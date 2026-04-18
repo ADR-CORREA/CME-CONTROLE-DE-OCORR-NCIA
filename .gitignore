@@ -1,0 +1,13 @@
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Ignore everything except the wiki structure
+*
+!.gitignore
+!CLAUDE.md
+!raw/
+!raw/**
+!wiki/
+!wiki/**
