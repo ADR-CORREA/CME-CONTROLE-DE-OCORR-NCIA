@@ -1487,9 +1487,30 @@ function salvarStore(chave, valor) {
   _cache[chave] = valor;
   if (window._db) {
     window._db.from('store')
-      .upsert({ key: 'cme_' + chave, value: valor }, { onConflict: 'key' })
-      .then(({ error }) => { if (error) console.error('[CME] Erro ao salvar no Supabase:', chave, error); });
+      .upsert({ key: 'cme_' + chave, value: valor, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+      .then(({ error }) => {
+        if (error) {
+          console.error('[CME] Erro ao salvar no Supabase:', chave, error);
+          _mostrarToast('⚠️ Erro ao salvar no banco: ' + error.message, 'erro');
+        }
+      });
   }
+}
+
+function _mostrarToast(msg, tipo) {
+  let t = document.getElementById('cme-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'cme-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9998;padding:12px 20px;border-radius:8px;font-size:13px;font-family:var(--font-sans);box-shadow:0 4px 16px rgba(0,0,0,.2);transition:opacity .3s;max-width:320px';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.background = tipo === 'erro' ? '#D32F2F' : '#1A4226';
+  t.style.color = '#fff';
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 4000);
 }
 
 function carregarStore(chave, padrao) {
@@ -1498,7 +1519,7 @@ function carregarStore(chave, padrao) {
 
 /* USUÁRIOS PADRÃO */
 const USUARIOS_PADRAO = [
-  { usuario: "admin", senha: btoa("admin123"), nome: "Administrador", nivel: "admin" },
+  { usuario: "admin", senha: btoa("Admin@480096"), nome: "Administrador", nivel: "admin" },
   { usuario: "gerente", senha: btoa("gerente123"), nome: "Gerência CME", nivel: "gerencia" },
   { usuario: "plantao", senha: btoa("plantao123"), nome: "Operador Plantão", nivel: "plantao" },
   { usuario: "juridico", senha: btoa("juridico123"), nome: "Setor Jurídico", nivel: "juridico" },
@@ -1517,10 +1538,22 @@ function salvarOcorrencias(d) { salvarStore("ocorrencias", d); }
 
 function getLogs() { return carregarStore("logs", []); }
 function addLog(msg) {
-  const logs = getLogs();
-  logs.unshift({ ts: new Date().toISOString(), msg });
-  if (logs.length > 100) logs.pop();
-  salvarStore("logs", logs);
+  // Busca o estado atual dos logs direto do Supabase para evitar conflito entre PCs
+  const entrada = { ts: new Date().toISOString(), msg };
+  if (window._db) {
+    window._db.from('store').select('value').eq('key', 'cme_logs').maybeSingle()
+      .then(({ data }) => {
+        const logs = (data?.value || _cache['logs'] || []).slice();
+        logs.unshift(entrada);
+        if (logs.length > 100) logs.pop();
+        salvarStore("logs", logs);
+      });
+  } else {
+    const logs = getLogs();
+    logs.unshift(entrada);
+    if (logs.length > 100) logs.pop();
+    salvarStore("logs", logs);
+  }
 }
 
 /* DADOS INICIAIS (do Excel) */
@@ -1682,8 +1715,12 @@ function renderizarCriticos() {
   });
   // Ordenar por score
   com_score.sort((a, b) => a._score - b._score);
-  // Filtrar fora os comunicados
-  const ativos = com_score.filter(o => o._status !== "✅ COMUNICADO" && o._status !== "-");
+  // Mostrar apenas ATENÇÃO, VENCENDO e VENCIDO (excluir NO PRAZO e COMUNICADO)
+  const ativos = com_score.filter(o =>
+    o._status === "🔴 VENCIDO" ||
+    o._status === "🟠 VENCENDO" ||
+    o._status === "🟡 ATENÇÃO"
+  );
 
   let vd=0, ve=0, at=0, pr=0;
   ativos.forEach(o => {
@@ -2454,6 +2491,15 @@ setInterval(atualizarTudo, 300000);
     if (!data.find(r => r.key === 'cme_usuarios')) {
       _cache['usuarios'] = USUARIOS_PADRAO;
       seeds.push(window._db.from('store').insert({ key: 'cme_usuarios', value: USUARIOS_PADRAO }));
+    } else {
+      // Garantir que a senha do admin está sempre atualizada
+      const usuarios = _cache['usuarios'] || [];
+      const adminUser = usuarios.find(u => u.usuario === 'admin');
+      const novaSenha = btoa('Admin@480096');
+      if (adminUser && adminUser.senha !== novaSenha) {
+        adminUser.senha = novaSenha;
+        seeds.push(window._db.from('store').upsert({ key: 'cme_usuarios', value: usuarios }, { onConflict: 'key' }));
+      }
     }
     if (!data.find(r => r.key === 'cme_ocorrencias')) {
       _cache['ocorrencias'] = DADOS_INICIAIS;
