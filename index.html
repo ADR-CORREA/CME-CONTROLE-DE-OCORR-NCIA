@@ -2423,60 +2423,87 @@ setInterval(atualizarTudo, 300000);
   const SUPABASE_URL = "https://eesapyygdvjb.supabase.co";
   const SUPABASE_KEY = "sb_publishable__ohDZFy3NGuc-vVs5_0H9Q_lM6nREHN";
 
-  window._db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const overlay   = document.getElementById('loading-overlay');
+  const loadingMsg = overlay.querySelector('p');
+  const spinner    = overlay.querySelector('div');
 
-  // Carregar todos os dados existentes no Supabase
-  const { data, error } = await window._db.from('store').select('*');
+  function mostrarErro(msg) {
+    spinner.style.display = 'none';
+    loadingMsg.style.color = '#FF5252';
+    loadingMsg.innerHTML = '⚠️ ' + msg + '<br><small style="opacity:.7">Verifique o console (F12) para detalhes.</small>';
+  }
 
-  if (error) {
-    console.error('[CME] Erro ao conectar ao Supabase:', error);
-  } else {
+  try {
+    if (!window.supabase) throw new Error('Biblioteca Supabase não carregou. Verifique sua conexão com a internet.');
+
+    window._db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    loadingMsg.textContent = 'Conectando ao banco de dados...';
+
+    const { data, error } = await window._db.from('store').select('*');
+
+    if (error) throw new Error('Falha na leitura da tabela: ' + error.message + ' (código ' + error.code + ')');
+
     // Popular cache com dados vindos do Supabase
     data.forEach(row => {
       _cache[row.key.replace('cme_', '')] = row.value;
     });
 
-    // Semear dados padrão se ainda não existem no banco
+    // Semear dados padrão se ainda não existem no banco (await garante conclusão antes de logar)
+    const seeds = [];
     if (!data.find(r => r.key === 'cme_usuarios')) {
-      salvarStore('usuarios', USUARIOS_PADRAO);
+      _cache['usuarios'] = USUARIOS_PADRAO;
+      seeds.push(window._db.from('store').insert({ key: 'cme_usuarios', value: USUARIOS_PADRAO }));
     }
     if (!data.find(r => r.key === 'cme_ocorrencias')) {
-      salvarStore('ocorrencias', DADOS_INICIAIS);
+      _cache['ocorrencias'] = DADOS_INICIAIS;
+      seeds.push(window._db.from('store').insert({ key: 'cme_ocorrencias', value: DADOS_INICIAIS }));
     }
     if (!data.find(r => r.key === 'cme_logs')) {
-      salvarStore('logs', []);
+      _cache['logs'] = [];
+      seeds.push(window._db.from('store').insert({ key: 'cme_logs', value: [] }));
     }
+    if (seeds.length) {
+      loadingMsg.textContent = 'Inicializando banco pela primeira vez...';
+      await Promise.all(seeds);
+    }
+
+    loadingMsg.style.color = '#4CAF50';
+    loadingMsg.textContent = '✓ Banco de dados conectado!';
+
+    // Sincronização em tempo real: recebe mudanças de outros PCs
+    window._db.channel('store-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'store' }, (payload) => {
+        const row = payload.new || payload.old;
+        if (!row?.key) return;
+        const chave = row.key.replace('cme_', '');
+        if (payload.eventType === 'DELETE') {
+          delete _cache[chave];
+        } else {
+          _cache[chave] = row.value;
+        }
+        if (usuarioAtual) {
+          atualizarTudo();
+          if (document.getElementById('panel-admin')?.classList.contains('active')) {
+            renderizarUsers();
+            renderizarLogs();
+          }
+        }
+      })
+      .subscribe();
+
+    // Pausa breve para o usuário ver a confirmação verde
+    await new Promise(r => setTimeout(r, 600));
+
+  } catch(e) {
+    console.error('[CME] Erro Supabase:', e);
+    mostrarErro(e.message);
+    // Aguarda 5 s para o usuário ler o erro antes de liberar o login
+    await new Promise(r => setTimeout(r, 5000));
   }
 
-  // Ocultar loading e exibir tela de login
-  document.getElementById('loading-overlay').style.display = 'none';
+  overlay.style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
-
-  // Sincronização em tempo real: recebe mudanças de outros PCs
-  window._db.channel('store-sync')
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'store'
-    }, (payload) => {
-      const row = payload.new || payload.old;
-      if (!row?.key) return;
-      const chave = row.key.replace('cme_', '');
-      if (payload.eventType === 'DELETE') {
-        delete _cache[chave];
-      } else {
-        _cache[chave] = row.value;
-      }
-      // Atualizar interface se houver usuário logado
-      if (usuarioAtual) {
-        atualizarTudo();
-        if (document.getElementById('panel-admin')?.classList.contains('active')) {
-          renderizarUsers();
-          renderizarLogs();
-        }
-      }
-    })
-    .subscribe();
 })();
 </script>
 </body>
