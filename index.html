@@ -917,6 +917,7 @@ input, select, textarea, button { font-family: var(--font-sans); }
     <div class="nav-tab" onclick="mudarAba('comunicacao')">📡 Comunicação</div>
     <div class="nav-tab" onclick="mudarAba('estoque')">📦 Estoque</div>
     <div class="nav-tab" onclick="mudarAba('triagem')">🗂️ Triagem</div>
+    <div class="nav-tab" onclick="mudarAba('relatorio')">📄 Relatório</div>
     <div class="nav-tab gerencia-only" onclick="mudarAba('gerencia')">📋 Gerência</div>
     <div class="nav-tab admin-only" onclick="mudarAba('admin')">🔧 Administração</div>
   </div>
@@ -1138,6 +1139,39 @@ input, select, textarea, button { font-family: var(--font-sans); }
             <tbody id="tbody-juridico"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- ─── RELATÓRIO ─── -->
+    <div class="tab-panel" id="panel-relatorio">
+      <div class="table-wrapper">
+        <div class="table-toolbar">
+          <div class="table-search">
+            <span>🔍</span>
+            <input type="text" placeholder="Buscar monitorado, servidor..." oninput="filtrarRelatorio(this.value)">
+          </div>
+          <div class="table-actions">
+            <button class="btn-secondary" onclick="renderizarRelatorio()">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="exportarRelatorioExcel()">📥 Exportar Excel</button>
+            <button class="btn-primary" onclick="abrirModalRelatorio()">➕ Novo Relatório</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th>Nº</th>
+              <th>Tipo de Relatório</th>
+              <th>Monitorado</th>
+              <th>Data Recebimento</th>
+              <th>Data Envio Comunicação</th>
+              <th>Servidor Responsável</th>
+              <th>Observação</th>
+              <th>Ações</th>
+            </tr></thead>
+            <tbody id="tbody-relatorio"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;font-size:.85rem;color:#666" id="rel-count-label"></div>
       </div>
     </div>
 
@@ -1798,6 +1832,62 @@ input, select, textarea, button { font-family: var(--font-sans); }
   </div>
 </div>
 
+<!-- MODAL RELATÓRIO -->
+<div class="modal-overlay" id="modal-relatorio">
+  <div class="modal-box" style="max-width:620px">
+    <div class="modal-header">
+      <h3 id="rel-modal-title">➕ Novo Relatório</h3>
+      <button class="modal-close" onclick="fecharModal('modal-relatorio')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="rel-edit-id">
+      <div class="form-section">
+        <div class="form-section-title">Tipo de Relatório</div>
+        <div class="form-field">
+          <label>Tipo *</label>
+          <select id="rel-tipo" onchange="toggleCamposRelatorio()">
+            <option value="">Selecione...</option>
+            <option value="Relatório de Violação">Relatório de Violação</option>
+          </select>
+        </div>
+      </div>
+      <div id="rel-section-violacao" style="display:none">
+        <div class="form-section">
+          <div class="form-section-title">Dados do Relatório de Violação</div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>Nome do Monitorado *</label>
+              <input type="text" id="rel-monitorado" placeholder="Nome completo do monitorado">
+            </div>
+            <div class="form-field">
+              <label>Servidor Responsável *</label>
+              <input type="text" id="rel-servidor" placeholder="Nome do servidor que confeccionou">
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>Data de Recebimento *</label>
+              <input type="date" id="rel-data-recebimento">
+            </div>
+            <div class="form-field">
+              <label>Data de Envio à Comunicação Processual *</label>
+              <input type="date" id="rel-data-envio">
+            </div>
+          </div>
+          <div class="form-field">
+            <label>Observação</label>
+            <textarea id="rel-obs" rows="2" placeholder="Observações adicionais (opcional)" style="resize:vertical"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-relatorio')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarRelatorio()">💾 Salvar Relatório</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL GERÊNCIA -->
 <div class="modal-overlay" id="modal-gerencia">
   <div class="modal-box" style="max-width:560px">
@@ -2351,7 +2441,7 @@ function mudarAba(aba) {
   document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
   const tabs = document.querySelectorAll(".nav-tab");
-  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, comunicacao: 4, estoque: 5, triagem: 6, gerencia: 7, admin: 8 };
+  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, comunicacao: 4, estoque: 5, triagem: 6, relatorio: 7, gerencia: 8, admin: 9 };
   if (tabs[map[aba]]) tabs[map[aba]].classList.add("active");
   const panel = document.getElementById("panel-" + aba);
   if (panel) panel.classList.add("active");
@@ -2362,6 +2452,7 @@ function mudarAba(aba) {
   if (aba === "comunicacao") renderizarComunicacao();
   if (aba === "estoque") renderizarEstoque();
   if (aba === "triagem") renderizarTriagem();
+  if (aba === "relatorio") renderizarRelatorio();
   if (aba === "gerencia") renderizarGerencia();
   if (aba === "admin") { renderizarUsers(); renderizarLogs(); }
 }
@@ -3173,6 +3264,168 @@ function baixarModeloExcel() {
   ];
   XLSX.utils.book_append_sheet(wb, ws, "Ocorrências");
   XLSX.writeFile(wb, "modelo_importacao_CME.xlsx");
+}
+
+/* ═══════════════════════ MÓDULO RELATÓRIO ════════════════════════ */
+
+let _relFiltro = '';
+
+function getRelatorios() {
+  return carregarStore('relatorios', { registros: [] });
+}
+
+function filtrarRelatorio(val) {
+  _relFiltro = (val || '').toLowerCase();
+  renderizarRelatorio();
+}
+
+function toggleCamposRelatorio() {
+  const tipo = document.getElementById('rel-tipo')?.value || '';
+  const secViolacao = document.getElementById('rel-section-violacao');
+  if (secViolacao) secViolacao.style.display = tipo === 'Relatório de Violação' ? '' : 'none';
+}
+
+function renderizarRelatorio() {
+  const dados = getRelatorios();
+  let lista = (dados.registros || []).slice().sort((a,b) => (b.criadoEm||'').localeCompare(a.criadoEm||''));
+
+  if (_relFiltro) {
+    lista = lista.filter(r =>
+      (r.monitorado||'').toLowerCase().includes(_relFiltro) ||
+      (r.servidor||'').toLowerCase().includes(_relFiltro) ||
+      (r.tipo||'').toLowerCase().includes(_relFiltro)
+    );
+  }
+
+  const labelEl = document.getElementById('rel-count-label');
+  if (labelEl) labelEl.textContent = `${lista.length} registro(s)`;
+
+  const tbody = document.getElementById('tbody-relatorio');
+  if (!tbody) return;
+
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#888">Nenhum relatório registrado.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = lista.map((r, i) => {
+    const recFmt  = (r.dataRecebimento||'').split('-').reverse().join('/');
+    const envFmt  = (r.dataEnvio||'').split('-').reverse().join('/');
+    return `<tr>
+      <td style="text-align:center;font-weight:700">${lista.length - i}</td>
+      <td>${r.tipo||''}</td>
+      <td>${r.monitorado||''}</td>
+      <td>${recFmt||'—'}</td>
+      <td>${envFmt||'—'}</td>
+      <td>${r.servidor||''}</td>
+      <td>${r.obs||'—'}</td>
+      <td>
+        <button class="btn-sm btn-outline" onclick="abrirModalRelatorio('${r.id}')">✏️</button>
+        <button class="btn-sm btn-danger"  onclick="excluirRelatorio('${r.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirModalRelatorio(id) {
+  const titleEl = document.getElementById('rel-modal-title');
+  // Limpar campos
+  ['rel-edit-id','rel-monitorado','rel-servidor','rel-data-recebimento','rel-data-envio','rel-obs'].forEach(fid => {
+    const el = document.getElementById(fid); if (el) el.value = '';
+  });
+  document.getElementById('rel-tipo').value = '';
+  // Defaults
+  const hoje = new Date().toISOString().slice(0,10);
+  document.getElementById('rel-data-recebimento').value = hoje;
+  document.getElementById('rel-data-envio').value = hoje;
+  document.getElementById('rel-servidor').value = usuarioAtual?.nome || '';
+
+  if (id) {
+    const dados = getRelatorios();
+    const r = (dados.registros||[]).find(x => x.id === id);
+    if (r) {
+      document.getElementById('rel-edit-id').value   = r.id;
+      document.getElementById('rel-tipo').value       = r.tipo || '';
+      document.getElementById('rel-monitorado').value = r.monitorado || '';
+      document.getElementById('rel-servidor').value   = r.servidor || '';
+      document.getElementById('rel-data-recebimento').value = r.dataRecebimento || '';
+      document.getElementById('rel-data-envio').value       = r.dataEnvio || '';
+      document.getElementById('rel-obs').value               = r.obs || '';
+      if (titleEl) titleEl.textContent = '✏️ Editar Relatório';
+    }
+  } else {
+    if (titleEl) titleEl.textContent = '➕ Novo Relatório';
+  }
+
+  toggleCamposRelatorio();
+  document.getElementById('modal-relatorio').classList.add('open');
+}
+
+function salvarRelatorio() {
+  const tipo            = document.getElementById('rel-tipo').value;
+  const monitorado      = document.getElementById('rel-monitorado').value.trim();
+  const servidor        = document.getElementById('rel-servidor').value.trim();
+  const dataRecebimento = document.getElementById('rel-data-recebimento').value;
+  const dataEnvio       = document.getElementById('rel-data-envio').value;
+  const obs             = document.getElementById('rel-obs').value.trim();
+
+  if (!tipo)            return _mostrarToast('⚠️ Selecione o tipo de relatório.', 'erro');
+  if (!monitorado)      return _mostrarToast('⚠️ Informe o nome do monitorado.', 'erro');
+  if (!servidor)        return _mostrarToast('⚠️ Informe o servidor responsável.', 'erro');
+  if (!dataRecebimento) return _mostrarToast('⚠️ Informe a data de recebimento.', 'erro');
+  if (!dataEnvio)       return _mostrarToast('⚠️ Informe a data de envio.', 'erro');
+
+  const dados = getRelatorios();
+  const lista = dados.registros || [];
+  const editId = document.getElementById('rel-edit-id').value;
+
+  const obj = { tipo, monitorado, servidor, dataRecebimento, dataEnvio, obs };
+
+  if (editId) {
+    const idx = lista.findIndex(x => x.id === editId);
+    if (idx >= 0) lista[idx] = { ...lista[idx], ...obj };
+  } else {
+    lista.push({
+      id: 'rel_' + Date.now(),
+      ...obj,
+      criadoPor: usuarioAtual?.usuario || '',
+      criadoEm:  new Date().toISOString()
+    });
+  }
+
+  dados.registros = lista;
+  salvarStore('relatorios', dados);
+  fecharModal('modal-relatorio');
+  renderizarRelatorio();
+  _mostrarToast('✅ Relatório salvo!', 'sucesso');
+}
+
+function excluirRelatorio(id) {
+  if (!confirm('Excluir este relatório? A ação não pode ser desfeita.')) return;
+  const dados = getRelatorios();
+  dados.registros = (dados.registros||[]).filter(r => r.id !== id);
+  salvarStore('relatorios', dados);
+  renderizarRelatorio();
+  _mostrarToast('🗑️ Relatório excluído.', 'sucesso');
+}
+
+function exportarRelatorioExcel() {
+  const dados = getRelatorios();
+  const lista = dados.registros || [];
+  if (!lista.length) { _mostrarToast('Nenhum relatório para exportar.', 'erro'); return; }
+  const rows = lista.map((r, i) => ({
+    'Nº':                    i + 1,
+    'Tipo':                  r.tipo||'',
+    'Monitorado':            r.monitorado||'',
+    'Data Recebimento':      (r.dataRecebimento||'').split('-').reverse().join('/'),
+    'Data Envio Comunicação':(r.dataEnvio||'').split('-').reverse().join('/'),
+    'Servidor Responsável':  r.servidor||'',
+    'Observação':            r.obs||''
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Relatórios');
+  XLSX.writeFile(wb, 'relatorios_CME.xlsx');
 }
 
 /* ═══════════════════════ MÓDULO GERÊNCIA ════════════════════════ */
@@ -4228,6 +4481,10 @@ setInterval(atualizarTudo, 300000);
     if (!data.find(r => r.key === 'cme_gerencia')) {
       _cache['gerencia'] = { demandas: [] };
       seeds.push(window._db.from('store').insert({ key: 'cme_gerencia', value: { demandas: [] } }));
+    }
+    if (!data.find(r => r.key === 'cme_relatorios')) {
+      _cache['relatorios'] = { registros: [] };
+      seeds.push(window._db.from('store').insert({ key: 'cme_relatorios', value: { registros: [] } }));
     }
     if (seeds.length) {
       loadingMsg.textContent = 'Inicializando banco pela primeira vez...';
