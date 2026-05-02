@@ -1796,15 +1796,6 @@ input, select, textarea, button { font-family: var(--font-sans); }
       </div>
       <div class="form-grid">
         <div class="form-field">
-          <label>CIODES acionado?</label>
-          <select id="com-ciodes">
-            <option value="">Não</option>
-            <option value="SIM">SIM</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-grid">
-        <div class="form-field">
           <label>PRODOC enviado? *</label>
           <select id="com-prodoc" onchange="toggleComProdoc()">
             <option value="">Não</option>
@@ -3990,7 +3981,6 @@ function abrirModalComunicacao(idx) {
   document.getElementById('com-edit-idx').value = idx;
   document.getElementById('com-id-display').textContent = o.id;
   document.getElementById('com-monitorado-display').textContent = o.monitorado || '';
-  document.getElementById('com-ciodes').value = o.ciodes || '';
   document.getElementById('com-prodoc').value = o.prodoc || '';
   document.getElementById('com-prodoc-num').value = o.prodocNum || '';
   document.getElementById('com-prodoc-data').value = o.prodocData || '';
@@ -4009,7 +3999,6 @@ function salvarComunicacao() {
   const idx = parseInt(document.getElementById('com-edit-idx').value);
   const ocs = getOcorrencias();
   if (!ocs[idx]) return;
-  ocs[idx].ciodes = document.getElementById('com-ciodes').value;
   ocs[idx].prodoc = document.getElementById('com-prodoc').value;
   ocs[idx].prodocNum = document.getElementById('com-prodoc-num').value.trim();
   ocs[idx].prodocData = document.getElementById('com-prodoc-data').value;
