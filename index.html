@@ -1527,7 +1527,13 @@ input, select, textarea, button { font-family: var(--font-sans); }
         <div class="form-grid">
           <div class="form-field">
             <label>Plantão</label>
-            <input type="text" id="oc-plantao" placeholder="Turno/Plantão">
+            <select id="oc-plantao">
+              <option value="ALFA">ALFA</option>
+              <option value="BRAVO">BRAVO</option>
+              <option value="CHARLIE">CHARLIE</option>
+              <option value="DELTA">DELTA</option>
+              <option value="ECHO">ECHO</option>
+            </select>
           </div>
           <div class="form-field">
             <label>Operador</label>
@@ -2623,7 +2629,7 @@ function abrirModalNovaOcorrencia() {
   document.getElementById("oc-tipo").value = "";
   const _plantaoAuto = getPlantaoParaData(new Date().toISOString());
   document.getElementById("oc-plantao").value = _plantaoAuto;
-  document.getElementById("oc-operador").value = "";
+  document.getElementById("oc-operador").value = usuarioAtual?.nome || "";
   document.getElementById("oc-descricao").value = "";
   document.getElementById("oc-obs").value = "";
   recalcularStatus();
