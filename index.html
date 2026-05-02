@@ -913,6 +913,7 @@ input, select, textarea, button { font-family: var(--font-sans); }
     <div class="nav-tab" onclick="mudarAba('criticos')">🚨 Críticos</div>
     <div class="nav-tab" onclick="mudarAba('ocorrencias')">📋 Ocorrências</div>
     <div class="nav-tab" onclick="mudarAba('juridico')">⚖️ Jurídico</div>
+    <div class="nav-tab" onclick="mudarAba('comunicacao')">📡 Comunicação</div>
     <div class="nav-tab" onclick="mudarAba('estoque')">📦 Estoque</div>
     <div class="nav-tab" onclick="mudarAba('triagem')">🗂️ Triagem</div>
     <div class="nav-tab admin-only" onclick="mudarAba('admin')">🔧 Administração</div>
@@ -928,7 +929,10 @@ input, select, textarea, button { font-family: var(--font-sans); }
           <div class="dash-title">Dashboard Operacional</div>
           <div class="dash-update" id="dash-update">Atualizado agora</div>
         </div>
-        <button class="btn-refresh" onclick="atualizarTudo()">↻ Atualizar</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-secondary" onclick="exportarDashboardExcel()">📥 Exportar Excel</button>
+          <button class="btn-refresh" onclick="atualizarTudo()">↻ Atualizar</button>
+        </div>
       </div>
 
       <div class="section-title">Status de Prazo — Ocorrências Ativas</div>
@@ -1020,7 +1024,8 @@ input, select, textarea, button { font-family: var(--font-sans); }
             <input type="text" placeholder="Buscar monitorado..." oninput="filtrarCriticos(this.value)">
           </div>
           <div class="table-actions">
-            <button class="btn-secondary" onclick="atualizarTudo()">↻ Atualizar</button>
+            <button class="btn-secondary" onclick="renderizarCriticos()">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="exportarCriticosExcel()">📥 Exportar Excel</button>
           </div>
         </div>
         <div class="table-scroll">
@@ -1055,7 +1060,8 @@ input, select, textarea, button { font-family: var(--font-sans); }
             <input type="text" placeholder="Buscar ID, monitorado..." oninput="filtrarOcorrencias(this.value)">
           </div>
           <div class="table-actions">
-            <button class="btn-secondary" onclick="exportarCSV()">⬇ Exportar CSV</button>
+            <button class="btn-secondary" onclick="renderizarOcorrencias()">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="exportarOcorrenciasExcel()">📥 Exportar Excel</button>
             <label class="btn-secondary" style="cursor:pointer;display:flex;align-items:center;gap:6px" title="Importar planilha Excel com monitorados">
               📥 Importar Excel
               <input type="file" id="import-excel" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(this)">
@@ -1103,7 +1109,8 @@ input, select, textarea, button { font-family: var(--font-sans); }
             <input type="text" placeholder="Buscar monitorado..." oninput="filtrarJuridico(this.value)">
           </div>
           <div class="table-actions">
-            <button class="btn-secondary" onclick="exportarCSVJur()">⬇ Exportar CSV</button>
+            <button class="btn-secondary" onclick="renderizarJuridico()">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="exportarJuridicoExcel()">📥 Exportar Excel</button>
           </div>
         </div>
         <div class="table-scroll">
@@ -1202,15 +1209,57 @@ input, select, textarea, button { font-family: var(--font-sans); }
       </div>
     </div>
 
+    <!-- ─── COMUNICAÇÃO ─── -->
+    <div class="tab-panel" id="panel-comunicacao">
+      <div class="table-wrapper">
+        <div class="table-toolbar">
+          <div class="table-search">
+            <span>🔍</span>
+            <input type="text" placeholder="Buscar monitorado, ID..." oninput="filtrarComunicacao(this.value)">
+          </div>
+          <div class="table-actions">
+            <button class="btn-secondary" onclick="renderizarComunicacao()">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="exportarComunicacaoExcel()">📥 Exportar Excel</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th>ID</th>
+              <th>Monitorado</th>
+              <th>Medida</th>
+              <th>Tipo Violação</th>
+              <th>Data Alerta</th>
+              <th>Status</th>
+              <th>PRODOC?</th>
+              <th>Nº PRODOC</th>
+              <th>Data PRODOC</th>
+              <th>Plantão</th>
+              <th>Ação</th>
+            </tr></thead>
+            <tbody id="tbody-comunicacao"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="com-pag-info">0 ocorrências</span>
+          <div class="pagination-btns" id="com-pag-btns"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ─── ESTOQUE ─── -->
     <div class="tab-panel" id="panel-estoque">
       <div class="est-header">
         <div class="est-header-title">📦 Estoque — CME/IAPEN-AP</div>
-        <div class="est-header-actions" id="est-btns-acao">
-          <button class="btn-primary"   onclick="abrirModalEstoque('entrada')">⬆ Entrada</button>
-          <button class="btn-secondary" onclick="abrirModalEstoque('saida')">⬇ Saída</button>
-          <button class="btn-secondary" onclick="abrirModalEstoque('devolucao')">↩ Devolução</button>
-          <button class="btn-danger"    onclick="abrirModalEstoque('baixa')">✕ Baixa</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-secondary" onclick="renderizarEstoque()">🔄 Atualizar</button>
+          <div class="est-header-actions" id="est-btns-acao">
+            <button class="btn-secondary" onclick="abrirConfigEstoque()">⚙️ Configurar Mínimos</button>
+            <button class="btn-primary"   onclick="abrirModalEstoque('entrada')">⬆ Entrada</button>
+            <button class="btn-secondary" onclick="abrirModalEstoque('saida')">⬇ Saída</button>
+            <button class="btn-secondary" onclick="abrirModalEstoque('devolucao')">↩ Devolução</button>
+            <button class="btn-danger"    onclick="abrirModalEstoque('baixa')">✕ Baixa</button>
+          </div>
         </div>
       </div>
 
@@ -1270,6 +1319,7 @@ input, select, textarea, button { font-family: var(--font-sans); }
       <div class="tri-header">
         <div class="tri-header-title">🗂️ Triagem — Atendimentos CME</div>
         <div id="tri-btns-acao">
+          <button class="btn-secondary" onclick="renderizarTriagem()">🔄 Atualizar</button>
           <button class="btn-secondary" onclick="exportarTriagem()">📥 Exportar Excel</button>
           <button class="btn-primary" onclick="abrirModalTriagem()">➕ Novo Atendimento</button>
         </div>
@@ -1686,6 +1736,65 @@ input, select, textarea, button { font-family: var(--font-sans); }
   </div>
 </div>
 
+<!-- MODAL COMUNICAÇÃO -->
+<div class="modal-overlay" id="modal-comunicacao">
+  <div class="modal-box" style="max-width:500px">
+    <div class="modal-header">
+      <h3>📡 Atualizar PRODOC</h3>
+      <button class="modal-close" onclick="fecharModal('modal-comunicacao')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="com-edit-idx">
+      <div style="margin-bottom:14px;padding:10px;background:#f0f4ff;border-radius:8px">
+        <div style="font-size:.82rem;color:#666">Ocorrência</div>
+        <div style="font-weight:700;font-size:1rem" id="com-id-display"></div>
+        <div style="color:#444;margin-top:2px" id="com-monitorado-display"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>PRODOC enviado? *</label>
+          <select id="com-prodoc" onchange="toggleComProdoc()">
+            <option value="">Não</option>
+            <option value="SIM">SIM</option>
+          </select>
+        </div>
+      </div>
+      <div id="com-row-prodoc-det" style="display:none">
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Nº do PRODOC</label>
+            <input type="text" id="com-prodoc-num" placeholder="Número do documento">
+          </div>
+          <div class="form-field">
+            <label>Data do PRODOC</label>
+            <input type="date" id="com-prodoc-data">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-comunicacao')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarComunicacao()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIG ESTOQUE -->
+<div class="modal-overlay" id="modal-est-config">
+  <div class="modal-box" style="max-width:600px">
+    <div class="modal-header">
+      <h3>⚙️ Configurar Quantidades Mínimas</h3>
+      <button class="modal-close" onclick="fecharModal('modal-est-config')">✕</button>
+    </div>
+    <div class="modal-body" id="est-config-body">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-est-config')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarConfigEstoque()">💾 Salvar Configurações</button>
+    </div>
+  </div>
+</div>
+
 <!-- ENTRADA -->
 <div class="modal-overlay" id="modal-est-entrada">
   <div class="modal-box">
@@ -1765,10 +1874,6 @@ input, select, textarea, button { font-family: var(--font-sans); }
         <div class="form-grid">
           <div class="form-field"><label>Quantidade *</label>
             <input type="number" id="sai-quantidade" min="1" placeholder="0"></div>
-          <div class="form-field"><label>Nome do Monitorado</label>
-            <input type="text" id="sai-monitorado" placeholder="Se aplicável"></div>
-          <div class="form-field"><label>Nº do Processo</label>
-            <input type="text" id="sai-processo" placeholder="Se aplicável"></div>
         </div>
       </div>
       <!-- Entrega -->
@@ -1778,11 +1883,11 @@ input, select, textarea, button { font-family: var(--font-sans); }
           <div class="form-field"><label>Plantão que recebe *</label>
             <select id="sai-plantao">
               <option value="">Selecione...</option>
-              <option>Alpha</option>
-              <option>Bravo</option>
-              <option>Charlie</option>
-              <option>Delta</option>
-              <option>Outro</option>
+              <option>ALFA</option>
+              <option>BRAVO</option>
+              <option>CHARLIE</option>
+              <option>DELTA</option>
+              <option>ECHO</option>
             </select></div>
           <div class="form-field"><label>Nome do Plantonista *</label>
             <input type="text" id="sai-plantonista" placeholder="Quem está recebendo o item"></div>
@@ -2181,7 +2286,7 @@ function mudarAba(aba) {
   document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
   const tabs = document.querySelectorAll(".nav-tab");
-  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, estoque: 4, triagem: 5, admin: 6 };
+  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, comunicacao: 4, estoque: 5, triagem: 6, admin: 7 };
   if (tabs[map[aba]]) tabs[map[aba]].classList.add("active");
   const panel = document.getElementById("panel-" + aba);
   if (panel) panel.classList.add("active");
@@ -2189,6 +2294,7 @@ function mudarAba(aba) {
   if (aba === "criticos") renderizarCriticos();
   if (aba === "ocorrencias") renderizarOcorrencias();
   if (aba === "juridico") renderizarJuridico();
+  if (aba === "comunicacao") renderizarComunicacao();
   if (aba === "estoque") renderizarEstoque();
   if (aba === "triagem") renderizarTriagem();
   if (aba === "admin") { renderizarUsers(); renderizarLogs(); }
@@ -2200,6 +2306,7 @@ function atualizarTudo() {
   renderizarCriticos();
   renderizarOcorrencias();
   renderizarJuridico();
+  if (document.getElementById('panel-comunicacao')?.classList.contains('active')) renderizarComunicacao();
   document.getElementById("dash-update").textContent =
     "Atualizado em " + new Date().toLocaleTimeString("pt-BR");
 }
@@ -3256,6 +3363,222 @@ function exportarTriagem() {
   XLSX.writeFile(wb, 'triagem_CME.xlsx');
 }
 
+/* ═══════════════════════ FUNÇÕES EXPORT EXCEL ═══════════════════ */
+
+function exportarDashboardExcel() {
+  const ocs = getOcorrencias();
+  const rows = [
+    { 'Métrica': 'Total de Ocorrências', 'Valor': ocs.length },
+    { 'Métrica': 'Vencidos', 'Valor': ocs.filter(o => o._status === '🔴 VENCIDO').length },
+    { 'Métrica': 'Vencendo', 'Valor': ocs.filter(o => o._status === '🟠 VENCENDO').length },
+    { 'Métrica': 'Em Atenção', 'Valor': ocs.filter(o => o._status === '🟡 ATENÇÃO').length },
+    { 'Métrica': 'No Prazo', 'Valor': ocs.filter(o => o._status === '🟢 NO PRAZO').length },
+    { 'Métrica': 'Comunicados', 'Valor': ocs.filter(o => o._status === '✅ COMUNICADO').length },
+    { 'Métrica': 'Data exportação', 'Valor': new Date().toLocaleString('pt-BR') },
+  ];
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Dashboard');
+  XLSX.writeFile(wb, 'dashboard_CME.xlsx');
+}
+
+function exportarCriticosExcel() {
+  const ocs = getOcorrencias().filter(o =>
+    o._status === '🔴 VENCIDO' || o._status === '🟠 VENCENDO' || o._status === '🟡 ATENÇÃO'
+  );
+  if (!ocs.length) { _mostrarToast('Nenhum caso crítico para exportar.', 'erro'); return; }
+  const rows = ocs.map((o, i) => ({
+    'Prioridade': i + 1,
+    'ID': o.id,
+    'Monitorado': o.monitorado||'',
+    'Medida': o.medida||'',
+    'Tipo Violação': o.tipo||'',
+    'Status': o._status||'',
+    'Data Alerta': o.dataAlerta ? new Date(o.dataAlerta).toLocaleString('pt-BR') : '',
+    'Plantão': o.plantao||''
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Críticos');
+  XLSX.writeFile(wb, 'criticos_CME.xlsx');
+}
+
+function exportarOcorrenciasExcel() {
+  const ocs = getOcorrencias();
+  if (!ocs.length) { _mostrarToast('Nenhuma ocorrência para exportar.', 'erro'); return; }
+  const rows = ocs.map(o => ({
+    'ID': o.id,
+    'Data Alerta': o.dataAlerta ? new Date(o.dataAlerta).toLocaleString('pt-BR') : '',
+    'Monitorado': o.monitorado||'',
+    'Medida': o.medida||'',
+    'Tipo Violação': o.tipo||'',
+    'Status': o._status||'',
+    'CIODES?': o.ciodes||'',
+    'PRODOC?': o.prodoc||'',
+    'Nº PRODOC': o.prodocNum||'',
+    'Plantão': o.plantao||'',
+    'Observação': o.obs||''
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Ocorrências');
+  XLSX.writeFile(wb, 'ocorrencias_CME.xlsx');
+}
+
+function exportarJuridicoExcel() {
+  const ocs = getOcorrencias();
+  if (!ocs.length) { _mostrarToast('Nenhum dado para exportar.', 'erro'); return; }
+  const rows = ocs.map(o => ({
+    'ID': o.id,
+    'Monitorado': o.monitorado||'',
+    'Medida': o.medida||'',
+    'Tipo Violação': o.tipo||'',
+    'Interrompido': o.juridico?.interrompido||'',
+    'Motivo Interrupção': o.juridico?.motivo||'',
+    'Desvinculado': o.juridico?.desvinculado||'',
+    'Ciência Juízo': o.juridico?.cienciaJuizo||''
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Jurídico');
+  XLSX.writeFile(wb, 'juridico_CME.xlsx');
+}
+
+/* ═══════════════════════ MÓDULO COMUNICAÇÃO ════════════════════════ */
+
+let _comFiltro = '';
+let _comPagAtual = 1;
+const COM_POR_PAG = 20;
+
+function podEditarComunicacao() {
+  return usuarioAtual && ['admin','comunicacao','gerencia'].includes(usuarioAtual.nivel);
+}
+
+function filtrarComunicacao(val) {
+  _comFiltro = val.toLowerCase();
+  _comPagAtual = 1;
+  renderizarComunicacao();
+}
+
+function renderizarComunicacao() {
+  const ocs = getOcorrencias();
+  let filtrados = ocs;
+  if (_comFiltro) {
+    filtrados = ocs.filter(o =>
+      String(o.id).includes(_comFiltro) ||
+      (o.monitorado||'').toLowerCase().includes(_comFiltro)
+    );
+  }
+  filtrados = [...filtrados].sort((a,b) => (b.dataAlerta||'').localeCompare(a.dataAlerta||''));
+
+  const total = filtrados.length;
+  const totalPags = Math.max(1, Math.ceil(total / COM_POR_PAG));
+  if (_comPagAtual > totalPags) _comPagAtual = 1;
+  const inicio = (_comPagAtual - 1) * COM_POR_PAG;
+  const pagina = filtrados.slice(inicio, inicio + COM_POR_PAG);
+
+  const infoEl = document.getElementById('com-pag-info');
+  if (infoEl) infoEl.textContent = `${total} ocorrência(s)`;
+
+  const btnsEl = document.getElementById('com-pag-btns');
+  if (btnsEl) {
+    let html = '';
+    for (let i = 1; i <= totalPags; i++) {
+      html += `<button class="btn-sm ${i===_comPagAtual?'btn-primary':'btn-outline'}" onclick="_comPagAtual=${i};renderizarComunicacao()">${i}</button>`;
+    }
+    btnsEl.innerHTML = html;
+  }
+
+  const tbody = document.getElementById('tbody-comunicacao');
+  if (!tbody) return;
+
+  if (!pagina.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:#888">Nenhuma ocorrência encontrada.</td></tr>';
+    return;
+  }
+
+  const podeEdit = podEditarComunicacao();
+  tbody.innerHTML = pagina.map((o) => {
+    const idx = ocs.indexOf(o);
+    const badgeProdoc = o.prodoc === 'SIM'
+      ? '<span class="badge badge-ok">SIM</span>'
+      : '<span class="badge badge-vencido">NÃO</span>';
+    const btnEdit = podeEdit
+      ? `<button class="btn-sm btn-outline" onclick="abrirModalComunicacao(${idx})">✏️ Atualizar PRODOC</button>`
+      : '—';
+    return `<tr>
+      <td>${o.id}</td>
+      <td>${o.monitorado||''}</td>
+      <td>${o.medida||''}</td>
+      <td>${o.tipo||''}</td>
+      <td style="white-space:nowrap">${o.dataAlerta ? new Date(o.dataAlerta).toLocaleString('pt-BR') : ''}</td>
+      <td>${o._status||''}</td>
+      <td>${badgeProdoc}</td>
+      <td>${o.prodocNum||'—'}</td>
+      <td>${o.prodocData ? new Date(o.prodocData).toLocaleDateString('pt-BR') : '—'}</td>
+      <td>${o.plantao||''}</td>
+      <td>${btnEdit}</td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirModalComunicacao(idx) {
+  if (!podEditarComunicacao()) { _mostrarToast('⚠️ Sem permissão.', 'erro'); return; }
+  const ocs = getOcorrencias();
+  const o = ocs[idx];
+  if (!o) return;
+  document.getElementById('com-edit-idx').value = idx;
+  document.getElementById('com-id-display').textContent = o.id;
+  document.getElementById('com-monitorado-display').textContent = o.monitorado || '';
+  document.getElementById('com-prodoc').value = o.prodoc || '';
+  document.getElementById('com-prodoc-num').value = o.prodocNum || '';
+  document.getElementById('com-prodoc-data').value = o.prodocData || '';
+  toggleComProdoc();
+  document.getElementById('modal-comunicacao').classList.add('open');
+}
+
+function toggleComProdoc() {
+  const sim = document.getElementById('com-prodoc')?.value === 'SIM';
+  const row = document.getElementById('com-row-prodoc-det');
+  if (row) row.style.display = sim ? '' : 'none';
+}
+
+function salvarComunicacao() {
+  if (!podEditarComunicacao()) { _mostrarToast('⚠️ Sem permissão.', 'erro'); return; }
+  const idx = parseInt(document.getElementById('com-edit-idx').value);
+  const ocs = getOcorrencias();
+  if (!ocs[idx]) return;
+  ocs[idx].prodoc = document.getElementById('com-prodoc').value;
+  ocs[idx].prodocNum = document.getElementById('com-prodoc-num').value.trim();
+  ocs[idx].prodocData = document.getElementById('com-prodoc-data').value;
+  salvarStore('ocorrencias', ocs);
+  fecharModal('modal-comunicacao');
+  renderizarComunicacao();
+  atualizarTudo();
+  _mostrarToast('✅ PRODOC atualizado!', 'sucesso');
+}
+
+function exportarComunicacaoExcel() {
+  const ocs = getOcorrencias();
+  if (!ocs.length) { _mostrarToast('Nenhum dado para exportar.', 'erro'); return; }
+  const rows = ocs.map(o => ({
+    'ID': o.id,
+    'Monitorado': o.monitorado||'',
+    'Medida': o.medida||'',
+    'Tipo Violação': o.tipo||'',
+    'Data Alerta': o.dataAlerta ? new Date(o.dataAlerta).toLocaleString('pt-BR') : '',
+    'Status': o._status||'',
+    'PRODOC?': o.prodoc||'NÃO',
+    'Nº PRODOC': o.prodocNum||'',
+    'Data PRODOC': o.prodocData || '',
+    'Plantão': o.plantao||''
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Comunicação');
+  XLSX.writeFile(wb, 'comunicacao_CME.xlsx');
+}
+
 /* ═══════════════════════ MÓDULO ESTOQUE ════════════════════════ */
 
 const EST_TAMANHOS = ['16 cm','17 cm','18 cm','19 cm','20 cm','21 cm','22 cm','23 cm','24 cm','25 cm','26 cm','27 cm'];
@@ -3291,6 +3614,54 @@ const EST_PADRAO = {
 /* ─ Permissão ─────────────────────────────────────────── */
 function podeAlterarEstoque() {
   return usuarioAtual && (usuarioAtual.nivel === 'admin' || usuarioAtual.nivel === 'estoque');
+}
+
+/* ─ Configuração de Mínimos ────────────────────────────── */
+function getConfigEstoque() {
+  return carregarStore('estoque_config', { minimos: {} });
+}
+
+function abrirConfigEstoque() {
+  if (!podeAlterarEstoque()) { alert('Sem permissão.'); return; }
+  const config = getConfigEstoque();
+  const minimos = config.minimos || {};
+  const itens = [];
+  Object.entries(EST_TIPOS).forEach(([cat, tipos]) => {
+    tipos.forEach(tipo => {
+      if (tipo === 'Cinta') {
+        EST_TAMANHOS.forEach(tam => itens.push({ chave: estChave('Cinta', tam), label: `Cinta ${tam}` }));
+      } else {
+        itens.push({ chave: estChave(tipo, ''), label: tipo });
+      }
+    });
+  });
+  const body = document.getElementById('est-config-body');
+  body.innerHTML = `
+    <p style="color:#555;font-size:.87rem;margin-bottom:16px">Defina a quantidade mínima de cada item. Quando o estoque atingir ou ficar abaixo do mínimo, a linha ficará vermelha.</p>
+    <div style="display:grid;grid-template-columns:1fr 120px;gap:8px 16px;align-items:center">
+      <div style="font-weight:600;color:#444;font-size:.83rem">Item</div>
+      <div style="font-weight:600;color:#444;font-size:.83rem">Qtd Mínima</div>
+      ${itens.map(it => `
+        <div style="font-size:.88rem">${it.label}</div>
+        <input type="number" min="0" class="est-config-input" data-chave="${it.chave}"
+          value="${minimos[it.chave] ?? EST_MINIMO[it.label] ?? 0}"
+          style="padding:5px 8px;border:1px solid #ccc;border-radius:6px;width:100%">
+      `).join('')}
+    </div>
+  `;
+  document.getElementById('modal-est-config').classList.add('open');
+}
+
+function salvarConfigEstoque() {
+  const inputs = document.querySelectorAll('.est-config-input');
+  const minimos = {};
+  inputs.forEach(inp => {
+    minimos[inp.dataset.chave] = parseInt(inp.value) || 0;
+  });
+  salvarStore('estoque_config', { minimos });
+  fecharModal('modal-est-config');
+  renderizarEstoque();
+  _mostrarToast('✅ Configurações de mínimo salvas!', 'sucesso');
 }
 
 /* ─ Storage ────────────────────────────────────────────── */
@@ -3332,10 +3703,13 @@ function renderizarEstoque() {
   const chip     = itens['Chip do DPP'] || 0;
   const total    = mod + cinta + trava + carrTorn + dpp + carrDpp + chip;
 
+  const _cfgMin = getConfigEstoque().minimos || {};
+  const _getMin = (chave, fallback) => _cfgMin[chave] !== undefined ? _cfgMin[chave] : (fallback || 0);
+
   let baixo = 0, zero = 0;
   Object.keys(EST_PADRAO.itens).forEach(k => {
     const isCinta = k.startsWith('Cinta_');
-    const min = isCinta ? EST_MINIMO['Cinta'] : estMinItem(k);
+    const min = isCinta ? _getMin(k, EST_MINIMO['Cinta']) : _getMin(k, estMinItem(k));
     const s   = estStatusCls(itens[k] || 0, min);
     if (s === 'zero') zero++; else if (s === 'baixo') baixo++;
   });
@@ -3358,10 +3732,12 @@ function renderizarEstoque() {
   const tbTorn  = document.getElementById('tbody-est-torn');
   const rowsTorn = [];
   ['Módulo eletrônico de monitoração','Trava','Carregador da tornozeleira'].forEach(tipo => {
+    const chave = estChave(tipo, '');
     const qtd = itens[tipo] || 0;
-    const min = EST_MINIMO[tipo];
+    const min = _getMin(chave, EST_MINIMO[tipo]);
     const cls = estStatusCls(qtd, min);
-    rowsTorn.push(`<tr>
+    const rowStyle = qtd <= min ? ' style="background:#ffeaea"' : '';
+    rowsTorn.push(`<tr${rowStyle}>
       <td>${tipo}</td><td style="color:var(--cz2)">—</td>
       <td style="text-align:center"><strong>${qtd}</strong></td>
       <td style="text-align:center">${min}</td>
@@ -3371,9 +3747,10 @@ function renderizarEstoque() {
   EST_TAMANHOS.forEach(tam => {
     const k   = 'Cinta_' + tam;
     const qtd = itens[k] || 0;
-    const min = EST_MINIMO['Cinta'];
+    const min = _getMin(k, EST_MINIMO['Cinta']);
     const cls = estStatusCls(qtd, min);
-    rowsTorn.push(`<tr>
+    const rowStyle = qtd <= min ? ' style="background:#ffeaea"' : '';
+    rowsTorn.push(`<tr${rowStyle}>
       <td>Cinta</td><td>${tam}</td>
       <td style="text-align:center"><strong>${qtd}</strong></td>
       <td style="text-align:center">${min}</td>
@@ -3385,10 +3762,12 @@ function renderizarEstoque() {
   /* Tabela DPP */
   document.getElementById('tbody-est-dpp').innerHTML =
     ['Dispositivo DPP','Carregador do DPP','Chip do DPP'].map(tipo => {
+      const chave = estChave(tipo, '');
       const qtd = itens[tipo] || 0;
-      const min = EST_MINIMO[tipo];
+      const min = _getMin(chave, EST_MINIMO[tipo]);
       const cls = estStatusCls(qtd, min);
-      return `<tr>
+      const rowStyle = qtd <= min ? ' style="background:#ffeaea"' : '';
+      return `<tr${rowStyle}>
         <td>${tipo}</td>
         <td style="text-align:center"><strong>${qtd}</strong></td>
         <td style="text-align:center">${min}</td>
