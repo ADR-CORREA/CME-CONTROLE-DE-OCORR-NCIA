@@ -1257,7 +1257,8 @@ input, select, textarea, button { font-family: var(--font-sans); }
         <table class="data-table">
           <thead><tr>
             <th>Data/Hora</th><th>Tipo</th><th>Categoria</th><th>Item</th><th>Tamanho</th>
-            <th>Qtd</th><th>Responsável</th><th>Motivo</th><th>Monitorado</th><th>Observação</th>
+            <th>Qtd</th><th>Responsável</th><th>Motivo</th><th>Monitorado</th>
+            <th>Plantão</th><th>Plantonista</th><th>Dt. Entrega</th><th>Observação</th>
           </tr></thead>
           <tbody id="tbody-est-hist"></tbody>
         </table>
@@ -1736,45 +1737,68 @@ input, select, textarea, button { font-family: var(--font-sans); }
 
 <!-- SAÍDA -->
 <div class="modal-overlay" id="modal-est-saida">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:680px">
     <div class="modal-header">
       <h3>⬇ Registro de Saída</h3>
       <button class="modal-close" onclick="fecharModal('modal-est-saida')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-field"><label>Categoria *</label>
-          <select id="sai-categoria" onchange="atualizarTiposEst('sai')">
-            <option value="">Selecione...</option>
-            <option value="Tornozeleira">Tornozeleira</option>
-            <option value="DPP — Dispositivo de Proteção Pessoal">DPP — Dispositivo de Proteção Pessoal</option>
-          </select></div>
-        <div class="form-field"><label>Tipo de Item *</label>
-          <select id="sai-tipo" onchange="toggleTamanhoEst('sai')">
-            <option value="">Selecione a categoria...</option>
-          </select></div>
+      <!-- Item -->
+      <div class="form-section">
+        <div class="form-section-title">Item Retirado</div>
+        <div class="form-grid">
+          <div class="form-field"><label>Categoria *</label>
+            <select id="sai-categoria" onchange="atualizarTiposEst('sai')">
+              <option value="">Selecione...</option>
+              <option value="Tornozeleira">Tornozeleira</option>
+              <option value="DPP — Dispositivo de Proteção Pessoal">DPP — Dispositivo de Proteção Pessoal</option>
+            </select></div>
+          <div class="form-field"><label>Tipo de Item *</label>
+            <select id="sai-tipo" onchange="toggleTamanhoEst('sai')">
+              <option value="">Selecione a categoria...</option>
+            </select></div>
+        </div>
+        <div class="form-grid" id="sai-row-tamanho" style="display:none">
+          <div class="form-field"><label>Tamanho da Cinta *</label>
+            <select id="sai-tamanho"><option value="">Selecione...</option></select></div>
+        </div>
+        <div class="form-grid">
+          <div class="form-field"><label>Quantidade *</label>
+            <input type="number" id="sai-quantidade" min="1" placeholder="0"></div>
+          <div class="form-field"><label>Nome do Monitorado</label>
+            <input type="text" id="sai-monitorado" placeholder="Se aplicável"></div>
+          <div class="form-field"><label>Nº do Processo</label>
+            <input type="text" id="sai-processo" placeholder="Se aplicável"></div>
+        </div>
       </div>
-      <div class="form-grid" id="sai-row-tamanho" style="display:none">
-        <div class="form-field"><label>Tamanho da Cinta *</label>
-          <select id="sai-tamanho"><option value="">Selecione...</option></select></div>
-      </div>
-      <div class="form-grid three">
-        <div class="form-field"><label>Quantidade *</label>
-          <input type="number" id="sai-quantidade" min="1" placeholder="0"></div>
-        <div class="form-field"><label>Nome do Monitorado</label>
-          <input type="text" id="sai-monitorado" placeholder="Se aplicável"></div>
-        <div class="form-field"><label>Nº do Processo</label>
-          <input type="text" id="sai-processo" placeholder="Se aplicável"></div>
-      </div>
-      <div class="form-grid">
-        <div class="form-field"><label>Motivo *</label>
-          <input type="text" id="sai-motivo" placeholder="Motivo da saída"></div>
-        <div class="form-field"><label>Responsável *</label>
-          <input type="text" id="sai-responsavel" placeholder="Nome do servidor"></div>
-      </div>
-      <div class="form-grid">
-        <div class="form-field"><label>Observação</label>
-          <input type="text" id="sai-obs" placeholder="Opcional"></div>
+      <!-- Entrega -->
+      <div class="form-section">
+        <div class="form-section-title">Dados da Entrega</div>
+        <div class="form-grid">
+          <div class="form-field"><label>Plantão que recebe *</label>
+            <select id="sai-plantao">
+              <option value="">Selecione...</option>
+              <option>Alpha</option>
+              <option>Bravo</option>
+              <option>Charlie</option>
+              <option>Delta</option>
+              <option>Outro</option>
+            </select></div>
+          <div class="form-field"><label>Nome do Plantonista *</label>
+            <input type="text" id="sai-plantonista" placeholder="Quem está recebendo o item"></div>
+        </div>
+        <div class="form-grid">
+          <div class="form-field"><label>Responsável pela entrega *</label>
+            <input type="text" id="sai-responsavel" placeholder="Quem está entregando"></div>
+          <div class="form-field"><label>Data da entrega *</label>
+            <input type="date" id="sai-data-entrega"></div>
+        </div>
+        <div class="form-grid">
+          <div class="form-field"><label>Motivo *</label>
+            <input type="text" id="sai-motivo" placeholder="Motivo da saída"></div>
+          <div class="form-field"><label>Observação</label>
+            <input type="text" id="sai-obs" placeholder="Opcional"></div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -3145,7 +3169,7 @@ function abrirModalTriagem(id) {
   }
 
   toggleCamposTriagem();
-  modal.style.display = 'flex';
+  modal.classList.add('open');
 }
 
 function salvarAtendimentoTriagem() {
@@ -3376,22 +3400,29 @@ function renderizarEstoque() {
   const movs = (est.movimentacoes || []).slice(0, 300);
   const tbH  = document.getElementById('tbody-est-hist');
   if (!movs.length) {
-    tbH.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:28px;color:var(--cz2)">Nenhuma movimentação registrada ainda.</td></tr>`;
+    tbH.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:28px;color:var(--cz2)">Nenhuma movimentação registrada ainda.</td></tr>`;
     return;
   }
   const badgeMov = { 'Entrada':'badge-ok', 'Saída':'badge-vencido', 'Devolução':'badge-atencao', 'Baixa':'badge-vencendo' };
-  tbH.innerHTML = movs.map(m => `<tr>
-    <td style="white-space:nowrap;font-size:.8rem">${new Date(m.ts).toLocaleString('pt-BR')}</td>
-    <td><span class="badge ${badgeMov[m.tipo]||''}">${m.tipo}</span></td>
-    <td>${m.categoria||''}</td>
-    <td>${m.item||''}</td>
-    <td>${m.tamanho||'—'}</td>
-    <td style="text-align:center">${m.quantidade}</td>
-    <td>${m.responsavel||''}</td>
-    <td>${m.motivo||'—'}</td>
-    <td>${m.monitorado||'—'}</td>
-    <td>${m.obs||'—'}</td>
-  </tr>`).join('');
+  tbH.innerHTML = movs.map(m => {
+    const isSaida = m.tipo === 'Saída';
+    const dtEntrega = m.dataEntrega ? m.dataEntrega.split('-').reverse().join('/') : '—';
+    return `<tr>
+      <td style="white-space:nowrap;font-size:.8rem">${new Date(m.ts).toLocaleString('pt-BR')}</td>
+      <td><span class="badge ${badgeMov[m.tipo]||''}">${m.tipo}</span></td>
+      <td>${m.categoria||''}</td>
+      <td>${m.item||''}</td>
+      <td>${m.tamanho||'—'}</td>
+      <td style="text-align:center">${m.quantidade}</td>
+      <td>${m.responsavel||''}</td>
+      <td>${m.motivo||'—'}</td>
+      <td>${m.monitorado||'—'}</td>
+      <td>${isSaida ? (m.plantao||'—') : '—'}</td>
+      <td>${isSaida ? (m.plantonista||'—') : '—'}</td>
+      <td>${isSaida ? dtEntrega : '—'}</td>
+      <td>${m.obs||'—'}</td>
+    </tr>`;
+  }).join('');
 }
 
 /* ─ Abrir modais ────────────────────────────────────────── */
@@ -3401,12 +3432,18 @@ function abrirModalEstoque(tipo) {
   const pfxs = { entrada:'ent', saida:'sai', devolucao:'dev', baixa:'bxa' };
   const pfx  = pfxs[tipo];
   // Limpar campos
-  ['categoria','tipo','tamanho','quantidade','responsavel','obs','motivo','monitorado','processo','numserie'].forEach(f => {
+  ['categoria','tipo','tamanho','quantidade','responsavel','obs','motivo','monitorado','processo','numserie','plantao','plantonista','data-entrega'].forEach(f => {
     const el = document.getElementById(pfx + '-' + f);
     if (!el) return;
     if (el.tagName === 'SELECT') el.selectedIndex = 0;
     else el.value = '';
   });
+  // Pré-preenche o responsável com o nome do operador logado
+  const respEl = document.getElementById(pfx + '-responsavel');
+  if (respEl) respEl.value = usuarioAtual?.nome || '';
+  // Pré-preenche a data de entrega (saída) com hoje
+  const dataEntregaEl = document.getElementById(pfx + '-data-entrega');
+  if (dataEntregaEl) dataEntregaEl.value = new Date().toISOString().slice(0,10);
   atualizarTiposEst(pfx);
   document.getElementById(ids[tipo]).classList.add('open');
 }
@@ -3454,6 +3491,9 @@ function salvarMovEstoque(tipo) {
   if (qtd < 1)                               return alert('Informe uma quantidade válida (mínimo 1).');
   if (!resp)                                 return alert('Informe o responsável.');
   if ((tipo === 'saida' || tipo === 'baixa') && !g('motivo')) return alert('Informe o motivo.');
+  if (tipo === 'saida' && !g('plantao'))     return alert('Selecione o plantão que recebe.');
+  if (tipo === 'saida' && !g('plantonista')) return alert('Informe o nome do plantonista.');
+  if (tipo === 'saida' && !g('data-entrega')) return alert('Informe a data da entrega.');
 
   const chave  = estChave(itemTipo, tamanho);
   const est    = getEstoque();
@@ -3470,20 +3510,24 @@ function salvarMovEstoque(tipo) {
 
   // Registrar movimentação
   const mov = {
-    id:         Date.now() + '-' + Math.random().toString(36).slice(2, 7),
-    ts:         new Date().toISOString(),
-    tipo:       tipoLabel,
+    id:           Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+    ts:           new Date().toISOString(),
+    tipo:         tipoLabel,
     categoria,
-    item:       itemTipo,
-    tamanho:    tamanho || '',
-    quantidade: qtd,
-    responsavel: resp,
-    motivo:     g('motivo'),
-    monitorado: g('monitorado'),
-    processo:   g('processo'),
-    obs:        g('obs'),
-    estado:     g('estado'),
-    numSerie:   g('numserie'),
+    item:         itemTipo,
+    tamanho:      tamanho || '',
+    quantidade:   qtd,
+    responsavel:  resp,
+    motivo:       g('motivo'),
+    monitorado:   g('monitorado'),
+    processo:     g('processo'),
+    obs:          g('obs'),
+    estado:       g('estado'),
+    numSerie:     g('numserie'),
+    // Campos exclusivos de Saída
+    plantao:      tipo === 'saida' ? g('plantao')      : '',
+    plantonista:  tipo === 'saida' ? g('plantonista')  : '',
+    dataEntrega:  tipo === 'saida' ? g('data-entrega') : '',
   };
   est.movimentacoes.unshift(mov);
   if (est.movimentacoes.length > 500) est.movimentacoes = est.movimentacoes.slice(0, 500);
