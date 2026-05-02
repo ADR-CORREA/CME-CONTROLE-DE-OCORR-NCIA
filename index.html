@@ -282,6 +282,7 @@ input, select, textarea, button { font-family: var(--font-sans); }
   border-bottom-color: var(--am2);
 }
 .admin-only { display: none; }
+.gerencia-only { display: none; }
 
 /* MAIN CONTENT */
 .main {
@@ -916,6 +917,7 @@ input, select, textarea, button { font-family: var(--font-sans); }
     <div class="nav-tab" onclick="mudarAba('comunicacao')">📡 Comunicação</div>
     <div class="nav-tab" onclick="mudarAba('estoque')">📦 Estoque</div>
     <div class="nav-tab" onclick="mudarAba('triagem')">🗂️ Triagem</div>
+    <div class="nav-tab gerencia-only" onclick="mudarAba('gerencia')">📋 Gerência</div>
     <div class="nav-tab admin-only" onclick="mudarAba('admin')">🔧 Administração</div>
   </div>
 
@@ -1134,6 +1136,39 @@ input, select, textarea, button { font-family: var(--font-sans); }
               </tr>
             </thead>
             <tbody id="tbody-juridico"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── GERÊNCIA ─── -->
+    <div class="tab-panel" id="panel-gerencia">
+      <div class="table-wrapper">
+        <div class="table-toolbar">
+          <div style="font-size:1.1rem;font-weight:700;color:var(--az1)">📋 Agenda de Demandas — Gerência</div>
+          <div class="table-actions">
+            <button class="btn-secondary" onclick="renderizarGerencia()">🔄 Atualizar</button>
+            <button class="btn-primary" onclick="abrirModalGerencia()">➕ Nova Demanda</button>
+          </div>
+        </div>
+        <!-- Legenda -->
+        <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;font-size:.84rem">
+          <span style="background:#ffeaea;padding:3px 10px;border-radius:6px;border:1px solid #f5c6c6">🔴 Vencida</span>
+          <span style="background:#fff8e1;padding:3px 10px;border-radius:6px;border:1px solid #ffe082">🟡 Vencendo (≤2 dias)</span>
+          <span style="background:#f0fff4;padding:3px 10px;border-radius:6px;border:1px solid #b2dfdb">🟢 No prazo</span>
+          <span style="background:#f5f5f5;padding:3px 10px;border-radius:6px;border:1px solid #ccc">✅ Concluída</span>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th>Prazo</th>
+              <th>Demanda</th>
+              <th>Descrição</th>
+              <th>Responsável</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr></thead>
+            <tbody id="tbody-gerencia"></tbody>
           </table>
         </div>
       </div>
@@ -1459,7 +1494,7 @@ input, select, textarea, button { font-family: var(--font-sans); }
           </div>
           <div class="form-field">
             <label>Data / Hora do Alerta *</label>
-            <input type="datetime-local" id="oc-data">
+            <input type="datetime-local" id="oc-data" onchange="atualizarPlantaoOcorrencia()">
           </div>
           <div class="form-field">
             <label>Monitorado *</label>
@@ -1523,40 +1558,9 @@ input, select, textarea, button { font-family: var(--font-sans); }
         </div>
       </div>
 
-      <div class="form-section">
-        <div class="form-section-title">Acompanhamento</div>
-        <div class="form-grid">
-          <div class="form-field">
-            <label>CIODES Acionado?</label>
-            <select id="oc-ciodes">
-              <option value="">Não</option>
-              <option value="SIM">SIM</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label>PRODOC Enviado?</label>
-            <select id="oc-prodoc" onchange="toggleProdocFields()">
-              <option value="">Não</option>
-              <option value="SIM">SIM</option>
-            </select>
-          </div>
-          <div class="form-field" id="prodoc-num-field" style="display:none">
-            <label>Nº PRODOC</label>
-            <input type="text" id="oc-prodoc-num" placeholder="Número do PRODOC">
-          </div>
-          <div class="form-field" id="prodoc-data-field" style="display:none">
-            <label>Data PRODOC</label>
-            <input type="date" id="oc-prodoc-data">
-          </div>
-        </div>
-        <div class="form-field full" style="margin-top:10px">
-          <label>Contatos realizados <span style="color:var(--cz2);font-weight:400">(formato: DD/MM HHh RESULTADO, ...)</span></label>
-          <textarea id="oc-contatos" placeholder="Ex: 21/04 08h NA, 21/04 14h WP, 22/04 09h AT"></textarea>
-        </div>
-        <div class="form-field full" style="margin-top:10px">
-          <label>Obs. Finais / Resolução</label>
-          <textarea id="oc-obs"></textarea>
-        </div>
+      <div class="form-field full" style="margin-top:10px">
+        <label>Obs. Finais / Resolução</label>
+        <textarea id="oc-obs"></textarea>
       </div>
     </div>
     <div class="modal-footer">
@@ -1752,6 +1756,15 @@ input, select, textarea, button { font-family: var(--font-sans); }
       </div>
       <div class="form-grid">
         <div class="form-field">
+          <label>CIODES acionado?</label>
+          <select id="com-ciodes">
+            <option value="">Não</option>
+            <option value="SIM">SIM</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
           <label>PRODOC enviado? *</label>
           <select id="com-prodoc" onchange="toggleComProdoc()">
             <option value="">Não</option>
@@ -1775,6 +1788,49 @@ input, select, textarea, button { font-family: var(--font-sans); }
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-comunicacao')">Cancelar</button>
       <button class="btn-primary" onclick="salvarComunicacao()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GERÊNCIA -->
+<div class="modal-overlay" id="modal-gerencia">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-header">
+      <h3 id="ger-modal-title">➕ Nova Demanda</h3>
+      <button class="modal-close" onclick="fecharModal('modal-gerencia')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ger-edit-id">
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Prazo *</label>
+          <input type="date" id="ger-prazo">
+        </div>
+        <div class="form-field">
+          <label>Responsável</label>
+          <input type="text" id="ger-responsavel" placeholder="Nome do responsável">
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Demanda / Título *</label>
+        <input type="text" id="ger-titulo" placeholder="Título da demanda">
+      </div>
+      <div class="form-field">
+        <label>Descrição</label>
+        <textarea id="ger-descricao" rows="3" placeholder="Detalhes da demanda (opcional)" style="resize:vertical"></textarea>
+      </div>
+      <div class="form-field">
+        <label>Status</label>
+        <select id="ger-status">
+          <option value="pendente">Pendente</option>
+          <option value="em_andamento">Em andamento</option>
+          <option value="concluida">Concluída</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-gerencia')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarDemandaGerencia()">💾 Salvar</button>
     </div>
   </div>
 </div>
@@ -1896,7 +1952,7 @@ input, select, textarea, button { font-family: var(--font-sans); }
           <div class="form-field"><label>Responsável pela entrega *</label>
             <input type="text" id="sai-responsavel" placeholder="Quem está entregando"></div>
           <div class="form-field"><label>Data da entrega *</label>
-            <input type="date" id="sai-data-entrega"></div>
+            <input type="date" id="sai-data-entrega" onchange="atualizarPlantaoSaida()"></div>
         </div>
         <div class="form-grid">
           <div class="form-field"><label>Motivo *</label>
@@ -2274,6 +2330,9 @@ function iniciarApp() {
   document.querySelectorAll(".admin-only").forEach(el => {
     el.style.display = (nivel === "admin") ? "block" : "none";
   });
+  document.querySelectorAll(".gerencia-only").forEach(el => {
+    el.style.display = (['admin','gerencia'].includes(nivel)) ? "flex" : "none";
+  });
 
   atualizarTudo();
   mudarAba("dashboard");
@@ -2286,7 +2345,7 @@ function mudarAba(aba) {
   document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
   const tabs = document.querySelectorAll(".nav-tab");
-  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, comunicacao: 4, estoque: 5, triagem: 6, admin: 7 };
+  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, comunicacao: 4, estoque: 5, triagem: 6, gerencia: 7, admin: 8 };
   if (tabs[map[aba]]) tabs[map[aba]].classList.add("active");
   const panel = document.getElementById("panel-" + aba);
   if (panel) panel.classList.add("active");
@@ -2297,6 +2356,7 @@ function mudarAba(aba) {
   if (aba === "comunicacao") renderizarComunicacao();
   if (aba === "estoque") renderizarEstoque();
   if (aba === "triagem") renderizarTriagem();
+  if (aba === "gerencia") renderizarGerencia();
   if (aba === "admin") { renderizarUsers(); renderizarLogs(); }
 }
 
@@ -2532,16 +2592,37 @@ function renderizarJuridico() {
 }
 function filtrarJuridico(v) { filtroJur = v; renderizarJuridico(); }
 
+// Ciclo de plantões: referência 01/05/2026 = DELTA (índice 3)
+const PLANTOES = ['ALFA', 'BRAVO', 'CHARLIE', 'DELTA', 'ECHO'];
+function getPlantaoParaData(dataStr) {
+  const ref = new Date('2026-05-01T00:00:00');
+  const data = new Date(dataStr.slice(0,10) + 'T00:00:00');
+  const diffDias = Math.round((data - ref) / 86400000);
+  const idx = ((3 + diffDias) % 5 + 5) % 5;
+  return PLANTOES[idx];
+}
+
+function atualizarPlantaoOcorrencia() {
+  const dataEl = document.getElementById('oc-data');
+  const plantaoEl = document.getElementById('oc-plantao');
+  if (dataEl && plantaoEl && dataEl.value) {
+    plantaoEl.value = getPlantaoParaData(dataEl.value);
+  }
+  recalcularStatus();
+}
+
 /* ─── MODAL OCORRÊNCIA ───────────────────────────────── */
 function abrirModalNovaOcorrencia() {
   document.getElementById("modal-title").textContent = "Nova Ocorrência";
   document.getElementById("oc-id-edit").value = "";
   document.getElementById("oc-id").value = "";
-  document.getElementById("oc-data").value = new Date().toISOString().slice(0,16);
+  const _agora = new Date(); _agora.setMinutes(_agora.getMinutes() - _agora.getTimezoneOffset());
+  document.getElementById("oc-data").value = _agora.toISOString().slice(0,16);
   document.getElementById("oc-monitorado").value = "";
   document.getElementById("oc-medida").value = "";
   document.getElementById("oc-tipo").value = "";
-  document.getElementById("oc-plantao").value = usuarioAtual?.nome || "";
+  const _plantaoAuto = getPlantaoParaData(new Date().toISOString());
+  document.getElementById("oc-plantao").value = _plantaoAuto;
   document.getElementById("oc-operador").value = "";
   document.getElementById("oc-descricao").value = "";
   document.getElementById("oc-ciodes").value = "";
@@ -2597,7 +2678,7 @@ function recalcularStatus() {
 }
 
 // Recalcular quando data mudar
-document.getElementById("oc-data").addEventListener("change", recalcularStatus);
+document.getElementById("oc-data").addEventListener("change", atualizarPlantaoOcorrencia);
 
 function salvarOcorrencia() {
   const idEdit = document.getElementById("oc-id-edit").value;
@@ -3091,6 +3172,129 @@ function baixarModeloExcel() {
   XLSX.writeFile(wb, "modelo_importacao_CME.xlsx");
 }
 
+/* ═══════════════════════ MÓDULO GERÊNCIA ════════════════════════ */
+
+function getGerencia() {
+  return carregarStore('gerencia', { demandas: [] });
+}
+
+function renderizarGerencia() {
+  const dados = getGerencia();
+  const lista = (dados.demandas || []).slice().sort((a,b) => (a.prazo||'').localeCompare(b.prazo||''));
+  const tbody = document.getElementById('tbody-gerencia');
+  if (!tbody) return;
+
+  const hoje = new Date().toISOString().slice(0,10);
+  const doisDias = new Date(); doisDias.setDate(doisDias.getDate() + 2);
+  const doisDiasStr = doisDias.toISOString().slice(0,10);
+
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#888">Nenhuma demanda cadastrada.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = lista.map(d => {
+    let rowStyle = '';
+    let statusBadge = '';
+    if (d.status === 'concluida') {
+      rowStyle = 'background:#f5f5f5;color:#888;text-decoration:line-through';
+      statusBadge = '<span class="badge badge-ok">✅ Concluída</span>';
+    } else if (d.prazo < hoje) {
+      rowStyle = 'background:#ffeaea';
+      statusBadge = '<span class="badge badge-vencido">🔴 Vencida</span>';
+    } else if (d.prazo <= doisDiasStr) {
+      rowStyle = 'background:#fff8e1';
+      statusBadge = '<span class="badge badge-atencao">🟡 Vencendo</span>';
+    } else {
+      rowStyle = 'background:#f0fff4';
+      statusBadge = d.status === 'em_andamento'
+        ? '<span class="badge badge-vencendo">🔵 Em andamento</span>'
+        : '<span class="badge">🟢 Pendente</span>';
+    }
+    const prazoFmt = (d.prazo||'').split('-').reverse().join('/');
+    return `<tr style="${rowStyle}">
+      <td style="white-space:nowrap;font-weight:600">${prazoFmt}</td>
+      <td>${d.titulo||''}</td>
+      <td>${d.descricao||''}</td>
+      <td>${d.responsavel||''}</td>
+      <td>${statusBadge}</td>
+      <td>
+        <button class="btn-sm btn-outline" onclick="abrirModalGerencia('${d.id}')">✏️</button>
+        <button class="btn-sm btn-danger" onclick="excluirDemandaGerencia('${d.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirModalGerencia(id) {
+  const titleEl = document.getElementById('ger-modal-title');
+  document.getElementById('ger-edit-id').value = '';
+  document.getElementById('ger-titulo').value = '';
+  document.getElementById('ger-descricao').value = '';
+  document.getElementById('ger-responsavel').value = usuarioAtual?.nome || '';
+  document.getElementById('ger-status').value = 'pendente';
+  // Default prazo = amanhã
+  const amanha = new Date(); amanha.setDate(amanha.getDate() + 1);
+  document.getElementById('ger-prazo').value = amanha.toISOString().slice(0,10);
+
+  if (id) {
+    const dados = getGerencia();
+    const d = (dados.demandas||[]).find(x => x.id === id);
+    if (d) {
+      document.getElementById('ger-edit-id').value = d.id;
+      document.getElementById('ger-titulo').value = d.titulo || '';
+      document.getElementById('ger-descricao').value = d.descricao || '';
+      document.getElementById('ger-responsavel').value = d.responsavel || '';
+      document.getElementById('ger-status').value = d.status || 'pendente';
+      document.getElementById('ger-prazo').value = d.prazo || '';
+      if (titleEl) titleEl.textContent = '✏️ Editar Demanda';
+    }
+  } else {
+    if (titleEl) titleEl.textContent = '➕ Nova Demanda';
+  }
+  document.getElementById('modal-gerencia').classList.add('open');
+}
+
+function salvarDemandaGerencia() {
+  const titulo = document.getElementById('ger-titulo').value.trim();
+  const prazo  = document.getElementById('ger-prazo').value;
+  if (!titulo || !prazo) { _mostrarToast('⚠️ Preencha o título e o prazo.', 'erro'); return; }
+
+  const dados = getGerencia();
+  const lista = dados.demandas || [];
+  const editId = document.getElementById('ger-edit-id').value;
+
+  const obj = {
+    titulo,
+    prazo,
+    descricao:   document.getElementById('ger-descricao').value.trim(),
+    responsavel: document.getElementById('ger-responsavel').value.trim(),
+    status:      document.getElementById('ger-status').value,
+  };
+
+  if (editId) {
+    const idx = lista.findIndex(x => x.id === editId);
+    if (idx >= 0) lista[idx] = { ...lista[idx], ...obj };
+  } else {
+    lista.push({ id: 'ger_' + Date.now(), ...obj, criadoEm: new Date().toISOString() });
+  }
+
+  dados.demandas = lista;
+  salvarStore('gerencia', dados);
+  fecharModal('modal-gerencia');
+  renderizarGerencia();
+  _mostrarToast('✅ Demanda salva!', 'sucesso');
+}
+
+function excluirDemandaGerencia(id) {
+  if (!confirm('Excluir esta demanda?')) return;
+  const dados = getGerencia();
+  dados.demandas = (dados.demandas||[]).filter(d => d.id !== id);
+  salvarStore('gerencia', dados);
+  renderizarGerencia();
+  _mostrarToast('🗑️ Demanda excluída.', 'sucesso');
+}
+
 /* ═══════════════════════ MÓDULO TRIAGEM ════════════════════════ */
 
 function podeAlterarTriagem() {
@@ -3530,6 +3734,7 @@ function abrirModalComunicacao(idx) {
   document.getElementById('com-edit-idx').value = idx;
   document.getElementById('com-id-display').textContent = o.id;
   document.getElementById('com-monitorado-display').textContent = o.monitorado || '';
+  document.getElementById('com-ciodes').value = o.ciodes || '';
   document.getElementById('com-prodoc').value = o.prodoc || '';
   document.getElementById('com-prodoc-num').value = o.prodocNum || '';
   document.getElementById('com-prodoc-data').value = o.prodocData || '';
@@ -3548,6 +3753,7 @@ function salvarComunicacao() {
   const idx = parseInt(document.getElementById('com-edit-idx').value);
   const ocs = getOcorrencias();
   if (!ocs[idx]) return;
+  ocs[idx].ciodes = document.getElementById('com-ciodes').value;
   ocs[idx].prodoc = document.getElementById('com-prodoc').value;
   ocs[idx].prodocNum = document.getElementById('com-prodoc-num').value.trim();
   ocs[idx].prodocData = document.getElementById('com-prodoc-data').value;
@@ -3805,6 +4011,14 @@ function renderizarEstoque() {
 }
 
 /* ─ Abrir modais ────────────────────────────────────────── */
+function atualizarPlantaoSaida() {
+  const dataEl = document.getElementById('sai-data-entrega');
+  const plantaoEl = document.getElementById('sai-plantao');
+  if (dataEl && plantaoEl && dataEl.value) {
+    plantaoEl.value = getPlantaoParaData(dataEl.value);
+  }
+}
+
 function abrirModalEstoque(tipo) {
   if (!podeAlterarEstoque()) { alert('Sem permissão para alterar o estoque.'); return; }
   const ids = { entrada:'modal-est-entrada', saida:'modal-est-saida', devolucao:'modal-est-devolucao', baixa:'modal-est-baixa' };
@@ -3823,6 +4037,11 @@ function abrirModalEstoque(tipo) {
   // Pré-preenche a data de entrega (saída) com hoje
   const dataEntregaEl = document.getElementById(pfx + '-data-entrega');
   if (dataEntregaEl) dataEntregaEl.value = new Date().toISOString().slice(0,10);
+  // Auto-preenche plantão para saída
+  if (tipo === 'saida') {
+    const plantaoEl = document.getElementById('sai-plantao');
+    if (plantaoEl) plantaoEl.value = getPlantaoParaData(new Date().toISOString());
+  }
   atualizarTiposEst(pfx);
   document.getElementById(ids[tipo]).classList.add('open');
 }
@@ -4002,6 +4221,10 @@ setInterval(atualizarTudo, 300000);
     if (!data.find(r => r.key === 'cme_triagem')) {
       _cache['triagem'] = { atendimentos: [] };
       seeds.push(window._db.from('store').insert({ key: 'cme_triagem', value: { atendimentos: [] } }));
+    }
+    if (!data.find(r => r.key === 'cme_gerencia')) {
+      _cache['gerencia'] = { demandas: [] };
+      seeds.push(window._db.from('store').insert({ key: 'cme_gerencia', value: { demandas: [] } }));
     }
     if (seeds.length) {
       loadingMsg.textContent = 'Inicializando banco pela primeira vez...';
