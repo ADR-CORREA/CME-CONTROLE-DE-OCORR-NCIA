@@ -811,6 +811,38 @@ input, select, textarea, button { font-family: var(--font-sans); }
   .topbar, .nav-tabs, .table-toolbar, .table-actions, .modal-overlay { display: none !important; }
   .main { padding: 0; }
 }
+
+/* ═══════════════════════ MÓDULO ESTOQUE ════════════════════════ */
+.est-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+.est-header-title { font-size:1.2rem; font-weight:700; color:var(--az1); }
+.est-header-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.est-aviso-perm { background:var(--am3); border:1px solid var(--am2); border-radius:var(--radius); padding:10px 16px; margin-bottom:16px; font-size:.84rem; color:var(--am1); }
+.est-alerta-box { background:var(--vm3); border:1px solid var(--vm2); border-radius:var(--radius); padding:10px 14px; margin-bottom:14px; font-size:.83rem; color:var(--vm1); }
+.est-kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin-bottom:24px; }
+.est-kpi { background:#fff; border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); border-left:4px solid var(--az3); }
+.est-kpi.alerta { border-left-color:var(--am2); }
+.est-kpi.perigo  { border-left-color:var(--vm2); }
+.est-kpi-num   { font-size:1.65rem; font-weight:700; color:var(--az1); line-height:1; }
+.est-kpi-label { font-size:.72rem; color:var(--cz2); margin-top:4px; }
+.est-section-title { font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--cz2); margin:20px 0 8px; border-bottom:1px solid var(--cz3); padding-bottom:6px; }
+.est-badge { display:inline-block; padding:2px 9px; border-radius:4px; font-size:.71rem; font-weight:700; letter-spacing:.03em; }
+.est-badge.ok    { background:var(--vd3); color:var(--vd1); }
+.est-badge.baixo { background:var(--am3); color:var(--am1); }
+.est-badge.zero  { background:var(--vm3); color:var(--vm1); }
+
+/* ═══════════════════════ MÓDULO TRIAGEM ════════════════════════ */
+.tri-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
+.tri-header-title { font-size:1.2rem; font-weight:700; color:var(--az1); }
+.tri-aviso-perm { background:var(--am3); border:1px solid var(--am2); border-radius:var(--radius); padding:10px 16px; margin-bottom:14px; font-size:.84rem; color:var(--am1); }
+.tri-filtros { background:#fff; border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); margin-bottom:18px; }
+.tri-filtros-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px; align-items:end; }
+.tri-filtros-title { font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--cz2); margin-bottom:10px; }
+.tri-badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:.71rem; font-weight:700; }
+.tri-badge.cautelar  { background:var(--az5); color:var(--az2); }
+.tri-badge.execucao  { background:var(--rx3); color:var(--rx1); }
+.tri-badge.protetiva { background:var(--vm3); color:var(--vm1); }
+.tri-badge.agressor  { background:var(--vm3); color:var(--vm1); }
+.tri-badge.vitima    { background:var(--vd3); color:var(--vd1); }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -881,6 +913,8 @@ input, select, textarea, button { font-family: var(--font-sans); }
     <div class="nav-tab" onclick="mudarAba('criticos')">🚨 Críticos</div>
     <div class="nav-tab" onclick="mudarAba('ocorrencias')">📋 Ocorrências</div>
     <div class="nav-tab" onclick="mudarAba('juridico')">⚖️ Jurídico</div>
+    <div class="nav-tab" onclick="mudarAba('estoque')">📦 Estoque</div>
+    <div class="nav-tab" onclick="mudarAba('triagem')">🗂️ Triagem</div>
     <div class="nav-tab admin-only" onclick="mudarAba('admin')">🔧 Administração</div>
   </div>
 
@@ -1130,6 +1164,8 @@ input, select, textarea, button { font-family: var(--font-sans); }
                   <option value="comunicacao">Comunicação Processual</option>
                   <option value="juridico">Jurídico</option>
                   <option value="gerencia">Gerência</option>
+                  <option value="estoque">Estoque</option>
+                  <option value="triagem">Triagem</option>
                   <option value="admin">Administrador</option>
                 </select>
               </div>
@@ -1165,6 +1201,188 @@ input, select, textarea, button { font-family: var(--font-sans); }
         </div>
       </div>
     </div>
+
+    <!-- ─── ESTOQUE ─── -->
+    <div class="tab-panel" id="panel-estoque">
+      <div class="est-header">
+        <div class="est-header-title">📦 Estoque — CME/IAPEN-AP</div>
+        <div class="est-header-actions" id="est-btns-acao">
+          <button class="btn-primary"   onclick="abrirModalEstoque('entrada')">⬆ Entrada</button>
+          <button class="btn-secondary" onclick="abrirModalEstoque('saida')">⬇ Saída</button>
+          <button class="btn-secondary" onclick="abrirModalEstoque('devolucao')">↩ Devolução</button>
+          <button class="btn-danger"    onclick="abrirModalEstoque('baixa')">✕ Baixa</button>
+        </div>
+      </div>
+
+      <div id="est-aviso-perm" class="est-aviso-perm" style="display:none">
+        🔒 <strong>Modo visualização:</strong> seu perfil não possui permissão para alterar o estoque.
+      </div>
+      <div id="est-alertas"></div>
+
+      <!-- KPI Cards -->
+      <div class="est-kpi-grid">
+        <div class="est-kpi"><div class="est-kpi-num" id="est-k-mod">0</div><div class="est-kpi-label">Módulo Eletrônico</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="est-k-cinta">0</div><div class="est-kpi-label">Cintas (total)</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="est-k-trava">0</div><div class="est-kpi-label">Travas</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="est-k-carrtor">0</div><div class="est-kpi-label">Carregadores Tornozeleira</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="est-k-dpp">0</div><div class="est-kpi-label">Dispositivos DPP</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="est-k-carrdpp">0</div><div class="est-kpi-label">Carregadores DPP</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="est-k-chip">0</div><div class="est-kpi-label">Chips DPP</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="est-k-total">0</div><div class="est-kpi-label">Total Geral</div></div>
+        <div class="est-kpi alerta"><div class="est-kpi-num" id="est-k-baixo">0</div><div class="est-kpi-label">Estoque Baixo</div></div>
+        <div class="est-kpi perigo"><div class="est-kpi-num" id="est-k-zero">0</div><div class="est-kpi-label">Sem Estoque</div></div>
+      </div>
+
+      <!-- Tabela Tornozeleira -->
+      <div class="est-section-title">Tornozeleira Eletrônica</div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead><tr><th>Item</th><th>Tamanho</th><th style="text-align:center">Qtd. Atual</th><th style="text-align:center">Mínimo</th><th>Status</th></tr></thead>
+          <tbody id="tbody-est-torn"></tbody>
+        </table>
+      </div>
+
+      <!-- Tabela DPP -->
+      <div class="est-section-title">DPP — Dispositivo de Proteção Pessoal</div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead><tr><th>Item</th><th style="text-align:center">Qtd. Atual</th><th style="text-align:center">Mínimo</th><th>Status</th></tr></thead>
+          <tbody id="tbody-est-dpp"></tbody>
+        </table>
+      </div>
+
+      <!-- Histórico -->
+      <div class="est-section-title" style="margin-top:28px">Histórico de Movimentações</div>
+      <div class="table-wrapper" style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr>
+            <th>Data/Hora</th><th>Tipo</th><th>Categoria</th><th>Item</th><th>Tamanho</th>
+            <th>Qtd</th><th>Responsável</th><th>Motivo</th><th>Monitorado</th><th>Observação</th>
+          </tr></thead>
+          <tbody id="tbody-est-hist"></tbody>
+        </table>
+      </div>
+    </div><!-- /panel-estoque -->
+
+    <!-- ─── TRIAGEM ─── -->
+    <div class="tab-panel" id="panel-triagem">
+      <div class="tri-header">
+        <div class="tri-header-title">🗂️ Triagem — Atendimentos CME</div>
+        <div id="tri-btns-acao">
+          <button class="btn-secondary" onclick="exportarTriagem()">📥 Exportar Excel</button>
+          <button class="btn-primary" onclick="abrirModalTriagem()">➕ Novo Atendimento</button>
+        </div>
+      </div>
+
+      <div id="tri-aviso-perm" class="tri-aviso-perm" style="display:none">
+        🔒 <strong>Modo visualização:</strong> você possui acesso somente para visualização da triagem.
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="est-kpi-grid" id="tri-kpi-grid">
+        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-hoje">0</div><div class="est-kpi-label">Atendimentos Hoje</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-total">0</div><div class="est-kpi-label">Total Geral</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-endereco">0</div><div class="est-kpi-label">Mudança de Endereço</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-vinc">0</div><div class="est-kpi-label">Vinculações</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-desvinc">0</div><div class="est-kpi-label">Desvinculações</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-justif">0</div><div class="est-kpi-label">Justificativas</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-info">0</div><div class="est-kpi-label">Informações</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-juridico">0</div><div class="est-kpi-label">Setor Jurídico</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-multi">0</div><div class="est-kpi-label">Equipe Multidisciplinar</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-protetiva">0</div><div class="est-kpi-label">Medidas Protetivas</div></div>
+        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-adv">0</div><div class="est-kpi-label">Advogados Atendidos</div></div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="tri-filtros">
+        <div class="tri-filtros-title">🔍 Filtros</div>
+        <div class="tri-filtros-grid">
+          <div class="form-field" style="margin:0">
+            <label>Nome</label>
+            <input type="text" id="tri-f-nome" placeholder="Buscar por nome..." oninput="renderizarTriagem()">
+          </div>
+          <div class="form-field" style="margin:0">
+            <label>CPF</label>
+            <input type="text" id="tri-f-cpf" placeholder="000.000.000-00" oninput="renderizarTriagem()">
+          </div>
+          <div class="form-field" style="margin:0">
+            <label>Tipo de Atendimento</label>
+            <select id="tri-f-tipo" onchange="renderizarTriagem()">
+              <option value="">Todos</option>
+              <option>Mudança de endereço</option>
+              <option>Desvinculação</option>
+              <option>Vinculação</option>
+              <option>Justificativa</option>
+              <option>Informação</option>
+              <option>Setor Jurídico</option>
+              <option>Equipe Multidisciplinar</option>
+              <option>Outros</option>
+            </select>
+          </div>
+          <div class="form-field" style="margin:0">
+            <label>Tipo de Medida</label>
+            <select id="tri-f-medida" onchange="renderizarTriagem()">
+              <option value="">Todas</option>
+              <option>Medida cautelar</option>
+              <option>Vara de Execuções Penais</option>
+              <option>Medida protetiva</option>
+            </select>
+          </div>
+          <div class="form-field" style="margin:0">
+            <label>Condição (Protetiva)</label>
+            <select id="tri-f-condicao" onchange="renderizarTriagem()">
+              <option value="">Todas</option>
+              <option>Agressor</option>
+              <option>Vítima</option>
+            </select>
+          </div>
+          <div class="form-field" style="margin:0">
+            <label>Advogado?</label>
+            <select id="tri-f-adv" onchange="renderizarTriagem()">
+              <option value="">Todos</option>
+              <option value="Sim">Sim</option>
+              <option value="Não">Não</option>
+            </select>
+          </div>
+          <div class="form-field" style="margin:0">
+            <label>Responsável</label>
+            <input type="text" id="tri-f-resp" placeholder="Nome do responsável" oninput="renderizarTriagem()">
+          </div>
+          <div class="form-field" style="margin:0">
+            <label>Data início</label>
+            <input type="date" id="tri-f-inicio" onchange="renderizarTriagem()">
+          </div>
+          <div class="form-field" style="margin:0">
+            <label>Data fim</label>
+            <input type="date" id="tri-f-fim" onchange="renderizarTriagem()">
+          </div>
+          <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+            <button class="btn-secondary" style="width:100%" onclick="limparFiltrosTriagem()">✕ Limpar Filtros</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabela -->
+      <div class="est-section-title" id="tri-count-label">Atendimentos</div>
+      <div class="table-wrapper" style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr>
+            <th>Data/Hora</th>
+            <th>Nome</th>
+            <th>CPF</th>
+            <th>Tipo Atendimento</th>
+            <th>Tipo Medida</th>
+            <th>Condição</th>
+            <th>Advogado?</th>
+            <th>Cliente Monitorado</th>
+            <th>Responsável</th>
+            <th>Observação</th>
+            <th id="tri-col-acoes" style="display:none">Ações</th>
+          </tr></thead>
+          <tbody id="tbody-triagem"></tbody>
+        </table>
+      </div>
+    </div><!-- /panel-triagem -->
 
   </div><!-- /main -->
 </div><!-- /app -->
@@ -1367,6 +1585,297 @@ input, select, textarea, button { font-family: var(--font-sans); }
 </div>
 
 <!-- ═══════════════════════════════════════════════════════
+     MODAIS DE ESTOQUE
+═══════════════════════════════════════════════════════ -->
+
+<!-- TRIAGEM -->
+<div class="modal-overlay" id="modal-triagem">
+  <div class="modal-box" style="max-width:680px">
+    <div class="modal-header">
+      <h3 id="tri-modal-title">➕ Novo Atendimento</h3>
+      <button class="modal-close" onclick="fecharModal('modal-triagem')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="tri-edit-id">
+      <div class="form-section">
+        <div class="form-section-title">Identificação da Pessoa</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Nome completo *</label>
+            <input type="text" id="tri-nome" placeholder="Nome da pessoa atendida">
+          </div>
+          <div class="form-field">
+            <label>CPF *</label>
+            <input type="text" id="tri-cpf" placeholder="000.000.000-00" maxlength="14" oninput="mascararCPF(this)">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>É advogado? *</label>
+            <select id="tri-advogado" onchange="toggleCamposTriagem()">
+              <option value="Não">Não</option>
+              <option value="Sim">Sim</option>
+            </select>
+          </div>
+          <div class="form-field" id="tri-row-cliente" style="display:none">
+            <label>Nome do cliente monitorado *</label>
+            <input type="text" id="tri-cliente" placeholder="Nome do monitorado que representa">
+          </div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Dados do Atendimento</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Tipo de atendimento *</label>
+            <select id="tri-tipo">
+              <option value="">Selecione...</option>
+              <option>Mudança de endereço</option>
+              <option>Desvinculação</option>
+              <option>Vinculação</option>
+              <option>Justificativa</option>
+              <option>Informação</option>
+              <option>Setor Jurídico</option>
+              <option>Equipe Multidisciplinar</option>
+              <option>Outros</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Tipo de medida/processo *</label>
+            <select id="tri-medida" onchange="toggleCamposTriagem()">
+              <option value="">Selecione...</option>
+              <option>Medida cautelar</option>
+              <option>Vara de Execuções Penais</option>
+              <option>Medida protetiva</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid" id="tri-row-condicao" style="display:none">
+          <div class="form-field">
+            <label>Condição na medida protetiva *</label>
+            <select id="tri-condicao">
+              <option value="">Selecione...</option>
+              <option>Agressor</option>
+              <option>Vítima</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Data do atendimento *</label>
+            <input type="date" id="tri-data">
+          </div>
+          <div class="form-field">
+            <label>Responsável *</label>
+            <input type="text" id="tri-responsavel" placeholder="Nome do responsável pelo atendimento">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Observação</label>
+            <textarea id="tri-obs" rows="2" placeholder="Anotações adicionais (opcional)" style="resize:vertical"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-triagem')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarAtendimentoTriagem()">💾 Salvar Atendimento</button>
+    </div>
+  </div>
+</div>
+
+<!-- ENTRADA -->
+<div class="modal-overlay" id="modal-est-entrada">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>⬆ Registro de Entrada</h3>
+      <button class="modal-close" onclick="fecharModal('modal-est-entrada')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field"><label>Categoria *</label>
+          <select id="ent-categoria" onchange="atualizarTiposEst('ent')">
+            <option value="">Selecione...</option>
+            <option value="Tornozeleira">Tornozeleira</option>
+            <option value="DPP — Dispositivo de Proteção Pessoal">DPP — Dispositivo de Proteção Pessoal</option>
+          </select></div>
+        <div class="form-field"><label>Tipo de Item *</label>
+          <select id="ent-tipo" onchange="toggleTamanhoEst('ent')">
+            <option value="">Selecione a categoria...</option>
+          </select></div>
+      </div>
+      <div class="form-grid" id="ent-row-tamanho" style="display:none">
+        <div class="form-field"><label>Tamanho da Cinta *</label>
+          <select id="ent-tamanho"><option value="">Selecione...</option></select></div>
+      </div>
+      <div class="form-grid three">
+        <div class="form-field"><label>Quantidade *</label>
+          <input type="number" id="ent-quantidade" min="1" placeholder="0"></div>
+        <div class="form-field"><label>Nº de Série / Patrimônio</label>
+          <input type="text" id="ent-numserie" placeholder="Identificação patrimonial"></div>
+        <div class="form-field"><label>Estado do Item</label>
+          <select id="ent-estado">
+            <option value="Novo">Novo</option><option value="Bom">Bom</option>
+            <option value="Regular">Regular</option><option value="Danificado">Danificado</option>
+          </select></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field"><label>Responsável *</label>
+          <input type="text" id="ent-responsavel" placeholder="Nome do servidor"></div>
+        <div class="form-field"><label>Observação</label>
+          <input type="text" id="ent-obs" placeholder="Opcional"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-est-entrada')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarMovEstoque('entrada')">💾 Registrar Entrada</button>
+    </div>
+  </div>
+</div>
+
+<!-- SAÍDA -->
+<div class="modal-overlay" id="modal-est-saida">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>⬇ Registro de Saída</h3>
+      <button class="modal-close" onclick="fecharModal('modal-est-saida')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field"><label>Categoria *</label>
+          <select id="sai-categoria" onchange="atualizarTiposEst('sai')">
+            <option value="">Selecione...</option>
+            <option value="Tornozeleira">Tornozeleira</option>
+            <option value="DPP — Dispositivo de Proteção Pessoal">DPP — Dispositivo de Proteção Pessoal</option>
+          </select></div>
+        <div class="form-field"><label>Tipo de Item *</label>
+          <select id="sai-tipo" onchange="toggleTamanhoEst('sai')">
+            <option value="">Selecione a categoria...</option>
+          </select></div>
+      </div>
+      <div class="form-grid" id="sai-row-tamanho" style="display:none">
+        <div class="form-field"><label>Tamanho da Cinta *</label>
+          <select id="sai-tamanho"><option value="">Selecione...</option></select></div>
+      </div>
+      <div class="form-grid three">
+        <div class="form-field"><label>Quantidade *</label>
+          <input type="number" id="sai-quantidade" min="1" placeholder="0"></div>
+        <div class="form-field"><label>Nome do Monitorado</label>
+          <input type="text" id="sai-monitorado" placeholder="Se aplicável"></div>
+        <div class="form-field"><label>Nº do Processo</label>
+          <input type="text" id="sai-processo" placeholder="Se aplicável"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field"><label>Motivo *</label>
+          <input type="text" id="sai-motivo" placeholder="Motivo da saída"></div>
+        <div class="form-field"><label>Responsável *</label>
+          <input type="text" id="sai-responsavel" placeholder="Nome do servidor"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field"><label>Observação</label>
+          <input type="text" id="sai-obs" placeholder="Opcional"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-est-saida')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarMovEstoque('saida')">💾 Registrar Saída</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEVOLUÇÃO -->
+<div class="modal-overlay" id="modal-est-devolucao">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>↩ Registro de Devolução</h3>
+      <button class="modal-close" onclick="fecharModal('modal-est-devolucao')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field"><label>Categoria *</label>
+          <select id="dev-categoria" onchange="atualizarTiposEst('dev')">
+            <option value="">Selecione...</option>
+            <option value="Tornozeleira">Tornozeleira</option>
+            <option value="DPP — Dispositivo de Proteção Pessoal">DPP — Dispositivo de Proteção Pessoal</option>
+          </select></div>
+        <div class="form-field"><label>Tipo de Item *</label>
+          <select id="dev-tipo" onchange="toggleTamanhoEst('dev')">
+            <option value="">Selecione a categoria...</option>
+          </select></div>
+      </div>
+      <div class="form-grid" id="dev-row-tamanho" style="display:none">
+        <div class="form-field"><label>Tamanho da Cinta *</label>
+          <select id="dev-tamanho"><option value="">Selecione...</option></select></div>
+      </div>
+      <div class="form-grid three">
+        <div class="form-field"><label>Quantidade *</label>
+          <input type="number" id="dev-quantidade" min="1" placeholder="0"></div>
+        <div class="form-field"><label>Estado no Retorno</label>
+          <select id="dev-estado">
+            <option value="Bom">Bom</option><option value="Regular">Regular</option>
+            <option value="Danificado">Danificado</option><option value="Inutilizável">Inutilizável</option>
+          </select></div>
+        <div class="form-field"><label>Responsável *</label>
+          <input type="text" id="dev-responsavel" placeholder="Nome do servidor"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field"><label>Observação</label>
+          <input type="text" id="dev-obs" placeholder="Opcional"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-est-devolucao')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarMovEstoque('devolucao')">💾 Registrar Devolução</button>
+    </div>
+  </div>
+</div>
+
+<!-- BAIXA -->
+<div class="modal-overlay" id="modal-est-baixa">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>✕ Registro de Baixa</h3>
+      <button class="modal-close" onclick="fecharModal('modal-est-baixa')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field"><label>Categoria *</label>
+          <select id="bxa-categoria" onchange="atualizarTiposEst('bxa')">
+            <option value="">Selecione...</option>
+            <option value="Tornozeleira">Tornozeleira</option>
+            <option value="DPP — Dispositivo de Proteção Pessoal">DPP — Dispositivo de Proteção Pessoal</option>
+          </select></div>
+        <div class="form-field"><label>Tipo de Item *</label>
+          <select id="bxa-tipo" onchange="toggleTamanhoEst('bxa')">
+            <option value="">Selecione a categoria...</option>
+          </select></div>
+      </div>
+      <div class="form-grid" id="bxa-row-tamanho" style="display:none">
+        <div class="form-field"><label>Tamanho da Cinta *</label>
+          <select id="bxa-tamanho"><option value="">Selecione...</option></select></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field"><label>Quantidade *</label>
+          <input type="number" id="bxa-quantidade" min="1" placeholder="0"></div>
+        <div class="form-field"><label>Motivo *</label>
+          <input type="text" id="bxa-motivo" placeholder="Motivo da baixa patrimonial"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field"><label>Responsável *</label>
+          <input type="text" id="bxa-responsavel" placeholder="Nome do servidor"></div>
+        <div class="form-field"><label>Observação</label>
+          <input type="text" id="bxa-obs" placeholder="Opcional"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-est-baixa')">Cancelar</button>
+      <button class="btn-danger" onclick="salvarMovEstoque('baixa')">✕ Registrar Baixa</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
      JAVASCRIPT — MOTOR DO SISTEMA
 ═══════════════════════════════════════════════════════ -->
 <script>
@@ -1524,6 +2033,8 @@ const USUARIOS_PADRAO = [
   { usuario: "plantao", senha: btoa("plantao123"), nome: "Operador Plantão", nivel: "plantao" },
   { usuario: "juridico", senha: btoa("juridico123"), nome: "Setor Jurídico", nivel: "juridico" },
   { usuario: "comunicacao", senha: btoa("comunicacao123"), nome: "Comunicação Processual", nivel: "comunicacao" },
+  { usuario: "estoque", senha: btoa("estoque123"), nome: "Operador de Estoque", nivel: "estoque" },
+  { usuario: "triagem", senha: btoa("triagem123"), nome: "Operador de Triagem", nivel: "triagem" },
 ];
 
 function getUsuarios() {
@@ -1646,7 +2157,7 @@ function mudarAba(aba) {
   document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
   const tabs = document.querySelectorAll(".nav-tab");
-  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, admin: 4 };
+  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, estoque: 4, triagem: 5, admin: 6 };
   if (tabs[map[aba]]) tabs[map[aba]].classList.add("active");
   const panel = document.getElementById("panel-" + aba);
   if (panel) panel.classList.add("active");
@@ -1654,6 +2165,8 @@ function mudarAba(aba) {
   if (aba === "criticos") renderizarCriticos();
   if (aba === "ocorrencias") renderizarOcorrencias();
   if (aba === "juridico") renderizarJuridico();
+  if (aba === "estoque") renderizarEstoque();
+  if (aba === "triagem") renderizarTriagem();
   if (aba === "admin") { renderizarUsers(); renderizarLogs(); }
 }
 
@@ -2447,6 +2960,541 @@ function baixarModeloExcel() {
   XLSX.writeFile(wb, "modelo_importacao_CME.xlsx");
 }
 
+/* ═══════════════════════ MÓDULO TRIAGEM ════════════════════════ */
+
+function podeAlterarTriagem() {
+  return usuarioAtual && ['admin','triagem','gerencia'].includes(usuarioAtual.nivel);
+}
+
+function getTriagem() {
+  return carregarStore('triagem', { atendimentos: [] });
+}
+
+function salvarTriagem(dados) {
+  salvarStore('triagem', dados);
+}
+
+// Called inline: oninput="mascararCPF(this)"
+function mascararCPF(el) {
+  let v = el.value.replace(/\D/g, '').slice(0, 11);
+  if (v.length <= 3) { el.value = v; return; }
+  if (v.length <= 6) { el.value = v.slice(0,3) + '.' + v.slice(3); return; }
+  if (v.length <= 9) { el.value = v.slice(0,3) + '.' + v.slice(3,6) + '.' + v.slice(6); return; }
+  el.value = v.slice(0,3) + '.' + v.slice(3,6) + '.' + v.slice(6,9) + '-' + v.slice(9);
+}
+
+// Show/hide conditional rows in the modal
+function toggleCamposTriagem() {
+  const medida = document.getElementById('tri-medida')?.value || '';
+  const adv    = document.getElementById('tri-advogado')?.value || '';
+  const rowCondicao = document.getElementById('tri-row-condicao');
+  const rowCliente  = document.getElementById('tri-row-cliente');
+  if (rowCondicao) rowCondicao.style.display = (medida === 'Medida protetiva') ? '' : 'none';
+  if (rowCliente)  rowCliente.style.display  = (adv === 'Sim') ? '' : 'none';
+}
+
+function renderizarTriagem() {
+  const dados     = getTriagem();
+  const lista     = dados.atendimentos || [];
+  const fNome     = (document.getElementById('tri-f-nome')?.value    || '').toLowerCase();
+  const fCpf      = (document.getElementById('tri-f-cpf')?.value     || '').replace(/\D/g,'');
+  const fTipo     = document.getElementById('tri-f-tipo')?.value     || '';
+  const fMedida   = document.getElementById('tri-f-medida')?.value   || '';
+  const fCondicao = document.getElementById('tri-f-condicao')?.value || '';
+  const fAdv      = document.getElementById('tri-f-adv')?.value      || '';
+  const fResp     = (document.getElementById('tri-f-resp')?.value    || '').toLowerCase();
+  const fInicio   = document.getElementById('tri-f-inicio')?.value   || '';
+  const fFim      = document.getElementById('tri-f-fim')?.value      || '';
+
+  const filtrados = lista.filter(a => {
+    if (fNome     && !((a.nome||'').toLowerCase().includes(fNome)))    return false;
+    if (fCpf      && !(a.cpf||'').replace(/\D/g,'').includes(fCpf))   return false;
+    if (fTipo     && a.tipo    !== fTipo)                               return false;
+    if (fMedida   && a.medida  !== fMedida)                            return false;
+    if (fCondicao && a.condicao !== fCondicao)                         return false;
+    if (fAdv      && a.adv     !== fAdv)                               return false;
+    if (fResp     && !((a.responsavel||'').toLowerCase().includes(fResp))) return false;
+    if (fInicio   && (a.data||'') < fInicio)                           return false;
+    if (fFim      && (a.data||'') > fFim)                              return false;
+    return true;
+  });
+
+  // Sort by date/time desc (criadoEm for precision, fallback to data)
+  filtrados.sort((a,b) => (b.criadoEm||b.data||'').localeCompare(a.criadoEm||a.data||''));
+
+  // ── KPIs (use full lista, not filtered) ──
+  const hoje     = new Date().toISOString().slice(0,10);
+  const kpi = id => document.getElementById(id);
+  const count = tipo => lista.filter(a => a.tipo === tipo).length;
+  if (kpi('tri-k-hoje'))     kpi('tri-k-hoje').textContent     = lista.filter(a => a.data === hoje).length;
+  if (kpi('tri-k-total'))    kpi('tri-k-total').textContent    = lista.length;
+  if (kpi('tri-k-endereco')) kpi('tri-k-endereco').textContent = count('Mudança de endereço');
+  if (kpi('tri-k-vinc'))     kpi('tri-k-vinc').textContent     = count('Vinculação');
+  if (kpi('tri-k-desvinc'))  kpi('tri-k-desvinc').textContent  = count('Desvinculação');
+  if (kpi('tri-k-justif'))   kpi('tri-k-justif').textContent   = count('Justificativa');
+  if (kpi('tri-k-info'))     kpi('tri-k-info').textContent     = count('Informação');
+  if (kpi('tri-k-juridico')) kpi('tri-k-juridico').textContent = count('Setor Jurídico');
+  if (kpi('tri-k-multi'))    kpi('tri-k-multi').textContent    = count('Equipe Multidisciplinar');
+  if (kpi('tri-k-protetiva'))kpi('tri-k-protetiva').textContent= lista.filter(a => a.medida === 'Medida protetiva').length;
+  if (kpi('tri-k-adv'))      kpi('tri-k-adv').textContent      = lista.filter(a => a.adv === 'Sim').length;
+
+  // ── Show/hide permission UI ──
+  const podeMod = podeAlterarTriagem();
+  const avisoEl = document.getElementById('tri-aviso-perm');
+  const btnsEl  = document.getElementById('tri-btns-acao');
+  const colAcoes = document.getElementById('tri-col-acoes');
+  if (avisoEl)  avisoEl.style.display  = podeMod ? 'none' : '';
+  if (btnsEl)   btnsEl.style.display   = podeMod ? '' : 'none';
+  if (colAcoes) colAcoes.style.display = podeMod ? '' : 'none';
+
+  // ── Render table ──
+  const tbody = document.getElementById('tbody-triagem');
+  if (!tbody) return;
+
+  const colCount = podeMod ? 11 : 10;
+  if (filtrados.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center;padding:20px;color:#888">Nenhum atendimento encontrado.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtrados.map(a => {
+    const dataFmt = (a.data||'').split('-').reverse().join('/');
+    const hora    = a.criadoEm ? new Date(a.criadoEm).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '';
+    const btns    = podeMod
+      ? `<button class="btn-sm btn-outline" onclick="abrirModalTriagem('${a.id}')">✏️</button>
+         <button class="btn-sm btn-danger"  onclick="excluirAtendimentoTriagem('${a.id}')">🗑️</button>`
+      : '';
+    return `<tr>
+      <td>${dataFmt}${hora ? ' ' + hora : ''}</td>
+      <td>${a.nome||''}</td>
+      <td>${a.cpf||''}</td>
+      <td>${a.tipo||''}</td>
+      <td>${a.medida||''}</td>
+      <td>${a.condicao||''}</td>
+      <td>${a.adv||''}</td>
+      <td>${a.clienteMonitorado||''}</td>
+      <td>${a.responsavel||''}</td>
+      <td>${a.obs||''}</td>
+      ${podeMod ? `<td>${btns}</td>` : ''}
+    </tr>`;
+  }).join('');
+
+  // Update count label
+  const label = document.getElementById('tri-count-label');
+  if (label) label.textContent = `Atendimentos (${filtrados.length} de ${lista.length})`;
+}
+
+function limparFiltrosTriagem() {
+  ['tri-f-nome','tri-f-cpf','tri-f-resp','tri-f-inicio','tri-f-fim'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['tri-f-tipo','tri-f-medida','tri-f-condicao','tri-f-adv'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  renderizarTriagem();
+}
+
+function abrirModalTriagem(id) {
+  if (!podeAlterarTriagem()) {
+    _mostrarToast('⚠️ Sem permissão para esta operação.', 'erro');
+    return;
+  }
+  const modal = document.getElementById('modal-triagem');
+  if (!modal) return;
+
+  // Clear all fields
+  ['tri-edit-id','tri-nome','tri-cpf','tri-data','tri-responsavel','tri-obs','tri-condicao','tri-cliente'].forEach(fid => {
+    const el = document.getElementById(fid); if (el) el.value = '';
+  });
+  const tipoEl   = document.getElementById('tri-tipo');
+  const medidaEl = document.getElementById('tri-medida');
+  const advEl    = document.getElementById('tri-advogado');
+  if (tipoEl)   tipoEl.value   = '';
+  if (medidaEl) medidaEl.value = '';
+  if (advEl)    advEl.value    = 'Não';
+
+  // Default date = today
+  const dataEl = document.getElementById('tri-data');
+  if (dataEl) dataEl.value = new Date().toISOString().slice(0,10);
+
+  // Default responsável = nome do usuário logado
+  const respEl = document.getElementById('tri-responsavel');
+  if (respEl) respEl.value = usuarioAtual?.nome || '';
+
+  const titleEl = document.getElementById('tri-modal-title');
+
+  if (id) {
+    // Editing existing record
+    const dados = getTriagem();
+    const a = (dados.atendimentos||[]).find(x => x.id === id);
+    if (a) {
+      document.getElementById('tri-edit-id').value = a.id;
+      if (tipoEl)   tipoEl.value   = a.tipo   || '';
+      if (medidaEl) medidaEl.value = a.medida  || '';
+      if (advEl)    advEl.value    = a.adv     || 'Não';
+      ['nome','cpf','data','responsavel','obs','condicao'].forEach(campo => {
+        const el = document.getElementById('tri-' + campo);
+        if (el) el.value = a[campo] || '';
+      });
+      const clienteEl = document.getElementById('tri-cliente');
+      if (clienteEl) clienteEl.value = a.clienteMonitorado || '';
+      if (titleEl) titleEl.textContent = '✏️ Editar Atendimento';
+    }
+  } else {
+    if (titleEl) titleEl.textContent = '➕ Novo Atendimento';
+  }
+
+  toggleCamposTriagem();
+  modal.style.display = 'flex';
+}
+
+function salvarAtendimentoTriagem() {
+  if (!podeAlterarTriagem()) {
+    _mostrarToast('⚠️ Sem permissão.', 'erro');
+    return;
+  }
+  const get = fid => (document.getElementById(fid)?.value || '').trim();
+
+  const nome        = get('tri-nome');
+  const tipo        = get('tri-tipo');
+  const data        = get('tri-data');
+  const responsavel = get('tri-responsavel');
+
+  if (!nome || !tipo || !data || !responsavel) {
+    _mostrarToast('⚠️ Preencha: Nome, Tipo, Data e Responsável.', 'erro');
+    return;
+  }
+
+  const cpf             = get('tri-cpf');
+  const medida          = get('tri-medida');
+  const condicao        = get('tri-condicao');
+  const adv             = get('tri-advogado');
+  const clienteMonitorado = get('tri-cliente');
+  const obs             = get('tri-obs');
+  const editId          = get('tri-edit-id');
+
+  const dados = getTriagem();
+  const lista = dados.atendimentos || [];
+
+  if (editId) {
+    const idx = lista.findIndex(x => x.id === editId);
+    if (idx >= 0) {
+      lista[idx] = { ...lista[idx], nome, cpf, tipo, data, responsavel, medida, condicao, adv, clienteMonitorado, obs };
+    }
+  } else {
+    lista.push({
+      id: 'tri_' + Date.now(),
+      nome, cpf, tipo, data, responsavel, medida, condicao, adv, clienteMonitorado, obs,
+      criadoPor: usuarioAtual?.usuario || '',
+      criadoEm: new Date().toISOString()
+    });
+  }
+
+  dados.atendimentos = lista;
+  salvarTriagem(dados);
+  fecharModal('modal-triagem');
+  renderizarTriagem();
+  _mostrarToast('✅ Atendimento salvo!', 'sucesso');
+}
+
+function excluirAtendimentoTriagem(id) {
+  if (!podeAlterarTriagem()) {
+    _mostrarToast('⚠️ Sem permissão.', 'erro');
+    return;
+  }
+  if (!confirm('Excluir este atendimento? Esta ação não pode ser desfeita.')) return;
+  const dados = getTriagem();
+  dados.atendimentos = (dados.atendimentos||[]).filter(a => a.id !== id);
+  salvarTriagem(dados);
+  renderizarTriagem();
+  _mostrarToast('🗑️ Atendimento excluído.', 'sucesso');
+}
+
+function exportarTriagem() {
+  const dados = getTriagem();
+  const lista = dados.atendimentos || [];
+  if (!lista.length) { _mostrarToast('Nenhum dado para exportar.', 'erro'); return; }
+  const rows = lista.map(a => ({
+    'Data':             (a.data||'').split('-').reverse().join('/'),
+    'Nome':             a.nome||'',
+    'CPF':              a.cpf||'',
+    'Tipo Atendimento': a.tipo||'',
+    'Tipo Medida':      a.medida||'',
+    'Condição':         a.condicao||'',
+    'Advogado?':        a.adv||'',
+    'Cliente Monitorado': a.clienteMonitorado||'',
+    'Responsável':      a.responsavel||'',
+    'Observação':       a.obs||''
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Triagem');
+  XLSX.writeFile(wb, 'triagem_CME.xlsx');
+}
+
+/* ═══════════════════════ MÓDULO ESTOQUE ════════════════════════ */
+
+const EST_TAMANHOS = ['16 cm','17 cm','18 cm','19 cm','20 cm','21 cm','22 cm','23 cm','24 cm','25 cm','26 cm','27 cm'];
+
+const EST_TIPOS = {
+  'Tornozeleira': ['Módulo eletrônico de monitoração','Cinta','Trava','Carregador da tornozeleira'],
+  'DPP — Dispositivo de Proteção Pessoal': ['Dispositivo DPP','Carregador do DPP','Chip do DPP']
+};
+
+const EST_MINIMO = {
+  'Módulo eletrônico de monitoração': 5,
+  'Cinta': 3,
+  'Trava': 20,
+  'Carregador da tornozeleira': 5,
+  'Dispositivo DPP': 3,
+  'Carregador do DPP': 3,
+  'Chip do DPP': 3,
+};
+
+const EST_PADRAO = {
+  itens: {
+    'Módulo eletrônico de monitoração': 0,
+    'Cinta_16 cm': 0, 'Cinta_17 cm': 0, 'Cinta_18 cm': 0, 'Cinta_19 cm': 0,
+    'Cinta_20 cm': 0, 'Cinta_21 cm': 0, 'Cinta_22 cm': 0, 'Cinta_23 cm': 0,
+    'Cinta_24 cm': 0, 'Cinta_25 cm': 0, 'Cinta_26 cm': 0, 'Cinta_27 cm': 0,
+    'Trava': 0, 'Carregador da tornozeleira': 0,
+    'Dispositivo DPP': 0, 'Carregador do DPP': 0, 'Chip do DPP': 0,
+  },
+  movimentacoes: [],
+  configuracoes: { estoqueMinimo: Object.assign({}, EST_MINIMO) }
+};
+
+/* ─ Permissão ─────────────────────────────────────────── */
+function podeAlterarEstoque() {
+  return usuarioAtual && (usuarioAtual.nivel === 'admin' || usuarioAtual.nivel === 'estoque');
+}
+
+/* ─ Storage ────────────────────────────────────────────── */
+function getEstoque() {
+  const d = carregarStore('estoque', null);
+  if (!d) return JSON.parse(JSON.stringify(EST_PADRAO));
+  // Garantir que todas as chaves existem (migração futura)
+  if (!d.itens) d.itens = {};
+  if (!d.movimentacoes) d.movimentacoes = [];
+  if (!d.configuracoes) d.configuracoes = { estoqueMinimo: Object.assign({}, EST_MINIMO) };
+  Object.keys(EST_PADRAO.itens).forEach(k => { if (!(k in d.itens)) d.itens[k] = 0; });
+  return d;
+}
+function salvarEstoque(d) { salvarStore('estoque', d); }
+
+/* ─ Helpers ────────────────────────────────────────────── */
+function estChave(tipo, tamanho) { return tipo === 'Cinta' ? 'Cinta_' + tamanho : tipo; }
+function estMinItem(tipo)        { return tipo === 'Cinta' ? EST_MINIMO['Cinta'] : (EST_MINIMO[tipo] || 0); }
+function estStatusCls(qtd, min)  { return qtd <= 0 ? 'zero' : qtd < min ? 'baixo' : 'ok'; }
+function estStatusLabel(cls)     { return cls === 'ok' ? 'DISPONÍVEL' : cls === 'baixo' ? 'ESTOQUE BAIXO' : 'SEM ESTOQUE'; }
+
+/* ─ Renderização ────────────────────────────────────────── */
+function renderizarEstoque() {
+  const est   = getEstoque();
+  const itens = est.itens;
+
+  /* Permissão visual */
+  const podAlt = podeAlterarEstoque();
+  document.getElementById('est-btns-acao').style.display   = podAlt ? 'flex' : 'none';
+  document.getElementById('est-aviso-perm').style.display  = podAlt ? 'none' : 'block';
+
+  /* KPIs */
+  const mod      = itens['Módulo eletrônico de monitoração'] || 0;
+  const cinta    = EST_TAMANHOS.reduce((s, t) => s + (itens['Cinta_' + t] || 0), 0);
+  const trava    = itens['Trava'] || 0;
+  const carrTorn = itens['Carregador da tornozeleira'] || 0;
+  const dpp      = itens['Dispositivo DPP'] || 0;
+  const carrDpp  = itens['Carregador do DPP'] || 0;
+  const chip     = itens['Chip do DPP'] || 0;
+  const total    = mod + cinta + trava + carrTorn + dpp + carrDpp + chip;
+
+  let baixo = 0, zero = 0;
+  Object.keys(EST_PADRAO.itens).forEach(k => {
+    const isCinta = k.startsWith('Cinta_');
+    const min = isCinta ? EST_MINIMO['Cinta'] : estMinItem(k);
+    const s   = estStatusCls(itens[k] || 0, min);
+    if (s === 'zero') zero++; else if (s === 'baixo') baixo++;
+  });
+
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('est-k-mod', mod);   set('est-k-cinta', cinta);   set('est-k-trava', trava);
+  set('est-k-carrtor', carrTorn); set('est-k-dpp', dpp); set('est-k-carrdpp', carrDpp);
+  set('est-k-chip', chip); set('est-k-total', total);
+  set('est-k-baixo', baixo); set('est-k-zero', zero);
+
+  /* Alertas sem estoque */
+  const semEst = Object.keys(EST_PADRAO.itens).filter(k => (itens[k] || 0) <= 0).map(k =>
+    k.startsWith('Cinta_') ? 'Cinta ' + k.replace('Cinta_', '') : k
+  );
+  document.getElementById('est-alertas').innerHTML = semEst.length
+    ? `<div class="est-alerta-box">⚠️ <strong>Itens SEM estoque (${semEst.length}):</strong> ${semEst.join(', ')}</div>`
+    : '';
+
+  /* Tabela Tornozeleira */
+  const tbTorn  = document.getElementById('tbody-est-torn');
+  const rowsTorn = [];
+  ['Módulo eletrônico de monitoração','Trava','Carregador da tornozeleira'].forEach(tipo => {
+    const qtd = itens[tipo] || 0;
+    const min = EST_MINIMO[tipo];
+    const cls = estStatusCls(qtd, min);
+    rowsTorn.push(`<tr>
+      <td>${tipo}</td><td style="color:var(--cz2)">—</td>
+      <td style="text-align:center"><strong>${qtd}</strong></td>
+      <td style="text-align:center">${min}</td>
+      <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
+    </tr>`);
+  });
+  EST_TAMANHOS.forEach(tam => {
+    const k   = 'Cinta_' + tam;
+    const qtd = itens[k] || 0;
+    const min = EST_MINIMO['Cinta'];
+    const cls = estStatusCls(qtd, min);
+    rowsTorn.push(`<tr>
+      <td>Cinta</td><td>${tam}</td>
+      <td style="text-align:center"><strong>${qtd}</strong></td>
+      <td style="text-align:center">${min}</td>
+      <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
+    </tr>`);
+  });
+  tbTorn.innerHTML = rowsTorn.join('');
+
+  /* Tabela DPP */
+  document.getElementById('tbody-est-dpp').innerHTML =
+    ['Dispositivo DPP','Carregador do DPP','Chip do DPP'].map(tipo => {
+      const qtd = itens[tipo] || 0;
+      const min = EST_MINIMO[tipo];
+      const cls = estStatusCls(qtd, min);
+      return `<tr>
+        <td>${tipo}</td>
+        <td style="text-align:center"><strong>${qtd}</strong></td>
+        <td style="text-align:center">${min}</td>
+        <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
+      </tr>`;
+    }).join('');
+
+  /* Histórico */
+  const movs = (est.movimentacoes || []).slice(0, 300);
+  const tbH  = document.getElementById('tbody-est-hist');
+  if (!movs.length) {
+    tbH.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:28px;color:var(--cz2)">Nenhuma movimentação registrada ainda.</td></tr>`;
+    return;
+  }
+  const badgeMov = { 'Entrada':'badge-ok', 'Saída':'badge-vencido', 'Devolução':'badge-atencao', 'Baixa':'badge-vencendo' };
+  tbH.innerHTML = movs.map(m => `<tr>
+    <td style="white-space:nowrap;font-size:.8rem">${new Date(m.ts).toLocaleString('pt-BR')}</td>
+    <td><span class="badge ${badgeMov[m.tipo]||''}">${m.tipo}</span></td>
+    <td>${m.categoria||''}</td>
+    <td>${m.item||''}</td>
+    <td>${m.tamanho||'—'}</td>
+    <td style="text-align:center">${m.quantidade}</td>
+    <td>${m.responsavel||''}</td>
+    <td>${m.motivo||'—'}</td>
+    <td>${m.monitorado||'—'}</td>
+    <td>${m.obs||'—'}</td>
+  </tr>`).join('');
+}
+
+/* ─ Abrir modais ────────────────────────────────────────── */
+function abrirModalEstoque(tipo) {
+  if (!podeAlterarEstoque()) { alert('Sem permissão para alterar o estoque.'); return; }
+  const ids = { entrada:'modal-est-entrada', saida:'modal-est-saida', devolucao:'modal-est-devolucao', baixa:'modal-est-baixa' };
+  const pfxs = { entrada:'ent', saida:'sai', devolucao:'dev', baixa:'bxa' };
+  const pfx  = pfxs[tipo];
+  // Limpar campos
+  ['categoria','tipo','tamanho','quantidade','responsavel','obs','motivo','monitorado','processo','numserie'].forEach(f => {
+    const el = document.getElementById(pfx + '-' + f);
+    if (!el) return;
+    if (el.tagName === 'SELECT') el.selectedIndex = 0;
+    else el.value = '';
+  });
+  atualizarTiposEst(pfx);
+  document.getElementById(ids[tipo]).classList.add('open');
+}
+
+/* ─ Selects dinâmicos ───────────────────────────────────── */
+function atualizarTiposEst(pfx) {
+  const cat   = document.getElementById(pfx + '-categoria').value;
+  const tipos = cat ? (EST_TIPOS[cat] || []) : [];
+  document.getElementById(pfx + '-tipo').innerHTML =
+    '<option value="">Selecione...</option>' + tipos.map(t => `<option value="${t}">${t}</option>`).join('');
+  toggleTamanhoEst(pfx);
+}
+
+function toggleTamanhoEst(pfx) {
+  const tipo   = document.getElementById(pfx + '-tipo').value;
+  const row    = document.getElementById(pfx + '-row-tamanho');
+  if (!row) return;
+  const isCinta = tipo === 'Cinta';
+  row.style.display = isCinta ? '' : 'none';
+  if (isCinta) {
+    document.getElementById(pfx + '-tamanho').innerHTML =
+      '<option value="">Selecione...</option>' + EST_TAMANHOS.map(t => `<option value="${t}">${t}</option>`).join('');
+  }
+}
+
+/* ─ Salvar movimentação ─────────────────────────────────── */
+function salvarMovEstoque(tipo) {
+  if (!podeAlterarEstoque()) { alert('Sem permissão para alterar o estoque.'); return; }
+
+  const pfx      = { entrada:'ent', saida:'sai', devolucao:'dev', baixa:'bxa' }[tipo];
+  const modalId  = { entrada:'modal-est-entrada', saida:'modal-est-saida', devolucao:'modal-est-devolucao', baixa:'modal-est-baixa' }[tipo];
+  const tipoLabel= { entrada:'Entrada', saida:'Saída', devolucao:'Devolução', baixa:'Baixa' }[tipo];
+
+  const g = id => { const el = document.getElementById(pfx + '-' + id); return el ? el.value.trim() : ''; };
+
+  const categoria = g('categoria');
+  const itemTipo  = g('tipo');
+  const tamanho   = g('tamanho');
+  const qtd       = parseInt(g('quantidade')) || 0;
+  const resp      = g('responsavel');
+
+  if (!categoria)                            return alert('Selecione a categoria.');
+  if (!itemTipo)                             return alert('Selecione o tipo de item.');
+  if (itemTipo === 'Cinta' && !tamanho)      return alert('Selecione o tamanho da cinta.');
+  if (qtd < 1)                               return alert('Informe uma quantidade válida (mínimo 1).');
+  if (!resp)                                 return alert('Informe o responsável.');
+  if ((tipo === 'saida' || tipo === 'baixa') && !g('motivo')) return alert('Informe o motivo.');
+
+  const chave  = estChave(itemTipo, tamanho);
+  const est    = getEstoque();
+  const qtdAtual = est.itens[chave] || 0;
+
+  if ((tipo === 'saida' || tipo === 'baixa') && qtd > qtdAtual) {
+    return alert(`Saldo insuficiente. Estoque atual: ${qtdAtual} unidade(s).`);
+  }
+
+  // Atualizar saldo
+  est.itens[chave] = (tipo === 'entrada' || tipo === 'devolucao')
+    ? qtdAtual + qtd
+    : qtdAtual - qtd;
+
+  // Registrar movimentação
+  const mov = {
+    id:         Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+    ts:         new Date().toISOString(),
+    tipo:       tipoLabel,
+    categoria,
+    item:       itemTipo,
+    tamanho:    tamanho || '',
+    quantidade: qtd,
+    responsavel: resp,
+    motivo:     g('motivo'),
+    monitorado: g('monitorado'),
+    processo:   g('processo'),
+    obs:        g('obs'),
+    estado:     g('estado'),
+    numSerie:   g('numserie'),
+  };
+  est.movimentacoes.unshift(mov);
+  if (est.movimentacoes.length > 500) est.movimentacoes = est.movimentacoes.slice(0, 500);
+
+  salvarEstoque(est);
+  addLog(`Estoque — ${tipoLabel}: ${itemTipo}${tamanho ? ' ' + tamanho : ''} ×${qtd} (${resp})`);
+  fecharModal(modalId);
+  renderizarEstoque();
+  _mostrarToast('✓ ' + tipoLabel + ' registrada com sucesso!', 'ok');
+}
+
 // Fechar modal clicando fora
 document.querySelectorAll(".modal-overlay").forEach(m => {
   m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); });
@@ -2509,6 +3557,29 @@ setInterval(atualizarTudo, 300000);
       _cache['logs'] = [];
       seeds.push(window._db.from('store').insert({ key: 'cme_logs', value: [] }));
     }
+    if (!data.find(r => r.key === 'cme_estoque')) {
+      const estPad = {
+        itens: {
+          'Módulo eletrônico de monitoração':0,
+          'Cinta_16 cm':0,'Cinta_17 cm':0,'Cinta_18 cm':0,'Cinta_19 cm':0,
+          'Cinta_20 cm':0,'Cinta_21 cm':0,'Cinta_22 cm':0,'Cinta_23 cm':0,
+          'Cinta_24 cm':0,'Cinta_25 cm':0,'Cinta_26 cm':0,'Cinta_27 cm':0,
+          'Trava':0,'Carregador da tornozeleira':0,
+          'Dispositivo DPP':0,'Carregador do DPP':0,'Chip do DPP':0,
+        },
+        movimentacoes: [],
+        configuracoes: { estoqueMinimo: {
+          'Módulo eletrônico de monitoração':5,'Cinta':3,'Trava':20,
+          'Carregador da tornozeleira':5,'Dispositivo DPP':3,'Carregador do DPP':3,'Chip do DPP':3
+        }}
+      };
+      _cache['estoque'] = estPad;
+      seeds.push(window._db.from('store').insert({ key: 'cme_estoque', value: estPad }));
+    }
+    if (!data.find(r => r.key === 'cme_triagem')) {
+      _cache['triagem'] = { atendimentos: [] };
+      seeds.push(window._db.from('store').insert({ key: 'cme_triagem', value: { atendimentos: [] } }));
+    }
     if (seeds.length) {
       loadingMsg.textContent = 'Inicializando banco pela primeira vez...';
       await Promise.all(seeds);
@@ -2533,6 +3604,12 @@ setInterval(atualizarTudo, 300000);
           if (document.getElementById('panel-admin')?.classList.contains('active')) {
             renderizarUsers();
             renderizarLogs();
+          }
+          if (document.getElementById('panel-estoque')?.classList.contains('active')) {
+            renderizarEstoque();
+          }
+          if (document.getElementById('panel-triagem')?.classList.contains('active')) {
+            renderizarTriagem();
           }
         }
       })
