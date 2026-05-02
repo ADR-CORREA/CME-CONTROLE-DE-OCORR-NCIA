@@ -2586,7 +2586,7 @@ function renderizarJuridico() {
       <td>${v180}</td>
       <td style="font-weight:700">${aut}</td>
       <td><span class="badge ${sc==='AUTORIZADO'?'badge-ok':sc==='DESVINCULADO'?'badge-comunicado':'badge-neutro'}">${sc}</span></td>
-      <td><button class="btn-edit" onclick="abrirModalJuridico(${idx})">✏ Atualizar</button></td>
+      <td>${usuarioAtual?.nivel !== 'plantao' ? `<button class="btn-edit" onclick="abrirModalJuridico(${idx})">✏ Atualizar</button>` : '—'}</td>
     </tr>`;
   }).join("");
 }
@@ -2625,13 +2625,7 @@ function abrirModalNovaOcorrencia() {
   document.getElementById("oc-plantao").value = _plantaoAuto;
   document.getElementById("oc-operador").value = "";
   document.getElementById("oc-descricao").value = "";
-  document.getElementById("oc-ciodes").value = "";
-  document.getElementById("oc-prodoc").value = "";
-  document.getElementById("oc-prodoc-num").value = "";
-  document.getElementById("oc-prodoc-data").value = "";
-  document.getElementById("oc-contatos").value = "";
   document.getElementById("oc-obs").value = "";
-  toggleProdocFields();
   recalcularStatus();
   document.getElementById("modal-ocorrencia").classList.add("open");
 }
@@ -2650,31 +2644,22 @@ function editarOcorrencia(idx) {
   document.getElementById("oc-plantao").value = oc.plantao || "";
   document.getElementById("oc-operador").value = oc.operador || "";
   document.getElementById("oc-descricao").value = oc.descricao || "";
-  document.getElementById("oc-ciodes").value = oc.ciodes || "";
-  document.getElementById("oc-prodoc").value = oc.prodoc || "";
-  document.getElementById("oc-prodoc-num").value = oc.prodocNum || "";
-  document.getElementById("oc-prodoc-data").value = oc.prodocData || "";
-  document.getElementById("oc-contatos").value = oc.contatos || "";
   document.getElementById("oc-obs").value = oc.obs || "";
-  toggleProdocFields();
   recalcularStatus();
   document.getElementById("modal-ocorrencia").classList.add("open");
 }
 
 function toggleProdocFields() {
-  const sim = document.getElementById("oc-prodoc").value === "SIM";
-  document.getElementById("prodoc-num-field").style.display = sim ? "block" : "none";
-  document.getElementById("prodoc-data-field").style.display = sim ? "block" : "none";
+  // PRODOC agora é gerenciado pela aba Comunicação — função mantida por compatibilidade
 }
 
 function recalcularStatus() {
   const data = document.getElementById("oc-data").value;
   const medida = document.getElementById("oc-medida").value;
   const tipo = document.getElementById("oc-tipo").value;
-  const prodoc = document.getElementById("oc-prodoc").value;
   document.getElementById("oc-prazo-pop").value = calcPrazoPOP(tipo, medida);
   document.getElementById("oc-prazo-rest").value = calcPrazoRestante(data, tipo, medida);
-  document.getElementById("oc-status-show").value = calcStatus(data, tipo, medida, prodoc);
+  document.getElementById("oc-status-show").value = calcStatus(data, tipo, medida, '');
 }
 
 // Recalcular quando data mudar
@@ -2699,18 +2684,22 @@ function salvarOcorrencia() {
     plantao: document.getElementById("oc-plantao").value,
     operador: document.getElementById("oc-operador").value,
     descricao: document.getElementById("oc-descricao").value,
-    ciodes: document.getElementById("oc-ciodes").value,
-    contatos: document.getElementById("oc-contatos").value,
-    prodoc: document.getElementById("oc-prodoc").value,
-    prodocNum: document.getElementById("oc-prodoc-num").value,
-    prodocData: document.getElementById("oc-prodoc-data").value,
+    // PRODOC/CIODES gerenciados pela aba Comunicação — preservados do registro existente
+    ciodes: '', contatos: '', prodoc: '', prodocNum: '', prodocData: '',
     obs: document.getElementById("oc-obs").value,
     juridico: {},
   };
 
   const ocs = getOcorrencias();
   if (idEdit !== "") {
-    oc.juridico = ocs[parseInt(idEdit)].juridico || {};
+    const existing = ocs[parseInt(idEdit)] || {};
+    // Preserva campos gerenciados pela aba Comunicação
+    oc.ciodes     = existing.ciodes     || '';
+    oc.prodoc     = existing.prodoc     || '';
+    oc.prodocNum  = existing.prodocNum  || '';
+    oc.prodocData = existing.prodocData || '';
+    oc.contatos   = existing.contatos   || '';
+    oc.juridico   = existing.juridico   || {};
     ocs[parseInt(idEdit)] = oc;
     addLog(`Editou ocorrência #${id} (${usuarioAtual.nome})`);
   } else {
@@ -2736,6 +2725,10 @@ function excluirOcorrencia(idx) {
 
 /* ─── MODAL JURÍDICO ─────────────────────────────────── */
 function abrirModalJuridico(idx) {
+  if (usuarioAtual?.nivel === 'plantao') {
+    _mostrarToast('⚠️ Plantão não tem permissão para editar o Jurídico.', 'erro');
+    return;
+  }
   const ocs = getOcorrencias();
   const oc = ocs[idx];
   if (!oc) return;
@@ -2764,6 +2757,10 @@ function abrirModalJuridico(idx) {
 }
 
 function salvarJuridico() {
+  if (usuarioAtual?.nivel === 'plantao') {
+    _mostrarToast('⚠️ Plantão não tem permissão para editar o Jurídico.', 'erro');
+    return;
+  }
   const idx = parseInt(document.getElementById("jur-oc-idx").value);
   const ocs = getOcorrencias();
   if (!ocs[idx]) return;
