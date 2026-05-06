@@ -844,6 +844,16 @@ input, select, textarea, button { font-family: var(--font-sans); }
 .tri-badge.protetiva { background:var(--vm3); color:var(--vm1); }
 .tri-badge.agressor  { background:var(--vm3); color:var(--vm1); }
 .tri-badge.vitima    { background:var(--vd3); color:var(--vd1); }
+/* Sub-abas */
+.sub-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid #e0e6ed; padding-bottom:0; flex-wrap:wrap; }
+.sub-tab { padding:8px 18px; cursor:pointer; font-size:.87rem; font-weight:600; color:#666; border-radius:6px 6px 0 0; border:1px solid transparent; border-bottom:none; transition:.15s; }
+.sub-tab:hover { color:var(--az1); background:#f0f4ff; }
+.sub-tab.active { color:var(--az1); background:#fff; border-color:#e0e6ed; border-bottom:2px solid #fff; margin-bottom:-2px; }
+.sub-panel { display:none; }
+.sub-panel.active { display:block; }
+/* Badge de notificação */
+.nav-tab { position:relative; }
+.notif-badge { position:absolute; top:4px; right:4px; background:#e74c3c; color:#fff; border-radius:50%; width:16px; height:16px; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; line-height:1; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -914,7 +924,7 @@ input, select, textarea, button { font-family: var(--font-sans); }
     <div class="nav-tab" onclick="mudarAba('criticos')">🚨 Críticos</div>
     <div class="nav-tab" onclick="mudarAba('ocorrencias')">📋 Ocorrências</div>
     <div class="nav-tab" onclick="mudarAba('juridico')">⚖️ Jurídico</div>
-    <div class="nav-tab" onclick="mudarAba('comunicacao')">📡 Comunicação</div>
+    <div class="nav-tab" onclick="mudarAba('comunicacao')">📡 Comunicação <span id="com-badge" style="display:none" class="notif-badge">0</span></div>
     <div class="nav-tab" onclick="mudarAba('estoque')">📦 Estoque</div>
     <div class="nav-tab" onclick="mudarAba('triagem')">🗂️ Triagem</div>
     <div class="nav-tab" onclick="mudarAba('relatorio')">📄 Relatório</div>
@@ -1144,65 +1154,110 @@ input, select, textarea, button { font-family: var(--font-sans); }
 
     <!-- ─── RELATÓRIO ─── -->
     <div class="tab-panel" id="panel-relatorio">
-      <div class="table-wrapper">
-        <div class="table-toolbar">
-          <div class="table-search">
-            <span>🔍</span>
-            <input type="text" placeholder="Buscar monitorado, servidor..." oninput="filtrarRelatorio(this.value)">
+      <div class="sub-tabs">
+        <div class="sub-tab active" id="rel-stab-lista" onclick="mudarSubAbaRel('lista')">📄 Relatórios</div>
+        <div class="sub-tab" id="rel-stab-arquivadas" onclick="mudarSubAbaRel('arquivadas')">📁 Arquivadas</div>
+      </div>
+      <div class="sub-panel active" id="rel-panel-lista">
+        <div class="table-wrapper">
+          <div class="table-toolbar">
+            <div class="table-search">
+              <span>🔍</span>
+              <input type="text" placeholder="Buscar monitorado, servidor..." oninput="filtrarRelatorio(this.value)">
+            </div>
+            <div class="table-actions">
+              <button class="btn-secondary" onclick="renderizarRelatorio()">🔄 Atualizar</button>
+              <button class="btn-secondary" onclick="exportarRelatorioExcel()">📥 Exportar Excel</button>
+              <button class="btn-primary" onclick="abrirModalRelatorio()">➕ Novo Relatório</button>
+            </div>
           </div>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead><tr>
+                <th>Nº</th>
+                <th>Tipo de Relatório</th>
+                <th>Monitorado</th>
+                <th>Data Recebimento</th>
+                <th>Data Envio Comunicação</th>
+                <th>Servidor Responsável</th>
+                <th>Observação</th>
+                <th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-relatorio"></tbody>
+            </table>
+          </div>
+          <div style="margin-top:10px;font-size:.85rem;color:#666" id="rel-count-label"></div>
+        </div>
+      </div>
+      <div class="sub-panel" id="rel-panel-arquivadas">
+        <div class="table-toolbar">
+          <div style="font-weight:600;color:var(--az1)">📁 Relatórios enviados pela Comunicação Processual</div>
           <div class="table-actions">
-            <button class="btn-secondary" onclick="renderizarRelatorio()">🔄 Atualizar</button>
-            <button class="btn-secondary" onclick="exportarRelatorioExcel()">📥 Exportar Excel</button>
-            <button class="btn-primary" onclick="abrirModalRelatorio()">➕ Novo Relatório</button>
+            <button class="btn-secondary" onclick="renderizarRelArquivadas()">🔄 Atualizar</button>
           </div>
         </div>
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr>
-              <th>Nº</th>
-              <th>Tipo de Relatório</th>
-              <th>Monitorado</th>
-              <th>Data Recebimento</th>
-              <th>Data Envio Comunicação</th>
-              <th>Servidor Responsável</th>
-              <th>Observação</th>
-              <th>Ações</th>
+              <th>Nº</th><th>Tipo</th><th>Monitorado</th><th>Servidor</th>
+              <th>Dt. Recebimento</th><th>Dt. Envio Com.</th><th>Enviado pela Com. em</th>
             </tr></thead>
-            <tbody id="tbody-relatorio"></tbody>
+            <tbody id="tbody-rel-arquivadas"></tbody>
           </table>
         </div>
-        <div style="margin-top:10px;font-size:.85rem;color:#666" id="rel-count-label"></div>
       </div>
     </div>
 
     <!-- ─── GERÊNCIA ─── -->
     <div class="tab-panel" id="panel-gerencia">
-      <div class="table-wrapper">
-        <div class="table-toolbar">
-          <div style="font-size:1.1rem;font-weight:700;color:var(--az1)">📋 Agenda de Demandas — Gerência</div>
-          <div class="table-actions">
-            <button class="btn-secondary" onclick="renderizarGerencia()">🔄 Atualizar</button>
-            <button class="btn-primary" onclick="abrirModalGerencia()">➕ Nova Demanda</button>
+      <div class="sub-tabs">
+        <div class="sub-tab active" id="ger-stab-agenda" onclick="mudarSubAbaGer('agenda')">📋 Agenda</div>
+        <div class="sub-tab" id="ger-stab-arquivados" onclick="mudarSubAbaGer('arquivados')">📁 Arquivados</div>
+      </div>
+      <div class="sub-panel active" id="ger-panel-agenda">
+        <div class="table-wrapper">
+          <div class="table-toolbar">
+            <div style="font-size:1.1rem;font-weight:700;color:var(--az1)">📋 Agenda de Demandas — Gerência</div>
+            <div class="table-actions">
+              <button class="btn-secondary" onclick="renderizarGerencia()">🔄 Atualizar</button>
+              <button class="btn-primary" onclick="abrirModalGerencia()">➕ Nova Demanda</button>
+            </div>
+          </div>
+          <!-- Legenda -->
+          <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;font-size:.84rem">
+            <span style="background:#ffeaea;padding:3px 10px;border-radius:6px;border:1px solid #f5c6c6">🔴 Vencida</span>
+            <span style="background:#fff8e1;padding:3px 10px;border-radius:6px;border:1px solid #ffe082">🟡 Vencendo (≤2 dias)</span>
+            <span style="background:#f0fff4;padding:3px 10px;border-radius:6px;border:1px solid #b2dfdb">🟢 No prazo</span>
+            <span style="background:#f5f5f5;padding:3px 10px;border-radius:6px;border:1px solid #ccc">✅ Concluída</span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead><tr>
+                <th>Prazo</th>
+                <th>Demanda</th>
+                <th>Descrição</th>
+                <th>Responsável</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-gerencia"></tbody>
+            </table>
           </div>
         </div>
-        <!-- Legenda -->
-        <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;font-size:.84rem">
-          <span style="background:#ffeaea;padding:3px 10px;border-radius:6px;border:1px solid #f5c6c6">🔴 Vencida</span>
-          <span style="background:#fff8e1;padding:3px 10px;border-radius:6px;border:1px solid #ffe082">🟡 Vencendo (≤2 dias)</span>
-          <span style="background:#f0fff4;padding:3px 10px;border-radius:6px;border:1px solid #b2dfdb">🟢 No prazo</span>
-          <span style="background:#f5f5f5;padding:3px 10px;border-radius:6px;border:1px solid #ccc">✅ Concluída</span>
+      </div>
+      <div class="sub-panel" id="ger-panel-arquivados">
+        <div class="table-toolbar">
+          <div style="font-weight:600;color:var(--az1)">📁 Demandas enviadas pela Comunicação Processual</div>
+          <div class="table-actions">
+            <button class="btn-secondary" onclick="renderizarGerArquivados()">🔄 Atualizar</button>
+          </div>
         </div>
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr>
-              <th>Prazo</th>
-              <th>Demanda</th>
-              <th>Descrição</th>
-              <th>Responsável</th>
-              <th>Status</th>
-              <th>Ações</th>
+              <th>Prazo</th><th>Demanda</th><th>Responsável</th><th>Enviado em</th><th>Obs</th>
             </tr></thead>
-            <tbody id="tbody-gerencia"></tbody>
+            <tbody id="tbody-ger-arquivados"></tbody>
           </table>
         </div>
       </div>
@@ -1280,38 +1335,109 @@ input, select, textarea, button { font-family: var(--font-sans); }
 
     <!-- ─── COMUNICAÇÃO ─── -->
     <div class="tab-panel" id="panel-comunicacao">
-      <div class="table-wrapper">
+      <!-- Sub-tabs da Comunicação -->
+      <div class="sub-tabs">
+        <div class="sub-tab active" id="com-stab-ocorrencias" onclick="mudarSubAbaCom('ocorrencias')">📋 Ocorrências</div>
+        <div class="sub-tab" id="com-stab-relatorio" onclick="mudarSubAbaCom('relatorio')">📄 Relatório</div>
+        <div class="sub-tab" id="com-stab-gerencia" onclick="mudarSubAbaCom('gerencia')">📋 Gerência</div>
+        <div class="sub-tab" id="com-stab-arquivados" onclick="mudarSubAbaCom('arquivados')">📁 Arquivados</div>
+      </div>
+
+      <!-- SUB-PANEL: OCORRÊNCIAS (conteúdo existente) -->
+      <div class="sub-panel active" id="com-panel-ocorrencias">
+        <div class="table-wrapper">
+          <div class="table-toolbar">
+            <div class="table-search">
+              <span>🔍</span>
+              <input type="text" placeholder="Buscar monitorado, ID..." oninput="filtrarComunicacao(this.value)">
+            </div>
+            <div class="table-actions">
+              <button class="btn-secondary" onclick="renderizarComunicacao()">🔄 Atualizar</button>
+              <button class="btn-secondary" onclick="exportarComunicacaoExcel()">📥 Exportar Excel</button>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead><tr>
+                <th>ID</th>
+                <th>Monitorado</th>
+                <th>Medida</th>
+                <th>Tipo Violação</th>
+                <th>Data Alerta</th>
+                <th>Status</th>
+                <th>PRODOC?</th>
+                <th>Nº PRODOC</th>
+                <th>Data PRODOC</th>
+                <th>Plantão</th>
+                <th>Ação</th>
+              </tr></thead>
+              <tbody id="tbody-comunicacao"></tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <span id="com-pag-info">0 ocorrências</span>
+            <div class="pagination-btns" id="com-pag-btns"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-PANEL: RELATÓRIO -->
+      <div class="sub-panel" id="com-panel-relatorio">
         <div class="table-toolbar">
-          <div class="table-search">
-            <span>🔍</span>
-            <input type="text" placeholder="Buscar monitorado, ID..." oninput="filtrarComunicacao(this.value)">
+          <div class="table-search"><span>🔍</span>
+            <input type="text" placeholder="Buscar monitorado..." oninput="filtrarComRelatorio(this.value)">
           </div>
           <div class="table-actions">
-            <button class="btn-secondary" onclick="renderizarComunicacao()">🔄 Atualizar</button>
-            <button class="btn-secondary" onclick="exportarComunicacaoExcel()">📥 Exportar Excel</button>
+            <button class="btn-secondary" onclick="renderizarComRelatorio()">🔄 Atualizar</button>
           </div>
         </div>
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr>
-              <th>ID</th>
-              <th>Monitorado</th>
-              <th>Medida</th>
-              <th>Tipo Violação</th>
-              <th>Data Alerta</th>
-              <th>Status</th>
-              <th>PRODOC?</th>
-              <th>Nº PRODOC</th>
-              <th>Data PRODOC</th>
-              <th>Plantão</th>
-              <th>Ação</th>
+              <th>Nº</th><th>Tipo</th><th>Monitorado</th><th>Servidor</th>
+              <th>Dt. Recebimento</th><th>Dt. Envio Comunicação</th><th>Status</th><th>Ação</th>
             </tr></thead>
-            <tbody id="tbody-comunicacao"></tbody>
+            <tbody id="tbody-com-relatorio"></tbody>
           </table>
         </div>
-        <div class="pagination">
-          <span id="com-pag-info">0 ocorrências</span>
-          <div class="pagination-btns" id="com-pag-btns"></div>
+      </div>
+
+      <!-- SUB-PANEL: GERÊNCIA -->
+      <div class="sub-panel" id="com-panel-gerencia">
+        <div class="table-toolbar">
+          <div class="table-search"><span>🔍</span>
+            <input type="text" placeholder="Buscar demanda..." oninput="filtrarComGerencia(this.value)">
+          </div>
+          <div class="table-actions">
+            <button class="btn-secondary" onclick="renderizarComGerencia()">🔄 Atualizar</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th>Prazo</th><th>Demanda</th><th>Responsável</th><th>Status</th><th>Ação</th>
+            </tr></thead>
+            <tbody id="tbody-com-gerencia"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SUB-PANEL: ARQUIVADOS -->
+      <div class="sub-panel" id="com-panel-arquivados">
+        <div class="table-toolbar">
+          <div style="font-weight:600;color:var(--az1)">📁 Itens arquivados (marcados como enviados)</div>
+          <div class="table-actions">
+            <button class="btn-secondary" onclick="renderizarComArquivados()">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="exportarComArquivadosExcel()">📥 Exportar Excel</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th>Tipo</th><th>Descrição</th><th>Enviado em</th><th>Obs</th>
+            </tr></thead>
+            <tbody id="tbody-com-arquivados"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -1954,7 +2080,7 @@ input, select, textarea, button { font-family: var(--font-sans); }
             <option value="DPP — Dispositivo de Proteção Pessoal">DPP — Dispositivo de Proteção Pessoal</option>
           </select></div>
         <div class="form-field"><label>Tipo de Item *</label>
-          <select id="ent-tipo" onchange="toggleTamanhoEst('ent')">
+          <select id="ent-tipo" onchange="toggleTamanhoEst('ent'); atualizarCamposSerialEntrada()">
             <option value="">Selecione a categoria...</option>
           </select></div>
       </div>
@@ -1964,14 +2090,20 @@ input, select, textarea, button { font-family: var(--font-sans); }
       </div>
       <div class="form-grid three">
         <div class="form-field"><label>Quantidade *</label>
-          <input type="number" id="ent-quantidade" min="1" placeholder="0"></div>
+          <input type="number" id="ent-quantidade" min="1" placeholder="0" oninput="atualizarCamposSerialEntrada()"></div>
         <div class="form-field"><label>Nº de Série / Patrimônio</label>
           <input type="text" id="ent-numserie" placeholder="Identificação patrimonial"></div>
         <div class="form-field"><label>Estado do Item</label>
           <select id="ent-estado">
-            <option value="Novo">Novo</option><option value="Bom">Bom</option>
-            <option value="Regular">Regular</option><option value="Danificado">Danificado</option>
+            <option value="">Selecione...</option>
+            <option value="Novo">Novo</option>
+            <option value="Reutilizado">Reutilizado</option>
+            <option value="Danificado">Danificado</option>
           </select></div>
+      </div>
+      <div id="ent-seriais-container" style="display:none">
+        <div class="form-section-title" style="margin-top:12px">Números de Série</div>
+        <div id="ent-seriais-lista"></div>
       </div>
       <div class="form-grid">
         <div class="form-field"><label>Responsável *</label>
@@ -2006,7 +2138,7 @@ input, select, textarea, button { font-family: var(--font-sans); }
               <option value="DPP — Dispositivo de Proteção Pessoal">DPP — Dispositivo de Proteção Pessoal</option>
             </select></div>
           <div class="form-field"><label>Tipo de Item *</label>
-            <select id="sai-tipo" onchange="toggleTamanhoEst('sai')">
+            <select id="sai-tipo" onchange="toggleTamanhoEst('sai'); atualizarCamposSerialSaida()">
               <option value="">Selecione a categoria...</option>
             </select></div>
         </div>
@@ -2016,7 +2148,11 @@ input, select, textarea, button { font-family: var(--font-sans); }
         </div>
         <div class="form-grid">
           <div class="form-field"><label>Quantidade *</label>
-            <input type="number" id="sai-quantidade" min="1" placeholder="0"></div>
+            <input type="number" id="sai-quantidade" min="1" placeholder="0" oninput="atualizarCamposSerialSaida()"></div>
+        </div>
+        <div id="sai-seriais-container" style="display:none">
+          <div class="form-section-title" style="margin-top:12px">Selecionar Números de Série</div>
+          <div id="sai-seriais-lista"></div>
         </div>
       </div>
       <!-- Entrega -->
@@ -2072,7 +2208,7 @@ input, select, textarea, button { font-family: var(--font-sans); }
             <option value="DPP — Dispositivo de Proteção Pessoal">DPP — Dispositivo de Proteção Pessoal</option>
           </select></div>
         <div class="form-field"><label>Tipo de Item *</label>
-          <select id="dev-tipo" onchange="toggleTamanhoEst('dev')">
+          <select id="dev-tipo" onchange="toggleTamanhoEst('dev'); atualizarCamposSerialDevolucao()">
             <option value="">Selecione a categoria...</option>
           </select></div>
       </div>
@@ -2082,14 +2218,20 @@ input, select, textarea, button { font-family: var(--font-sans); }
       </div>
       <div class="form-grid three">
         <div class="form-field"><label>Quantidade *</label>
-          <input type="number" id="dev-quantidade" min="1" placeholder="0"></div>
+          <input type="number" id="dev-quantidade" min="1" placeholder="0" oninput="atualizarCamposSerialDevolucao()"></div>
         <div class="form-field"><label>Estado no Retorno</label>
           <select id="dev-estado">
-            <option value="Bom">Bom</option><option value="Regular">Regular</option>
-            <option value="Danificado">Danificado</option><option value="Inutilizável">Inutilizável</option>
+            <option value="">Selecione...</option>
+            <option value="Novo">Novo</option>
+            <option value="Reutilizado">Reutilizado</option>
+            <option value="Danificado">Danificado</option>
           </select></div>
         <div class="form-field"><label>Responsável *</label>
           <input type="text" id="dev-responsavel" placeholder="Nome do servidor"></div>
+      </div>
+      <div id="dev-seriais-container" style="display:none">
+        <div class="form-section-title" style="margin-top:12px">Números de Série</div>
+        <div id="dev-seriais-lista"></div>
       </div>
       <div class="form-grid">
         <div class="form-field"><label>Observação</label>
@@ -2143,6 +2285,66 @@ input, select, textarea, button { font-family: var(--font-sans); }
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-est-baixa')">Cancelar</button>
       <button class="btn-danger" onclick="salvarMovEstoque('baixa')">✕ Registrar Baixa</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COM-RELATORIO -->
+<div class="modal-overlay" id="modal-com-relatorio">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <h3>📄 Marcar Relatório como Enviado</h3>
+      <button class="modal-close" onclick="fecharModal('modal-com-relatorio')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="com-rel-edit-id">
+      <div style="margin-bottom:14px;padding:10px;background:#f0f4ff;border-radius:8px">
+        <div style="font-size:.82rem;color:#666">Relatório</div>
+        <div style="font-weight:700" id="com-rel-tipo-display"></div>
+        <div style="color:#444;margin-top:2px" id="com-rel-monitorado-display"></div>
+      </div>
+      <div class="form-field">
+        <label>Data do envio *</label>
+        <input type="date" id="com-rel-data-envio">
+      </div>
+      <div class="form-field">
+        <label>Observação</label>
+        <textarea id="com-rel-obs" rows="2" placeholder="Observação sobre o envio" style="resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-com-relatorio')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarComRelatorio()">✅ Marcar como Enviado</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COM-GERENCIA -->
+<div class="modal-overlay" id="modal-com-gerencia">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <h3>📋 Marcar Demanda como Enviada</h3>
+      <button class="modal-close" onclick="fecharModal('modal-com-gerencia')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="com-ger-edit-id">
+      <div style="margin-bottom:14px;padding:10px;background:#f0f4ff;border-radius:8px">
+        <div style="font-size:.82rem;color:#666">Demanda</div>
+        <div style="font-weight:700" id="com-ger-titulo-display"></div>
+        <div style="color:#444;margin-top:2px" id="com-ger-resp-display"></div>
+      </div>
+      <div class="form-field">
+        <label>Data do envio *</label>
+        <input type="date" id="com-ger-data-envio">
+      </div>
+      <div class="form-field">
+        <label>Observação</label>
+        <textarea id="com-ger-obs" rows="2" placeholder="Observação sobre o envio" style="resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-com-gerencia')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarComGerencia()">✅ Marcar como Enviado</button>
     </div>
   </div>
 </div>
@@ -2440,7 +2642,7 @@ function mudarAba(aba) {
   if (aba === "criticos") renderizarCriticos();
   if (aba === "ocorrencias") renderizarOcorrencias();
   if (aba === "juridico") renderizarJuridico();
-  if (aba === "comunicacao") renderizarComunicacao();
+  if (aba === "comunicacao") { marcarComVisto(); renderizarComunicacao(); }
   if (aba === "estoque") renderizarEstoque();
   if (aba === "triagem") renderizarTriagem();
   if (aba === "relatorio") renderizarRelatorio();
@@ -2457,6 +2659,7 @@ function atualizarTudo() {
   if (document.getElementById('panel-comunicacao')?.classList.contains('active')) renderizarComunicacao();
   document.getElementById("dash-update").textContent =
     "Atualizado em " + new Date().toLocaleTimeString("pt-BR");
+  atualizarBadgeCom();
 }
 
 /* ─── DASHBOARD ──────────────────────────────────────── */
@@ -3419,6 +3622,248 @@ function exportarRelatorioExcel() {
   XLSX.writeFile(wb, 'relatorios_CME.xlsx');
 }
 
+/* ═══════════ SUB-ABAS E NOTIFICAÇÕES ═══════════ */
+
+// Navegação sub-abas Comunicação
+function mudarSubAbaCom(aba) {
+  ['ocorrencias','relatorio','gerencia','arquivados'].forEach(a => {
+    document.getElementById('com-stab-' + a)?.classList.toggle('active', a === aba);
+    document.getElementById('com-panel-' + a)?.classList.toggle('active', a === aba);
+  });
+  if (aba === 'relatorio')  renderizarComRelatorio();
+  if (aba === 'gerencia')   renderizarComGerencia();
+  if (aba === 'arquivados') renderizarComArquivados();
+}
+
+// Navegação sub-abas Relatório
+function mudarSubAbaRel(aba) {
+  ['lista','arquivadas'].forEach(a => {
+    document.getElementById('rel-stab-' + a)?.classList.toggle('active', a === aba);
+    document.getElementById('rel-panel-' + a)?.classList.toggle('active', a === aba);
+  });
+  if (aba === 'lista')      renderizarRelatorio();
+  if (aba === 'arquivadas') renderizarRelArquivadas();
+}
+
+// Navegação sub-abas Gerência
+function mudarSubAbaGer(aba) {
+  ['agenda','arquivados'].forEach(a => {
+    document.getElementById('ger-stab-' + a)?.classList.toggle('active', a === aba);
+    document.getElementById('ger-panel-' + a)?.classList.toggle('active', a === aba);
+  });
+  if (aba === 'agenda')     renderizarGerencia();
+  if (aba === 'arquivados') renderizarGerArquivados();
+}
+
+// ── Badge de notificação ──────────────────────────────
+function atualizarBadgeCom() {
+  const lastVisto = _cache['_comLastVisto'] || '1970-01-01T00:00:00.000Z';
+  const rels = (getRelatorios().registros || []).filter(r => !r.comEnviadoEm && r.criadoEm > lastVisto);
+  const gers = (getGerencia().demandas || []).filter(d => !d.comEnviadoEm && d.criadoEm > lastVisto);
+  const total = rels.length + gers.length;
+  const badge = document.getElementById('com-badge');
+  if (!badge) return;
+  if (total > 0) {
+    badge.textContent = total > 9 ? '9+' : total;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function marcarComVisto() {
+  _cache['_comLastVisto'] = new Date().toISOString();
+  const badge = document.getElementById('com-badge');
+  if (badge) badge.style.display = 'none';
+}
+
+// ── Renderizar COM → Relatório ──────────────────────────────
+let _comRelFiltro = '';
+function filtrarComRelatorio(v) { _comRelFiltro = (v||'').toLowerCase(); renderizarComRelatorio(); }
+
+function renderizarComRelatorio() {
+  const dados = getRelatorios();
+  let lista = (dados.registros || []).filter(r => !r.comEnviadoEm);
+  if (_comRelFiltro) lista = lista.filter(r =>
+    (r.monitorado||'').toLowerCase().includes(_comRelFiltro) ||
+    (r.servidor||'').toLowerCase().includes(_comRelFiltro)
+  );
+  lista.sort((a,b) => (a.criadoEm||'').localeCompare(b.criadoEm||''));
+  const tbody = document.getElementById('tbody-com-relatorio');
+  if (!tbody) return;
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#888">Nenhum relatório pendente de envio.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map((r, i) => `<tr>
+    <td>${i+1}</td>
+    <td>${r.tipo||''}</td>
+    <td>${r.monitorado||''}</td>
+    <td>${r.servidor||''}</td>
+    <td>${(r.dataRecebimento||'').split('-').reverse().join('/')}</td>
+    <td>${(r.dataEnvio||'').split('-').reverse().join('/')}</td>
+    <td><span class="badge badge-vencendo">Pendente</span></td>
+    <td><button class="btn-sm btn-primary" onclick="abrirModalComRelatorio('${r.id}')">✅ Marcar Enviado</button></td>
+  </tr>`).join('');
+}
+
+function abrirModalComRelatorio(id) {
+  const r = (getRelatorios().registros||[]).find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('com-rel-edit-id').value = id;
+  document.getElementById('com-rel-tipo-display').textContent = r.tipo || '';
+  document.getElementById('com-rel-monitorado-display').textContent = r.monitorado || '';
+  document.getElementById('com-rel-data-envio').value = new Date().toISOString().slice(0,10);
+  document.getElementById('com-rel-obs').value = '';
+  document.getElementById('modal-com-relatorio').classList.add('open');
+}
+
+function salvarComRelatorio() {
+  const id = document.getElementById('com-rel-edit-id').value;
+  const dataEnvio = document.getElementById('com-rel-data-envio').value;
+  const obs = document.getElementById('com-rel-obs').value.trim();
+  if (!dataEnvio) { _mostrarToast('⚠️ Informe a data do envio.', 'erro'); return; }
+  const dados = getRelatorios();
+  const idx = (dados.registros||[]).findIndex(x => x.id === id);
+  if (idx < 0) return;
+  dados.registros[idx].comEnviadoEm = dataEnvio;
+  dados.registros[idx].comObs = obs;
+  salvarStore('relatorios', dados);
+  fecharModal('modal-com-relatorio');
+  renderizarComRelatorio();
+  renderizarRelArquivadas();
+  _mostrarToast('✅ Relatório marcado como enviado!', 'sucesso');
+}
+
+// ── Renderizar COM → Gerência ──────────────────────────────
+let _comGerFiltro = '';
+function filtrarComGerencia(v) { _comGerFiltro = (v||'').toLowerCase(); renderizarComGerencia(); }
+
+function renderizarComGerencia() {
+  const dados = getGerencia();
+  let lista = (dados.demandas || []).filter(d => !d.comEnviadoEm);
+  if (_comGerFiltro) lista = lista.filter(d =>
+    (d.titulo||'').toLowerCase().includes(_comGerFiltro) ||
+    (d.responsavel||'').toLowerCase().includes(_comGerFiltro)
+  );
+  lista.sort((a,b) => (a.prazo||'').localeCompare(b.prazo||''));
+  const tbody = document.getElementById('tbody-com-gerencia');
+  if (!tbody) return;
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#888">Nenhuma demanda pendente de envio.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(d => `<tr>
+    <td>${(d.prazo||'').split('-').reverse().join('/')}</td>
+    <td>${d.titulo||''}</td>
+    <td>${d.responsavel||''}</td>
+    <td><span class="badge badge-vencendo">Pendente</span></td>
+    <td><button class="btn-sm btn-primary" onclick="abrirModalComGerencia('${d.id}')">✅ Marcar Enviado</button></td>
+  </tr>`).join('');
+}
+
+function abrirModalComGerencia(id) {
+  const d = (getGerencia().demandas||[]).find(x => x.id === id);
+  if (!d) return;
+  document.getElementById('com-ger-edit-id').value = id;
+  document.getElementById('com-ger-titulo-display').textContent = d.titulo || '';
+  document.getElementById('com-ger-resp-display').textContent = d.responsavel || '';
+  document.getElementById('com-ger-data-envio').value = new Date().toISOString().slice(0,10);
+  document.getElementById('com-ger-obs').value = '';
+  document.getElementById('modal-com-gerencia').classList.add('open');
+}
+
+function salvarComGerencia() {
+  const id = document.getElementById('com-ger-edit-id').value;
+  const dataEnvio = document.getElementById('com-ger-data-envio').value;
+  const obs = document.getElementById('com-ger-obs').value.trim();
+  if (!dataEnvio) { _mostrarToast('⚠️ Informe a data do envio.', 'erro'); return; }
+  const dados = getGerencia();
+  const idx = (dados.demandas||[]).findIndex(x => x.id === id);
+  if (idx < 0) return;
+  dados.demandas[idx].comEnviadoEm = dataEnvio;
+  dados.demandas[idx].comObs = obs;
+  salvarStore('gerencia', dados);
+  fecharModal('modal-com-gerencia');
+  renderizarComGerencia();
+  renderizarGerArquivados();
+  _mostrarToast('✅ Demanda marcada como enviada!', 'sucesso');
+}
+
+// ── Renderizar COM → Arquivados ──────────────────────────────
+function renderizarComArquivados() {
+  const rels = (getRelatorios().registros||[]).filter(r => r.comEnviadoEm)
+    .map(r => ({ tipo:'Relatório', descricao: `${r.tipo} — ${r.monitorado}`, enviadoEm: r.comEnviadoEm, obs: r.comObs||'' }));
+  const gers = (getGerencia().demandas||[]).filter(d => d.comEnviadoEm)
+    .map(d => ({ tipo:'Gerência', descricao: d.titulo, enviadoEm: d.comEnviadoEm, obs: d.comObs||'' }));
+  const lista = [...rels, ...gers].sort((a,b) => (b.enviadoEm||'').localeCompare(a.enviadoEm||''));
+  const tbody = document.getElementById('tbody-com-arquivados');
+  if (!tbody) return;
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#888">Nenhum item arquivado ainda.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(a => `<tr>
+    <td><span class="badge badge-ok">${a.tipo}</span></td>
+    <td>${a.descricao}</td>
+    <td>${(a.enviadoEm||'').split('-').reverse().join('/')}</td>
+    <td>${a.obs||'—'}</td>
+  </tr>`).join('');
+}
+
+function exportarComArquivadosExcel() {
+  const rels = (getRelatorios().registros||[]).filter(r => r.comEnviadoEm)
+    .map(r => ({ 'Tipo':'Relatório','Descrição':`${r.tipo} — ${r.monitorado}`,'Enviado em':(r.comEnviadoEm||'').split('-').reverse().join('/'),'Obs':r.comObs||'' }));
+  const gers = (getGerencia().demandas||[]).filter(d => d.comEnviadoEm)
+    .map(d => ({ 'Tipo':'Gerência','Descrição':d.titulo,'Enviado em':(d.comEnviadoEm||'').split('-').reverse().join('/'),'Obs':d.comObs||'' }));
+  const lista = [...rels, ...gers];
+  if (!lista.length) { _mostrarToast('Nenhum item arquivado.','erro'); return; }
+  const ws = XLSX.utils.json_to_sheet(lista);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Arquivados');
+  XLSX.writeFile(wb, 'comunicacao_arquivados_CME.xlsx');
+}
+
+// ── Relatório → Arquivadas ──────────────────────────────
+function renderizarRelArquivadas() {
+  const lista = (getRelatorios().registros||[]).filter(r => r.comEnviadoEm)
+    .sort((a,b) => (b.comEnviadoEm||'').localeCompare(a.comEnviadoEm||''));
+  const tbody = document.getElementById('tbody-rel-arquivadas');
+  if (!tbody) return;
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#888">Nenhum relatório arquivado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map((r,i) => `<tr>
+    <td>${i+1}</td>
+    <td>${r.tipo||''}</td>
+    <td>${r.monitorado||''}</td>
+    <td>${r.servidor||''}</td>
+    <td>${(r.dataRecebimento||'').split('-').reverse().join('/')}</td>
+    <td>${(r.dataEnvio||'').split('-').reverse().join('/')}</td>
+    <td><strong>${(r.comEnviadoEm||'').split('-').reverse().join('/')}</strong></td>
+  </tr>`).join('');
+}
+
+// ── Gerência → Arquivados ──────────────────────────────
+function renderizarGerArquivados() {
+  const lista = (getGerencia().demandas||[]).filter(d => d.comEnviadoEm)
+    .sort((a,b) => (b.comEnviadoEm||'').localeCompare(a.comEnviadoEm||''));
+  const tbody = document.getElementById('tbody-ger-arquivados');
+  if (!tbody) return;
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#888">Nenhuma demanda arquivada.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(d => `<tr>
+    <td>${(d.prazo||'').split('-').reverse().join('/')}</td>
+    <td>${d.titulo||''}</td>
+    <td>${d.responsavel||''}</td>
+    <td><strong>${(d.comEnviadoEm||'').split('-').reverse().join('/')}</strong></td>
+    <td>${d.comObs||'—'}</td>
+  </tr>`).join('');
+}
+
 /* ═══════════════════════ MÓDULO GERÊNCIA ════════════════════════ */
 
 function getGerencia() {
@@ -4032,12 +4477,14 @@ function exportarComunicacaoExcel() {
 
 /* ═══════════════════════ MÓDULO ESTOQUE ════════════════════════ */
 
-const EST_TAMANHOS = ['16 cm','17 cm','18 cm','19 cm','20 cm','21 cm','22 cm','23 cm','24 cm','25 cm','26 cm','27 cm'];
+const EST_TAMANHOS = ['17 cm','18 cm','19 cm','20 cm','21 cm','22 cm','23 cm','24 cm','25 cm','26 cm','27 cm','28 cm','29 cm','30 cm'];
 
 const EST_TIPOS = {
   'Tornozeleira': ['Módulo eletrônico de monitoração','Cinta','Trava','Carregador da tornozeleira'],
   'DPP — Dispositivo de Proteção Pessoal': ['Dispositivo DPP','Carregador do DPP','Chip do DPP']
 };
+
+const ITENS_COM_SERIAL = ['Módulo eletrônico de monitoração', 'Dispositivo DPP'];
 
 const EST_MINIMO = {
   'Módulo eletrônico de monitoração': 5,
@@ -4052,13 +4499,15 @@ const EST_MINIMO = {
 const EST_PADRAO = {
   itens: {
     'Módulo eletrônico de monitoração': 0,
-    'Cinta_16 cm': 0, 'Cinta_17 cm': 0, 'Cinta_18 cm': 0, 'Cinta_19 cm': 0,
-    'Cinta_20 cm': 0, 'Cinta_21 cm': 0, 'Cinta_22 cm': 0, 'Cinta_23 cm': 0,
-    'Cinta_24 cm': 0, 'Cinta_25 cm': 0, 'Cinta_26 cm': 0, 'Cinta_27 cm': 0,
+    'Cinta_17 cm': 0, 'Cinta_18 cm': 0, 'Cinta_19 cm': 0, 'Cinta_20 cm': 0,
+    'Cinta_21 cm': 0, 'Cinta_22 cm': 0, 'Cinta_23 cm': 0, 'Cinta_24 cm': 0,
+    'Cinta_25 cm': 0, 'Cinta_26 cm': 0, 'Cinta_27 cm': 0, 'Cinta_28 cm': 0,
+    'Cinta_29 cm': 0, 'Cinta_30 cm': 0,
     'Trava': 0, 'Carregador da tornozeleira': 0,
     'Dispositivo DPP': 0, 'Carregador do DPP': 0, 'Chip do DPP': 0,
   },
   movimentacoes: [],
+  seriais: {},
   configuracoes: { estoqueMinimo: Object.assign({}, EST_MINIMO) }
 };
 
@@ -4122,6 +4571,7 @@ function getEstoque() {
   // Garantir que todas as chaves existem (migração futura)
   if (!d.itens) d.itens = {};
   if (!d.movimentacoes) d.movimentacoes = [];
+  if (!d.seriais) d.seriais = {};
   if (!d.configuracoes) d.configuracoes = { estoqueMinimo: Object.assign({}, EST_MINIMO) };
   Object.keys(EST_PADRAO.itens).forEach(k => { if (!(k in d.itens)) d.itens[k] = 0; });
   return d;
@@ -4194,6 +4644,16 @@ function renderizarEstoque() {
       <td style="text-align:center">${min}</td>
       <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
     </tr>`);
+    if (ITENS_COM_SERIAL.includes(tipo)) {
+      const seriais = (est.seriais || {})[tipo] || [];
+      if (seriais.length > 0) {
+        rowsTorn.push(`<tr style="background:#f8f9ff">
+          <td colspan="5" style="font-size:.78rem;color:#555;padding:4px 12px">
+            📋 <strong>Nºs de série em estoque:</strong> ${seriais.join(' · ')}
+          </td>
+        </tr>`);
+      }
+    }
   });
   EST_TAMANHOS.forEach(tam => {
     const k   = 'Cinta_' + tam;
@@ -4211,20 +4671,31 @@ function renderizarEstoque() {
   tbTorn.innerHTML = rowsTorn.join('');
 
   /* Tabela DPP */
-  document.getElementById('tbody-est-dpp').innerHTML =
-    ['Dispositivo DPP','Carregador do DPP','Chip do DPP'].map(tipo => {
-      const chave = estChave(tipo, '');
-      const qtd = itens[tipo] || 0;
-      const min = _getMin(chave, EST_MINIMO[tipo]);
-      const cls = estStatusCls(qtd, min);
-      const rowStyle = qtd <= min ? ' style="background:#ffeaea"' : '';
-      return `<tr${rowStyle}>
-        <td>${tipo}</td>
-        <td style="text-align:center"><strong>${qtd}</strong></td>
-        <td style="text-align:center">${min}</td>
-        <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
-      </tr>`;
-    }).join('');
+  const rowsDpp = [];
+  ['Dispositivo DPP','Carregador do DPP','Chip do DPP'].forEach(tipo => {
+    const chave = estChave(tipo, '');
+    const qtd = itens[tipo] || 0;
+    const min = _getMin(chave, EST_MINIMO[tipo]);
+    const cls = estStatusCls(qtd, min);
+    const rowStyle = qtd <= min ? ' style="background:#ffeaea"' : '';
+    rowsDpp.push(`<tr${rowStyle}>
+      <td>${tipo}</td>
+      <td style="text-align:center"><strong>${qtd}</strong></td>
+      <td style="text-align:center">${min}</td>
+      <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
+    </tr>`);
+    if (ITENS_COM_SERIAL.includes(tipo)) {
+      const seriais = (est.seriais || {})[tipo] || [];
+      if (seriais.length > 0) {
+        rowsDpp.push(`<tr style="background:#f8f9ff">
+          <td colspan="4" style="font-size:.78rem;color:#555;padding:4px 12px">
+            📋 <strong>Nºs de série em estoque:</strong> ${seriais.join(' · ')}
+          </td>
+        </tr>`);
+      }
+    }
+  });
+  document.getElementById('tbody-est-dpp').innerHTML = rowsDpp.join('');
 
   /* Histórico */
   const movs = (est.movimentacoes || []).slice(0, 300);
@@ -4289,6 +4760,10 @@ function abrirModalEstoque(tipo) {
   }
   atualizarTiposEst(pfx);
   document.getElementById(ids[tipo]).classList.add('open');
+  // Atualizar campos de série após abrir (setTimeout garante que o DOM já está visível)
+  if (tipo === 'saida') setTimeout(atualizarCamposSerialSaida, 0);
+  if (tipo === 'entrada') setTimeout(atualizarCamposSerialEntrada, 0);
+  if (tipo === 'devolucao') setTimeout(atualizarCamposSerialDevolucao, 0);
 }
 
 /* ─ Selects dinâmicos ───────────────────────────────────── */
@@ -4309,6 +4784,90 @@ function toggleTamanhoEst(pfx) {
   if (isCinta) {
     document.getElementById(pfx + '-tamanho').innerHTML =
       '<option value="">Selecione...</option>' + EST_TAMANHOS.map(t => `<option value="${t}">${t}</option>`).join('');
+  }
+}
+
+/* ─ Campos dinâmicos de número de série ─────────────────── */
+function atualizarCamposSerialEntrada() {
+  const itemTipo = document.getElementById('ent-tipo')?.value || '';
+  const qtd = parseInt(document.getElementById('ent-quantidade')?.value) || 0;
+  const container = document.getElementById('ent-seriais-container');
+  const lista = document.getElementById('ent-seriais-lista');
+  if (!container || !lista) return;
+  if (ITENS_COM_SERIAL.includes(itemTipo) && qtd > 0) {
+    container.style.display = '';
+    const existentes = Array.from(lista.querySelectorAll('input')).map(i => i.value);
+    lista.innerHTML = '';
+    for (let i = 0; i < qtd; i++) {
+      const div = document.createElement('div');
+      div.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px';
+      div.innerHTML = `<span style="min-width:24px;font-weight:600;color:#555">${i+1}.</span>
+        <input type="text" placeholder="Nº de série ${i+1}" value="${existentes[i]||''}"
+          style="flex:1;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:.9rem"
+          class="ent-serial-input">`;
+      lista.appendChild(div);
+    }
+  } else {
+    container.style.display = 'none';
+    lista.innerHTML = '';
+  }
+}
+
+function atualizarCamposSerialDevolucao() {
+  const itemTipo = document.getElementById('dev-tipo')?.value || '';
+  const qtd = parseInt(document.getElementById('dev-quantidade')?.value) || 0;
+  const container = document.getElementById('dev-seriais-container');
+  const lista = document.getElementById('dev-seriais-lista');
+  if (!container || !lista) return;
+  if (ITENS_COM_SERIAL.includes(itemTipo) && qtd > 0) {
+    container.style.display = '';
+    const existentes = Array.from(lista.querySelectorAll('input')).map(i => i.value);
+    lista.innerHTML = '';
+    for (let i = 0; i < qtd; i++) {
+      const div = document.createElement('div');
+      div.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px';
+      div.innerHTML = `<span style="min-width:24px;font-weight:600;color:#555">${i+1}.</span>
+        <input type="text" placeholder="Nº de série ${i+1}" value="${existentes[i]||''}"
+          style="flex:1;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:.9rem"
+          class="dev-serial-input">`;
+      lista.appendChild(div);
+    }
+  } else {
+    container.style.display = 'none';
+    lista.innerHTML = '';
+  }
+}
+
+function atualizarCamposSerialSaida() {
+  const itemTipo = document.getElementById('sai-tipo')?.value || '';
+  const qtd = parseInt(document.getElementById('sai-quantidade')?.value) || 0;
+  const container = document.getElementById('sai-seriais-container');
+  const lista = document.getElementById('sai-seriais-lista');
+  if (!container || !lista) return;
+  if (ITENS_COM_SERIAL.includes(itemTipo) && qtd > 0) {
+    container.style.display = '';
+    const est = getEstoque();
+    const disponiveis = (est.seriais || {})[itemTipo] || [];
+    const existentes = Array.from(lista.querySelectorAll('input,select')).map(i => i.value);
+    lista.innerHTML = '';
+    for (let i = 0; i < qtd; i++) {
+      const div = document.createElement('div');
+      div.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px';
+      const dlId = 'sai-serial-dl-' + i;
+      div.innerHTML = `<span style="min-width:24px;font-weight:600;color:#555">${i+1}.</span>
+        <input type="text" list="${dlId}" placeholder="Selecione ou digite o nº de série"
+          value="${existentes[i]||''}"
+          style="flex:1;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:.9rem"
+          class="sai-serial-input">
+        <datalist id="${dlId}">${disponiveis.map(s=>`<option value="${s}">`).join('')}</datalist>`;
+      lista.appendChild(div);
+    }
+    if (disponiveis.length === 0) {
+      lista.innerHTML += '<p style="color:#e74c3c;font-size:.83rem;margin:4px 0">⚠️ Nenhum número de série cadastrado para este item.</p>';
+    }
+  } else {
+    container.style.display = 'none';
+    lista.innerHTML = '';
   }
 }
 
@@ -4351,6 +4910,34 @@ function salvarMovEstoque(tipo) {
     ? qtdAtual + qtd
     : qtdAtual - qtd;
 
+  // Inicializar est.seriais se não existir
+  if (!est.seriais) est.seriais = {};
+
+  // Gerenciar números de série
+  if (ITENS_COM_SERIAL.includes(itemTipo)) {
+    if (!est.seriais[itemTipo]) est.seriais[itemTipo] = [];
+
+    if (tipo === 'entrada' || tipo === 'devolucao') {
+      // Adicionar seriais da entrada
+      const inputs = document.querySelectorAll('.ent-serial-input, .dev-serial-input');
+      inputs.forEach(inp => {
+        const sn = inp.value.trim();
+        if (sn && !est.seriais[itemTipo].includes(sn)) {
+          est.seriais[itemTipo].push(sn);
+        }
+      });
+    } else if (tipo === 'saida' || tipo === 'baixa') {
+      // Remover seriais da saída
+      const inputs = document.querySelectorAll('.sai-serial-input, .bxa-serial-input');
+      inputs.forEach(inp => {
+        const sn = inp.value.trim();
+        if (sn) {
+          est.seriais[itemTipo] = est.seriais[itemTipo].filter(s => s !== sn);
+        }
+      });
+    }
+  }
+
   // Registrar movimentação
   const mov = {
     id:           Date.now() + '-' + Math.random().toString(36).slice(2, 7),
@@ -4367,6 +4954,11 @@ function salvarMovEstoque(tipo) {
     obs:          g('obs'),
     estado:       g('estado'),
     numSerie:     g('numserie'),
+    seriais: (() => {
+      if (!ITENS_COM_SERIAL.includes(itemTipo)) return [];
+      const cls = tipo === 'entrada' ? '.ent-serial-input' : tipo === 'devolucao' ? '.dev-serial-input' : tipo === 'saida' ? '.sai-serial-input' : '.bxa-serial-input';
+      return Array.from(document.querySelectorAll(cls)).map(i=>i.value.trim()).filter(Boolean);
+    })(),
     // Campos exclusivos de Saída
     plantao:      tipo === 'saida' ? g('plantao')      : '',
     plantonista:  tipo === 'saida' ? g('plantonista')  : '',
@@ -4448,13 +5040,15 @@ setInterval(atualizarTudo, 300000);
       const estPad = {
         itens: {
           'Módulo eletrônico de monitoração':0,
-          'Cinta_16 cm':0,'Cinta_17 cm':0,'Cinta_18 cm':0,'Cinta_19 cm':0,
-          'Cinta_20 cm':0,'Cinta_21 cm':0,'Cinta_22 cm':0,'Cinta_23 cm':0,
-          'Cinta_24 cm':0,'Cinta_25 cm':0,'Cinta_26 cm':0,'Cinta_27 cm':0,
+          'Cinta_17 cm':0,'Cinta_18 cm':0,'Cinta_19 cm':0,'Cinta_20 cm':0,
+          'Cinta_21 cm':0,'Cinta_22 cm':0,'Cinta_23 cm':0,'Cinta_24 cm':0,
+          'Cinta_25 cm':0,'Cinta_26 cm':0,'Cinta_27 cm':0,'Cinta_28 cm':0,
+          'Cinta_29 cm':0,'Cinta_30 cm':0,
           'Trava':0,'Carregador da tornozeleira':0,
           'Dispositivo DPP':0,'Carregador do DPP':0,'Chip do DPP':0,
         },
         movimentacoes: [],
+        seriais: {},
         configuracoes: { estoqueMinimo: {
           'Módulo eletrônico de monitoração':5,'Cinta':3,'Trava':20,
           'Carregador da tornozeleira':5,'Dispositivo DPP':3,'Carregador do DPP':3,'Chip do DPP':3
