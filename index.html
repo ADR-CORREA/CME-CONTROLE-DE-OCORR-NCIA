@@ -1016,6 +1016,8 @@ function salvarEnviarComGerencia() {
     <div class="nav-tab" onclick="mudarAba('estoque')">📦 Estoque</div>
     <div class="nav-tab" onclick="mudarAba('triagem')">🗂️ Triagem</div>
     <div class="nav-tab" onclick="mudarAba('relatorio')">📄 Relatório <span id="rel-badge" style="display:none" class="notif-badge">0</span></div>
+    <div class="nav-tab" onclick="mudarAba('links')">🔗 Links</div>
+    <div class="nav-tab" onclick="mudarAba('modelos')">📝 Modelos</div>
     <div class="nav-tab gerencia-only" onclick="mudarAba('gerencia')">📋 Gerência <span id="ger-badge" style="display:none" class="notif-badge">0</span></div>
     <div class="nav-tab admin-only" onclick="mudarAba('admin')">🔧 Administração</div>
   </div>
@@ -1379,6 +1381,145 @@ function salvarEnviarComGerencia() {
       </div>
     </div>
 
+    <!-- ─── LINKS ─── -->
+    <div class="tab-panel" id="panel-links">
+      <div class="dash-header">
+        <div>
+          <div class="dash-title">🔗 Links do Sistema</div>
+          <div class="dash-update">Acesso rápido aos sistemas integrados da CME/IAPEN-AP</div>
+        </div>
+      </div>
+
+      <div id="links-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;margin-top:8px"></div>
+    </div>
+
+    <!-- ─── MODELOS ─── -->
+    <div class="tab-panel" id="panel-modelos">
+      <div class="dash-header">
+        <div>
+          <div class="dash-title">📝 Gerador de Modelos de Documento</div>
+          <div class="dash-update">Preencha os campos e gere o texto padrão para copiar</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-secondary" onclick="limparModelo()">🗑️ Limpar</button>
+          <button class="btn-primary" onclick="copiarModelo()">📋 Copiar Texto</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:4px">
+        <!-- Coluna Formulário -->
+        <div style="background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow)">
+          <div style="font-weight:700;color:var(--az1);font-size:.95rem;margin-bottom:16px;border-bottom:1px solid #e0e6ed;padding-bottom:8px">📋 Dados do Documento</div>
+
+          <div class="form-field">
+            <label>Assunto *</label>
+            <select id="mod-assunto" onchange="gerarModelo()">
+              <option value="">-- Escolha o assunto --</option>
+              <option>VINCULAÇÃO</option>
+              <option>VINCULAÇÃO JVD</option>
+              <option>DESVINCULAÇÃO</option>
+              <option>TROCA/SUBSTITUIÇÃO DE TORNOZELEIRA</option>
+              <option>JUSTIFICATIVA DE SAÍDA DE ZONA</option>
+              <option>JUSTIFICATIVA ATESTADO MÉDICO</option>
+              <option>INSPEÇÃO DE TORNOZELEIRA</option>
+              <option>TEMPO LIMITE AUSÊNCIA GPRS</option>
+              <option>PERMUTA SERVIDOR/PLANTÃO</option>
+              <option>INFORMATIVO – ENTREGA DE DECLARAÇÃO</option>
+              <option>INFORMATIVO – ATUALIZAÇÃO CADASTRAL</option>
+              <option>ALTERAÇÃO ENDEREÇO/ZONA</option>
+              <option>VINCULAÇÃO – DPP</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label>Nome do Monitorado</label>
+            <input type="text" id="mod-monitorado" placeholder="Nome completo" oninput="gerarModelo()">
+          </div>
+
+          <div class="form-field">
+            <label>Processo / Alvará Nº</label>
+            <input type="text" id="mod-processo" placeholder="Nº do processo ou alvará" oninput="gerarModelo()">
+          </div>
+
+          <div id="mod-row-tnz" style="display:none">
+            <div class="form-grid">
+              <div class="form-field">
+                <label>TNZ Antiga</label>
+                <input type="text" id="mod-tnz-antiga" placeholder="Nº série antigo" oninput="gerarModelo()">
+              </div>
+              <div class="form-field">
+                <label>TNZ Nova</label>
+                <input type="text" id="mod-tnz-nova" placeholder="Nº série novo" oninput="gerarModelo()">
+              </div>
+            </div>
+          </div>
+
+          <div id="mod-row-tnz-unica" style="display:none">
+            <div class="form-field">
+              <label>Nº da Tornozeleira (TNZ)</label>
+              <input type="text" id="mod-tnz" placeholder="Número de série" oninput="gerarModelo()">
+            </div>
+          </div>
+
+          <div id="mod-row-dpp" style="display:none">
+            <div class="form-field">
+              <label>Nº do DPP</label>
+              <input type="text" id="mod-dpp" placeholder="Número de série do DPP" oninput="gerarModelo()">
+            </div>
+          </div>
+
+          <div id="mod-row-zona" style="display:none">
+            <div class="form-field">
+              <label>Motivo / Justificativa</label>
+              <textarea id="mod-justificativa" rows="3" placeholder="Descreva o motivo" oninput="gerarModelo()" style="resize:vertical"></textarea>
+            </div>
+          </div>
+
+          <div id="mod-row-permuta" style="display:none">
+            <div class="form-grid">
+              <div class="form-field">
+                <label>Servidor Saindo</label>
+                <input type="text" id="mod-servidor-saindo" placeholder="Nome do servidor" oninput="gerarModelo()">
+              </div>
+              <div class="form-field">
+                <label>Servidor Entrando</label>
+                <input type="text" id="mod-servidor-entrando" placeholder="Nome do servidor" oninput="gerarModelo()">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label>Plantão</label>
+            <select id="mod-plantao" onchange="gerarModelo()">
+              <option value="">-- Selecione --</option>
+              <option>ALFA</option><option>BRAVO</option><option>CHARLIE</option>
+              <option>DELTA</option><option>ECHO</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label>Servidor Responsável</label>
+            <input type="text" id="mod-servidor" placeholder="Nome do servidor" oninput="gerarModelo()">
+          </div>
+
+          <div class="form-field">
+            <label>Data / Hora</label>
+            <input type="datetime-local" id="mod-data" oninput="gerarModelo()">
+          </div>
+        </div>
+
+        <!-- Coluna Texto Gerado -->
+        <div style="background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column">
+          <div style="font-weight:700;color:var(--az1);font-size:.95rem;margin-bottom:16px;border-bottom:1px solid #e0e6ed;padding-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+            <span>📄 Texto Gerado (editável)</span>
+            <span id="mod-char-count" style="font-size:.75rem;color:#888;font-weight:400">0 caracteres</span>
+          </div>
+          <textarea id="mod-texto" rows="20" style="flex:1;resize:vertical;font-family:var(--font-mono);font-size:.8rem;line-height:1.6;border:1px solid #e0e6ed;border-radius:6px;padding:12px;background:#f8faff;color:#1a1a2e;outline:none" placeholder="O texto aparecerá aqui após preencher os campos..." oninput="document.getElementById('mod-char-count').textContent=this.value.length+' caracteres'"></textarea>
+          <div id="mod-copy-msg" style="display:none;margin-top:8px;padding:8px 12px;background:#e8f5e9;border-radius:6px;color:#1a4226;font-size:.84rem;font-weight:600">✅ Texto copiado para a área de transferência!</div>
+        </div>
+      </div>
+    </div>
+
     <!-- ─── ADMINISTRAÇÃO ─── -->
     <div class="tab-panel" id="panel-admin">
       <div class="admin-grid">
@@ -1407,8 +1548,9 @@ function salvarEnviarComGerencia() {
               <div class="form-field">
                 <label>Nível de acesso</label>
                 <select id="new-role">
-                  <option value="plantao">Plantão</option>
+                  <option value="plantao">Operador / Plantão</option>
                   <option value="comunicacao">Comunicação Processual</option>
+                  <option value="relatorio">Relatório</option>
                   <option value="juridico">Jurídico</option>
                   <option value="gerencia">Gerência</option>
                   <option value="estoque">Estoque</option>
@@ -2780,36 +2922,68 @@ function fazerLogout() {
   document.getElementById("input-pass").value = "";
 }
 
+// ── Mapa de abas permitidas por nível ─────────────────────
+const TABS_POR_NIVEL = {
+  plantao:    ['dashboard', 'criticos', 'ocorrencias', 'links', 'modelos'],
+  comunicacao: ['comunicacao', 'links'],
+  relatorio:  ['relatorio', 'comunicacao', 'links'],
+  juridico:   ['juridico', 'links'],
+  estoque:    ['estoque', 'links'],
+  triagem:    ['triagem', 'links'],
+  gerencia:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
+               'estoque', 'triagem', 'relatorio', 'links', 'modelos', 'gerencia'],
+  admin:      ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
+               'estoque', 'triagem', 'relatorio', 'links', 'modelos', 'gerencia', 'admin'],
+};
+
+const _TAB_MAP = { dashboard:0, criticos:1, ocorrencias:2, juridico:3, comunicacao:4,
+                   estoque:5, triagem:6, relatorio:7, links:8, modelos:9, gerencia:10, admin:11 };
+
+function aplicarVisibilidadeTabs(nivel) {
+  const permitidas = TABS_POR_NIVEL[nivel] || TABS_POR_NIVEL['plantao'];
+  const tabs = document.querySelectorAll('.nav-tab');
+  Object.keys(_TAB_MAP).forEach(aba => {
+    const tab = tabs[_TAB_MAP[aba]];
+    if (tab) tab.style.display = permitidas.includes(aba) ? '' : 'none';
+  });
+  // Navegar para a primeira aba permitida
+  mudarAba(permitidas[0] || 'dashboard');
+}
+
 function iniciarApp() {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
 
-  // Configurar UI por nível
   const nivel = usuarioAtual.nivel;
   document.getElementById("user-display").textContent = usuarioAtual.nome;
   document.getElementById("user-avatar").textContent = usuarioAtual.nome.charAt(0).toUpperCase();
-  document.getElementById("role-badge").textContent = nivel.toUpperCase();
 
-  // Mostrar aba admin só para admin
-  document.querySelectorAll(".admin-only").forEach(el => {
-    el.style.display = (nivel === "admin") ? "block" : "none";
-  });
-  document.querySelectorAll(".gerencia-only").forEach(el => {
-    el.style.display = (['admin','gerencia'].includes(nivel)) ? "flex" : "none";
-  });
+  const nivelLabel = {
+    admin:'ADMINISTRADOR', gerencia:'GERÊNCIA', juridico:'JURÍDICO',
+    comunicacao:'COMUNICAÇÃO', plantao:'OPERADOR', estoque:'ESTOQUE',
+    triagem:'TRIAGEM', relatorio:'RELATÓRIO'
+  };
+  document.getElementById("role-badge").textContent = nivelLabel[nivel] || nivel.toUpperCase();
 
   atualizarTudo();
-  mudarAba("dashboard");
-  renderizarUsers();
-  renderizarLogs();
+  aplicarVisibilidadeTabs(nivel);
+  if (nivel === 'admin') { renderizarUsers(); renderizarLogs(); }
 }
 
 /* ─── NAVEGAÇÃO ──────────────────────────────────────── */
 function mudarAba(aba) {
+  // Verificar permissão de acesso
+  if (usuarioAtual) {
+    const permitidas = TABS_POR_NIVEL[usuarioAtual.nivel] || TABS_POR_NIVEL['plantao'];
+    if (!permitidas.includes(aba)) {
+      mudarAba(permitidas[0] || 'dashboard');
+      return;
+    }
+  }
   document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
   const tabs = document.querySelectorAll(".nav-tab");
-  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, comunicacao: 4, estoque: 5, triagem: 6, relatorio: 7, gerencia: 8, admin: 9 };
+  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, comunicacao: 4, estoque: 5, triagem: 6, relatorio: 7, links: 8, modelos: 9, gerencia: 10, admin: 11 };
   if (tabs[map[aba]]) tabs[map[aba]].classList.add("active");
   const panel = document.getElementById("panel-" + aba);
   if (panel) panel.classList.add("active");
@@ -2822,6 +2996,8 @@ function mudarAba(aba) {
   if (aba === "triagem") renderizarTriagem();
   if (aba === "relatorio") { marcarRelVisto(); renderizarRelatorio(); }
   if (aba === "gerencia") { marcarGerVisto(); renderizarGerencia(); }
+  if (aba === "links") renderizarLinks();
+  if (aba === "modelos") renderizarModelos();
   if (aba === "admin") { renderizarUsers(); renderizarLogs(); }
 }
 
@@ -3248,7 +3424,7 @@ function salvarJuridico() {
 /* ─── ADMINISTRAÇÃO ──────────────────────────────────── */
 function renderizarUsers() {
   const usuarios = getUsuarios();
-  const nivelNome = { admin:"Administrador", gerencia:"Gerência", juridico:"Jurídico",
+  const nivelNome = { admin:"Administrador", gerencia:"Gerência", juridico:"Jurídico", relatorio:"Relatório",
     comunicacao:"Comunicação", plantao:"Plantão" };
   document.getElementById("user-list").innerHTML = usuarios.map((u, i) => `
     <div class="user-row">
@@ -3263,6 +3439,7 @@ function renderizarUsers() {
         <select class="role-select" onchange="alterarNivel(${i}, this.value)">
           <option value="plantao" ${u.nivel==='plantao'?'selected':''}>Plantão</option>
           <option value="comunicacao" ${u.nivel==='comunicacao'?'selected':''}>Comunicação</option>
+          <option value="relatorio" ${u.nivel==='relatorio'?'selected':''}>Relatório</option>
           <option value="juridico" ${u.nivel==='juridico'?'selected':''}>Jurídico</option>
           <option value="gerencia" ${u.nivel==='gerencia'?'selected':''}>Gerência</option>
           <option value="admin" ${u.nivel==='admin'?'selected':''}>Admin</option>
@@ -4685,7 +4862,7 @@ let _comPagAtual = 1;
 const COM_POR_PAG = 20;
 
 function podEditarComunicacao() {
-  return usuarioAtual && ['admin','comunicacao','gerencia'].includes(usuarioAtual.nivel);
+  return usuarioAtual && ['admin','comunicacao','relatorio','gerencia'].includes(usuarioAtual.nivel);
 }
 
 function filtrarComunicacao(val) {
@@ -5327,6 +5504,339 @@ document.querySelectorAll(".modal-overlay").forEach(m => {
 
 // Auto-atualizar a cada 5 min
 setInterval(atualizarTudo, 300000);
+
+/* ═══════════════════════ MÓDULO LINKS ════════════════════════ */
+
+const LINKS_SISTEMA = [
+  { icon: '📄', nome: 'PRODOC', desc: 'Sistema de Processos Digitais do Estado do Amapá', url: 'https://prodoc.ap.gov.br/login', cor: '#1F4E78' },
+  { icon: '⚡', nome: 'Sistema Akiles', desc: 'Plataforma de monitoramento eletrônico de tornozeleiras', url: 'https://akiles.ap.uetecnologia.com.br', cor: '#1A4226' },
+  { icon: '📋', nome: 'Registro Akiles / Boletim', desc: 'Geração de boletins e registros de atividades do Akiles', url: 'https://centralap.github.io/boletim/', cor: '#4A0066' },
+  { icon: '📸', nome: 'Fotos / AirDroid', desc: 'Acesso remoto a dispositivos para visualização de fotos e arquivos', url: 'https://web.airdroid.com/', cor: '#7A3800' },
+  { icon: '📊', nome: 'Monitoramento de Relatórios', desc: 'Cadastro e banco de dados de relatórios da Central', url: 'https://centralap.github.io/login/', cor: '#7B0000' },
+  { icon: '🔄', nome: 'Passagem de Serviço', desc: 'Checklist e geração de texto para passagem de plantão', url: 'https://centralap.github.io/passagemdeservico/', cor: '#0B1F35' },
+  { icon: '🏛️', nome: 'SIAPEN', desc: 'Sistema de Informações do Sistema Penal do Amapá', url: 'https://siapen.portal.ap.gov.br', cor: '#1F4E78' },
+  { icon: '🔍', nome: 'OCR — Reconhecimento de Texto', desc: 'Extração de texto de documentos e imagens digitalizadas', url: 'https://centralap.github.io/ocr/', cor: '#2E75B6' },
+  { icon: '📝', nome: 'Livro de Ocorrências (legado)', desc: 'Sistema anterior de controle de ocorrências', url: 'https://adr-correa.github.io/CME-CONTROLE-DE-OCORR-NCIA/', cor: '#757575' },
+  { icon: '📬', nome: 'E-mail CME', desc: 'Acesso ao e-mail institucional da Central', url: 'mailto:cme.iapen.ap@gmail.com', cor: '#1A4226' },
+];
+
+function renderizarLinks() {
+  const grid = document.getElementById('links-grid');
+  if (!grid) return;
+  grid.innerHTML = LINKS_SISTEMA.map(l => `
+    <a href="${l.url}" target="_blank" rel="noopener" style="text-decoration:none">
+      <div style="background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);
+           border-left:4px solid ${l.cor};cursor:pointer;transition:.2s;display:flex;flex-direction:column;gap:10px;
+           height:100%" onmouseover="this.style.boxShadow='var(--shadow-lg)';this.style.transform='translateY(-2px)'"
+           onmouseout="this.style.boxShadow='var(--shadow)';this.style.transform=''">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:2rem;background:${l.cor}15;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center">${l.icon}</div>
+          <div style="font-weight:700;color:${l.cor};font-size:.95rem;line-height:1.2">${l.nome}</div>
+        </div>
+        <div style="color:#555;font-size:.82rem;line-height:1.5;flex:1">${l.desc}</div>
+        <div style="font-size:.78rem;color:${l.cor};font-weight:600;display:flex;align-items:center;gap:4px">
+          🔗 Acessar <span style="opacity:.6;font-size:.7rem">${l.url.replace('https://','').replace('http://','').split('/')[0]}</span>
+        </div>
+      </div>
+    </a>
+  `).join('');
+}
+
+/* ═══════════════════════ MÓDULO MODELOS ═══════════════════════ */
+
+const _agora_fmt = () => {
+  const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0,16).replace('T',' ').replace('-','/').replace('-','/');
+};
+
+function renderizarModelos() {
+  // Preencher servidor com usuário logado
+  const srv = document.getElementById('mod-servidor');
+  if (srv && !srv.value) srv.value = usuarioAtual?.nome || '';
+  // Preencher plantão do dia
+  const pl = document.getElementById('mod-plantao');
+  if (pl && !pl.value) {
+    const hoje = new Date(); hoje.setMinutes(hoje.getMinutes() - hoje.getTimezoneOffset());
+    pl.value = getPlantaoParaData(hoje.toISOString().slice(0,10));
+  }
+  // Preencher data/hora atual
+  const dt = document.getElementById('mod-data');
+  if (dt && !dt.value) {
+    const n = new Date(); n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
+    dt.value = n.toISOString().slice(0,16);
+  }
+}
+
+function gerarModelo() {
+  const assunto   = document.getElementById('mod-assunto')?.value || '';
+  const monit     = document.getElementById('mod-monitorado')?.value.trim() || '___________________';
+  const processo  = document.getElementById('mod-processo')?.value.trim() || '___________________';
+  const tnzA      = document.getElementById('mod-tnz-antiga')?.value.trim() || '___________';
+  const tnzN      = document.getElementById('mod-tnz-nova')?.value.trim() || '___________';
+  const tnz       = document.getElementById('mod-tnz')?.value.trim() || '___________';
+  const dpp       = document.getElementById('mod-dpp')?.value.trim() || '___________';
+  const just      = document.getElementById('mod-justificativa')?.value.trim() || '___________________';
+  const srvSai    = document.getElementById('mod-servidor-saindo')?.value.trim() || '___________________';
+  const srvEntra  = document.getElementById('mod-servidor-entrando')?.value.trim() || '___________________';
+  const plantao   = document.getElementById('mod-plantao')?.value || '___________';
+  const servidor  = document.getElementById('mod-servidor')?.value.trim() || '___________________';
+  const dataRaw   = document.getElementById('mod-data')?.value || '';
+  const dataFmt   = dataRaw ? dataRaw.replace('T',' ').slice(0,16) : _agora_fmt();
+
+  // Mostrar/ocultar campos dinâmicos
+  const camposTNZ     = ['TROCA/SUBSTITUIÇÃO DE TORNOZELEIRA'];
+  const camposTNZUnit = ['VINCULAÇÃO','VINCULAÇÃO JVD','DESVINCULAÇÃO','INSPEÇÃO DE TORNOZELEIRA','TEMPO LIMITE AUSÊNCIA GPRS'];
+  const camposDPP     = ['VINCULAÇÃO – DPP'];
+  const camposZona    = ['JUSTIFICATIVA DE SAÍDA DE ZONA','JUSTIFICATIVA ATESTADO MÉDICO','ALTERAÇÃO ENDEREÇO/ZONA'];
+  const camposPermuta = ['PERMUTA SERVIDOR/PLANTÃO'];
+
+  const setDisplay = (id, show) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = show ? '' : 'none';
+  };
+  setDisplay('mod-row-tnz',      camposTNZ.includes(assunto));
+  setDisplay('mod-row-tnz-unica', camposTNZUnit.includes(assunto));
+  setDisplay('mod-row-dpp',      camposDPP.includes(assunto));
+  setDisplay('mod-row-zona',     camposZona.includes(assunto));
+  setDisplay('mod-row-permuta',  camposPermuta.includes(assunto));
+
+  if (!assunto) { document.getElementById('mod-texto').value = ''; return; }
+
+  const cabecalho = `ESTADO DO AMAPÁ
+SECRETARIA DE ESTADO DA JUSTIÇA E SEGURANÇA PÚBLICA
+INSTITUTO DE ADMINISTRAÇÃO PENITENCIÁRIA DO AMAPÁ — IAPEN/AP
+CENTRAL DE MONITORAMENTO ELETRÔNICO — CME
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ASSUNTO: ${assunto}
+Data/Hora: ${dataFmt}
+Plantão: ${plantao}
+Servidor: ${servidor}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+
+  const templates = {
+    'VINCULAÇÃO': `
+Registramos nesta data (${dataFmt}) a VINCULAÇÃO do dispositivo de monitoramento eletrônico (tornozeleira) de número de série ${tnz} ao monitorado:
+
+• MONITORADO: ${monit}
+• PROCESSO/ALVARÁ: ${processo}
+
+O equipamento foi devidamente instalado no tornozelo esquerdo do (a) monitorado (a), conforme procedimento padrão desta Central. Foram repassadas ao (à) monitorado (a) as instruções de uso, proibições e obrigações relativas ao cumprimento da medida cautelar/pena alternativa.
+
+Servidor responsável pela vinculação: ${servidor}
+Plantão: ${plantao}`,
+
+    'VINCULAÇÃO JVD': `
+Registramos nesta data (${dataFmt}) a VINCULAÇÃO mediante JUIZADO DE VIOLÊNCIA DOMÉSTICA (JVD) do dispositivo de monitoramento eletrônico (tornozeleira) de número de série ${tnz} ao monitorado:
+
+• MONITORADO: ${monit}
+• PROCESSO/ALVARÁ: ${processo}
+
+O equipamento foi instalado em cumprimento a decisão judicial no âmbito do Juizado de Violência Doméstica, conforme determinação judicial. O (a) monitorado (a) foi orientado (a) quanto às regras de uso e das consequências em caso de violação.
+
+Servidor responsável: ${servidor}
+Plantão: ${plantao}`,
+
+    'DESVINCULAÇÃO': `
+Registramos nesta data (${dataFmt}) a DESVINCULAÇÃO do dispositivo de monitoramento eletrônico (tornozeleira) de número de série ${tnz} do monitorado:
+
+• MONITORADO: ${monit}
+• PROCESSO/ALVARÁ: ${processo}
+
+A desvinculação foi realizada em conformidade com determinação judicial/administrativa, sendo o equipamento recolhido e encaminhado ao setor de estoque desta Central para os devidos procedimentos.
+
+Servidor responsável: ${servidor}
+Plantão: ${plantao}`,
+
+    'TROCA/SUBSTITUIÇÃO DE TORNOZELEIRA': `
+Registramos nesta data (${dataFmt}) a TROCA/SUBSTITUIÇÃO do dispositivo de monitoramento eletrônico do monitorado:
+
+• MONITORADO: ${monit}
+• PROCESSO/ALVARÁ: ${processo}
+
+• TNZ RECOLHIDA (ANTIGA): ${tnzA}
+• TNZ INSTALADA (NOVA):   ${tnzN}
+
+A substituição foi realizada devido a problemas técnicos/operacionais no equipamento anterior. O novo dispositivo foi devidamente instalado e testado, confirmando seu correto funcionamento.
+
+Servidor responsável: ${servidor}
+Plantão: ${plantao}`,
+
+    'JUSTIFICATIVA DE SAÍDA DE ZONA': `
+Registramos nesta data (${dataFmt}) a JUSTIFICATIVA DE SAÍDA DE ZONA referente ao monitorado:
+
+• MONITORADO: ${monit}
+• PROCESSO/ALVARÁ: ${processo}
+• TORNOZELEIRA: ${tnz}
+
+JUSTIFICATIVA: ${just}
+
+O alerta foi devidamente analisado por esta Central, registrado e encaminhado conforme protocolo operacional vigente. Situação regularizada.
+
+Servidor responsável: ${servidor}
+Plantão: ${plantao}`,
+
+    'JUSTIFICATIVA ATESTADO MÉDICO': `
+Registramos nesta data (${dataFmt}) a JUSTIFICATIVA DE AUSÊNCIA POR ATESTADO MÉDICO referente ao monitorado:
+
+• MONITORADO: ${monit}
+• PROCESSO/ALVARÁ: ${processo}
+• TORNOZELEIRA: ${tnz}
+
+JUSTIFICATIVA: ${just}
+
+O documento médico apresentado foi verificado e aceito como justificativa para a ausência/saída de zona monitorada. O atestado encontra-se arquivado para os devidos fins legais.
+
+Servidor responsável: ${servidor}
+Plantão: ${plantao}`,
+
+    'INSPEÇÃO DE TORNOZELEIRA': `
+Registramos nesta data (${dataFmt}) a realização de INSPEÇÃO DE TORNOZELEIRA referente ao monitorado:
+
+• MONITORADO: ${monit}
+• PROCESSO/ALVARÁ: ${processo}
+• TORNOZELEIRA: ${tnz}
+
+A inspeção foi realizada verificando-se o estado geral do equipamento, nível de bateria, integridade física do dispositivo e da cinta de fixação, bem como o correto funcionamento dos sistemas de GPS e comunicação.
+
+☐ Equipamento em bom estado
+☐ Cinta em bom estado
+☐ Sinal GPS operacional
+☐ Comunicação operacional
+
+Servidor responsável: ${servidor}
+Plantão: ${plantao}`,
+
+    'TEMPO LIMITE AUSÊNCIA GPRS': `
+Registramos nesta data (${dataFmt}) o alerta de TEMPO LIMITE DE AUSÊNCIA DE SINAL GPRS referente ao monitorado:
+
+• MONITORADO: ${monit}
+• PROCESSO/ALVARÁ: ${processo}
+• TORNOZELEIRA: ${tnz}
+
+Constatou-se que o dispositivo ultrapassou o tempo máximo permitido sem sinal GPS/GPRS. Foram adotadas as medidas previstas no protocolo operacional desta Central, incluindo tentativa de contato com o monitorado e comunicação à autoridade competente.
+
+Situação: _________________
+Providências adotadas: _________________
+
+Servidor responsável: ${servidor}
+Plantão: ${plantao}`,
+
+    'PERMUTA SERVIDOR/PLANTÃO': `
+Registramos nesta data (${dataFmt}) a PERMUTA DE SERVIDOR entre plantões desta Central:
+
+• SERVIDOR SAINDO: ${srvSai}
+• SERVIDOR ENTRANDO: ${srvEntra}
+• PLANTÃO DE REFERÊNCIA: ${plantao}
+
+A permuta foi acordada entre os servidores envolvidos e está devidamente registrada para fins de controle de frequência e escala de serviço desta Central.
+
+Responsável pelo registro: ${servidor}`,
+
+    'INFORMATIVO – ENTREGA DE DECLARAÇÃO': `
+Registramos nesta data (${dataFmt}) o INFORMATIVO DE ENTREGA DE DECLARAÇÃO referente ao monitorado:
+
+• MONITORADO: ${monit}
+• PROCESSO/ALVARÁ: ${processo}
+
+O (a) monitorado (a) compareceu a esta Central e realizou a entrega de declaração conforme solicitado. O documento foi recebido, protocolado e encaminhado ao setor competente para as devidas providências.
+
+Servidor responsável: ${servidor}
+Plantão: ${plantao}`,
+
+    'INFORMATIVO – ATUALIZAÇÃO CADASTRAL': `
+Registramos nesta data (${dataFmt}) o INFORMATIVO DE ATUALIZAÇÃO CADASTRAL referente ao monitorado:
+
+• MONITORADO: ${monit}
+• PROCESSO/ALVARÁ: ${processo}
+
+Os dados cadastrais do (a) monitorado (a) foram devidamente atualizados no sistema desta Central, conforme solicitação e documentação apresentada.
+
+Dados atualizados: _________________
+
+Servidor responsável: ${servidor}
+Plantão: ${plantao}`,
+
+    'ALTERAÇÃO ENDEREÇO/ZONA': `
+Registramos nesta data (${dataFmt}) a ALTERAÇÃO DE ENDEREÇO E/OU ZONA DE MONITORAMENTO referente ao monitorado:
+
+• MONITORADO: ${monit}
+• PROCESSO/ALVARÁ: ${processo}
+• TORNOZELEIRA: ${tnz}
+
+MOTIVO/JUSTIFICATIVA: ${just}
+
+A alteração de zona/endereço foi realizada no sistema após análise da documentação apresentada e autorização judicial/administrativa competente. O novo endereço e parâmetros de zona foram configurados no sistema de monitoramento.
+
+Servidor responsável: ${servidor}
+Plantão: ${plantao}`,
+
+    'VINCULAÇÃO – DPP': `
+Registramos nesta data (${dataFmt}) a VINCULAÇÃO de DISPOSITIVO DE PROTEÇÃO PESSOAL (DPP) ao monitorado/usuário:
+
+• MONITORADO/USUÁRIO: ${monit}
+• PROCESSO/ALVARÁ: ${processo}
+• Nº SÉRIE DO DPP: ${dpp}
+
+O dispositivo foi entregue, configurado e testado, confirmando seu correto funcionamento. O (a) usuário (a) foi instruído (a) quanto ao modo de uso e acionamento em situações de emergência.
+
+Servidor responsável: ${servidor}
+Plantão: ${plantao}`,
+  };
+
+  const corpo = templates[assunto] || '';
+  const rodape = `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Central de Monitoramento Eletrônico — CME/IAPEN-AP
+Av. Machado de Assis, 372 — Santa Rita | CEP: 68.901-257
+Tel.: (096) 98415-2844 | cme.iapen.ap@gmail.com
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+  const texto = cabecalho + corpo + rodape;
+  const ta = document.getElementById('mod-texto');
+  if (ta) {
+    ta.value = texto;
+    document.getElementById('mod-char-count').textContent = texto.length + ' caracteres';
+  }
+}
+
+function copiarModelo() {
+  const ta = document.getElementById('mod-texto');
+  if (!ta || !ta.value.trim()) { _mostrarToast('⚠️ Gere um texto antes de copiar.', 'erro'); return; }
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const msg = document.getElementById('mod-copy-msg');
+    if (msg) { msg.style.display = ''; setTimeout(() => msg.style.display = 'none', 3000); }
+    _mostrarToast('📋 Texto copiado!', 'sucesso');
+  }).catch(() => {
+    ta.select(); document.execCommand('copy');
+    _mostrarToast('📋 Texto copiado!', 'sucesso');
+  });
+}
+
+function limparModelo() {
+  ['mod-assunto','mod-monitorado','mod-processo','mod-tnz-antiga','mod-tnz-nova',
+   'mod-tnz','mod-dpp','mod-justificativa','mod-servidor-saindo','mod-servidor-entrando','mod-plantao'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  // Reset servidor e data
+  const srv = document.getElementById('mod-servidor');
+  if (srv) srv.value = usuarioAtual?.nome || '';
+  const n = new Date(); n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
+  const dt = document.getElementById('mod-data');
+  if (dt) dt.value = n.toISOString().slice(0,16);
+  const ta = document.getElementById('mod-texto');
+  if (ta) ta.value = '';
+  document.getElementById('mod-char-count').textContent = '0 caracteres';
+  ['mod-row-tnz','mod-row-tnz-unica','mod-row-dpp','mod-row-zona','mod-row-permuta'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
 
 // Sincronizar logo da topbar com a do login (evita base64 duplicado/corrompido)
 (function() {
