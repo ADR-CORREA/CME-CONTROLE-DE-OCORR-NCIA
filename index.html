@@ -4753,7 +4753,7 @@ function renderizarComunicacao() {
 
   const podeEdit = podEditarComunicacao();
   tbody.innerHTML = pagina.map((o) => {
-    const idx = ocs.indexOf(o);
+    const idx = findIdx(o.id);  // índice correto no array completo
     const badgeProdoc = o.prodoc === 'SIM'
       ? '<span class="badge badge-ok">SIM</span>'
       : '<span class="badge badge-vencido">NÃO</span>';
