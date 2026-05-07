@@ -915,6 +915,7 @@ tr.row-critico-com { background: #fff8f0 !important; }
 tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -1374,7 +1375,8 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <button class="btn-secondary" onclick="limparModelo()">🗑️ Limpar</button>
-          <button class="btn-primary" onclick="copiarModelo()">📋 Copiar Texto</button>
+          <button class="btn-secondary" onclick="copiarModelo()">📋 Copiar Texto</button>
+          <button class="btn-primary" onclick="baixarModeloWord()">📥 Baixar Word</button>
         </div>
       </div>
 
@@ -1400,6 +1402,7 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
               <option>INFORMATIVO – ATUALIZAÇÃO CADASTRAL</option>
               <option>ALTERAÇÃO ENDEREÇO/ZONA</option>
               <option>VINCULAÇÃO – DPP</option>
+              <option>COMPARECIMENTO NA CENTRAL</option>
             </select>
           </div>
 
@@ -1411,6 +1414,20 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
           <div class="form-field">
             <label>Processo / Alvará Nº</label>
             <input type="text" id="mod-processo" placeholder="Nº do processo ou alvará" oninput="gerarModelo()">
+          </div>
+
+          <div id="mod-row-cpf" style="display:none">
+            <div class="form-field">
+              <label>CPF do Monitorado</label>
+              <input type="text" id="mod-cpf" placeholder="000.000.000-00" oninput="gerarModelo()">
+            </div>
+          </div>
+
+          <div id="mod-row-motivo" style="display:none">
+            <div class="form-field">
+              <label>Motivo do Comparecimento <span style="color:#888;font-weight:400">(opcional)</span></label>
+              <input type="text" id="mod-motivo" placeholder="Ex: Entrega de declaração, Atualização cadastral..." oninput="gerarModelo()">
+            </div>
           </div>
 
           <div id="mod-row-tnz" style="display:none">
@@ -3043,7 +3060,7 @@ function filtrarCriticos(v) { filtroCrit = v; renderizarCriticos(); }
 
 /* ─── OCORRÊNCIAS ────────────────────────────────────── */
 function renderizarOcorrencias() {
-  let ocs = getOcorrencias();
+  let ocs = getOcorrencias().filter(o => !o.arquivadaPorComunicacao);
   if (filtroOc) {
     ocs = ocs.filter(o =>
       String(o.id).includes(filtroOc) ||
@@ -5404,6 +5421,8 @@ function gerarModelo() {
   const tnz       = document.getElementById('mod-tnz')?.value.trim() || '___________';
   const dpp       = document.getElementById('mod-dpp')?.value.trim() || '___________';
   const just      = document.getElementById('mod-justificativa')?.value.trim() || '___________________';
+  const cpf       = document.getElementById('mod-cpf')?.value.trim() || '___.___.___-__';
+  const motivo    = document.getElementById('mod-motivo')?.value.trim() || 'Comparecimento à Central';
   const srvSai    = document.getElementById('mod-servidor-saindo')?.value.trim() || '___________________';
   const srvEntra  = document.getElementById('mod-servidor-entrando')?.value.trim() || '___________________';
   const plantao   = document.getElementById('mod-plantao')?.value || '___________';
@@ -5412,21 +5431,24 @@ function gerarModelo() {
   const dataFmt   = dataRaw ? dataRaw.replace('T',' ').slice(0,16) : _agora_fmt();
 
   // Mostrar/ocultar campos dinâmicos
-  const camposTNZ     = ['TROCA/SUBSTITUIÇÃO DE TORNOZELEIRA'];
-  const camposTNZUnit = ['VINCULAÇÃO','VINCULAÇÃO JVD','DESVINCULAÇÃO','INSPEÇÃO DE TORNOZELEIRA','TEMPO LIMITE AUSÊNCIA GPRS'];
-  const camposDPP     = ['VINCULAÇÃO – DPP'];
-  const camposZona    = ['JUSTIFICATIVA DE SAÍDA DE ZONA','JUSTIFICATIVA ATESTADO MÉDICO','ALTERAÇÃO ENDEREÇO/ZONA'];
-  const camposPermuta = ['PERMUTA SERVIDOR/PLANTÃO'];
+  const camposTNZ         = ['TROCA/SUBSTITUIÇÃO DE TORNOZELEIRA'];
+  const camposTNZUnit     = ['VINCULAÇÃO','VINCULAÇÃO JVD','DESVINCULAÇÃO','INSPEÇÃO DE TORNOZELEIRA','TEMPO LIMITE AUSÊNCIA GPRS'];
+  const camposDPP         = ['VINCULAÇÃO – DPP'];
+  const camposZona        = ['JUSTIFICATIVA DE SAÍDA DE ZONA','JUSTIFICATIVA ATESTADO MÉDICO','ALTERAÇÃO ENDEREÇO/ZONA'];
+  const camposPermuta     = ['PERMUTA SERVIDOR/PLANTÃO'];
+  const camposComparec    = ['COMPARECIMENTO NA CENTRAL'];
 
   const setDisplay = (id, show) => {
     const el = document.getElementById(id);
     if (el) el.style.display = show ? '' : 'none';
   };
-  setDisplay('mod-row-tnz',      camposTNZ.includes(assunto));
+  setDisplay('mod-row-tnz',       camposTNZ.includes(assunto));
   setDisplay('mod-row-tnz-unica', camposTNZUnit.includes(assunto));
-  setDisplay('mod-row-dpp',      camposDPP.includes(assunto));
-  setDisplay('mod-row-zona',     camposZona.includes(assunto));
-  setDisplay('mod-row-permuta',  camposPermuta.includes(assunto));
+  setDisplay('mod-row-dpp',       camposDPP.includes(assunto));
+  setDisplay('mod-row-zona',      camposZona.includes(assunto));
+  setDisplay('mod-row-permuta',   camposPermuta.includes(assunto));
+  setDisplay('mod-row-cpf',       camposComparec.includes(assunto));
+  setDisplay('mod-row-motivo',    camposComparec.includes(assunto));
 
   if (!assunto) { document.getElementById('mod-texto').value = ''; return; }
 
@@ -5613,6 +5635,30 @@ O dispositivo foi entregue, configurado e testado, confirmando seu correto funci
 
 Servidor responsável: ${servidor}
 Plantão: ${plantao}`,
+
+    'COMPARECIMENTO NA CENTRAL': `
+DECLARAMOS que o (a) monitorado (a) abaixo identificado (a) compareceu pessoalmente à CENTRAL DE MONITORAMENTO ELETRÔNICO — CME/IAPEN-AP na data e horário indicados:
+
+• NOME: ${monit}
+• CPF: ${cpf}
+• PROCESSO / ALVARÁ Nº: ${processo}
+• DATA/HORA DO COMPARECIMENTO: ${dataFmt}
+• MOTIVO: ${motivo}
+
+O comparecimento foi devidamente registrado nos sistemas desta Central, confirmando a presença física do (a) monitorado (a) nas dependências da CME/IAPEN-AP.
+
+Esta declaração é emitida a pedido do (a) interessado (a) para os fins que se fizerem necessários.
+
+Servidor responsável pelo registro: ${servidor}
+Plantão: ${plantao}
+
+
+_____________________________________________
+Assinatura do Servidor
+
+
+_____________________________________________
+Assinatura do Monitorado (a)`,
   };
 
   const corpo = templates[assunto] || '';
@@ -5645,9 +5691,147 @@ function copiarModelo() {
   });
 }
 
+async function baixarModeloWord() {
+  const assunto = document.getElementById('mod-assunto')?.value;
+  if (!assunto) { _mostrarToast('⚠️ Selecione um assunto primeiro.', 'erro'); return; }
+  const ta = document.getElementById('mod-texto');
+  if (!ta || !ta.value.trim()) { _mostrarToast('⚠️ Gere o texto antes de baixar.', 'erro'); return; }
+  if (!window.docx) { _mostrarToast('⚠️ Biblioteca Word ainda carregando. Tente novamente.', 'erro'); return; }
+
+  const { Document, Packer, Paragraph, TextRun, AlignmentType, ImageRun, BorderStyle } = window.docx;
+
+  // ── Dados do formulário ─────────────────────────────
+  const monit    = document.getElementById('mod-monitorado')?.value?.trim() || '___________________';
+  const processo = document.getElementById('mod-processo')?.value?.trim()  || '___________________';
+  const plantao  = document.getElementById('mod-plantao')?.value           || '___________';
+  const servidor = document.getElementById('mod-servidor')?.value?.trim()  || '___________________';
+  const dataRaw  = document.getElementById('mod-data')?.value              || '';
+  const dataFmt  = dataRaw ? dataRaw.replace('T',' ').slice(0,16) : _agora_fmt();
+
+  // ── Logo ────────────────────────────────────────────
+  let logoParag = null;
+  try {
+    const logoEl = document.querySelector('#login-screen img') || document.getElementById('topbar-logo');
+    if (logoEl && logoEl.src && logoEl.src.startsWith('data:')) {
+      const b64 = logoEl.src.split(',')[1];
+      const bStr = atob(b64);
+      const bytes = new Uint8Array(bStr.length);
+      for (let i = 0; i < bStr.length; i++) bytes[i] = bStr.charCodeAt(i);
+      const tipo = logoEl.src.includes('jpeg') || logoEl.src.includes('jpg') ? 'jpg' : 'png';
+      logoParag = new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 120 },
+        children: [new ImageRun({ data: bytes, transformation: { width: 90, height: 90 }, type: tipo })]
+      });
+    }
+  } catch(e) { console.warn('[CME] Logo Word:', e); }
+
+  // ── Helpers ─────────────────────────────────────────
+  const az1 = '1F4E78';
+  const cz  = '555555';
+  const fnt = 'Arial';
+  const par = (text, opts = {}) => new Paragraph({
+    alignment: opts.center ? AlignmentType.CENTER : (opts.left ? AlignmentType.LEFT : AlignmentType.JUSTIFIED),
+    spacing: { after: opts.after ?? 80 },
+    children: [new TextRun({
+      text: text || ' ',
+      bold:   !!opts.bold,
+      size:   opts.size  ?? 20,
+      color:  opts.color ?? '000000',
+      font:   fnt,
+      allCaps: !!opts.caps,
+    })]
+  });
+  const vazio = (sz = 80) => new Paragraph({ spacing: { after: sz }, children: [new TextRun({ text: ' ', size: 18, font: fnt })] });
+  const linha = () => new Paragraph({
+    border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: az1, space: 1 } },
+    spacing: { after: 160 },
+    children: [new TextRun({ text: ' ' })]
+  });
+
+  // ── Corpo: parsear o texto do textarea ───────────────
+  const textoLinhas = ta.value.split('\n');
+  const bodyParas = [];
+  // Pular as 7 primeiras linhas do cabeçalho (vamos recriar no Word)
+  // e as 2 últimas do rodapé institucional
+  let dentroCorpo = false;
+  let rodapeIdx = textoLinhas.findLastIndex(l => l.includes('━━━'));
+  for (let i = 0; i < textoLinhas.length; i++) {
+    if (i >= rodapeIdx) break; // Pular rodapé (vamos recriar)
+    const l = textoLinhas[i];
+    if (l.includes('━━━')) { dentroCorpo = true; continue; }
+    if (!dentroCorpo) continue; // Pular linhas do cabeçalho
+
+    // Detectar tipo da linha
+    const isAssunto = l.startsWith('ASSUNTO:');
+    const isMeta    = /^(Data\/Hora:|Plantão:|Servidor:)/.test(l);
+    const isBullet  = l.startsWith('•');
+    const isCheck   = l.startsWith('☐');
+    const isEmpty   = !l.trim();
+
+    if (isEmpty) { bodyParas.push(vazio(60)); continue; }
+
+    bodyParas.push(new Paragraph({
+      alignment: (isAssunto || isMeta) ? AlignmentType.LEFT : AlignmentType.JUSTIFIED,
+      spacing: { after: isAssunto ? 100 : 60 },
+      children: [new TextRun({
+        text: l,
+        bold: isAssunto || isMeta,
+        size: isAssunto ? 22 : 20,
+        color: isAssunto ? az1 : '111111',
+        font: fnt,
+      })]
+    }));
+  }
+
+  // ── Montar documento ─────────────────────────────────
+  const children = [
+    ...(logoParag ? [logoParag] : []),
+    par('ESTADO DO AMAPÁ',                                          { center:true, bold:true, size:24, color:az1 }),
+    par('SECRETARIA DE ESTADO DA JUSTIÇA E SEGURANÇA PÚBLICA',     { center:true, bold:true, size:19 }),
+    par('INSTITUTO DE ADMINISTRAÇÃO PENITENCIÁRIA DO AMAPÁ — IAPEN/AP', { center:true, bold:true, size:18 }),
+    par('CENTRAL DE MONITORAMENTO ELETRÔNICO — CME',               { center:true, bold:true, size:19, color:az1 }),
+    vazio(60),
+    linha(),
+    ...bodyParas,
+    vazio(40),
+    linha(),
+    // Rodapé institucional
+    par('Central de Monitoramento Eletrônico — CME/IAPEN-AP',      { center:true, bold:true, size:17, color:az1, after:40 }),
+    par('Av. Machado de Assis, 372 — Santa Rita | CEP: 68.901-257',{ center:true, size:15, color:cz, after:20 }),
+    par('Tel.: (096) 98415-2844 | cme.iapen.ap@gmail.com',          { center:true, size:15, color:cz, after:20 }),
+  ];
+
+  const doc = new Document({
+    sections: [{
+      properties: { page: { margin: { top: 1080, right: 1080, bottom: 1080, left: 1260 } } },
+      children
+    }]
+  });
+
+  try {
+    _mostrarToast('⏳ Gerando documento...', 'sucesso');
+    const blob = await Packer.toBlob(doc);
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    const nomeArq = `CME_${assunto.replace(/[\/\\\s]+/g,'_')}_${monit !== '___________________' ? monit.split(' ')[0] : 'documento'}.docx`;
+    a.download = nomeArq;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    _mostrarToast('📥 Documento Word baixado!', 'sucesso');
+  } catch(e) {
+    console.error('[CME] Erro ao gerar Word:', e);
+    _mostrarToast('❌ Erro ao gerar Word: ' + e.message, 'erro');
+  }
+}
+
 function limparModelo() {
   ['mod-assunto','mod-monitorado','mod-processo','mod-tnz-antiga','mod-tnz-nova',
-   'mod-tnz','mod-dpp','mod-justificativa','mod-servidor-saindo','mod-servidor-entrando','mod-plantao'].forEach(id => {
+   'mod-tnz','mod-dpp','mod-justificativa','mod-cpf','mod-motivo',
+   'mod-servidor-saindo','mod-servidor-entrando','mod-plantao'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
