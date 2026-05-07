@@ -866,40 +866,7 @@ function excluirOcorrenciaArquivada(id) {
   _mostrarToast('🗑️ Ocorrência excluída.', 'sucesso');
 }
 
-/* ── Gerência → Comunicação ────────────────────────────────────── */
-function abrirModalEnviarComGerencia() {
-  document.getElementById('ger-com-assunto').value = '';
-  const amanha = new Date(); amanha.setDate(amanha.getDate() + 1);
-  document.getElementById('ger-com-prazo').value = amanha.toISOString().slice(0,10);
-  document.getElementById('modal-ger-comunicacao').classList.add('open');
-}
 
-function salvarEnviarComGerencia() {
-  const assunto = document.getElementById('ger-com-assunto').value.trim();
-  const prazo   = document.getElementById('ger-com-prazo').value;
-  if (!assunto) { _mostrarToast('⚠️ Preencha o assunto.', 'erro'); return; }
-  const dados = getGerencia();
-  if (!dados.demandas) dados.demandas = [];
-  dados.demandas.push({
-    id:             'ger_com_' + Date.now(),
-    titulo:         assunto,
-    prazo:          prazo || '',
-    descricao:      'Demanda enviada pela Gerência para a Comunicação',
-    responsavel:    usuarioAtual?.nome || '',
-    status:         'pendente',
-    criadoEm:       new Date().toISOString(),
-    origemGerencia: true,
-  });
-  salvarStore('gerencia', dados);
-  fecharModal('modal-ger-comunicacao');
-  atualizarBadgeCom();
-  atualizarBadgeOc();
-  atualizarBadgeRel();
-  atualizarBadgeGer();
-  _mostrarToast('✅ Demanda enviada para a Comunicação!', 'sucesso');
-}
-
-/* ── Sub-aba Ocorrências ──────────────────────────────────────── */
 
 /* ═══════════════════════ MÓDULO ESTOQUE ════════════════════════ */
 .est-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
@@ -1342,7 +1309,7 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
             <div style="font-size:1.1rem;font-weight:700;color:var(--az1)">📋 Agenda de Demandas — Gerência</div>
             <div class="table-actions">
               <button class="btn-secondary" onclick="renderizarGerencia()">🔄 Atualizar</button>
-              <button class="btn-secondary" onclick="abrirModalEnviarComGerencia()">📡 Comunicação</button>
+
               <button class="btn-primary" onclick="abrirModalGerencia()">➕ Nova Demanda</button>
             </div>
           </div>
@@ -1601,8 +1568,6 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
       <!-- Sub-tabs da Comunicação -->
       <div class="sub-tabs">
         <div class="sub-tab active" id="com-stab-ocorrencias" onclick="mudarSubAbaCom('ocorrencias')">📋 Ocorrências</div>
-        <div class="sub-tab" id="com-stab-relatorio" onclick="mudarSubAbaCom('relatorio')">📄 Relatório</div>
-        <div class="sub-tab" id="com-stab-gerencia" onclick="mudarSubAbaCom('gerencia')">📋 Gerência</div>
         <div class="sub-tab" id="com-stab-arquivados" onclick="mudarSubAbaCom('arquivados')">📁 Arquivados</div>
       </div>
 
@@ -1644,46 +1609,7 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
         </div>
       </div>
 
-      <!-- SUB-PANEL: RELATÓRIO -->
-      <div class="sub-panel" id="com-panel-relatorio">
-        <div class="table-toolbar">
-          <div class="table-search"><span>🔍</span>
-            <input type="text" placeholder="Buscar monitorado..." oninput="filtrarComRelatorio(this.value)">
-          </div>
-          <div class="table-actions">
-            <button class="btn-secondary" onclick="renderizarComRelatorio()">🔄 Atualizar</button>
-          </div>
-        </div>
-        <div class="table-scroll">
-          <table class="data-table">
-            <thead><tr>
-              <th>Nº</th><th>Tipo</th><th>Monitorado</th><th>Servidor</th>
-              <th>Dt. Recebimento</th><th>Dt. Envio Comunicação</th><th>Status</th><th>Ação</th>
-            </tr></thead>
-            <tbody id="tbody-com-relatorio"></tbody>
-          </table>
-        </div>
-      </div>
 
-      <!-- SUB-PANEL: GERÊNCIA -->
-      <div class="sub-panel" id="com-panel-gerencia">
-        <div class="table-toolbar">
-          <div class="table-search"><span>🔍</span>
-            <input type="text" placeholder="Buscar demanda..." oninput="filtrarComGerencia(this.value)">
-          </div>
-          <div class="table-actions">
-            <button class="btn-secondary" onclick="renderizarComGerencia()">🔄 Atualizar</button>
-          </div>
-        </div>
-        <div class="table-scroll">
-          <table class="data-table">
-            <thead><tr>
-              <th>Prazo</th><th>Demanda</th><th>Responsável</th><th>Status</th><th>Ação</th>
-            </tr></thead>
-            <tbody id="tbody-com-gerencia"></tbody>
-          </table>
-        </div>
-      </div>
 
       <!-- SUB-PANEL: ARQUIVADOS -->
       <div class="sub-panel" id="com-panel-arquivados">
@@ -1697,7 +1623,7 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr>
-              <th>Tipo</th><th>Descrição</th><th>Enviado em</th><th>Obs</th><th>Ações</th>
+              <th>Ocorrência</th><th>Tipo Violação</th><th>Enviado em</th><th>Nº PRODOC</th><th>Plantão</th><th>Ações</th>
             </tr></thead>
             <tbody id="tbody-com-arquivados"></tbody>
           </table>
@@ -2312,28 +2238,7 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
 </div>
 
 <!-- MODAL GERÊNCIA → COMUNICAÇÃO -->
-<div class="modal-overlay" id="modal-ger-comunicacao">
-  <div class="modal-box" style="max-width:480px">
-    <div class="modal-header">
-      <h3>📡 Gerar Demanda para a Comunicação</h3>
-      <button class="modal-close" onclick="fecharModal('modal-ger-comunicacao')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-field">
-        <label>Assunto *</label>
-        <input type="text" id="ger-com-assunto" placeholder="Descreva o assunto a ser comunicado">
-      </div>
-      <div class="form-field">
-        <label>Prazo (opcional)</label>
-        <input type="date" id="ger-com-prazo">
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="fecharModal('modal-ger-comunicacao')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarEnviarComGerencia()">📡 Enviar para Comunicação</button>
-    </div>
-  </div>
-</div>
+
 
 
 <!-- MODAL CONFIG ESTOQUE -->
@@ -2906,6 +2811,12 @@ function fazerLogin() {
     return;
   }
   usuarioAtual = usuario;
+  // Salvar sessão no localStorage para sobreviver ao F5
+  localStorage.setItem('cme_sessao', JSON.stringify({
+    usuario: usuario.usuario,
+    nivel:   usuario.nivel,
+    nome:    usuario.nome
+  }));
   document.getElementById("login-error").style.display = "none";
   addLog(`Login: ${usuario.nome} (${usuario.nivel})`);
   iniciarApp();
@@ -2921,6 +2832,7 @@ document.getElementById("input-user").addEventListener("keydown", e => {
 function fazerLogout() {
   addLog(`Logout: ${usuarioAtual.nome}`);
   usuarioAtual = null;
+  localStorage.removeItem('cme_sessao');
   // Resetar visibilidade das abas para o estado padrão (CSS assume o controle)
   document.querySelectorAll('.nav-tab').forEach(t => t.style.display = '');
   document.getElementById("app").style.display = "none";
@@ -3992,12 +3904,10 @@ function exportarRelatorioExcel() {
 
 // Navegação sub-abas Comunicação
 function mudarSubAbaCom(aba) {
-  ['ocorrencias','relatorio','gerencia','arquivados'].forEach(a => {
+  ['ocorrencias','arquivados'].forEach(a => {
     document.getElementById('com-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('com-panel-' + a)?.classList.toggle('active', a === aba);
   });
-  if (aba === 'relatorio')  renderizarComRelatorio();
-  if (aba === 'gerencia')   renderizarComGerencia();
   if (aba === 'arquivados') renderizarComArquivados();
 }
 
@@ -4024,11 +3934,9 @@ function mudarSubAbaGer(aba) {
 // ── Badge de notificação ──────────────────────────────
 function atualizarBadgeCom() {
   const lastVisto = _cache['_comLastVisto'] || '1970-01-01T00:00:00.000Z';
-  const rels = (getRelatorios().registros || []).filter(r => !r.comEnviadoEm && r.criadoEm > lastVisto);
-  const gers = (getGerencia().demandas || []).filter(d => !d.comEnviadoEm && d.criadoEm > lastVisto);
   // Ocorrências encaminhadas de Críticos ainda não arquivadas
   const crits = getOcorrencias().filter(o => o.encaminhadoCom && !o.arquivadaPorComunicacao && (o.encaminhadoComEm||'') > lastVisto);
-  const total = rels.length + gers.length + crits.length;
+  const total = crits.length;
   const badge = document.getElementById('com-badge');
   if (!badge) return;
   if (total > 0) {
@@ -4046,142 +3954,27 @@ function marcarComVisto() {
 }
 
 // ── Renderizar COM → Relatório ──────────────────────────────
-let _comRelFiltro = '';
-function filtrarComRelatorio(v) { _comRelFiltro = (v||'').toLowerCase(); renderizarComRelatorio(); }
-
-function renderizarComRelatorio() {
-  const dados = getRelatorios();
-  let lista = (dados.registros || []).filter(r => !r.comEnviadoEm);
-  if (_comRelFiltro) lista = lista.filter(r =>
-    (r.monitorado||'').toLowerCase().includes(_comRelFiltro) ||
-    (r.servidor||'').toLowerCase().includes(_comRelFiltro)
-  );
-  lista.sort((a,b) => (a.criadoEm||'').localeCompare(b.criadoEm||''));
-  const tbody = document.getElementById('tbody-com-relatorio');
-  if (!tbody) return;
-  if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#888">Nenhum relatório pendente de envio.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = lista.map((r, i) => `<tr>
-    <td>${i+1}</td>
-    <td>${r.tipo||''}</td>
-    <td>${r.monitorado||''}</td>
-    <td>${r.servidor||''}</td>
-    <td>${(r.dataRecebimento||'').split('-').reverse().join('/')}</td>
-    <td>${(r.dataEnvio||'').split('-').reverse().join('/')}</td>
-    <td><span class="badge badge-vencendo">Pendente</span></td>
-    <td><button class="btn-sm btn-primary" onclick="abrirModalComRelatorio('${r.id}')">✅ Marcar Enviado</button></td>
-  </tr>`).join('');
-}
-
-function abrirModalComRelatorio(id) {
-  const r = (getRelatorios().registros||[]).find(x => x.id === id);
-  if (!r) return;
-  document.getElementById('com-rel-edit-id').value = id;
-  document.getElementById('com-rel-tipo-display').textContent = r.tipo || '';
-  document.getElementById('com-rel-monitorado-display').textContent = r.monitorado || '';
-  document.getElementById('com-rel-data-envio').value = new Date().toISOString().slice(0,10);
-  document.getElementById('com-rel-obs').value = '';
-  document.getElementById('modal-com-relatorio').classList.add('open');
-}
-
-function salvarComRelatorio() {
-  const id = document.getElementById('com-rel-edit-id').value;
-  const dataEnvio = document.getElementById('com-rel-data-envio').value;
-  const obs = document.getElementById('com-rel-obs').value.trim();
-  if (!dataEnvio) { _mostrarToast('⚠️ Informe a data do envio.', 'erro'); return; }
-  const dados = getRelatorios();
-  const idx = (dados.registros||[]).findIndex(x => x.id === id);
-  if (idx < 0) return;
-  dados.registros[idx].comEnviadoEm = dataEnvio;
-  dados.registros[idx].comObs = obs;
-  salvarStore('relatorios', dados);
-  fecharModal('modal-com-relatorio');
-  renderizarComRelatorio();
-  renderizarRelArquivadas();
-  _mostrarToast('✅ Relatório marcado como enviado!', 'sucesso');
-}
-
-// ── Renderizar COM → Gerência ──────────────────────────────
-let _comGerFiltro = '';
-function filtrarComGerencia(v) { _comGerFiltro = (v||'').toLowerCase(); renderizarComGerencia(); }
-
-function renderizarComGerencia() {
-  const dados = getGerencia();
-  let lista = (dados.demandas || []).filter(d => !d.comEnviadoEm);
-  if (_comGerFiltro) lista = lista.filter(d =>
-    (d.titulo||'').toLowerCase().includes(_comGerFiltro) ||
-    (d.responsavel||'').toLowerCase().includes(_comGerFiltro)
-  );
-  lista.sort((a,b) => (a.prazo||'').localeCompare(b.prazo||''));
-  const tbody = document.getElementById('tbody-com-gerencia');
-  if (!tbody) return;
-  if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#888">Nenhuma demanda pendente de envio.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = lista.map(d => `<tr>
-    <td>${(d.prazo||'').split('-').reverse().join('/')}</td>
-    <td>${d.titulo||''}</td>
-    <td>${d.responsavel||''}</td>
-    <td><span class="badge badge-vencendo">Pendente</span></td>
-    <td><button class="btn-sm btn-primary" onclick="abrirModalComGerencia('${d.id}')">✅ Marcar Enviado</button></td>
-  </tr>`).join('');
-}
-
-function abrirModalComGerencia(id) {
-  const d = (getGerencia().demandas||[]).find(x => x.id === id);
-  if (!d) return;
-  document.getElementById('com-ger-edit-id').value = id;
-  document.getElementById('com-ger-titulo-display').textContent = d.titulo || '';
-  document.getElementById('com-ger-resp-display').textContent = d.responsavel || '';
-  document.getElementById('com-ger-data-envio').value = new Date().toISOString().slice(0,10);
-  document.getElementById('com-ger-obs').value = '';
-  document.getElementById('modal-com-gerencia').classList.add('open');
-}
-
-function salvarComGerencia() {
-  const id = document.getElementById('com-ger-edit-id').value;
-  const dataEnvio = document.getElementById('com-ger-data-envio').value;
-  const obs = document.getElementById('com-ger-obs').value.trim();
-  if (!dataEnvio) { _mostrarToast('⚠️ Informe a data do envio.', 'erro'); return; }
-  const dados = getGerencia();
-  const idx = (dados.demandas||[]).findIndex(x => x.id === id);
-  if (idx < 0) return;
-  dados.demandas[idx].comEnviadoEm = dataEnvio;
-  dados.demandas[idx].comObs = obs;
-  salvarStore('gerencia', dados);
-  fecharModal('modal-com-gerencia');
-  renderizarComGerencia();
-  renderizarGerArquivados();
-  _mostrarToast('✅ Demanda marcada como enviada!', 'sucesso');
-}
-
 // ── Renderizar COM → Arquivados ──────────────────────────────
 function renderizarComArquivados() {
-  const rels = (getRelatorios().registros||[]).filter(r => r.comEnviadoEm);
-  const gers = (getGerencia().demandas   || []).filter(d => d.comEnviadoEm);
-  const ocs  = getOcorrencias().filter(o => o.arquivadaPorComunicacao);
+  const ocs = getOcorrencias().filter(o => o.arquivadaPorComunicacao);
   const tbody = document.getElementById('tbody-com-arquivados');
   if (!tbody) return;
 
-  const rows = [
-    ...ocs.map(o  => ({ tipo: '📋 Ocorrência', chave: 'oc:'+o.id,  desc: `#${o.id} — ${o.monitorado||''}`, enviadoEm: o.comEnviadoEm, obs: `PRODOC: ${o.prodocNum||'—'}` })),
-    ...rels.map(r => ({ tipo: '📄 Relatório',  chave: 'rel:'+r.id, desc: r.monitorado || r.tipo || '—',    enviadoEm: r.comEnviadoEm, obs: r.comObs || '' })),
-    ...gers.map(d => ({ tipo: '📋 Gerência',   chave: 'ger:'+d.id, desc: d.titulo || '—',                  enviadoEm: d.comEnviadoEm, obs: d.comObs || '' })),
-  ].sort((a,b) => (b.enviadoEm||'').localeCompare(a.enviadoEm||''));
+  const rows = ocs
+    .map(o => ({ chave: 'oc:'+o.id, desc: `#${o.id} — ${o.monitorado||''}`, tipo: o.tipo||'', enviadoEm: o.comEnviadoEm, prodoc: o.prodocNum||'—', plantao: o.plantao||'' }))
+    .sort((a,b) => (b.enviadoEm||'').localeCompare(a.enviadoEm||''));
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#888">Nenhum item arquivado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#888">Nenhuma ocorrência arquivada.</td></tr>';
     return;
   }
 
   tbody.innerHTML = rows.map(r => `<tr>
-    <td>${r.tipo}</td>
     <td>${r.desc}</td>
+    <td>${r.tipo}</td>
     <td style="white-space:nowrap">${r.enviadoEm ? new Date(r.enviadoEm).toLocaleString('pt-BR') : '—'}</td>
-    <td>${r.obs}</td>
+    <td>${r.prodoc}</td>
+    <td>${r.plantao}</td>
     <td style="white-space:nowrap">
       <button class="btn-sm btn-outline" onclick="desarquivarComItem('${r.chave}')">↩ Desarquivar</button>
       <button class="btn-sm btn-danger"  onclick="excluirComItem('${r.chave}')">🗑️</button>
@@ -4190,58 +3983,49 @@ function renderizarComArquivados() {
 }
 
 function desarquivarComItem(chave) {
-  if (!confirm('Desarquivar este item?')) return;
-  const [tipo, id] = chave.split(':');
-  if (tipo === 'oc') {
-    const ocs = getOcorrencias();
-    const oc = ocs.find(o => String(o.id) === String(id));
-    if (oc) { delete oc.arquivadaPorComunicacao; delete oc.comEnviadoEm; oc.prodoc = 'NÃO'; }
-    salvarStore('ocorrencias', ocs);
-  } else if (tipo === 'rel') {
-    const dados = getRelatorios();
-    const r = (dados.registros||[]).find(x => x.id === id);
-    if (r) { delete r.comEnviadoEm; delete r.comObs; }
-    salvarStore('relatorios', dados);
-  } else if (tipo === 'ger') {
-    const dados = getGerencia();
-    const d = (dados.demandas||[]).find(x => x.id === id);
-    if (d) { delete d.comEnviadoEm; delete d.comObs; }
-    salvarStore('gerencia', dados);
+  if (!confirm('Desarquivar esta ocorrência?')) return;
+  const [, id] = chave.split(':');
+  const ocs = getOcorrencias();
+  const oc = ocs.find(o => String(o.id) === String(id));
+  if (oc) {
+    delete oc.arquivadaPorComunicacao;
+    delete oc.comEnviadoEm;
+    delete oc.encaminhadoCom;
+    delete oc.encaminhadoComEm;
+    oc.prodoc = 'NÃO';
   }
+  salvarStore('ocorrencias', ocs);
   renderizarComArquivados();
   atualizarTudo();
-  _mostrarToast('↩ Item desarquivado.', 'sucesso');
+  _mostrarToast('↩ Ocorrência desarquivada.', 'sucesso');
 }
 
 function excluirComItem(chave) {
-  if (!confirm('Excluir este item permanentemente?')) return;
-  const [tipo, id] = chave.split(':');
-  if (tipo === 'oc') {
-    salvarStore('ocorrencias', getOcorrencias().filter(o => String(o.id) !== String(id)));
-  } else if (tipo === 'rel') {
-    const dados = getRelatorios();
-    dados.registros = (dados.registros||[]).filter(r => r.id !== id);
-    salvarStore('relatorios', dados);
-  } else if (tipo === 'ger') {
-    const dados = getGerencia();
-    dados.demandas = (dados.demandas||[]).filter(d => d.id !== id);
-    salvarStore('gerencia', dados);
-  }
+  if (!confirm('Excluir esta ocorrência permanentemente?')) return;
+  const [, id] = chave.split(':');
+  salvarStore('ocorrencias', getOcorrencias().filter(o => String(o.id) !== String(id)));
   renderizarComArquivados();
   atualizarTudo();
-  _mostrarToast('🗑️ Item excluído.', 'sucesso');
+  _mostrarToast('🗑️ Ocorrência excluída.', 'sucesso');
 }
 
 function exportarComArquivadosExcel() {
-  const rels = (getRelatorios().registros||[]).filter(r => r.comEnviadoEm)
-    .map(r => ({ 'Tipo':'Relatório','Descrição':`${r.tipo} — ${r.monitorado}`,'Enviado em':(r.comEnviadoEm||'').split('-').reverse().join('/'),'Obs':r.comObs||'' }));
-  const gers = (getGerencia().demandas||[]).filter(d => d.comEnviadoEm)
-    .map(d => ({ 'Tipo':'Gerência','Descrição':d.titulo,'Enviado em':(d.comEnviadoEm||'').split('-').reverse().join('/'),'Obs':d.comObs||'' }));
-  const lista = [...rels, ...gers];
-  if (!lista.length) { _mostrarToast('Nenhum item arquivado.','erro'); return; }
+  const lista = getOcorrencias().filter(o => o.arquivadaPorComunicacao)
+    .map(o => ({
+      'ID': o.id,
+      'Monitorado': o.monitorado || '',
+      'Tipo Violação': o.tipo || '',
+      'Medida': o.medida || '',
+      'Nº PRODOC': o.prodocNum || '',
+      'Data Envio': o.prodocData || '',
+      'Arquivado em': o.comEnviadoEm ? new Date(o.comEnviadoEm).toLocaleString('pt-BR') : '',
+      'Plantão': o.plantao || '',
+      'Obs': o.comObs || ''
+    }));
+  if (!lista.length) { _mostrarToast('Nenhuma ocorrência arquivada.','erro'); return; }
   const ws = XLSX.utils.json_to_sheet(lista);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Arquivados');
+  XLSX.utils.book_append_sheet(wb, ws, 'Arquivados COM');
   XLSX.writeFile(wb, 'comunicacao_arquivados_CME.xlsx');
 }
 
@@ -4333,18 +4117,8 @@ function atualizarBadgeOc() {
   const badge = document.getElementById('oc-badge');
   if (badge) { badge.textContent = count > 9 ? '9+' : count; badge.style.display = count > 0 ? 'flex' : 'none'; }
 }
-function atualizarBadgeRel() {
-  const last = _cache['_relBadgeVisto'] || '1970-01-01';
-  const count = (getRelatorios().registros||[]).filter(r => r.comEnviadoEm && r.comEnviadoEm > last).length;
-  const badge = document.getElementById('rel-badge');
-  if (badge) { badge.textContent = count > 9 ? '9+' : count; badge.style.display = count > 0 ? 'flex' : 'none'; }
-}
-function atualizarBadgeGer() {
-  const last = _cache['_gerBadgeVisto'] || '1970-01-01';
-  const count = (getGerencia().demandas||[]).filter(d => d.comEnviadoEm && d.comEnviadoEm > last).length;
-  const badge = document.getElementById('ger-badge');
-  if (badge) { badge.textContent = count > 9 ? '9+' : count; badge.style.display = count > 0 ? 'flex' : 'none'; }
-}
+function atualizarBadgeRel() { /* fluxo COM→Relatório removido */ }
+function atualizarBadgeGer() { /* fluxo COM→Gerência removido */ }
 function marcarOcVisto() {
   _cache['_ocBadgeVisto'] = new Date().toISOString();
   const b = document.getElementById('oc-badge'); if (b) b.style.display = 'none';
@@ -6036,6 +5810,22 @@ function limparModelo() {
     mostrarErro(e.message);
     // Aguarda 5 s para o usuário ler o erro antes de liberar o login
     await new Promise(r => setTimeout(r, 5000));
+  }
+
+  // Restaurar sessão salva (F5 / recarregamento)
+  const sessaoSalva = localStorage.getItem('cme_sessao');
+  if (sessaoSalva) {
+    try {
+      const s = JSON.parse(sessaoSalva);
+      const userSalvo = getUsuarios().find(u => u.usuario === s.usuario && u.nivel === s.nivel);
+      if (userSalvo) {
+        usuarioAtual = userSalvo;
+        overlay.style.display = 'none';
+        iniciarApp();
+        return; // Entra direto, sem mostrar login
+      }
+    } catch(e) { /* sessão inválida */ }
+    localStorage.removeItem('cme_sessao');
   }
 
   overlay.style.display = 'none';
