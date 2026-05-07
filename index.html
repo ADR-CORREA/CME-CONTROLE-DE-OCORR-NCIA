@@ -942,6 +942,10 @@ function salvarEnviarComGerencia() {
 /* Badge de notificação */
 .nav-tab { position:relative; }
 .notif-badge { position:absolute; top:4px; right:4px; background:#e74c3c; color:#fff; border-radius:50%; width:16px; height:16px; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; line-height:1; }
+
+/* Linha crítico destacado na aba Comunicação */
+tr.row-critico-com { background: #fff8f0 !important; }
+tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1145,6 +1149,7 @@ function salvarEnviarComGerencia() {
                 <th>Data Alerta</th>
                 <th>PRODOC?</th>
                 <th>Plantão</th>
+                <th>📡 COM</th>
                 <th>Ação</th>
               </tr>
             </thead>
@@ -2916,6 +2921,8 @@ document.getElementById("input-user").addEventListener("keydown", e => {
 function fazerLogout() {
   addLog(`Logout: ${usuarioAtual.nome}`);
   usuarioAtual = null;
+  // Resetar visibilidade das abas para o estado padrão (CSS assume o controle)
+  document.querySelectorAll('.nav-tab').forEach(t => t.style.display = '');
   document.getElementById("app").style.display = "none";
   document.getElementById("login-screen").style.display = "flex";
   document.getElementById("input-user").value = "";
@@ -2944,7 +2951,7 @@ function aplicarVisibilidadeTabs(nivel) {
   const tabs = document.querySelectorAll('.nav-tab');
   Object.keys(_TAB_MAP).forEach(aba => {
     const tab = tabs[_TAB_MAP[aba]];
-    if (tab) tab.style.display = permitidas.includes(aba) ? '' : 'none';
+    if (tab) tab.style.display = permitidas.includes(aba) ? 'block' : 'none';
   });
   // Navegar para a primeira aba permitida
   mudarAba(permitidas[0] || 'dashboard');
@@ -3085,7 +3092,7 @@ function renderizarCriticos() {
 
   const tbody = document.getElementById("tbody-criticos");
   if (!filtrados.length) {
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--cz2)">
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:32px;color:var(--cz2)">
       ✅ Nenhum caso crítico no momento</td></tr>`;
     return;
   }
@@ -3108,6 +3115,13 @@ function renderizarCriticos() {
       <td style="font-family:var(--font-mono);font-size:.8rem">${formatDate(oc.dataAlerta)}</td>
       <td style="text-align:center">${oc.prodoc === "SIM" ? "✅" : "—"}</td>
       <td>${oc.plantao || "-"}</td>
+      <td style="text-align:center;white-space:nowrap">${
+        oc.arquivadaPorComunicacao
+          ? '<span style="color:#27ae60;font-size:.78rem;font-weight:600">✅ Arquivado</span>'
+          : oc.encaminhadoCom
+            ? `<span style="color:#1F4E78;font-size:.78rem;font-weight:600">📡 Enc.<br><small>${formatDate(oc.encaminhadoComEm)}</small></span>`
+            : `<button class="btn-sm btn-primary" style="font-size:.75rem" onclick="abrirModalEncaminharCom(${findIdx(oc.id)})">📡 Enc. p/ COM</button>`
+      }</td>
       <td><button class="btn-edit" onclick="editarOcorrencia(${findIdx(oc.id)})">Editar</button></td>
     </tr>`;
   }).join("");
@@ -4012,7 +4026,9 @@ function atualizarBadgeCom() {
   const lastVisto = _cache['_comLastVisto'] || '1970-01-01T00:00:00.000Z';
   const rels = (getRelatorios().registros || []).filter(r => !r.comEnviadoEm && r.criadoEm > lastVisto);
   const gers = (getGerencia().demandas || []).filter(d => !d.comEnviadoEm && d.criadoEm > lastVisto);
-  const total = rels.length + gers.length;
+  // Ocorrências encaminhadas de Críticos ainda não arquivadas
+  const crits = getOcorrencias().filter(o => o.encaminhadoCom && !o.arquivadaPorComunicacao && (o.encaminhadoComEm||'') > lastVisto);
+  const total = rels.length + gers.length + crits.length;
   const badge = document.getElementById('com-badge');
   if (!badge) return;
   if (total > 0) {
@@ -4377,6 +4393,35 @@ function salvarComOcorrencia() {
   atualizarBadgeOc();
   atualizarTudo();
   _mostrarToast('✅ PRODOC marcado como enviado! Ocorrência arquivada.', 'sucesso');
+}
+
+/* ── Críticos → Encaminhar para Comunicação ──────────────────── */
+function abrirModalEncaminharCom(idx) {
+  const ocs = getOcorrencias();
+  const o = ocs[idx];
+  if (!o) return;
+  document.getElementById('enc-com-idx').value = idx;
+  document.getElementById('enc-com-id-display').textContent = 'ID #' + o.id + ' — ' + (o.tipo || '');
+  document.getElementById('enc-com-monitorado-display').textContent = o.monitorado || '';
+  document.getElementById('enc-com-prodoc-num').value = o.prodocNum || '';
+  document.getElementById('enc-com-obs').value = '';
+  document.getElementById('modal-enc-com').classList.add('open');
+}
+
+function salvarEncaminharCom() {
+  const idx = parseInt(document.getElementById('enc-com-idx').value);
+  const ocs = getOcorrencias();
+  if (!ocs[idx]) return;
+  ocs[idx].encaminhadoCom = true;
+  ocs[idx].encaminhadoComEm = new Date().toISOString();
+  const pNum = document.getElementById('enc-com-prodoc-num').value.trim();
+  if (pNum) ocs[idx].prodocNum = pNum;
+  ocs[idx].encaminhadoComObs = document.getElementById('enc-com-obs').value.trim();
+  salvarStore('ocorrencias', ocs);
+  fecharModal('modal-enc-com');
+  renderizarCriticos();
+  atualizarBadgeCom();
+  _mostrarToast('📡 Encaminhado para Comunicação! A COM irá confirmar o envio.', 'sucesso');
 }
 
 /* ═══════════════════════ MÓDULO GERÊNCIA ════════════════════════ */
@@ -4881,7 +4926,13 @@ function renderizarComunicacao() {
       (o.monitorado||'').toLowerCase().includes(_comFiltro)
     );
   }
-  filtrados = [...filtrados].sort((a,b) => (b.dataAlerta||'').localeCompare(a.dataAlerta||''));
+  // Priorizar itens encaminhados de Críticos; dentro de cada grupo, mais recentes primeiro
+  filtrados = [...filtrados].sort((a,b) => {
+    const aPrio = (a.encaminhadoCom && !a.arquivadaPorComunicacao) ? 0 : 1;
+    const bPrio = (b.encaminhadoCom && !b.arquivadaPorComunicacao) ? 0 : 1;
+    if (aPrio !== bPrio) return aPrio - bPrio;
+    return (b.dataAlerta||'').localeCompare(a.dataAlerta||'');
+  });
 
   const total = filtrados.length;
   const totalPags = Math.max(1, Math.ceil(total / COM_POR_PAG));
@@ -4915,13 +4966,16 @@ function renderizarComunicacao() {
     const badgeProdoc = o.prodoc === 'SIM'
       ? '<span class="badge badge-ok">SIM</span>'
       : '<span class="badge badge-vencido">NÃO</span>';
+    const badgeCrit = (o.encaminhadoCom && !o.arquivadaPorComunicacao)
+      ? '<span style="background:#c0392b;color:#fff;font-size:.68rem;border-radius:3px;padding:1px 5px;font-weight:700;margin-left:4px">🚨 CRÍTICO</span>'
+      : '';
     const btnEdit = podeEdit
       ? `<button class="btn-sm btn-outline" onclick="abrirModalComunicacao(${idx})">✏️ Atualizar PRODOC</button>
          <button class="btn-sm btn-primary" onclick="abrirModalComOcorrencia(${idx})">✅ Marcar Enviado</button>`
       : '—';
     return `<tr>
       <td>${o.id}</td>
-      <td>${o.monitorado||''}</td>
+      <td>${o.monitorado||''}${badgeCrit}</td>
       <td>${o.medida||''}</td>
       <td>${o.tipo||''}</td>
       <td style="white-space:nowrap">${o.dataAlerta ? new Date(o.dataAlerta).toLocaleString('pt-BR') : ''}</td>
@@ -5988,5 +6042,39 @@ function limparModelo() {
   document.getElementById('login-screen').style.display = 'flex';
 })();
 </script>
+
+<!-- ── MODAL: Encaminhar para Comunicação (de Críticos) ── -->
+<div class="modal-overlay" id="modal-enc-com">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h3>📡 Encaminhar para Comunicação</h3>
+      <button class="modal-close" onclick="fecharModal('modal-enc-com')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#f0f4ff;border-radius:8px;padding:10px 14px;margin-bottom:14px;border-left:4px solid var(--az1)">
+        <div style="font-size:.82rem;color:var(--cz2);margin-bottom:2px">Caso Crítico</div>
+        <div style="font-weight:700" id="enc-com-id-display"></div>
+        <div style="font-size:.9rem" id="enc-com-monitorado-display"></div>
+      </div>
+      <input type="hidden" id="enc-com-idx">
+      <div class="form-field">
+        <label>Nº PRODOC <span style="color:#888;font-weight:400">(opcional — preencha se já tiver)</span></label>
+        <input type="text" id="enc-com-prodoc-num" placeholder="Ex: 2025.001234">
+      </div>
+      <div class="form-field">
+        <label>Observação <span style="color:#888;font-weight:400">(opcional)</span></label>
+        <textarea id="enc-com-obs" rows="2" placeholder="Observações sobre o encaminhamento..."></textarea>
+      </div>
+      <div style="background:#fffbea;border:1px solid #f0c040;border-radius:6px;padding:8px 12px;font-size:.8rem;color:#7a6000">
+        ℹ️ Isso registra que o caso foi encaminhado à Comunicação via PRODOC. A Comunicação irá confirmar o envio e arquivar.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-enc-com')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarEncaminharCom()">📡 Confirmar Encaminhamento</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
