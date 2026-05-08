@@ -2299,6 +2299,139 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
   </div>
 </div>
 
+<!-- MODAL VISUALIZAR OCORRÊNCIA (somente leitura) -->
+<div class="modal-overlay" id="modal-ver-ocorrencia">
+  <div class="modal-box" style="max-width:700px">
+    <div class="modal-header">
+      <h3 id="ver-oc-title">Visualizar Ocorrência</h3>
+      <button class="modal-close" onclick="fecharModal('modal-ver-ocorrencia')">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-section">
+        <div class="form-section-title">Identificação</div>
+        <div class="form-grid three">
+          <div class="form-field">
+            <label>ID</label>
+            <input class="auto-field" readonly id="ver-id">
+          </div>
+          <div class="form-field">
+            <label>Data / Hora do Alerta</label>
+            <input class="auto-field" readonly id="ver-data">
+          </div>
+          <div class="form-field">
+            <label>Monitorado</label>
+            <input class="auto-field" readonly id="ver-monitorado">
+          </div>
+          <div class="form-field">
+            <label>Medida</label>
+            <input class="auto-field" readonly id="ver-medida">
+          </div>
+          <div class="form-field">
+            <label>Tipo de Violação</label>
+            <input class="auto-field" readonly id="ver-tipo">
+          </div>
+          <div class="form-field">
+            <label>Plantão</label>
+            <input class="auto-field" readonly id="ver-plantao">
+          </div>
+          <div class="form-field">
+            <label>Operador</label>
+            <input class="auto-field" readonly id="ver-operador">
+          </div>
+          <div class="form-field">
+            <label>Prazo POP</label>
+            <input class="auto-field" readonly id="ver-prazo-pop">
+          </div>
+          <div class="form-field">
+            <label>Prazo Restante</label>
+            <input class="auto-field" readonly id="ver-prazo-rest">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Status</label>
+            <input class="auto-field" readonly id="ver-status">
+          </div>
+          <div class="form-field">
+            <label>Tempo Decorrido</label>
+            <input class="auto-field" readonly id="ver-tempo">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Comunicação / PRODOC</div>
+        <div class="form-grid three">
+          <div class="form-field">
+            <label>CIODES</label>
+            <input class="auto-field" readonly id="ver-ciodes">
+          </div>
+          <div class="form-field">
+            <label>PRODOC</label>
+            <input class="auto-field" readonly id="ver-prodoc">
+          </div>
+          <div class="form-field">
+            <label>Nº PRODOC</label>
+            <input class="auto-field" readonly id="ver-prodoc-num">
+          </div>
+          <div class="form-field">
+            <label>Data PRODOC</label>
+            <input class="auto-field" readonly id="ver-prodoc-data">
+          </div>
+          <div class="form-field">
+            <label>Enc. p/ COM em</label>
+            <input class="auto-field" readonly id="ver-enc-com">
+          </div>
+          <div class="form-field">
+            <label>Enviado pela COM em</label>
+            <input class="auto-field" readonly id="ver-com-enviado">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Jurídico</div>
+        <div class="form-grid three">
+          <div class="form-field">
+            <label>Nº Ofício</label>
+            <input class="auto-field" readonly id="ver-jur-oficio">
+          </div>
+          <div class="form-field">
+            <label>Data Ofício</label>
+            <input class="auto-field" readonly id="ver-jur-data">
+          </div>
+          <div class="form-field">
+            <label>Resposta</label>
+            <input class="auto-field" readonly id="ver-jur-resp">
+          </div>
+        </div>
+        <div class="form-field full">
+          <label>Obs. Jurídico</label>
+          <textarea class="auto-field" readonly id="ver-jur-obs" rows="2" style="resize:none"></textarea>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Registro</div>
+        <div class="form-field full">
+          <label>Descrição da Ocorrência</label>
+          <textarea class="auto-field" readonly id="ver-descricao" rows="4" style="resize:none"></textarea>
+        </div>
+        <div class="form-field full" style="margin-top:8px">
+          <label>Obs. Finais / Resolução</label>
+          <textarea class="auto-field" readonly id="ver-obs" rows="3" style="resize:none"></textarea>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-ver-ocorrencia')">Fechar</button>
+      <button class="btn-primary" id="ver-btn-editar" onclick="">✏ Editar esta Ocorrência</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL JURÍDICO -->
 <div class="modal-overlay" id="modal-juridico">
   <div class="modal-box">
@@ -3487,7 +3620,7 @@ const TABS_POR_NIVEL = {
   plantao:    ['dashboard', 'criticos', 'ocorrencias', 'links', 'modelos'],
   comunicacao: ['comunicacao', 'links'],
   relatorio:  ['relatorio', 'links'],
-  juridico:   ['juridico', 'links'],
+  juridico:   ['criticos', 'ocorrencias', 'juridico', 'links'],
   estoque:    ['estoque', 'links'],
   triagem:       ['triagem', 'links'],
   psicossocial:  ['psicossocial', 'links'],
@@ -3732,7 +3865,8 @@ function renderizarOcorrencias() {
         <td style="font-family:var(--font-mono);font-size:.78rem">${oc.prodocNum || "—"}</td>
         <td>${oc.plantao || "—"}</td>
         <td style="white-space:nowrap">
-          <button class="btn-edit" onclick="editarOcorrencia(${idx})">✏ Editar</button>
+          <button class="btn-sm btn-outline" onclick="visualizarOcorrencia(${idx})" title="Visualizar">👁</button>
+          <button class="btn-edit" onclick="editarOcorrencia(${idx})" style="margin-left:4px">✏ Editar</button>
           <button class="btn-danger" onclick="excluirOcorrencia(${idx})" style="margin-left:4px">✕</button>
         </td>
       </tr>`;
@@ -3903,6 +4037,50 @@ function abrirModalNovaOcorrencia() {
   document.getElementById("oc-obs").value = "";
   recalcularStatus();
   document.getElementById("modal-ocorrencia").classList.add("open");
+}
+
+function visualizarOcorrencia(idx) {
+  const ocs = getOcorrencias();
+  const oc = ocs[idx];
+  if (!oc) return;
+
+  const fmt = v => v ? v.replace('T',' ').slice(0,16) : '—';
+  const fmtD = v => v ? v.split('-').reverse().join('/') : '—';
+  const ou = v => v || '—';
+
+  document.getElementById('ver-oc-title').textContent = 'Ocorrência #' + oc.id;
+  document.getElementById('ver-id').value           = oc.id;
+  document.getElementById('ver-data').value         = fmt(oc.dataAlerta);
+  document.getElementById('ver-monitorado').value   = ou(oc.monitorado);
+  document.getElementById('ver-medida').value       = ou(oc.medida);
+  document.getElementById('ver-tipo').value         = ou(oc.tipo);
+  document.getElementById('ver-plantao').value      = ou(oc.plantao);
+  document.getElementById('ver-operador').value     = ou(oc.operador);
+  document.getElementById('ver-prazo-pop').value    = calcPrazoPOP(oc.tipo, oc.medida);
+  document.getElementById('ver-prazo-rest').value   = calcPrazoRestante(oc.dataAlerta, oc.tipo, oc.medida);
+  document.getElementById('ver-status').value       = calcStatus(oc.dataAlerta, oc.tipo, oc.medida, oc.prodoc);
+  document.getElementById('ver-tempo').value        = calcTempoDecorrido(oc.dataAlerta);
+  document.getElementById('ver-ciodes').value       = ou(oc.ciodes);
+  document.getElementById('ver-prodoc').value       = ou(oc.prodoc);
+  document.getElementById('ver-prodoc-num').value   = ou(oc.prodocNum);
+  document.getElementById('ver-prodoc-data').value  = oc.prodocData ? fmtD(oc.prodocData) : '—';
+  document.getElementById('ver-enc-com').value      = oc.encaminhadoComEm ? fmt(oc.encaminhadoComEm) : '—';
+  document.getElementById('ver-com-enviado').value  = oc.comEnviadoEm ? fmt(oc.comEnviadoEm) : '—';
+  const jur = oc.juridico || {};
+  document.getElementById('ver-jur-oficio').value   = ou(jur.numOficio);
+  document.getElementById('ver-jur-data').value     = jur.dataOficio ? fmtD(jur.dataOficio) : '—';
+  document.getElementById('ver-jur-resp').value     = ou(jur.resposta);
+  document.getElementById('ver-jur-obs').value      = ou(jur.obs);
+  document.getElementById('ver-descricao').value    = ou(oc.descricao);
+  document.getElementById('ver-obs').value          = ou(oc.obs);
+
+  // Botão Editar no rodapé
+  document.getElementById('ver-btn-editar').onclick = function() {
+    fecharModal('modal-ver-ocorrencia');
+    editarOcorrencia(idx);
+  };
+
+  document.getElementById('modal-ver-ocorrencia').classList.add('open');
 }
 
 function editarOcorrencia(idx) {
