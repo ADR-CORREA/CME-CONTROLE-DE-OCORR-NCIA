@@ -938,6 +938,7 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
     <div class="nav-tab" onclick="mudarAba('modelos')">📝 Modelos</div>
     <div class="nav-tab gerencia-only" onclick="mudarAba('gerencia')">📋 Gerência <span id="ger-badge" style="display:none" class="notif-badge">0</span></div>
     <div class="nav-tab admin-only" onclick="mudarAba('admin')">🔧 Administração</div>
+    <div class="nav-tab" onclick="mudarAba('psicossocial')">🧠 Psicossocial</div>
   </div>
 
   <!-- CONTEÚDO PRINCIPAL -->
@@ -1490,6 +1491,7 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
                   <option value="gerencia">Gerência</option>
                   <option value="estoque">Estoque</option>
                   <option value="triagem">Triagem</option>
+                  <option value="psicossocial">Psicossocial</option>
                   <option value="admin">Administrador</option>
                 </select>
               </div>
@@ -1663,6 +1665,17 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
 
     <!-- ─── TRIAGEM ─── -->
     <div class="tab-panel" id="panel-triagem">
+
+      <!-- Sub-tabs Triagem -->
+      <div class="sub-tabs" style="margin-bottom:0">
+        <div class="sub-tab active" id="tri-stab-ativos"    onclick="mudarSubAbaTriagem('ativos')">📋 Atendimentos</div>
+        <div class="sub-tab"       id="tri-stab-arquivados" onclick="mudarSubAbaTriagem('arquivados')">
+          📁 Arquivados <span id="tri-arq-badge" class="notif-badge" style="display:none">0</span>
+        </div>
+      </div>
+
+      <!-- ── SUB-PANEL: ATIVOS ── -->
+      <div class="sub-panel active" id="tri-panel-ativos">
       <div class="tri-header">
         <div class="tri-header-title">🗂️ Triagem — Atendimentos CME</div>
         <div id="tri-btns-acao">
@@ -1780,7 +1793,326 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
           <tbody id="tbody-triagem"></tbody>
         </table>
       </div>
+      </div><!-- /tri-panel-ativos -->
+
+      <!-- ── SUB-PANEL: ARQUIVADOS ── -->
+      <div class="sub-panel" id="tri-panel-arquivados">
+
+        <div class="tri-header">
+          <div class="tri-header-title">📁 Atendimentos Arquivados <small style="font-size:.78rem;color:#888;font-weight:400">(arquivados automaticamente após 7 dias)</small></div>
+          <div>
+            <button class="btn-secondary" onclick="renderizarTriagemArquivados()">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="exportarTriagemArquivados()">📥 Exportar Excel</button>
+          </div>
+        </div>
+
+        <!-- Filtros Arquivados -->
+        <div class="tri-filtros">
+          <div class="tri-filtros-title">🔍 Filtros</div>
+          <div class="tri-filtros-grid">
+            <div class="form-field" style="margin:0">
+              <label>Nome</label>
+              <input type="text" id="tri-a-nome" placeholder="Buscar por nome..." oninput="renderizarTriagemArquivados()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>CPF</label>
+              <input type="text" id="tri-a-cpf" placeholder="000.000.000-00" oninput="renderizarTriagemArquivados()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Tipo de Atendimento</label>
+              <select id="tri-a-tipo" onchange="renderizarTriagemArquivados()">
+                <option value="">Todos</option>
+                <option>Mudança de endereço</option>
+                <option>Desvinculação</option>
+                <option>Vinculação</option>
+                <option>Justificativa</option>
+                <option>Informação</option>
+                <option>Setor Jurídico</option>
+                <option>Equipe Multidisciplinar</option>
+                <option>Outros</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Tipo de Medida</label>
+              <select id="tri-a-medida" onchange="renderizarTriagemArquivados()">
+                <option value="">Todas</option>
+                <option>Medida cautelar</option>
+                <option>Vara de Execuções Penais</option>
+                <option>Medida protetiva</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Condição (Protetiva)</label>
+              <select id="tri-a-condicao" onchange="renderizarTriagemArquivados()">
+                <option value="">Todas</option>
+                <option>Agressor</option>
+                <option>Vítima</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Advogado?</label>
+              <select id="tri-a-adv" onchange="renderizarTriagemArquivados()">
+                <option value="">Todos</option>
+                <option value="Sim">Sim</option>
+                <option value="Não">Não</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Responsável</label>
+              <input type="text" id="tri-a-resp" placeholder="Nome do responsável" oninput="renderizarTriagemArquivados()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Data início</label>
+              <input type="date" id="tri-a-inicio" onchange="renderizarTriagemArquivados()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Data fim</label>
+              <input type="date" id="tri-a-fim" onchange="renderizarTriagemArquivados()">
+            </div>
+            <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosTriagemArq()">✕ Limpar Filtros</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabela Arquivados -->
+        <div class="est-section-title" id="tri-arq-count-label">Arquivados</div>
+        <div class="table-wrapper" style="overflow-x:auto">
+          <table class="data-table">
+            <thead><tr>
+              <th>Data/Hora</th>
+              <th>Arquivado em</th>
+              <th>Nome</th>
+              <th>CPF</th>
+              <th>Tipo Atendimento</th>
+              <th>Tipo Medida</th>
+              <th>Condição</th>
+              <th>Advogado?</th>
+              <th>Cliente Monitorado</th>
+              <th>Responsável</th>
+              <th>Observação</th>
+              <th>Ações</th>
+            </tr></thead>
+            <tbody id="tbody-triagem-arquivados"></tbody>
+          </table>
+        </div>
+
+      </div><!-- /tri-panel-arquivados -->
+
     </div><!-- /panel-triagem -->
+
+    <!-- ─── PSICOSSOCIAL ─── -->
+    <div class="tab-panel" id="panel-psicossocial">
+
+      <!-- Sub-tabs -->
+      <div class="sub-tabs" style="margin-bottom:0">
+        <div class="sub-tab active" id="psi-stab-ativos"    onclick="mudarSubAbaPsi('ativos')">📋 Atendimentos</div>
+        <div class="sub-tab"       id="psi-stab-arquivados" onclick="mudarSubAbaPsi('arquivados')">
+          📁 Arquivados <span id="psi-arq-badge" class="notif-badge" style="display:none">0</span>
+        </div>
+      </div>
+
+      <!-- ── ATIVOS ── -->
+      <div class="sub-panel active" id="psi-panel-ativos">
+
+        <div class="tri-header">
+          <div class="tri-header-title">🧠 Psicossocial — Atendimentos Técnicos</div>
+          <div id="psi-btns-acao">
+            <button class="btn-secondary" onclick="renderizarPsi()">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="exportarPsi()">📥 Exportar Excel</button>
+            <button class="btn-primary"   onclick="abrirModalPsi()">➕ Novo Atendimento</button>
+          </div>
+        </div>
+
+        <div id="psi-aviso-perm" class="tri-aviso-perm" style="display:none">
+          🔒 <strong>Modo visualização:</strong> você possui acesso somente para visualização.
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="est-kpi-grid" id="psi-kpi-grid">
+          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-hoje">0</div><div class="est-kpi-label">Hoje</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-semana">0</div><div class="est-kpi-label">Esta Semana</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-total">0</div><div class="est-kpi-label">Total Geral</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-psicologia">0</div><div class="est-kpi-label">Psicologia</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-social">0</div><div class="est-kpi-label">Serviço Social</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-laudo">0</div><div class="est-kpi-label">Laudos</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-judicial">0</div><div class="est-kpi-label">Req. Judicial</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-proximo">0</div><div class="est-kpi-label">C/ Próx. Atend.</div></div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="tri-filtros">
+          <div class="tri-filtros-title">🔍 Filtros</div>
+          <div class="tri-filtros-grid">
+            <div class="form-field" style="margin:0">
+              <label>Nome</label>
+              <input type="text" id="psi-f-nome" placeholder="Buscar por nome..." oninput="renderizarPsi()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>CPF</label>
+              <input type="text" id="psi-f-cpf" placeholder="000.000.000-00" oninput="renderizarPsi()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Tipo de Atendimento</label>
+              <select id="psi-f-tipo" onchange="renderizarPsi()">
+                <option value="">Todos</option>
+                <option>Avaliação inicial</option>
+                <option>Acompanhamento psicológico</option>
+                <option>Acompanhamento social</option>
+                <option>Laudo técnico</option>
+                <option>Entrevista individual</option>
+                <option>Reunião familiar</option>
+                <option>Grupo terapêutico</option>
+                <option>Encaminhamento externo</option>
+                <option>Outros</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Área</label>
+              <select id="psi-f-area" onchange="renderizarPsi()">
+                <option value="">Todas</option>
+                <option>Psicologia</option>
+                <option>Serviço Social</option>
+                <option>Ambos</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Caráter</label>
+              <select id="psi-f-carater" onchange="renderizarPsi()">
+                <option value="">Todos</option>
+                <option>Rotina</option>
+                <option>Urgência</option>
+                <option>Requisição judicial</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Profissional</label>
+              <input type="text" id="psi-f-prof" placeholder="Nome do profissional" oninput="renderizarPsi()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Data início</label>
+              <input type="date" id="psi-f-inicio" onchange="renderizarPsi()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Data fim</label>
+              <input type="date" id="psi-f-fim" onchange="renderizarPsi()">
+            </div>
+            <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosPsi()">✕ Limpar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="est-section-title" id="psi-count-label">Atendimentos</div>
+        <div class="table-wrapper" style="overflow-x:auto">
+          <table class="data-table">
+            <thead><tr>
+              <th>Data</th>
+              <th>Nome</th>
+              <th>CPF</th>
+              <th>Tipo Atendimento</th>
+              <th>Área</th>
+              <th>Caráter</th>
+              <th>Medida</th>
+              <th>Profissional</th>
+              <th>Próx. Atend.</th>
+              <th id="psi-col-acoes">Ações</th>
+            </tr></thead>
+            <tbody id="tbody-psi"></tbody>
+          </table>
+        </div>
+
+      </div><!-- /psi-panel-ativos -->
+
+      <!-- ── ARQUIVADOS ── -->
+      <div class="sub-panel" id="psi-panel-arquivados">
+
+        <div class="tri-header">
+          <div class="tri-header-title">📁 Atendimentos Arquivados <small style="font-size:.78rem;color:#888;font-weight:400">(arquivados automaticamente após 30 dias)</small></div>
+          <div>
+            <button class="btn-secondary" onclick="renderizarPsiArquivados()">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="exportarPsiArquivados()">📥 Exportar Excel</button>
+          </div>
+        </div>
+
+        <!-- Filtros Arquivados -->
+        <div class="tri-filtros">
+          <div class="tri-filtros-title">🔍 Filtros</div>
+          <div class="tri-filtros-grid">
+            <div class="form-field" style="margin:0">
+              <label>Nome</label>
+              <input type="text" id="psi-a-nome" placeholder="Buscar por nome..." oninput="renderizarPsiArquivados()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>CPF</label>
+              <input type="text" id="psi-a-cpf" placeholder="000.000.000-00" oninput="renderizarPsiArquivados()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Tipo de Atendimento</label>
+              <select id="psi-a-tipo" onchange="renderizarPsiArquivados()">
+                <option value="">Todos</option>
+                <option>Avaliação inicial</option>
+                <option>Acompanhamento psicológico</option>
+                <option>Acompanhamento social</option>
+                <option>Laudo técnico</option>
+                <option>Entrevista individual</option>
+                <option>Reunião familiar</option>
+                <option>Grupo terapêutico</option>
+                <option>Encaminhamento externo</option>
+                <option>Outros</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Área</label>
+              <select id="psi-a-area" onchange="renderizarPsiArquivados()">
+                <option value="">Todas</option>
+                <option>Psicologia</option>
+                <option>Serviço Social</option>
+                <option>Ambos</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Profissional</label>
+              <input type="text" id="psi-a-prof" placeholder="Nome do profissional" oninput="renderizarPsiArquivados()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Data início</label>
+              <input type="date" id="psi-a-inicio" onchange="renderizarPsiArquivados()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Data fim</label>
+              <input type="date" id="psi-a-fim" onchange="renderizarPsiArquivados()">
+            </div>
+            <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosPsiArq()">✕ Limpar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabela Arquivados -->
+        <div class="est-section-title" id="psi-arq-count-label">Arquivados</div>
+        <div class="table-wrapper" style="overflow-x:auto">
+          <table class="data-table">
+            <thead><tr>
+              <th>Data</th>
+              <th>Arquivado em</th>
+              <th>Nome</th>
+              <th>CPF</th>
+              <th>Tipo Atendimento</th>
+              <th>Área</th>
+              <th>Caráter</th>
+              <th>Medida</th>
+              <th>Profissional</th>
+              <th>Ações</th>
+            </tr></thead>
+            <tbody id="tbody-psi-arquivados"></tbody>
+          </table>
+        </div>
+
+      </div><!-- /psi-panel-arquivados -->
+
+    </div><!-- /panel-psicossocial -->
 
   </div><!-- /main -->
 </div><!-- /app -->
@@ -2054,6 +2386,124 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-triagem')">Cancelar</button>
       <button class="btn-primary" onclick="salvarAtendimentoTriagem()">💾 Salvar Atendimento</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PSICOSSOCIAL -->
+<div class="modal-overlay" id="modal-psi">
+  <div class="modal-box" style="max-width:740px">
+    <div class="modal-header">
+      <h3 id="psi-modal-title">🧠 Novo Atendimento Psicossocial</h3>
+      <button class="modal-close" onclick="fecharModal('modal-psi')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="psi-edit-id">
+
+      <div class="form-section">
+        <div class="form-section-title">Identificação do Monitorado</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Nome completo *</label>
+            <input type="text" id="psi-nome" placeholder="Nome da pessoa atendida">
+          </div>
+          <div class="form-field">
+            <label>CPF</label>
+            <input type="text" id="psi-cpf" placeholder="000.000.000-00" maxlength="14" oninput="mascararCPF(this)">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Nº do Processo</label>
+            <input type="text" id="psi-processo" placeholder="Ex: 0000000-00.0000.0.00.0000">
+          </div>
+          <div class="form-field">
+            <label>Tipo de medida/processo</label>
+            <select id="psi-medida">
+              <option value="">Selecione...</option>
+              <option>Medida cautelar</option>
+              <option>Vara de Execuções Penais</option>
+              <option>Medida protetiva</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Dados do Atendimento</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Data do atendimento *</label>
+            <input type="date" id="psi-data">
+          </div>
+          <div class="form-field">
+            <label>Tipo de atendimento *</label>
+            <select id="psi-tipo">
+              <option value="">Selecione...</option>
+              <option>Avaliação inicial</option>
+              <option>Acompanhamento psicológico</option>
+              <option>Acompanhamento social</option>
+              <option>Laudo técnico</option>
+              <option>Entrevista individual</option>
+              <option>Reunião familiar</option>
+              <option>Grupo terapêutico</option>
+              <option>Encaminhamento externo</option>
+              <option>Outros</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Área profissional *</label>
+            <select id="psi-area">
+              <option value="">Selecione...</option>
+              <option>Psicologia</option>
+              <option>Serviço Social</option>
+              <option>Ambos</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Caráter do atendimento *</label>
+            <select id="psi-carater">
+              <option value="">Selecione...</option>
+              <option>Rotina</option>
+              <option>Urgência</option>
+              <option>Requisição judicial</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Profissional responsável *</label>
+            <input type="text" id="psi-profissional" placeholder="Nome do profissional">
+          </div>
+          <div class="form-field">
+            <label>Próximo atendimento (data)</label>
+            <input type="date" id="psi-proximo">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Registro Técnico</div>
+        <div class="form-field">
+          <label>Objetivo do atendimento</label>
+          <textarea id="psi-objetivo" rows="2" placeholder="Descreva o objetivo principal deste atendimento..." style="resize:vertical"></textarea>
+        </div>
+        <div class="form-field">
+          <label>Resultado / Encaminhamento</label>
+          <textarea id="psi-resultado" rows="2" placeholder="Resultado obtido, encaminhamentos realizados..." style="resize:vertical"></textarea>
+        </div>
+        <div class="form-field">
+          <label>Observações</label>
+          <textarea id="psi-obs" rows="2" placeholder="Anotações adicionais (opcional)" style="resize:vertical"></textarea>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-psi')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarAtendimentoPsi()">💾 Salvar Atendimento</button>
     </div>
   </div>
 </div>
@@ -2699,6 +3149,7 @@ const USUARIOS_PADRAO = [
   { usuario: "comunicacao", senha: btoa("comunicacao123"), nome: "Comunicação Processual", nivel: "comunicacao" },
   { usuario: "estoque", senha: btoa("estoque123"), nome: "Operador de Estoque", nivel: "estoque" },
   { usuario: "triagem", senha: btoa("triagem123"), nome: "Operador de Triagem", nivel: "triagem" },
+  { usuario: "psicossocial", senha: btoa("psico123"), nome: "Equipe Psicossocial", nivel: "psicossocial" },
 ];
 
 function getUsuarios() {
@@ -2808,18 +3259,19 @@ function fazerLogout() {
 const TABS_POR_NIVEL = {
   plantao:    ['dashboard', 'criticos', 'ocorrencias', 'links', 'modelos'],
   comunicacao: ['comunicacao', 'links'],
-  relatorio:  ['relatorio', 'comunicacao', 'links'],
+  relatorio:  ['relatorio', 'links'],
   juridico:   ['juridico', 'links'],
   estoque:    ['estoque', 'links'],
-  triagem:    ['triagem', 'links'],
+  triagem:       ['triagem', 'links'],
+  psicossocial:  ['psicossocial', 'links'],
   gerencia:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
-               'estoque', 'triagem', 'relatorio', 'links', 'modelos', 'gerencia'],
+               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia'],
   admin:      ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
-               'estoque', 'triagem', 'relatorio', 'links', 'modelos', 'gerencia', 'admin'],
+               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia', 'admin'],
 };
 
 const _TAB_MAP = { dashboard:0, criticos:1, ocorrencias:2, juridico:3, comunicacao:4,
-                   estoque:5, triagem:6, relatorio:7, links:8, modelos:9, gerencia:10, admin:11 };
+                   estoque:5, triagem:6, relatorio:7, links:8, modelos:9, gerencia:10, admin:11, psicossocial:12 };
 
 function aplicarVisibilidadeTabs(nivel) {
   const permitidas = TABS_POR_NIVEL[nivel] || TABS_POR_NIVEL['plantao'];
@@ -2875,7 +3327,8 @@ function mudarAba(aba) {
   if (aba === "juridico") renderizarJuridico();
   if (aba === "comunicacao") { marcarComVisto(); renderizarComunicacao(); }
   if (aba === "estoque") renderizarEstoque();
-  if (aba === "triagem") renderizarTriagem();
+  if (aba === "triagem") { renderizarTriagem(); atualizarBadgeTriagemArq(); }
+  if (aba === "psicossocial") { renderizarPsi(); atualizarBadgePsiArq(); }
   if (aba === "relatorio") { marcarRelVisto(); renderizarRelatorio(); }
   if (aba === "gerencia") { marcarGerVisto(); renderizarGerencia(); }
   if (aba === "links") renderizarLinks();
@@ -2894,6 +3347,8 @@ function atualizarTudo() {
     "Atualizado em " + new Date().toLocaleTimeString("pt-BR");
   atualizarBadgeCom();
   atualizarBadgeOc();
+  atualizarBadgeTriagemArq();
+  atualizarBadgePsiArq();
 }
 
 /* ─── DASHBOARD ──────────────────────────────────────── */
@@ -4380,8 +4835,26 @@ function toggleCamposTriagem() {
 }
 
 function renderizarTriagem() {
-  const dados     = getTriagem();
-  const lista     = dados.atendimentos || [];
+  const dados = getTriagem();
+
+  // ── Auto-arquivar atendimentos com mais de 7 dias ──────
+  const SETE_DIAS = 7 * 24 * 60 * 60 * 1000;
+  const agora = new Date();
+  let modificado = false;
+  (dados.atendimentos || []).forEach(a => {
+    if (!a.arquivado) {
+      const ref = a.criadoEm ? new Date(a.criadoEm) : (a.data ? new Date(a.data + 'T23:59:59') : null);
+      if (ref && (agora - ref) >= SETE_DIAS) {
+        a.arquivado   = true;
+        a.arquivadoEm = agora.toISOString();
+        modificado = true;
+      }
+    }
+  });
+  if (modificado) { salvarTriagem(dados); atualizarBadgeTriagemArq(); }
+
+  // Somente ativos (não arquivados)
+  const lista = (dados.atendimentos || []).filter(a => !a.arquivado);
   const fNome     = (document.getElementById('tri-f-nome')?.value    || '').toLowerCase();
   const fCpf      = (document.getElementById('tri-f-cpf')?.value     || '').replace(/\D/g,'');
   const fTipo     = document.getElementById('tri-f-tipo')?.value     || '';
@@ -4616,6 +5089,610 @@ function exportarTriagem() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Triagem');
   XLSX.writeFile(wb, 'triagem_CME.xlsx');
+}
+
+/* ─── Sub-abas Triagem ───────────────────────────────── */
+function mudarSubAbaTriagem(aba) {
+  ['ativos','arquivados'].forEach(a => {
+    document.getElementById('tri-stab-' + a)?.classList.toggle('active', a === aba);
+    document.getElementById('tri-panel-' + a)?.classList.toggle('active', a === aba);
+  });
+  if (aba === 'arquivados') renderizarTriagemArquivados();
+  if (aba === 'ativos')     renderizarTriagem();
+}
+
+/* ─── Badge arquivados ───────────────────────────────── */
+function atualizarBadgeTriagemArq() {
+  const total = (getTriagem().atendimentos || []).filter(a => a.arquivado).length;
+  const badge = document.getElementById('tri-arq-badge');
+  if (!badge) return;
+  if (total > 0) { badge.textContent = total > 99 ? '99+' : total; badge.style.display = 'flex'; }
+  else { badge.style.display = 'none'; }
+}
+
+/* ─── Renderizar Arquivados ──────────────────────────── */
+function renderizarTriagemArquivados() {
+  const dados = getTriagem();
+  let lista   = (dados.atendimentos || []).filter(a => a.arquivado);
+
+  const fNome     = (document.getElementById('tri-a-nome')?.value    || '').toLowerCase();
+  const fCpf      = (document.getElementById('tri-a-cpf')?.value     || '').replace(/\D/g,'');
+  const fTipo     = document.getElementById('tri-a-tipo')?.value     || '';
+  const fMedida   = document.getElementById('tri-a-medida')?.value   || '';
+  const fCondicao = document.getElementById('tri-a-condicao')?.value || '';
+  const fAdv      = document.getElementById('tri-a-adv')?.value      || '';
+  const fResp     = (document.getElementById('tri-a-resp')?.value    || '').toLowerCase();
+  const fInicio   = document.getElementById('tri-a-inicio')?.value   || '';
+  const fFim      = document.getElementById('tri-a-fim')?.value      || '';
+
+  lista = lista.filter(a => {
+    if (fNome     && !((a.nome||'').toLowerCase().includes(fNome)))          return false;
+    if (fCpf      && !(a.cpf||'').replace(/\D/g,'').includes(fCpf))        return false;
+    if (fTipo     && a.tipo     !== fTipo)                                   return false;
+    if (fMedida   && a.medida   !== fMedida)                                 return false;
+    if (fCondicao && a.condicao !== fCondicao)                               return false;
+    if (fAdv      && a.adv      !== fAdv)                                    return false;
+    if (fResp     && !((a.responsavel||'').toLowerCase().includes(fResp)))   return false;
+    if (fInicio   && (a.data||'') < fInicio)                                 return false;
+    if (fFim      && (a.data||'') > fFim)                                    return false;
+    return true;
+  });
+
+  lista.sort((a,b) => (b.arquivadoEm||b.criadoEm||b.data||'').localeCompare(a.arquivadoEm||a.criadoEm||a.data||''));
+
+  const tbody = document.getElementById('tbody-triagem-arquivados');
+  if (!tbody) return;
+
+  const totalArq = (dados.atendimentos||[]).filter(a => a.arquivado).length;
+  const label = document.getElementById('tri-arq-count-label');
+  if (label) label.textContent = 'Arquivados (' + lista.length + ' de ' + totalArq + ')';
+
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:24px;color:#888">Nenhum atendimento arquivado encontrado.</td></tr>';
+    return;
+  }
+
+  const podeMod = podeAlterarTriagem();
+  tbody.innerHTML = lista.map(a => {
+    const partes  = (a.data||'').split('-');
+    const dataFmt = partes.length === 3 ? partes[2]+'/'+partes[1]+'/'+partes[0] : (a.data||'');
+    const hora    = a.criadoEm ? new Date(a.criadoEm).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '';
+    const arqFmt  = a.arquivadoEm ? new Date(a.arquivadoEm).toLocaleDateString('pt-BR') : '—';
+    const btnDesarq = podeMod ? '<button class="btn-sm btn-outline" onclick="desarquivarAtendimento(\''+a.id+'\')">↩ Desarquivar</button>' : '';
+    const btnExcl   = podeMod ? '<button class="btn-sm btn-danger"  onclick="excluirAtendimentoArquivado(\''+a.id+'\')">🗑️</button>' : '';
+    return '<tr>'
+      + '<td style="white-space:nowrap">' + dataFmt + (hora ? ' ' + hora : '') + '</td>'
+      + '<td style="white-space:nowrap;color:#888;font-size:.82rem">' + arqFmt + '</td>'
+      + '<td>' + (a.nome||'') + '</td>'
+      + '<td>' + (a.cpf||'') + '</td>'
+      + '<td>' + (a.tipo||'') + '</td>'
+      + '<td>' + (a.medida||'') + '</td>'
+      + '<td>' + (a.condicao||'') + '</td>'
+      + '<td>' + (a.adv||'') + '</td>'
+      + '<td>' + (a.clienteMonitorado||'') + '</td>'
+      + '<td>' + (a.responsavel||'') + '</td>'
+      + '<td>' + (a.obs||'') + '</td>'
+      + '<td style="white-space:nowrap">' + btnDesarq + ' ' + btnExcl + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function limparFiltrosTriagemArq() {
+  ['tri-a-nome','tri-a-cpf','tri-a-resp','tri-a-inicio','tri-a-fim'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['tri-a-tipo','tri-a-medida','tri-a-condicao','tri-a-adv'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  renderizarTriagemArquivados();
+}
+
+function desarquivarAtendimento(id) {
+  if (!podeAlterarTriagem()) { _mostrarToast('Sem permissao.', 'erro'); return; }
+  if (!confirm('Desarquivar este atendimento? Ele voltará para a lista ativa.')) return;
+  const dados = getTriagem();
+  const a = (dados.atendimentos||[]).find(x => x.id === id);
+  if (a) { delete a.arquivado; delete a.arquivadoEm; }
+  salvarTriagem(dados);
+  renderizarTriagemArquivados();
+  atualizarBadgeTriagemArq();
+  _mostrarToast('Atendimento desarquivado.', 'sucesso');
+}
+
+function excluirAtendimentoArquivado(id) {
+  if (!podeAlterarTriagem()) { _mostrarToast('Sem permissao.', 'erro'); return; }
+  if (!confirm('Excluir permanentemente este atendimento arquivado?')) return;
+  const dados = getTriagem();
+  dados.atendimentos = (dados.atendimentos||[]).filter(a => a.id !== id);
+  salvarTriagem(dados);
+  renderizarTriagemArquivados();
+  atualizarBadgeTriagemArq();
+  _mostrarToast('Atendimento excluido permanentemente.', 'sucesso');
+}
+
+function exportarTriagemArquivados() {
+  const dados = getTriagem();
+  let lista = (dados.atendimentos||[]).filter(a => a.arquivado);
+
+  const fNome     = (document.getElementById('tri-a-nome')?.value    || '').toLowerCase();
+  const fCpf      = (document.getElementById('tri-a-cpf')?.value     || '').replace(/\D/g,'');
+  const fTipo     = document.getElementById('tri-a-tipo')?.value     || '';
+  const fMedida   = document.getElementById('tri-a-medida')?.value   || '';
+  const fCondicao = document.getElementById('tri-a-condicao')?.value || '';
+  const fAdv      = document.getElementById('tri-a-adv')?.value      || '';
+  const fResp     = (document.getElementById('tri-a-resp')?.value    || '').toLowerCase();
+  const fInicio   = document.getElementById('tri-a-inicio')?.value   || '';
+  const fFim      = document.getElementById('tri-a-fim')?.value      || '';
+
+  const filtrados = lista.filter(a => {
+    if (fNome     && !((a.nome||'').toLowerCase().includes(fNome)))          return false;
+    if (fCpf      && !(a.cpf||'').replace(/\D/g,'').includes(fCpf))        return false;
+    if (fTipo     && a.tipo     !== fTipo)                                   return false;
+    if (fMedida   && a.medida   !== fMedida)                                 return false;
+    if (fCondicao && a.condicao !== fCondicao)                               return false;
+    if (fAdv      && a.adv      !== fAdv)                                    return false;
+    if (fResp     && !((a.responsavel||'').toLowerCase().includes(fResp)))   return false;
+    if (fInicio   && (a.data||'') < fInicio)                                 return false;
+    if (fFim      && (a.data||'') > fFim)                                    return false;
+    return true;
+  });
+
+  if (!filtrados.length) { _mostrarToast('Nenhum dado arquivado para exportar.', 'erro'); return; }
+
+  const rows = filtrados.map(a => {
+    const partes  = (a.data||'').split('-');
+    const dataFmt = partes.length === 3 ? partes[2]+'/'+partes[1]+'/'+partes[0] : (a.data||'');
+    return {
+      'Data Atendimento': dataFmt,
+      'Hora':             a.criadoEm ? new Date(a.criadoEm).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '',
+      'Arquivado em':     a.arquivadoEm ? new Date(a.arquivadoEm).toLocaleDateString('pt-BR') : '',
+      'Nome':             a.nome||'',
+      'CPF':              a.cpf||'',
+      'Tipo Atendimento': a.tipo||'',
+      'Tipo Medida':      a.medida||'',
+      'Condicao':         a.condicao||'',
+      'Advogado?':        a.adv||'',
+      'Cliente Monitorado': a.clienteMonitorado||'',
+      'Responsavel':      a.responsavel||'',
+      'Observacao':       a.obs||''
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Triagem Arquivados');
+  XLSX.writeFile(wb, 'triagem_arquivados_CME.xlsx');
+  _mostrarToast(filtrados.length + ' registro(s) exportados!', 'sucesso');
+}
+
+/* ═══════════════════════ MÓDULO PSICOSSOCIAL ═══════════════════ */
+
+function podeAlterarPsi() {
+  return usuarioAtual && ['admin','psicossocial','gerencia'].includes(usuarioAtual.nivel);
+}
+
+function getPsi() {
+  return carregarStore('psicossocial', { atendimentos: [] });
+}
+function salvarPsi(dados) { salvarStore('psicossocial', dados); }
+
+function mudarSubAbaPsi(aba) {
+  ['ativos','arquivados'].forEach(a => {
+    document.getElementById('psi-stab-' + a)?.classList.toggle('active', a === aba);
+    document.getElementById('psi-panel-' + a)?.classList.toggle('active', a === aba);
+  });
+  if (aba === 'arquivados') renderizarPsiArquivados();
+  if (aba === 'ativos')     renderizarPsi();
+}
+
+function atualizarBadgePsiArq() {
+  const total = (getPsi().atendimentos || []).filter(a => a.arquivado).length;
+  const badge = document.getElementById('psi-arq-badge');
+  if (!badge) return;
+  if (total > 0) { badge.textContent = total > 99 ? '99+' : total; badge.style.display = 'flex'; }
+  else { badge.style.display = 'none'; }
+}
+
+function renderizarPsi() {
+  const dados = getPsi();
+
+  // Auto-arquivar após 30 dias
+  const TRINTA_DIAS = 30 * 24 * 60 * 60 * 1000;
+  const agora = new Date();
+  let modificado = false;
+  (dados.atendimentos || []).forEach(a => {
+    if (!a.arquivado) {
+      const ref = a.criadoEm ? new Date(a.criadoEm) : (a.data ? new Date(a.data + 'T23:59:59') : null);
+      if (ref && (agora - ref) >= TRINTA_DIAS) {
+        a.arquivado   = true;
+        a.arquivadoEm = agora.toISOString();
+        modificado = true;
+      }
+    }
+  });
+  if (modificado) { salvarPsi(dados); atualizarBadgePsiArq(); }
+
+  const ativos = (dados.atendimentos || []).filter(a => !a.arquivado);
+
+  // ── Filtros ──────────────────────────────
+  const fNome    = (document.getElementById('psi-f-nome')?.value    || '').toLowerCase();
+  const fCpf     = (document.getElementById('psi-f-cpf')?.value     || '').replace(/\D/g,'');
+  const fTipo    = document.getElementById('psi-f-tipo')?.value     || '';
+  const fArea    = document.getElementById('psi-f-area')?.value     || '';
+  const fCarater = document.getElementById('psi-f-carater')?.value  || '';
+  const fProf    = (document.getElementById('psi-f-prof')?.value    || '').toLowerCase();
+  const fInicio  = document.getElementById('psi-f-inicio')?.value   || '';
+  const fFim     = document.getElementById('psi-f-fim')?.value      || '';
+
+  let lista = ativos.filter(a => {
+    if (fNome    && !((a.nome||'').toLowerCase().includes(fNome)))       return false;
+    if (fCpf     && !(a.cpf||'').replace(/\D/g,'').includes(fCpf))      return false;
+    if (fTipo    && a.tipo    !== fTipo)                                  return false;
+    if (fArea    && a.area    !== fArea)                                  return false;
+    if (fCarater && a.carater !== fCarater)                               return false;
+    if (fProf    && !((a.profissional||'').toLowerCase().includes(fProf))) return false;
+    if (fInicio  && (a.data||'') < fInicio)                               return false;
+    if (fFim     && (a.data||'') > fFim)                                  return false;
+    return true;
+  });
+
+  lista.sort((a,b) => (b.criadoEm||b.data||'').localeCompare(a.criadoEm||a.data||''));
+
+  // ── KPIs ─────────────────────────────────
+  const hoje   = new Date().toISOString().slice(0,10);
+  const semana = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
+  const kpi = id => document.getElementById(id);
+  if (kpi('psi-k-hoje'))      kpi('psi-k-hoje').textContent      = ativos.filter(a => (a.data||'') === hoje).length;
+  if (kpi('psi-k-semana'))    kpi('psi-k-semana').textContent    = ativos.filter(a => (a.data||'') >= semana).length;
+  if (kpi('psi-k-total'))     kpi('psi-k-total').textContent     = ativos.length;
+  if (kpi('psi-k-psicologia'))kpi('psi-k-psicologia').textContent= ativos.filter(a => a.area === 'Psicologia').length;
+  if (kpi('psi-k-social'))    kpi('psi-k-social').textContent    = ativos.filter(a => a.area === 'Serviço Social').length;
+  if (kpi('psi-k-laudo'))     kpi('psi-k-laudo').textContent     = ativos.filter(a => a.tipo === 'Laudo técnico').length;
+  if (kpi('psi-k-judicial'))  kpi('psi-k-judicial').textContent  = ativos.filter(a => a.carater === 'Requisição judicial').length;
+  if (kpi('psi-k-proximo'))   kpi('psi-k-proximo').textContent   = ativos.filter(a => a.proximoAtend && a.proximoAtend >= hoje).length;
+
+  // ── Permissão ────────────────────────────
+  const podeMod  = podeAlterarPsi();
+  const avisoEl  = document.getElementById('psi-aviso-perm');
+  const btnsEl   = document.getElementById('psi-btns-acao');
+  const colAcoes = document.getElementById('psi-col-acoes');
+  if (avisoEl)  avisoEl.style.display  = podeMod ? 'none' : '';
+  if (btnsEl)   btnsEl.style.display   = podeMod ? ''     : 'none';
+  if (colAcoes) colAcoes.style.display = podeMod ? ''     : 'none';
+
+  // ── Tabela ───────────────────────────────
+  const label = document.getElementById('psi-count-label');
+  if (label) label.textContent = 'Atendimentos (' + lista.length + ' de ' + ativos.length + ')';
+
+  const tbody = document.getElementById('tbody-psi');
+  if (!tbody) return;
+
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#888">Nenhum atendimento encontrado.</td></tr>';
+    return;
+  }
+
+  const caraterCor = { 'Urgência': 'color:#c0392b;font-weight:700', 'Requisição judicial': 'color:#8e44ad;font-weight:700', 'Rotina': '' };
+  tbody.innerHTML = lista.map(a => {
+    const partes  = (a.data||'').split('-');
+    const dataFmt = partes.length === 3 ? partes[2]+'/'+partes[1]+'/'+partes[0] : (a.data||'');
+    const proxFmt = a.proximoAtend ? (() => { const p=a.proximoAtend.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; })() : '—';
+    const cstyle  = caraterCor[a.carater] || '';
+    const btnEd   = podeMod ? '<button class="btn-sm btn-outline" onclick="abrirModalPsi(\''+a.id+'\')">✏️</button> ' : '';
+    const btnEx   = podeMod ? '<button class="btn-sm btn-danger"  onclick="excluirAtendimentoPsi(\''+a.id+'\')">🗑️</button>' : '';
+    return '<tr>'
+      + '<td style="white-space:nowrap">' + dataFmt + '</td>'
+      + '<td><strong>' + (a.nome||'') + '</strong></td>'
+      + '<td>' + (a.cpf||'') + '</td>'
+      + '<td>' + (a.tipo||'') + '</td>'
+      + '<td>' + (a.area||'') + '</td>'
+      + '<td style="' + cstyle + '">' + (a.carater||'') + '</td>'
+      + '<td>' + (a.medida||'') + '</td>'
+      + '<td>' + (a.profissional||'') + '</td>'
+      + '<td style="white-space:nowrap">' + proxFmt + '</td>'
+      + (podeMod ? '<td style="white-space:nowrap">' + btnEd + btnEx + '</td>' : '')
+      + '</tr>';
+  }).join('');
+}
+
+function limparFiltrosPsi() {
+  ['psi-f-nome','psi-f-cpf','psi-f-prof','psi-f-inicio','psi-f-fim'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['psi-f-tipo','psi-f-area','psi-f-carater'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  renderizarPsi();
+}
+
+function abrirModalPsi(id) {
+  if (!podeAlterarPsi()) { _mostrarToast('Sem permissao.', 'erro'); return; }
+  const modal = document.getElementById('modal-psi');
+  if (!modal) return;
+
+  // Limpar
+  ['psi-edit-id','psi-nome','psi-cpf','psi-processo','psi-profissional'].forEach(i => {
+    const el = document.getElementById(i); if (el) el.value = '';
+  });
+  ['psi-medida','psi-tipo','psi-area','psi-carater'].forEach(i => {
+    const el = document.getElementById(i); if (el) el.value = '';
+  });
+  ['psi-data','psi-proximo'].forEach(i => {
+    const el = document.getElementById(i); if (el) el.value = '';
+  });
+  ['psi-objetivo','psi-resultado','psi-obs'].forEach(i => {
+    const el = document.getElementById(i); if (el) el.value = '';
+  });
+
+  if (id) {
+    const dados = getPsi();
+    const a = (dados.atendimentos||[]).find(x => x.id === id);
+    if (a) {
+      document.getElementById('psi-modal-title').textContent = 'Editar Atendimento Psicossocial';
+      document.getElementById('psi-edit-id').value      = a.id;
+      document.getElementById('psi-nome').value         = a.nome        || '';
+      document.getElementById('psi-cpf').value          = a.cpf         || '';
+      document.getElementById('psi-processo').value     = a.processo    || '';
+      document.getElementById('psi-medida').value       = a.medida      || '';
+      document.getElementById('psi-data').value         = a.data        || '';
+      document.getElementById('psi-tipo').value         = a.tipo        || '';
+      document.getElementById('psi-area').value         = a.area        || '';
+      document.getElementById('psi-carater').value      = a.carater     || '';
+      document.getElementById('psi-profissional').value = a.profissional|| '';
+      document.getElementById('psi-proximo').value      = a.proximoAtend|| '';
+      document.getElementById('psi-objetivo').value     = a.objetivo    || '';
+      document.getElementById('psi-resultado').value    = a.resultado   || '';
+      document.getElementById('psi-obs').value          = a.obs         || '';
+    }
+  } else {
+    document.getElementById('psi-modal-title').textContent = 'Novo Atendimento Psicossocial';
+    document.getElementById('psi-data').value = new Date().toISOString().slice(0,10);
+    document.getElementById('psi-profissional').value = usuarioAtual?.nome || '';
+  }
+  abrirModal('modal-psi');
+}
+
+function salvarAtendimentoPsi() {
+  if (!podeAlterarPsi()) { _mostrarToast('Sem permissao.', 'erro'); return; }
+
+  const nome       = (document.getElementById('psi-nome')?.value        || '').trim();
+  const tipo       = document.getElementById('psi-tipo')?.value         || '';
+  const area       = document.getElementById('psi-area')?.value         || '';
+  const carater    = document.getElementById('psi-carater')?.value      || '';
+  const data       = document.getElementById('psi-data')?.value         || '';
+  const profissional= (document.getElementById('psi-profissional')?.value||'').trim();
+
+  if (!nome)       { _mostrarToast('Informe o nome do monitorado.', 'erro'); return; }
+  if (!tipo)       { _mostrarToast('Selecione o tipo de atendimento.', 'erro'); return; }
+  if (!area)       { _mostrarToast('Selecione a area profissional.', 'erro'); return; }
+  if (!carater)    { _mostrarToast('Selecione o carater do atendimento.', 'erro'); return; }
+  if (!data)       { _mostrarToast('Informe a data do atendimento.', 'erro'); return; }
+  if (!profissional){ _mostrarToast('Informe o profissional responsavel.', 'erro'); return; }
+
+  const dados = getPsi();
+  const editId = document.getElementById('psi-edit-id')?.value || '';
+
+  const registro = {
+    id:          editId || Date.now().toString(),
+    criadoEm:   editId ? undefined : new Date().toISOString(),
+    nome,
+    cpf:         (document.getElementById('psi-cpf')?.value        || '').trim(),
+    processo:    (document.getElementById('psi-processo')?.value    || '').trim(),
+    medida:       document.getElementById('psi-medida')?.value      || '',
+    data,
+    tipo,
+    area,
+    carater,
+    profissional,
+    proximoAtend: document.getElementById('psi-proximo')?.value     || '',
+    objetivo:    (document.getElementById('psi-objetivo')?.value    || '').trim(),
+    resultado:   (document.getElementById('psi-resultado')?.value   || '').trim(),
+    obs:         (document.getElementById('psi-obs')?.value         || '').trim(),
+  };
+  if (!registro.criadoEm) registro.criadoEm = new Date().toISOString();
+
+  if (editId) {
+    const idx = (dados.atendimentos||[]).findIndex(x => x.id === editId);
+    if (idx >= 0) dados.atendimentos[idx] = registro;
+    else dados.atendimentos.push(registro);
+  } else {
+    if (!dados.atendimentos) dados.atendimentos = [];
+    dados.atendimentos.push(registro);
+  }
+
+  salvarPsi(dados);
+  fecharModal('modal-psi');
+  renderizarPsi();
+  addLog('Psicossocial: atendimento ' + (editId ? 'editado' : 'registrado') + ' — ' + nome);
+  _mostrarToast('Atendimento salvo com sucesso!', 'sucesso');
+}
+
+function excluirAtendimentoPsi(id) {
+  if (!podeAlterarPsi()) { _mostrarToast('Sem permissao.', 'erro'); return; }
+  if (!confirm('Excluir este atendimento permanentemente?')) return;
+  const dados = getPsi();
+  dados.atendimentos = (dados.atendimentos||[]).filter(a => a.id !== id);
+  salvarPsi(dados);
+  renderizarPsi();
+  _mostrarToast('Atendimento excluido.', 'sucesso');
+}
+
+function exportarPsi() {
+  const dados = getPsi();
+  const ativos = (dados.atendimentos||[]).filter(a => !a.arquivado);
+  if (!ativos.length) { _mostrarToast('Nenhum dado para exportar.', 'erro'); return; }
+
+  const rows = ativos.map(a => {
+    const partes  = (a.data||'').split('-');
+    const dataFmt = partes.length === 3 ? partes[2]+'/'+partes[1]+'/'+partes[0] : (a.data||'');
+    return {
+      'Data':              dataFmt,
+      'Nome':              a.nome||'',
+      'CPF':               a.cpf||'',
+      'N Processo':        a.processo||'',
+      'Medida':            a.medida||'',
+      'Tipo Atendimento':  a.tipo||'',
+      'Area':              a.area||'',
+      'Carater':           a.carater||'',
+      'Profissional':      a.profissional||'',
+      'Proximo Atend':     a.proximoAtend||'',
+      'Objetivo':          a.objetivo||'',
+      'Resultado':         a.resultado||'',
+      'Observacao':        a.obs||''
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Psicossocial');
+  XLSX.writeFile(wb, 'psicossocial_CME.xlsx');
+  _mostrarToast(ativos.length + ' registro(s) exportados!', 'sucesso');
+}
+
+// ─── Arquivados Psicossocial ─────────────────────────────
+
+function renderizarPsiArquivados() {
+  const dados = getPsi();
+  let lista   = (dados.atendimentos || []).filter(a => a.arquivado);
+
+  const fNome   = (document.getElementById('psi-a-nome')?.value   || '').toLowerCase();
+  const fCpf    = (document.getElementById('psi-a-cpf')?.value    || '').replace(/\D/g,'');
+  const fTipo   = document.getElementById('psi-a-tipo')?.value    || '';
+  const fArea   = document.getElementById('psi-a-area')?.value    || '';
+  const fProf   = (document.getElementById('psi-a-prof')?.value   || '').toLowerCase();
+  const fInicio = document.getElementById('psi-a-inicio')?.value  || '';
+  const fFim    = document.getElementById('psi-a-fim')?.value     || '';
+
+  lista = lista.filter(a => {
+    if (fNome   && !((a.nome||'').toLowerCase().includes(fNome)))          return false;
+    if (fCpf    && !(a.cpf||'').replace(/\D/g,'').includes(fCpf))         return false;
+    if (fTipo   && a.tipo   !== fTipo)                                      return false;
+    if (fArea   && a.area   !== fArea)                                      return false;
+    if (fProf   && !((a.profissional||'').toLowerCase().includes(fProf)))  return false;
+    if (fInicio && (a.data||'') < fInicio)                                  return false;
+    if (fFim    && (a.data||'') > fFim)                                     return false;
+    return true;
+  });
+
+  lista.sort((a,b) => (b.arquivadoEm||b.data||'').localeCompare(a.arquivadoEm||a.data||''));
+
+  const tbody = document.getElementById('tbody-psi-arquivados');
+  if (!tbody) return;
+
+  const totalArq = (dados.atendimentos||[]).filter(a => a.arquivado).length;
+  const label = document.getElementById('psi-arq-count-label');
+  if (label) label.textContent = 'Arquivados (' + lista.length + ' de ' + totalArq + ')';
+
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#888">Nenhum atendimento arquivado encontrado.</td></tr>';
+    return;
+  }
+
+  const podeMod = podeAlterarPsi();
+  tbody.innerHTML = lista.map(a => {
+    const partes  = (a.data||'').split('-');
+    const dataFmt = partes.length === 3 ? partes[2]+'/'+partes[1]+'/'+partes[0] : (a.data||'');
+    const arqFmt  = a.arquivadoEm ? new Date(a.arquivadoEm).toLocaleDateString('pt-BR') : '—';
+    const btnD    = podeMod ? '<button class="btn-sm btn-outline" onclick="desarquivarPsi(\''+a.id+'\')">↩ Desarquivar</button> ' : '';
+    const btnE    = podeMod ? '<button class="btn-sm btn-danger"  onclick="excluirPsiArquivado(\''+a.id+'\')">🗑️</button>' : '';
+    return '<tr>'
+      + '<td style="white-space:nowrap">' + dataFmt + '</td>'
+      + '<td style="white-space:nowrap;color:#888;font-size:.82rem">' + arqFmt + '</td>'
+      + '<td><strong>' + (a.nome||'') + '</strong></td>'
+      + '<td>' + (a.cpf||'') + '</td>'
+      + '<td>' + (a.tipo||'') + '</td>'
+      + '<td>' + (a.area||'') + '</td>'
+      + '<td>' + (a.carater||'') + '</td>'
+      + '<td>' + (a.medida||'') + '</td>'
+      + '<td>' + (a.profissional||'') + '</td>'
+      + '<td style="white-space:nowrap">' + btnD + btnE + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function limparFiltrosPsiArq() {
+  ['psi-a-nome','psi-a-cpf','psi-a-prof','psi-a-inicio','psi-a-fim'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['psi-a-tipo','psi-a-area'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  renderizarPsiArquivados();
+}
+
+function desarquivarPsi(id) {
+  if (!podeAlterarPsi()) { _mostrarToast('Sem permissao.', 'erro'); return; }
+  if (!confirm('Desarquivar este atendimento?')) return;
+  const dados = getPsi();
+  const a = (dados.atendimentos||[]).find(x => x.id === id);
+  if (a) { delete a.arquivado; delete a.arquivadoEm; }
+  salvarPsi(dados);
+  renderizarPsiArquivados();
+  atualizarBadgePsiArq();
+  _mostrarToast('Atendimento desarquivado.', 'sucesso');
+}
+
+function excluirPsiArquivado(id) {
+  if (!podeAlterarPsi()) { _mostrarToast('Sem permissao.', 'erro'); return; }
+  if (!confirm('Excluir permanentemente este atendimento arquivado?')) return;
+  const dados = getPsi();
+  dados.atendimentos = (dados.atendimentos||[]).filter(a => a.id !== id);
+  salvarPsi(dados);
+  renderizarPsiArquivados();
+  atualizarBadgePsiArq();
+  _mostrarToast('Atendimento excluido permanentemente.', 'sucesso');
+}
+
+function exportarPsiArquivados() {
+  const dados = getPsi();
+  let lista = (dados.atendimentos||[]).filter(a => a.arquivado);
+
+  const fNome   = (document.getElementById('psi-a-nome')?.value   || '').toLowerCase();
+  const fCpf    = (document.getElementById('psi-a-cpf')?.value    || '').replace(/\D/g,'');
+  const fTipo   = document.getElementById('psi-a-tipo')?.value    || '';
+  const fArea   = document.getElementById('psi-a-area')?.value    || '';
+  const fProf   = (document.getElementById('psi-a-prof')?.value   || '').toLowerCase();
+  const fInicio = document.getElementById('psi-a-inicio')?.value  || '';
+  const fFim    = document.getElementById('psi-a-fim')?.value     || '';
+
+  const filtrados = lista.filter(a => {
+    if (fNome   && !((a.nome||'').toLowerCase().includes(fNome)))          return false;
+    if (fCpf    && !(a.cpf||'').replace(/\D/g,'').includes(fCpf))         return false;
+    if (fTipo   && a.tipo   !== fTipo)                                      return false;
+    if (fArea   && a.area   !== fArea)                                      return false;
+    if (fProf   && !((a.profissional||'').toLowerCase().includes(fProf)))  return false;
+    if (fInicio && (a.data||'') < fInicio)                                  return false;
+    if (fFim    && (a.data||'') > fFim)                                     return false;
+    return true;
+  });
+
+  if (!filtrados.length) { _mostrarToast('Nenhum dado arquivado para exportar.', 'erro'); return; }
+
+  const rows = filtrados.map(a => {
+    const partes  = (a.data||'').split('-');
+    const dataFmt = partes.length === 3 ? partes[2]+'/'+partes[1]+'/'+partes[0] : (a.data||'');
+    return {
+      'Data':             dataFmt,
+      'Arquivado em':     a.arquivadoEm ? new Date(a.arquivadoEm).toLocaleDateString('pt-BR') : '',
+      'Nome':             a.nome||'',
+      'CPF':              a.cpf||'',
+      'N Processo':       a.processo||'',
+      'Medida':           a.medida||'',
+      'Tipo Atendimento': a.tipo||'',
+      'Area':             a.area||'',
+      'Carater':          a.carater||'',
+      'Profissional':     a.profissional||'',
+      'Objetivo':         a.objetivo||'',
+      'Resultado':        a.resultado||'',
+      'Observacao':       a.obs||''
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Psicossocial Arquivados');
+  XLSX.writeFile(wb, 'psicossocial_arquivados_CME.xlsx');
+  _mostrarToast(filtrados.length + ' registro(s) exportados!', 'sucesso');
 }
 
 /* ═══════════════════════ FUNÇÕES EXPORT EXCEL ═══════════════════ */
