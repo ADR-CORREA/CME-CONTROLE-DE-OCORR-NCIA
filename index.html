@@ -1231,8 +1231,49 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
           <div style="font-weight:600;color:var(--az1)">📁 Relatórios enviados pela Comunicação Processual</div>
           <div class="table-actions">
             <button class="btn-secondary" onclick="renderizarRelArquivadas()">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="exportarRelArquivadasExcel()">📥 Exportar Excel</button>
           </div>
         </div>
+
+        <!-- Filtros Arquivadas -->
+        <div class="tri-filtros">
+          <div class="tri-filtros-title">🔍 Pesquisar</div>
+          <div class="tri-filtros-grid">
+            <div class="form-field" style="margin:0">
+              <label>Monitorado</label>
+              <input type="text" id="rel-a-monitorado" placeholder="Nome do monitorado..." oninput="renderizarRelArquivadas()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Servidor</label>
+              <input type="text" id="rel-a-servidor" placeholder="Nome do servidor..." oninput="renderizarRelArquivadas()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Tipo de Relatório</label>
+              <select id="rel-a-tipo" onchange="renderizarRelArquivadas()">
+                <option value="">Todos</option>
+                <option>Relatório Mensal</option>
+                <option>Relatório de Ocorrência</option>
+                <option>Relatório de Violação</option>
+                <option>Relatório de Comparecimento</option>
+                <option>Relatório Circunstanciado</option>
+                <option>Outro</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Data início (Recebimento)</label>
+              <input type="date" id="rel-a-inicio" onchange="renderizarRelArquivadas()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Data fim (Recebimento)</label>
+              <input type="date" id="rel-a-fim" onchange="renderizarRelArquivadas()">
+            </div>
+            <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosRelArq()">✕ Limpar</button>
+            </div>
+          </div>
+        </div>
+        <div class="est-section-title" id="rel-arq-count-label">Arquivados</div>
+
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr>
@@ -1916,11 +1957,11 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
       <div class="sub-panel active" id="psi-panel-ativos">
 
         <div class="tri-header">
-          <div class="tri-header-title">🧠 Psicossocial — Atendimentos Técnicos</div>
+          <div class="tri-header-title">🧠 Equipe Multidisciplinar — CME/IAPEN-AP</div>
           <div id="psi-btns-acao">
             <button class="btn-secondary" onclick="renderizarPsi()">🔄 Atualizar</button>
             <button class="btn-secondary" onclick="exportarPsi()">📥 Exportar Excel</button>
-            <button class="btn-primary"   onclick="abrirModalPsi()">➕ Novo Atendimento</button>
+            <button class="btn-primary"   onclick="abrirModalPsi()">➕ Novo Registro</button>
           </div>
         </div>
 
@@ -1932,11 +1973,12 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
         <div class="est-kpi-grid" id="psi-kpi-grid">
           <div class="est-kpi"><div class="est-kpi-num" id="psi-k-hoje">0</div><div class="est-kpi-label">Hoje</div></div>
           <div class="est-kpi"><div class="est-kpi-num" id="psi-k-semana">0</div><div class="est-kpi-label">Esta Semana</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-total">0</div><div class="est-kpi-label">Total Geral</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-psicologia">0</div><div class="est-kpi-label">Psicologia</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-social">0</div><div class="est-kpi-label">Serviço Social</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-laudo">0</div><div class="est-kpi-label">Laudos</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-total">0</div><div class="est-kpi-label">Total Ativo</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-vitima">0</div><div class="est-kpi-label">Vítimas</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-monitorado">0</div><div class="est-kpi-label">Monitorados</div></div>
           <div class="est-kpi"><div class="est-kpi-num" id="psi-k-judicial">0</div><div class="est-kpi-label">Req. Judicial</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-urgencia">0</div><div class="est-kpi-label">Urgências</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-risco-alto">0</div><div class="est-kpi-label">Risco Alto</div></div>
           <div class="est-kpi"><div class="est-kpi-num" id="psi-k-proximo">0</div><div class="est-kpi-label">C/ Próx. Atend.</div></div>
         </div>
 
@@ -1946,34 +1988,49 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
           <div class="tri-filtros-grid">
             <div class="form-field" style="margin:0">
               <label>Nome</label>
-              <input type="text" id="psi-f-nome" placeholder="Buscar por nome..." oninput="renderizarPsi()">
+              <input type="text" id="psi-f-nome" placeholder="Nome da pessoa..." oninput="renderizarPsi()">
             </div>
             <div class="form-field" style="margin:0">
               <label>CPF</label>
               <input type="text" id="psi-f-cpf" placeholder="000.000.000-00" oninput="renderizarPsi()">
             </div>
             <div class="form-field" style="margin:0">
+              <label>Público</label>
+              <select id="psi-f-publico" onchange="renderizarPsi()">
+                <option value="">Todos</option>
+                <option>Vítima</option>
+                <option>Monitorado</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
               <label>Tipo de Atendimento</label>
               <select id="psi-f-tipo" onchange="renderizarPsi()">
                 <option value="">Todos</option>
-                <option>Avaliação inicial</option>
-                <option>Acompanhamento psicológico</option>
-                <option>Acompanhamento social</option>
-                <option>Laudo técnico</option>
-                <option>Entrevista individual</option>
+                <option>Atendimento inicial (pós-vinculação)</option>
+                <option>Escuta qualificada</option>
+                <option>Orientação sobre DPP</option>
+                <option>Avaliação inicial de risco</option>
+                <option>Avaliação técnica interdisciplinar</option>
+                <option>Acompanhamento psicossocial</option>
                 <option>Reunião familiar</option>
-                <option>Grupo terapêutico</option>
+                <option>Visita domiciliar</option>
+                <option>Visita institucional</option>
+                <option>Articulação com rede de proteção</option>
                 <option>Encaminhamento externo</option>
+                <option>Apoio em violação de medida</option>
+                <option>Análise de descumprimento</option>
+                <option>Elaboração de relatório técnico</option>
                 <option>Outros</option>
               </select>
             </div>
             <div class="form-field" style="margin:0">
-              <label>Área</label>
+              <label>Área Profissional</label>
               <select id="psi-f-area" onchange="renderizarPsi()">
                 <option value="">Todas</option>
                 <option>Psicologia</option>
                 <option>Serviço Social</option>
-                <option>Ambos</option>
+                <option>Jurídico</option>
+                <option>Interdisciplinar</option>
               </select>
             </div>
             <div class="form-field" style="margin:0">
@@ -1983,6 +2040,19 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
                 <option>Rotina</option>
                 <option>Urgência</option>
                 <option>Requisição judicial</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Situação Verificada</label>
+              <select id="psi-f-situacao" onchange="renderizarPsi()">
+                <option value="">Todas</option>
+                <option>Comparecimento / Execução regular</option>
+                <option>Não comparecimento</option>
+                <option>Ausência ou insuficiência de dados</option>
+                <option>Recusa ao DPP</option>
+                <option>Risco imediato identificado</option>
+                <option>Descumprimento reiterado</option>
+                <option>Caso encerrado</option>
               </select>
             </div>
             <div class="form-field" style="margin:0">
@@ -2006,15 +2076,18 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
         <!-- Tabela -->
         <div class="est-section-title" id="psi-count-label">Atendimentos</div>
         <div class="table-wrapper" style="overflow-x:auto">
-          <table class="data-table">
+          <table class="data-table" style="min-width:1100px">
             <thead><tr>
-              <th>Data</th>
+              <th>Data/Hora</th>
+              <th>Público</th>
               <th>Nome</th>
-              <th>CPF</th>
+              <th>Processo</th>
+              <th>Medida</th>
               <th>Tipo Atendimento</th>
               <th>Área</th>
               <th>Caráter</th>
-              <th>Medida</th>
+              <th>Situação</th>
+              <th>Risco</th>
               <th>Profissional</th>
               <th>Próx. Atend.</th>
               <th id="psi-col-acoes">Ações</th>
@@ -2029,7 +2102,7 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
       <div class="sub-panel" id="psi-panel-arquivados">
 
         <div class="tri-header">
-          <div class="tri-header-title">📁 Atendimentos Arquivados <small style="font-size:.78rem;color:#888;font-weight:400">(arquivados automaticamente após 30 dias)</small></div>
+          <div class="tri-header-title">📁 Registros Arquivados <small style="font-size:.78rem;color:#888;font-weight:400">(arquivados automaticamente após 90 dias)</small></div>
           <div>
             <button class="btn-secondary" onclick="renderizarPsiArquivados()">🔄 Atualizar</button>
             <button class="btn-secondary" onclick="exportarPsiArquivados()">📥 Exportar Excel</button>
@@ -2038,28 +2111,42 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
 
         <!-- Filtros Arquivados -->
         <div class="tri-filtros">
-          <div class="tri-filtros-title">🔍 Filtros</div>
+          <div class="tri-filtros-title">🔍 Pesquisar</div>
           <div class="tri-filtros-grid">
             <div class="form-field" style="margin:0">
               <label>Nome</label>
-              <input type="text" id="psi-a-nome" placeholder="Buscar por nome..." oninput="renderizarPsiArquivados()">
+              <input type="text" id="psi-a-nome" placeholder="Nome da pessoa..." oninput="renderizarPsiArquivados()">
             </div>
             <div class="form-field" style="margin:0">
               <label>CPF</label>
               <input type="text" id="psi-a-cpf" placeholder="000.000.000-00" oninput="renderizarPsiArquivados()">
             </div>
             <div class="form-field" style="margin:0">
+              <label>Público</label>
+              <select id="psi-a-publico" onchange="renderizarPsiArquivados()">
+                <option value="">Todos</option>
+                <option>Vítima</option>
+                <option>Monitorado</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
               <label>Tipo de Atendimento</label>
               <select id="psi-a-tipo" onchange="renderizarPsiArquivados()">
                 <option value="">Todos</option>
-                <option>Avaliação inicial</option>
-                <option>Acompanhamento psicológico</option>
-                <option>Acompanhamento social</option>
-                <option>Laudo técnico</option>
-                <option>Entrevista individual</option>
+                <option>Atendimento inicial (pós-vinculação)</option>
+                <option>Escuta qualificada</option>
+                <option>Orientação sobre DPP</option>
+                <option>Avaliação inicial de risco</option>
+                <option>Avaliação técnica interdisciplinar</option>
+                <option>Acompanhamento psicossocial</option>
                 <option>Reunião familiar</option>
-                <option>Grupo terapêutico</option>
+                <option>Visita domiciliar</option>
+                <option>Visita institucional</option>
+                <option>Articulação com rede de proteção</option>
                 <option>Encaminhamento externo</option>
+                <option>Apoio em violação de medida</option>
+                <option>Análise de descumprimento</option>
+                <option>Elaboração de relatório técnico</option>
                 <option>Outros</option>
               </select>
             </div>
@@ -2069,7 +2156,8 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
                 <option value="">Todas</option>
                 <option>Psicologia</option>
                 <option>Serviço Social</option>
-                <option>Ambos</option>
+                <option>Jurídico</option>
+                <option>Interdisciplinar</option>
               </select>
             </div>
             <div class="form-field" style="margin:0">
@@ -2090,21 +2178,12 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
           </div>
         </div>
 
-        <!-- Tabela Arquivados -->
         <div class="est-section-title" id="psi-arq-count-label">Arquivados</div>
         <div class="table-wrapper" style="overflow-x:auto">
-          <table class="data-table">
+          <table class="data-table" style="min-width:1000px">
             <thead><tr>
-              <th>Data</th>
-              <th>Arquivado em</th>
-              <th>Nome</th>
-              <th>CPF</th>
-              <th>Tipo Atendimento</th>
-              <th>Área</th>
-              <th>Caráter</th>
-              <th>Medida</th>
-              <th>Profissional</th>
-              <th>Ações</th>
+              <th>Data</th><th>Arquivado em</th><th>Público</th><th>Nome</th><th>Processo</th>
+              <th>Tipo Atendimento</th><th>Área</th><th>Situação</th><th>Profissional</th><th>Ações</th>
             </tr></thead>
             <tbody id="tbody-psi-arquivados"></tbody>
           </table>
@@ -2392,16 +2471,58 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
 
 <!-- MODAL PSICOSSOCIAL -->
 <div class="modal-overlay" id="modal-psi">
-  <div class="modal-box" style="max-width:740px">
+  <div class="modal-box" style="max-width:820px">
     <div class="modal-header">
-      <h3 id="psi-modal-title">🧠 Novo Atendimento Psicossocial</h3>
+      <h3 id="psi-modal-title">🧠 Novo Registro — Equipe Multidisciplinar</h3>
       <button class="modal-close" onclick="fecharModal('modal-psi')">✕</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="psi-edit-id">
 
+      <!-- SEC 1: Origem da demanda -->
       <div class="form-section">
-        <div class="form-section-title">Identificação do Monitorado</div>
+        <div class="form-section-title">Origem da Demanda</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Origem *</label>
+            <select id="psi-origem">
+              <option value="">Selecione...</option>
+              <option>Demanda judicial</option>
+              <option>Encaminhamento interno — Plantão CME</option>
+              <option>Encaminhamento interno — Outro setor</option>
+              <option>Comunicação de violação de medida protetiva</option>
+              <option>Comparecimento espontâneo</option>
+              <option>Demanda da Gerência</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Data / Hora do atendimento *</label>
+            <input type="datetime-local" id="psi-datahora">
+          </div>
+        </div>
+      </div>
+
+      <!-- SEC 2: Identificação -->
+      <div class="form-section">
+        <div class="form-section-title">Identificação da Pessoa Atendida</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Público *</label>
+            <select id="psi-publico" onchange="toggleCamposPsi()">
+              <option value="">Selecione...</option>
+              <option>Vítima</option>
+              <option>Monitorado</option>
+            </select>
+          </div>
+          <div class="form-field" id="psi-row-condicao" style="display:none">
+            <label>Condição na medida protetiva</label>
+            <select id="psi-condicao-med">
+              <option value="">Selecione...</option>
+              <option>Vítima (beneficiária DPP)</option>
+              <option>Agressor (monitorado)</option>
+            </select>
+          </div>
+        </div>
         <div class="form-grid">
           <div class="form-field">
             <label>Nome completo *</label>
@@ -2415,55 +2536,76 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
         <div class="form-grid">
           <div class="form-field">
             <label>Nº do Processo</label>
-            <input type="text" id="psi-processo" placeholder="Ex: 0000000-00.0000.0.00.0000">
+            <input type="text" id="psi-processo" placeholder="Ex: 0000000-00.0000.8.03.0001">
           </div>
           <div class="form-field">
-            <label>Tipo de medida/processo</label>
+            <label>Tipo de Medida / Processo *</label>
             <select id="psi-medida">
               <option value="">Selecione...</option>
+              <option>Medida protetiva (DPP)</option>
               <option>Medida cautelar</option>
               <option>Vara de Execuções Penais</option>
-              <option>Medida protetiva</option>
             </select>
           </div>
         </div>
       </div>
 
+      <!-- SEC 3: Dados do Atendimento -->
       <div class="form-section">
         <div class="form-section-title">Dados do Atendimento</div>
         <div class="form-grid">
           <div class="form-field">
-            <label>Data do atendimento *</label>
-            <input type="date" id="psi-data">
-          </div>
-          <div class="form-field">
-            <label>Tipo de atendimento *</label>
+            <label>Tipo de Atendimento *</label>
             <select id="psi-tipo">
               <option value="">Selecione...</option>
-              <option>Avaliação inicial</option>
-              <option>Acompanhamento psicológico</option>
-              <option>Acompanhamento social</option>
-              <option>Laudo técnico</option>
-              <option>Entrevista individual</option>
-              <option>Reunião familiar</option>
-              <option>Grupo terapêutico</option>
-              <option>Encaminhamento externo</option>
-              <option>Outros</option>
+              <optgroup label="— Vítima / DPP —">
+                <option>Escuta qualificada</option>
+                <option>Orientação sobre DPP</option>
+                <option>Avaliação inicial de risco</option>
+                <option>Acompanhamento da vítima</option>
+                <option>Articulação com rede de proteção</option>
+                <option>Apoio em violação de medida protetiva</option>
+              </optgroup>
+              <optgroup label="— Monitorado —">
+                <option>Atendimento inicial (pós-vinculação)</option>
+                <option>Avaliação técnica interdisciplinar</option>
+                <option>Acompanhamento psicossocial</option>
+                <option>Análise de descumprimento</option>
+                <option>Encaminhamento para serviços</option>
+              </optgroup>
+              <optgroup label="— Ambos —">
+                <option>Reunião familiar</option>
+                <option>Visita domiciliar</option>
+                <option>Visita institucional</option>
+                <option>Elaboração de relatório técnico</option>
+                <option>Outros</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Modalidade *</label>
+            <select id="psi-modalidade">
+              <option value="">Selecione...</option>
+              <option>Presencial</option>
+              <option>Remoto (telefone/videoconferência)</option>
+              <option>Visita domiciliar</option>
+              <option>Visita institucional</option>
             </select>
           </div>
         </div>
         <div class="form-grid">
           <div class="form-field">
-            <label>Área profissional *</label>
+            <label>Área Profissional *</label>
             <select id="psi-area">
               <option value="">Selecione...</option>
               <option>Psicologia</option>
               <option>Serviço Social</option>
-              <option>Ambos</option>
+              <option>Jurídico</option>
+              <option>Interdisciplinar</option>
             </select>
           </div>
           <div class="form-field">
-            <label>Caráter do atendimento *</label>
+            <label>Caráter *</label>
             <select id="psi-carater">
               <option value="">Selecione...</option>
               <option>Rotina</option>
@@ -2474,36 +2616,121 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
         </div>
         <div class="form-grid">
           <div class="form-field">
-            <label>Profissional responsável *</label>
+            <label>Profissional Responsável *</label>
             <input type="text" id="psi-profissional" placeholder="Nome do profissional">
           </div>
           <div class="form-field">
-            <label>Próximo atendimento (data)</label>
+            <label>Data Próximo Atendimento</label>
             <input type="date" id="psi-proximo">
           </div>
         </div>
       </div>
 
+      <!-- SEC 4: Situação Verificada -->
+      <div class="form-section">
+        <div class="form-section-title">Situação Verificada no Atendimento</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Situação *</label>
+            <select id="psi-situacao">
+              <option value="">Selecione...</option>
+              <option>Comparecimento / Execução regular da medida</option>
+              <option>Não comparecimento do monitorado</option>
+              <option>Ausência ou insuficiência de dados para contato</option>
+              <option>Recusa da vítima ao DPP</option>
+              <option>Risco imediato identificado</option>
+              <option>Descumprimento reiterado identificado</option>
+              <option>Caso encerrado / Medida revogada</option>
+            </select>
+          </div>
+          <div class="form-field" id="psi-row-risco" style="display:none">
+            <label>Nível de Risco (Vítima)</label>
+            <select id="psi-risco">
+              <option value="">Selecione...</option>
+              <option>Alto</option>
+              <option>Médio</option>
+              <option>Baixo</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Fatores de vulnerabilidade (só para vítima) -->
+        <div id="psi-row-vulnerabilidade" style="display:none">
+          <label style="font-weight:600;display:block;margin-bottom:8px">Fatores de Vulnerabilidade Identificados</label>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 18px">
+            <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-vul-ameacas"> Ameaças recentes</label>
+            <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-vul-lesoes"> Histórico de lesões graves</label>
+            <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-vul-arma"> Presença de arma</label>
+            <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-vul-filhos"> Filhos em comum</label>
+            <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-vul-dep-eco"> Dependência econômica</label>
+            <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-vul-dep-quim"> Dependência química</label>
+            <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-vul-transtorno"> Transtorno mental</label>
+            <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-vul-rua"> Situação de rua</label>
+            <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-vul-conflito"> Conflito familiar agudo</label>
+            <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-vul-rede"> Rede de apoio ausente</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEC 5: Encaminhamentos -->
+      <div class="form-section">
+        <div class="form-section-title">Encaminhamentos Realizados</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 18px">
+          <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-cmb"> Casa da Mulher Brasileira</label>
+          <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-creas"> CREAS</label>
+          <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-cras"> CRAS</label>
+          <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-dp"> Defensoria Pública</label>
+          <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-mp"> Ministério Público</label>
+          <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-saude"> Saúde Mental</label>
+          <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-dep-quim"> Tratamento dependência química</label>
+          <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-qual"> Qualificação profissional</label>
+          <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-plantao"> Articulação com Plantão CME</label>
+          <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-outros"> Outros</label>
+        </div>
+        <div class="form-field" id="psi-row-enc-outros" style="display:none;margin-top:8px">
+          <label>Especificar outros encaminhamentos</label>
+          <input type="text" id="psi-enc-outros-desc" placeholder="Descreva os encaminhamentos...">
+        </div>
+      </div>
+
+      <!-- SEC 6: Registro Técnico -->
       <div class="form-section">
         <div class="form-section-title">Registro Técnico</div>
         <div class="form-field">
-          <label>Objetivo do atendimento</label>
-          <textarea id="psi-objetivo" rows="2" placeholder="Descreva o objetivo principal deste atendimento..." style="resize:vertical"></textarea>
+          <label>Descrição / Relato do Atendimento *</label>
+          <textarea id="psi-descricao" rows="3" placeholder="Descreva o que foi realizado neste atendimento, falas relevantes, contexto observado..." style="resize:vertical"></textarea>
         </div>
         <div class="form-field">
-          <label>Resultado / Encaminhamento</label>
-          <textarea id="psi-resultado" rows="2" placeholder="Resultado obtido, encaminhamentos realizados..." style="resize:vertical"></textarea>
+          <label>Análise Técnica Interdisciplinar</label>
+          <textarea id="psi-analise" rows="3" placeholder="Análise dos fatores de risco/proteção, contexto social, familiar, laboral e psicológico..." style="resize:vertical"></textarea>
+        </div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Providência Formal Adotada</label>
+            <select id="psi-providencia">
+              <option value="">Nenhuma / Não aplicável</option>
+              <option>Relatório técnico ao Judiciário</option>
+              <option>Informativo interno</option>
+              <option>Encaminhamento formal</option>
+              <option>Articulação com Plantão CME</option>
+              <option>Acionamento de rede de proteção</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Tipo do Próximo Atendimento</label>
+            <input type="text" id="psi-proximo-tipo" placeholder="Ex: Acompanhamento psicossocial">
+          </div>
         </div>
         <div class="form-field">
-          <label>Observações</label>
-          <textarea id="psi-obs" rows="2" placeholder="Anotações adicionais (opcional)" style="resize:vertical"></textarea>
+          <label>Observações Complementares</label>
+          <textarea id="psi-obs" rows="2" placeholder="Informações adicionais relevantes..." style="resize:vertical"></textarea>
         </div>
       </div>
 
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-psi')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarAtendimentoPsi()">💾 Salvar Atendimento</button>
+      <button class="btn-primary" onclick="salvarAtendimentoPsi()">💾 Salvar Registro</button>
     </div>
   </div>
 </div>
@@ -4511,12 +4738,29 @@ function exportarComArquivadosExcel() {
 
 // ── Relatório → Arquivadas ──────────────────────────────
 function renderizarRelArquivadas() {
-  const lista = (getRelatorios().registros||[]).filter(r => r.comEnviadoEm)
-    .sort((a,b) => (b.comEnviadoEm||'').localeCompare(a.comEnviadoEm||''));
+  const fMon    = (document.getElementById('rel-a-monitorado')?.value||'').toLowerCase().trim();
+  const fSrv    = (document.getElementById('rel-a-servidor')?.value||'').toLowerCase().trim();
+  const fTipo   = (document.getElementById('rel-a-tipo')?.value||'').toLowerCase().trim();
+  const fInicio = document.getElementById('rel-a-inicio')?.value || '';
+  const fFim    = document.getElementById('rel-a-fim')?.value || '';
+
+  let lista = (getRelatorios().registros||[]).filter(r => r.comEnviadoEm);
+
+  if (fMon)    lista = lista.filter(r => (r.monitorado||'').toLowerCase().includes(fMon));
+  if (fSrv)    lista = lista.filter(r => (r.servidor||'').toLowerCase().includes(fSrv));
+  if (fTipo)   lista = lista.filter(r => (r.tipo||'').toLowerCase().includes(fTipo));
+  if (fInicio) lista = lista.filter(r => (r.dataRecebimento||'') >= fInicio);
+  if (fFim)    lista = lista.filter(r => (r.dataRecebimento||'') <= fFim);
+
+  lista.sort((a,b) => (b.comEnviadoEm||'').localeCompare(a.comEnviadoEm||''));
+
+  const countEl = document.getElementById('rel-arq-count-label');
+  if (countEl) countEl.textContent = `Arquivados — ${lista.length} registro${lista.length !== 1 ? 's' : ''}`;
+
   const tbody = document.getElementById('tbody-rel-arquivadas');
   if (!tbody) return;
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#888">Nenhum relatório arquivado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#888">Nenhum relatório encontrado.</td></tr>';
     return;
   }
   tbody.innerHTML = lista.map((r,i) => `<tr>
@@ -4526,12 +4770,63 @@ function renderizarRelArquivadas() {
     <td>${r.servidor||''}</td>
     <td>${(r.dataRecebimento||'').split('-').reverse().join('/')}</td>
     <td>${(r.dataEnvio||'').split('-').reverse().join('/')}</td>
-    <td><strong>${(r.comEnviadoEm||'').split('-').reverse().join('/')}</strong></td>
+    <td><strong>${(r.comEnviadoEm||'').replace('T',' ').slice(0,16)}</strong></td>
     <td style="white-space:nowrap">
       <button class="btn-sm btn-outline" onclick="desarquivarRelatorio('${r.id}')">↩ Desarquivar</button>
-      <button class="btn-sm btn-danger"  onclick="excluirRelatorio('${r.id}')">🗑️</button>
+      <button class="btn-sm btn-danger"  onclick="excluirRelatorio('${r.id}')">🗑</button>
     </td>
   </tr>`).join('');
+}
+
+function limparFiltrosRelArq() {
+  ['rel-a-monitorado','rel-a-servidor','rel-a-tipo','rel-a-inicio','rel-a-fim'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  renderizarRelArquivadas();
+}
+
+function excluirRelatorio(id) {
+  if (!confirm('Excluir este relatório permanentemente? Essa ação não pode ser desfeita.')) return;
+  const dados = getRelatorios();
+  dados.registros = (dados.registros||[]).filter(r => r.id !== id);
+  salvarStore('relatorios', dados);
+  renderizarRelArquivadas();
+  _mostrarToast('Relatório excluído.', 'sucesso');
+}
+
+function exportarRelArquivadasExcel() {
+  const fMon    = (document.getElementById('rel-a-monitorado')?.value||'').toLowerCase().trim();
+  const fSrv    = (document.getElementById('rel-a-servidor')?.value||'').toLowerCase().trim();
+  const fTipo   = (document.getElementById('rel-a-tipo')?.value||'').toLowerCase().trim();
+  const fInicio = document.getElementById('rel-a-inicio')?.value || '';
+  const fFim    = document.getElementById('rel-a-fim')?.value || '';
+
+  let lista = (getRelatorios().registros||[]).filter(r => r.comEnviadoEm);
+  if (fMon)    lista = lista.filter(r => (r.monitorado||'').toLowerCase().includes(fMon));
+  if (fSrv)    lista = lista.filter(r => (r.servidor||'').toLowerCase().includes(fSrv));
+  if (fTipo)   lista = lista.filter(r => (r.tipo||'').toLowerCase().includes(fTipo));
+  if (fInicio) lista = lista.filter(r => (r.dataRecebimento||'') >= fInicio);
+  if (fFim)    lista = lista.filter(r => (r.dataRecebimento||'') <= fFim);
+  lista.sort((a,b) => (b.comEnviadoEm||'').localeCompare(a.comEnviadoEm||''));
+
+  if (!lista.length) { _mostrarToast('Nenhum registro para exportar.', 'erro'); return; }
+
+  const rows = lista.map((r,i) => ({
+    '#':                  i+1,
+    'Tipo':               r.tipo||'',
+    'Monitorado':         r.monitorado||'',
+    'Servidor':           r.servidor||'',
+    'Data Recebimento':   r.dataRecebimento||'',
+    'Data Envio':         r.dataEnvio||'',
+    'Arquivado em':       (r.comEnviadoEm||'').replace('T',' ').slice(0,16),
+    'Observação COM':     r.comObs||'',
+  }));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Arquivados Relatório');
+  XLSX.writeFile(wb, 'relatorio_arquivados_CME.xlsx');
+  _mostrarToast('Excel exportado!', 'sucesso');
 }
 
 function desarquivarRelatorio(id) {
@@ -5265,434 +5560,516 @@ function exportarTriagemArquivados() {
   _mostrarToast(filtrados.length + ' registro(s) exportados!', 'sucesso');
 }
 
-/* ═══════════════════════ MÓDULO PSICOSSOCIAL ═══════════════════ */
+/* ═══════════════════════ MÓDULO PSICOSSOCIAL (EQUIPE MULTIDISCIPLINAR CME) ═══════════════════ */
 
 function podeAlterarPsi() {
   return usuarioAtual && ['admin','psicossocial','gerencia'].includes(usuarioAtual.nivel);
 }
-
-function getPsi() {
-  return carregarStore('psicossocial', { atendimentos: [] });
-}
-function salvarPsi(dados) { salvarStore('psicossocial', dados); }
+function getPsi()          { return carregarStore('psicossocial', { atendimentos: [] }); }
+function salvarPsi(dados)  { salvarStore('psicossocial', dados); }
 
 function mudarSubAbaPsi(aba) {
   ['ativos','arquivados'].forEach(a => {
-    document.getElementById('psi-stab-' + a)?.classList.toggle('active', a === aba);
-    document.getElementById('psi-panel-' + a)?.classList.toggle('active', a === aba);
+    document.getElementById('psi-stab-'+a)?.classList.toggle('active', a===aba);
+    document.getElementById('psi-panel-'+a)?.classList.toggle('active', a===aba);
   });
-  if (aba === 'arquivados') renderizarPsiArquivados();
-  if (aba === 'ativos')     renderizarPsi();
+  if (aba==='arquivados') renderizarPsiArquivados();
+  if (aba==='ativos')     renderizarPsi();
 }
 
 function atualizarBadgePsiArq() {
-  const total = (getPsi().atendimentos || []).filter(a => a.arquivado).length;
+  const total = (getPsi().atendimentos||[]).filter(a=>a.arquivado).length;
   const badge = document.getElementById('psi-arq-badge');
   if (!badge) return;
-  if (total > 0) { badge.textContent = total > 99 ? '99+' : total; badge.style.display = 'flex'; }
-  else { badge.style.display = 'none'; }
+  if (total > 0) { badge.textContent = total>99?'99+':total; badge.style.display='flex'; }
+  else badge.style.display='none';
+}
+
+// Toggle campos dinâmicos do modal Psicossocial
+function toggleCamposPsi() {
+  const pub  = document.getElementById('psi-publico')?.value || '';
+  const isVi = pub === 'Vítima';
+  const rowC = document.getElementById('psi-row-condicao');
+  const rowR = document.getElementById('psi-row-risco');
+  const rowV = document.getElementById('psi-row-vulnerabilidade');
+  if (rowC) rowC.style.display = isVi ? '' : 'none';
+  if (rowR) rowR.style.display = isVi ? '' : 'none';
+  if (rowV) rowV.style.display = isVi ? '' : 'none';
+
+  // Checkbox Outros encaminhamentos
+  const chkOutros = document.getElementById('psi-enc-outros');
+  const rowEnc    = document.getElementById('psi-row-enc-outros');
+  if (chkOutros && rowEnc) {
+    chkOutros.addEventListener('change', () => {
+      rowEnc.style.display = chkOutros.checked ? '' : 'none';
+    });
+  }
+}
+
+function _psiDataDe(a) {
+  // Retorna string YYYY-MM-DD para comparar
+  if (a.dataHora) return a.dataHora.slice(0,10);
+  return a.data || '';
 }
 
 function renderizarPsi() {
   const dados = getPsi();
 
-  // Auto-arquivar após 30 dias
-  const TRINTA_DIAS = 30 * 24 * 60 * 60 * 1000;
-  const agora = new Date();
-  let modificado = false;
-  (dados.atendimentos || []).forEach(a => {
+  // Auto-arquivar após 90 dias
+  const NOVENTA = 90 * 24 * 60 * 60 * 1000;
+  const agora   = new Date();
+  let mod = false;
+  (dados.atendimentos||[]).forEach(a => {
     if (!a.arquivado) {
-      const ref = a.criadoEm ? new Date(a.criadoEm) : (a.data ? new Date(a.data + 'T23:59:59') : null);
-      if (ref && (agora - ref) >= TRINTA_DIAS) {
-        a.arquivado   = true;
-        a.arquivadoEm = agora.toISOString();
-        modificado = true;
-      }
+      const ref = a.criadoEm ? new Date(a.criadoEm) : (a.dataHora ? new Date(a.dataHora) : (a.data ? new Date(a.data+'T23:59:59') : null));
+      if (ref && (agora-ref) >= NOVENTA) { a.arquivado=true; a.arquivadoEm=agora.toISOString(); mod=true; }
     }
   });
-  if (modificado) { salvarPsi(dados); atualizarBadgePsiArq(); }
+  if (mod) { salvarPsi(dados); atualizarBadgePsiArq(); }
 
-  const ativos = (dados.atendimentos || []).filter(a => !a.arquivado);
+  const ativos = (dados.atendimentos||[]).filter(a=>!a.arquivado);
 
-  // ── Filtros ──────────────────────────────
-  const fNome    = (document.getElementById('psi-f-nome')?.value    || '').toLowerCase();
-  const fCpf     = (document.getElementById('psi-f-cpf')?.value     || '').replace(/\D/g,'');
-  const fTipo    = document.getElementById('psi-f-tipo')?.value     || '';
-  const fArea    = document.getElementById('psi-f-area')?.value     || '';
-  const fCarater = document.getElementById('psi-f-carater')?.value  || '';
-  const fProf    = (document.getElementById('psi-f-prof')?.value    || '').toLowerCase();
-  const fInicio  = document.getElementById('psi-f-inicio')?.value   || '';
-  const fFim     = document.getElementById('psi-f-fim')?.value      || '';
+  // Filtros
+  const g = id => (document.getElementById(id)?.value||'');
+  const fNome    = g('psi-f-nome').toLowerCase();
+  const fCpf     = g('psi-f-cpf').replace(/\D/g,'');
+  const fPublico = g('psi-f-publico');
+  const fTipo    = g('psi-f-tipo');
+  const fArea    = g('psi-f-area');
+  const fCarater = g('psi-f-carater');
+  const fSit     = g('psi-f-situacao');
+  const fProf    = g('psi-f-prof').toLowerCase();
+  const fInicio  = g('psi-f-inicio');
+  const fFim     = g('psi-f-fim');
 
   let lista = ativos.filter(a => {
-    if (fNome    && !((a.nome||'').toLowerCase().includes(fNome)))       return false;
-    if (fCpf     && !(a.cpf||'').replace(/\D/g,'').includes(fCpf))      return false;
-    if (fTipo    && a.tipo    !== fTipo)                                  return false;
-    if (fArea    && a.area    !== fArea)                                  return false;
-    if (fCarater && a.carater !== fCarater)                               return false;
-    if (fProf    && !((a.profissional||'').toLowerCase().includes(fProf))) return false;
-    if (fInicio  && (a.data||'') < fInicio)                               return false;
-    if (fFim     && (a.data||'') > fFim)                                  return false;
+    const data = _psiDataDe(a);
+    if (fNome    && !(a.nome||'').toLowerCase().includes(fNome))            return false;
+    if (fCpf     && !(a.cpf||'').replace(/\D/g,'').includes(fCpf))         return false;
+    if (fPublico && a.publico   !== fPublico)                                return false;
+    if (fTipo    && a.tipo      !== fTipo)                                   return false;
+    if (fArea    && a.area      !== fArea)                                   return false;
+    if (fCarater && a.carater   !== fCarater)                                return false;
+    if (fSit     && a.situacao  !== fSit)                                    return false;
+    if (fProf    && !(a.profissional||'').toLowerCase().includes(fProf))    return false;
+    if (fInicio  && data < fInicio)                                          return false;
+    if (fFim     && data > fFim)                                             return false;
     return true;
   });
+  lista.sort((a,b)=>(b.criadoEm||b.dataHora||b.data||'').localeCompare(a.criadoEm||a.dataHora||a.data||''));
 
-  lista.sort((a,b) => (b.criadoEm||b.data||'').localeCompare(a.criadoEm||a.data||''));
-
-  // ── KPIs ─────────────────────────────────
+  // KPIs
   const hoje   = new Date().toISOString().slice(0,10);
-  const semana = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
+  const semana = new Date(Date.now()-7*24*60*60*1000).toISOString().slice(0,10);
   const kpi = id => document.getElementById(id);
-  if (kpi('psi-k-hoje'))      kpi('psi-k-hoje').textContent      = ativos.filter(a => (a.data||'') === hoje).length;
-  if (kpi('psi-k-semana'))    kpi('psi-k-semana').textContent    = ativos.filter(a => (a.data||'') >= semana).length;
-  if (kpi('psi-k-total'))     kpi('psi-k-total').textContent     = ativos.length;
-  if (kpi('psi-k-psicologia'))kpi('psi-k-psicologia').textContent= ativos.filter(a => a.area === 'Psicologia').length;
-  if (kpi('psi-k-social'))    kpi('psi-k-social').textContent    = ativos.filter(a => a.area === 'Serviço Social').length;
-  if (kpi('psi-k-laudo'))     kpi('psi-k-laudo').textContent     = ativos.filter(a => a.tipo === 'Laudo técnico').length;
-  if (kpi('psi-k-judicial'))  kpi('psi-k-judicial').textContent  = ativos.filter(a => a.carater === 'Requisição judicial').length;
-  if (kpi('psi-k-proximo'))   kpi('psi-k-proximo').textContent   = ativos.filter(a => a.proximoAtend && a.proximoAtend >= hoje).length;
+  const k = (id, val) => { const el=kpi(id); if(el) el.textContent=val; };
+  k('psi-k-hoje',       ativos.filter(a=>_psiDataDe(a)===hoje).length);
+  k('psi-k-semana',     ativos.filter(a=>_psiDataDe(a)>=semana).length);
+  k('psi-k-total',      ativos.length);
+  k('psi-k-vitima',     ativos.filter(a=>a.publico==='Vítima').length);
+  k('psi-k-monitorado', ativos.filter(a=>a.publico==='Monitorado').length);
+  k('psi-k-judicial',   ativos.filter(a=>a.carater==='Requisição judicial').length);
+  k('psi-k-urgencia',   ativos.filter(a=>a.carater==='Urgência').length);
+  k('psi-k-risco-alto', ativos.filter(a=>a.risco==='Alto').length);
+  k('psi-k-proximo',    ativos.filter(a=>a.proximoAtend && a.proximoAtend>=hoje).length);
 
-  // ── Permissão ────────────────────────────
-  const podeMod  = podeAlterarPsi();
-  const avisoEl  = document.getElementById('psi-aviso-perm');
-  const btnsEl   = document.getElementById('psi-btns-acao');
-  const colAcoes = document.getElementById('psi-col-acoes');
-  if (avisoEl)  avisoEl.style.display  = podeMod ? 'none' : '';
-  if (btnsEl)   btnsEl.style.display   = podeMod ? ''     : 'none';
-  if (colAcoes) colAcoes.style.display = podeMod ? ''     : 'none';
+  // Permissão
+  const podeMod = podeAlterarPsi();
+  const el = id => document.getElementById(id);
+  if (el('psi-aviso-perm'))  el('psi-aviso-perm').style.display  = podeMod ? 'none' : '';
+  if (el('psi-btns-acao'))   el('psi-btns-acao').style.display   = podeMod ? '' : 'none';
+  if (el('psi-col-acoes'))   el('psi-col-acoes').style.display   = podeMod ? '' : 'none';
 
-  // ── Tabela ───────────────────────────────
-  const label = document.getElementById('psi-count-label');
-  if (label) label.textContent = 'Atendimentos (' + lista.length + ' de ' + ativos.length + ')';
+  // Label e tabela
+  const lbl = el('psi-count-label');
+  if (lbl) lbl.textContent = 'Registros ('+lista.length+' de '+ativos.length+')';
 
-  const tbody = document.getElementById('tbody-psi');
+  const tbody = el('tbody-psi');
   if (!tbody) return;
-
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#888">Nenhum atendimento encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:24px;color:#888">Nenhum registro encontrado. Clique em "+ Novo Registro" para adicionar.</td></tr>';
     return;
   }
 
-  const caraterCor = { 'Urgência': 'color:#c0392b;font-weight:700', 'Requisição judicial': 'color:#8e44ad;font-weight:700', 'Rotina': '' };
+  const RISCO_COR = { 'Alto':'background:#ffeaea;color:#c0392b;font-weight:700;border-radius:4px;padding:2px 7px', 'Médio':'background:#fff8e1;color:#b7770d;font-weight:700;border-radius:4px;padding:2px 7px', 'Baixo':'background:#f0fff4;color:#27ae60;font-weight:700;border-radius:4px;padding:2px 7px' };
+  const CAR_COR  = { 'Urgência':'color:#c0392b;font-weight:700', 'Requisição judicial':'color:#8e44ad;font-weight:700' };
+  const PUB_COR  = { 'Vítima':'background:#fff0f0;color:#c0392b;border-radius:4px;padding:2px 7px;font-weight:600', 'Monitorado':'background:#eaf0ff;color:#2563eb;border-radius:4px;padding:2px 7px;font-weight:600' };
+
   tbody.innerHTML = lista.map(a => {
-    const partes  = (a.data||'').split('-');
-    const dataFmt = partes.length === 3 ? partes[2]+'/'+partes[1]+'/'+partes[0] : (a.data||'');
+    const dataFmt = (() => { const d=_psiDataDe(a).split('-'); return d.length===3?d[2]+'/'+d[1]+'/'+d[0]:(a.dataHora||a.data||''); })();
+    const hora    = a.dataHora ? a.dataHora.slice(11,16) : '';
     const proxFmt = a.proximoAtend ? (() => { const p=a.proximoAtend.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; })() : '—';
-    const cstyle  = caraterCor[a.carater] || '';
+    const risco   = a.risco ? '<span style="'+( RISCO_COR[a.risco]||'')+'">'+a.risco+'</span>' : '—';
     const btnEd   = podeMod ? '<button class="btn-sm btn-outline" onclick="abrirModalPsi(\''+a.id+'\')">✏️</button> ' : '';
     const btnEx   = podeMod ? '<button class="btn-sm btn-danger"  onclick="excluirAtendimentoPsi(\''+a.id+'\')">🗑️</button>' : '';
     return '<tr>'
-      + '<td style="white-space:nowrap">' + dataFmt + '</td>'
-      + '<td><strong>' + (a.nome||'') + '</strong></td>'
-      + '<td>' + (a.cpf||'') + '</td>'
-      + '<td>' + (a.tipo||'') + '</td>'
-      + '<td>' + (a.area||'') + '</td>'
-      + '<td style="' + cstyle + '">' + (a.carater||'') + '</td>'
-      + '<td>' + (a.medida||'') + '</td>'
-      + '<td>' + (a.profissional||'') + '</td>'
-      + '<td style="white-space:nowrap">' + proxFmt + '</td>'
-      + (podeMod ? '<td style="white-space:nowrap">' + btnEd + btnEx + '</td>' : '')
-      + '</tr>';
+      +'<td style="white-space:nowrap">'+dataFmt+(hora?' '+hora:'')+'</td>'
+      +'<td><span style="'+(PUB_COR[a.publico]||'')+'">'+(a.publico||'—')+'</span></td>'
+      +'<td><strong>'+(a.nome||'')+'</strong></td>'
+      +'<td style="font-size:.82rem">'+(a.processo||'—')+'</td>'
+      +'<td>'+(a.medida||'—')+'</td>'
+      +'<td>'+(a.tipo||'')+'</td>'
+      +'<td>'+(a.area||'')+'</td>'
+      +'<td style="'+(CAR_COR[a.carater]||'')+'">'+(a.carater||'')+'</td>'
+      +'<td style="font-size:.82rem">'+(a.situacao||'—')+'</td>'
+      +'<td>'+risco+'</td>'
+      +'<td>'+(a.profissional||'')+'</td>'
+      +'<td style="white-space:nowrap">'+proxFmt+'</td>'
+      +(podeMod ? '<td style="white-space:nowrap">'+btnEd+btnEx+'</td>' : '')
+      +'</tr>';
   }).join('');
 }
 
 function limparFiltrosPsi() {
-  ['psi-f-nome','psi-f-cpf','psi-f-prof','psi-f-inicio','psi-f-fim'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-  ['psi-f-tipo','psi-f-area','psi-f-carater'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
+  ['psi-f-nome','psi-f-cpf','psi-f-prof','psi-f-inicio','psi-f-fim'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  ['psi-f-publico','psi-f-tipo','psi-f-area','psi-f-carater','psi-f-situacao'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   renderizarPsi();
 }
 
-function abrirModalPsi(id) {
-  if (!podeAlterarPsi()) { _mostrarToast('Sem permissao.', 'erro'); return; }
-  const modal = document.getElementById('modal-psi');
-  if (!modal) return;
+function _psiLimparModal() {
+  const campos = ['psi-edit-id','psi-nome','psi-cpf','psi-processo','psi-profissional',
+    'psi-datahora','psi-proximo','psi-proximo-tipo','psi-descricao','psi-analise','psi-obs',
+    'psi-enc-outros-desc'];
+  campos.forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  ['psi-origem','psi-publico','psi-condicao-med','psi-medida','psi-tipo','psi-modalidade',
+   'psi-area','psi-carater','psi-situacao','psi-risco','psi-providencia'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  // Checkboxes vulnerabilidade
+  ['psi-vul-ameacas','psi-vul-lesoes','psi-vul-arma','psi-vul-filhos','psi-vul-dep-eco',
+   'psi-vul-dep-quim','psi-vul-transtorno','psi-vul-rua','psi-vul-conflito','psi-vul-rede'].forEach(id=>{ const e=document.getElementById(id); if(e) e.checked=false; });
+  // Checkboxes encaminhamentos
+  ['psi-enc-cmb','psi-enc-creas','psi-enc-cras','psi-enc-dp','psi-enc-mp','psi-enc-saude',
+   'psi-enc-dep-quim','psi-enc-qual','psi-enc-plantao','psi-enc-outros'].forEach(id=>{ const e=document.getElementById(id); if(e) e.checked=false; });
+  const rowEnc = document.getElementById('psi-row-enc-outros');
+  if (rowEnc) rowEnc.style.display = 'none';
+  // Esconder seções vítima
+  ['psi-row-condicao','psi-row-risco','psi-row-vulnerabilidade'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
+}
 
-  // Limpar
-  ['psi-edit-id','psi-nome','psi-cpf','psi-processo','psi-profissional'].forEach(i => {
-    const el = document.getElementById(i); if (el) el.value = '';
-  });
-  ['psi-medida','psi-tipo','psi-area','psi-carater'].forEach(i => {
-    const el = document.getElementById(i); if (el) el.value = '';
-  });
-  ['psi-data','psi-proximo'].forEach(i => {
-    const el = document.getElementById(i); if (el) el.value = '';
-  });
-  ['psi-objetivo','psi-resultado','psi-obs'].forEach(i => {
-    const el = document.getElementById(i); if (el) el.value = '';
-  });
+function abrirModalPsi(id) {
+  if (!podeAlterarPsi()) { _mostrarToast('Sem permissao para esta operacao.', 'erro'); return; }
+  _psiLimparModal();
 
   if (id) {
     const dados = getPsi();
-    const a = (dados.atendimentos||[]).find(x => x.id === id);
+    const a = (dados.atendimentos||[]).find(x=>x.id===id);
     if (a) {
-      document.getElementById('psi-modal-title').textContent = 'Editar Atendimento Psicossocial';
-      document.getElementById('psi-edit-id').value      = a.id;
-      document.getElementById('psi-nome').value         = a.nome        || '';
-      document.getElementById('psi-cpf').value          = a.cpf         || '';
-      document.getElementById('psi-processo').value     = a.processo    || '';
-      document.getElementById('psi-medida').value       = a.medida      || '';
-      document.getElementById('psi-data').value         = a.data        || '';
-      document.getElementById('psi-tipo').value         = a.tipo        || '';
-      document.getElementById('psi-area').value         = a.area        || '';
-      document.getElementById('psi-carater').value      = a.carater     || '';
-      document.getElementById('psi-profissional').value = a.profissional|| '';
-      document.getElementById('psi-proximo').value      = a.proximoAtend|| '';
-      document.getElementById('psi-objetivo').value     = a.objetivo    || '';
-      document.getElementById('psi-resultado').value    = a.resultado   || '';
-      document.getElementById('psi-obs').value          = a.obs         || '';
+      document.getElementById('psi-modal-title').textContent = 'Editar Registro — Equipe Multidisciplinar';
+      const set = (fid,val) => { const e=document.getElementById(fid); if(e) e.value=val||''; };
+      set('psi-edit-id',    a.id);
+      set('psi-origem',     a.origem);
+      set('psi-datahora',   a.dataHora);
+      set('psi-publico',    a.publico);
+      set('psi-condicao-med',a.condicaoMed);
+      set('psi-nome',       a.nome);
+      set('psi-cpf',        a.cpf);
+      set('psi-processo',   a.processo);
+      set('psi-medida',     a.medida);
+      set('psi-tipo',       a.tipo);
+      set('psi-modalidade', a.modalidade);
+      set('psi-area',       a.area);
+      set('psi-carater',    a.carater);
+      set('psi-profissional',a.profissional);
+      set('psi-situacao',   a.situacao);
+      set('psi-risco',      a.risco);
+      set('psi-providencia',a.providencia);
+      set('psi-proximo',    a.proximoAtend);
+      set('psi-proximo-tipo',a.proximoTipo);
+      set('psi-descricao',  a.descricao);
+      set('psi-analise',    a.analise);
+      set('psi-obs',        a.obs);
+      // Checkboxes vulnerabilidade
+      (a.fatoresVul||[]).forEach(v=>{ const e=document.getElementById('psi-vul-'+v); if(e) e.checked=true; });
+      // Checkboxes encaminhamentos
+      (a.encaminhamentos||[]).forEach(v=>{ const e=document.getElementById('psi-enc-'+v); if(e) e.checked=true; });
+      set('psi-enc-outros-desc', a.encOutrosDesc);
+      if (a.encaminhamentos && a.encaminhamentos.includes('outros')) {
+        const rowEnc = document.getElementById('psi-row-enc-outros');
+        if (rowEnc) rowEnc.style.display='';
+      }
+      toggleCamposPsi();
     }
   } else {
-    document.getElementById('psi-modal-title').textContent = 'Novo Atendimento Psicossocial';
-    document.getElementById('psi-data').value = new Date().toISOString().slice(0,10);
-    document.getElementById('psi-profissional').value = usuarioAtual?.nome || '';
+    document.getElementById('psi-modal-title').textContent = 'Novo Registro — Equipe Multidisciplinar';
+    // Data/hora padrão = agora
+    const agora = new Date();
+    const dh = agora.toISOString().slice(0,16);
+    const e = document.getElementById('psi-datahora'); if(e) e.value=dh;
+    const ep = document.getElementById('psi-profissional'); if(ep) ep.value=usuarioAtual?.nome||'';
   }
-  abrirModal('modal-psi');
+  document.getElementById('modal-psi').classList.add('open');
+
+  // Registrar listener para checkbox Outros
+  const chkOutros = document.getElementById('psi-enc-outros');
+  const rowEnc    = document.getElementById('psi-row-enc-outros');
+  if (chkOutros && rowEnc) {
+    chkOutros.onchange = () => { rowEnc.style.display = chkOutros.checked ? '' : 'none'; };
+  }
 }
 
 function salvarAtendimentoPsi() {
   if (!podeAlterarPsi()) { _mostrarToast('Sem permissao.', 'erro'); return; }
 
-  const nome       = (document.getElementById('psi-nome')?.value        || '').trim();
-  const tipo       = document.getElementById('psi-tipo')?.value         || '';
-  const area       = document.getElementById('psi-area')?.value         || '';
-  const carater    = document.getElementById('psi-carater')?.value      || '';
-  const data       = document.getElementById('psi-data')?.value         || '';
-  const profissional= (document.getElementById('psi-profissional')?.value||'').trim();
+  const g   = id => (document.getElementById(id)?.value||'').trim();
+  const gv  = id => document.getElementById(id)?.value||'';
+  const gc  = id => document.getElementById(id)?.checked||false;
 
-  if (!nome)       { _mostrarToast('Informe o nome do monitorado.', 'erro'); return; }
-  if (!tipo)       { _mostrarToast('Selecione o tipo de atendimento.', 'erro'); return; }
-  if (!area)       { _mostrarToast('Selecione a area profissional.', 'erro'); return; }
-  if (!carater)    { _mostrarToast('Selecione o carater do atendimento.', 'erro'); return; }
-  if (!data)       { _mostrarToast('Informe a data do atendimento.', 'erro'); return; }
+  const origem    = gv('psi-origem');
+  const dataHora  = gv('psi-datahora');
+  const publico   = gv('psi-publico');
+  const nome      = g('psi-nome');
+  const tipo      = gv('psi-tipo');
+  const area      = gv('psi-area');
+  const carater   = gv('psi-carater');
+  const situacao  = gv('psi-situacao');
+  const profissional = g('psi-profissional');
+  const descricao = g('psi-descricao');
+
+  if (!origem)    { _mostrarToast('Selecione a origem da demanda.', 'erro'); return; }
+  if (!dataHora)  { _mostrarToast('Informe a data e hora do atendimento.', 'erro'); return; }
+  if (!publico)   { _mostrarToast('Selecione o publico (Vitima ou Monitorado).', 'erro'); return; }
+  if (!nome)      { _mostrarToast('Informe o nome da pessoa atendida.', 'erro'); return; }
+  if (!tipo)      { _mostrarToast('Selecione o tipo de atendimento.', 'erro'); return; }
+  if (!area)      { _mostrarToast('Selecione a area profissional.', 'erro'); return; }
+  if (!carater)   { _mostrarToast('Selecione o carater do atendimento.', 'erro'); return; }
+  if (!situacao)  { _mostrarToast('Selecione a situacao verificada.', 'erro'); return; }
   if (!profissional){ _mostrarToast('Informe o profissional responsavel.', 'erro'); return; }
+  if (!descricao) { _mostrarToast('Preencha a descricao do atendimento.', 'erro'); return; }
+
+  // Coletar checkboxes vulnerabilidade
+  const vulIds = ['ameacas','lesoes','arma','filhos','dep-eco','dep-quim','transtorno','rua','conflito','rede'];
+  const fatoresVul = vulIds.filter(v=>gc('psi-vul-'+v));
+
+  // Coletar checkboxes encaminhamentos
+  const encIds = ['cmb','creas','cras','dp','mp','saude','dep-quim','qual','plantao','outros'];
+  const encaminhamentos = encIds.filter(v=>gc('psi-enc-'+v));
 
   const dados = getPsi();
-  const editId = document.getElementById('psi-edit-id')?.value || '';
+  const editId = g('psi-edit-id') || document.getElementById('psi-edit-id')?.value || '';
 
   const registro = {
-    id:          editId || Date.now().toString(),
-    criadoEm:   editId ? undefined : new Date().toISOString(),
+    id:            editId || Date.now().toString(),
+    criadoEm:      editId ? ((dados.atendimentos||[]).find(x=>x.id===editId)?.criadoEm || new Date().toISOString()) : new Date().toISOString(),
+    origem,
+    dataHora,
+    data:          dataHora.slice(0,10),
+    publico,
+    condicaoMed:   gv('psi-condicao-med'),
     nome,
-    cpf:         (document.getElementById('psi-cpf')?.value        || '').trim(),
-    processo:    (document.getElementById('psi-processo')?.value    || '').trim(),
-    medida:       document.getElementById('psi-medida')?.value      || '',
-    data,
+    cpf:           g('psi-cpf'),
+    processo:      g('psi-processo'),
+    medida:        gv('psi-medida'),
     tipo,
+    modalidade:    gv('psi-modalidade'),
     area,
     carater,
     profissional,
-    proximoAtend: document.getElementById('psi-proximo')?.value     || '',
-    objetivo:    (document.getElementById('psi-objetivo')?.value    || '').trim(),
-    resultado:   (document.getElementById('psi-resultado')?.value   || '').trim(),
-    obs:         (document.getElementById('psi-obs')?.value         || '').trim(),
+    situacao,
+    risco:         gv('psi-risco'),
+    fatoresVul,
+    encaminhamentos,
+    encOutrosDesc: g('psi-enc-outros-desc'),
+    providencia:   gv('psi-providencia'),
+    proximoAtend:  gv('psi-proximo'),
+    proximoTipo:   g('psi-proximo-tipo'),
+    descricao,
+    analise:       g('psi-analise'),
+    obs:           g('psi-obs'),
   };
-  if (!registro.criadoEm) registro.criadoEm = new Date().toISOString();
 
+  if (!dados.atendimentos) dados.atendimentos=[];
   if (editId) {
-    const idx = (dados.atendimentos||[]).findIndex(x => x.id === editId);
-    if (idx >= 0) dados.atendimentos[idx] = registro;
-    else dados.atendimentos.push(registro);
+    const idx = dados.atendimentos.findIndex(x=>x.id===editId);
+    if (idx>=0) dados.atendimentos[idx]=registro; else dados.atendimentos.push(registro);
   } else {
-    if (!dados.atendimentos) dados.atendimentos = [];
     dados.atendimentos.push(registro);
   }
 
   salvarPsi(dados);
   fecharModal('modal-psi');
   renderizarPsi();
-  addLog('Psicossocial: atendimento ' + (editId ? 'editado' : 'registrado') + ' — ' + nome);
-  _mostrarToast('Atendimento salvo com sucesso!', 'sucesso');
+  addLog('Psicossocial: '+(editId?'editado':'registrado')+' — '+publico+' — '+nome);
+  _mostrarToast('Registro salvo com sucesso!', 'sucesso');
 }
 
 function excluirAtendimentoPsi(id) {
   if (!podeAlterarPsi()) { _mostrarToast('Sem permissao.', 'erro'); return; }
-  if (!confirm('Excluir este atendimento permanentemente?')) return;
+  if (!confirm('Excluir este registro permanentemente?')) return;
   const dados = getPsi();
-  dados.atendimentos = (dados.atendimentos||[]).filter(a => a.id !== id);
+  dados.atendimentos = (dados.atendimentos||[]).filter(a=>a.id!==id);
   salvarPsi(dados);
   renderizarPsi();
-  _mostrarToast('Atendimento excluido.', 'sucesso');
+  _mostrarToast('Registro excluido.', 'sucesso');
 }
 
 function exportarPsi() {
   const dados = getPsi();
-  const ativos = (dados.atendimentos||[]).filter(a => !a.arquivado);
+  const ativos = (dados.atendimentos||[]).filter(a=>!a.arquivado);
   if (!ativos.length) { _mostrarToast('Nenhum dado para exportar.', 'erro'); return; }
-
-  const rows = ativos.map(a => {
-    const partes  = (a.data||'').split('-');
-    const dataFmt = partes.length === 3 ? partes[2]+'/'+partes[1]+'/'+partes[0] : (a.data||'');
-    return {
-      'Data':              dataFmt,
-      'Nome':              a.nome||'',
-      'CPF':               a.cpf||'',
-      'N Processo':        a.processo||'',
-      'Medida':            a.medida||'',
-      'Tipo Atendimento':  a.tipo||'',
-      'Area':              a.area||'',
-      'Carater':           a.carater||'',
-      'Profissional':      a.profissional||'',
-      'Proximo Atend':     a.proximoAtend||'',
-      'Objetivo':          a.objetivo||'',
-      'Resultado':         a.resultado||'',
-      'Observacao':        a.obs||''
-    };
-  });
-
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Psicossocial');
-  XLSX.writeFile(wb, 'psicossocial_CME.xlsx');
-  _mostrarToast(ativos.length + ' registro(s) exportados!', 'sucesso');
+  const rows = ativos.map(a=>({
+    'Data/Hora':        a.dataHora||a.data||'',
+    'Publico':          a.publico||'',
+    'Nome':             a.nome||'',
+    'CPF':              a.cpf||'',
+    'N Processo':       a.processo||'',
+    'Medida':           a.medida||'',
+    'Origem Demanda':   a.origem||'',
+    'Tipo Atendimento': a.tipo||'',
+    'Modalidade':       a.modalidade||'',
+    'Area':             a.area||'',
+    'Carater':          a.carater||'',
+    'Situacao':         a.situacao||'',
+    'Nivel Risco':      a.risco||'',
+    'Fatores Vuln.':    (a.fatoresVul||[]).join(', '),
+    'Encaminhamentos':  (a.encaminhamentos||[]).join(', '),
+    'Outros Enc.':      a.encOutrosDesc||'',
+    'Providencia':      a.providencia||'',
+    'Profissional':     a.profissional||'',
+    'Proximo Atend':    a.proximoAtend||'',
+    'Tipo Proximo':     a.proximoTipo||'',
+    'Descricao':        a.descricao||'',
+    'Analise Tecnica':  a.analise||'',
+    'Observacoes':      a.obs||''
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Psicossocial');
+  XLSX.writeFile(wb,'psicossocial_CME.xlsx');
+  _mostrarToast(ativos.length+' registro(s) exportados!','sucesso');
 }
 
 // ─── Arquivados Psicossocial ─────────────────────────────
 
 function renderizarPsiArquivados() {
   const dados = getPsi();
-  let lista   = (dados.atendimentos || []).filter(a => a.arquivado);
+  let lista   = (dados.atendimentos||[]).filter(a=>a.arquivado);
 
-  const fNome   = (document.getElementById('psi-a-nome')?.value   || '').toLowerCase();
-  const fCpf    = (document.getElementById('psi-a-cpf')?.value    || '').replace(/\D/g,'');
-  const fTipo   = document.getElementById('psi-a-tipo')?.value    || '';
-  const fArea   = document.getElementById('psi-a-area')?.value    || '';
-  const fProf   = (document.getElementById('psi-a-prof')?.value   || '').toLowerCase();
-  const fInicio = document.getElementById('psi-a-inicio')?.value  || '';
-  const fFim    = document.getElementById('psi-a-fim')?.value     || '';
+  const g    = id => (document.getElementById(id)?.value||'');
+  const fNome    = g('psi-a-nome').toLowerCase();
+  const fCpf     = g('psi-a-cpf').replace(/\D/g,'');
+  const fPublico = g('psi-a-publico');
+  const fTipo    = g('psi-a-tipo');
+  const fArea    = g('psi-a-area');
+  const fProf    = g('psi-a-prof').toLowerCase();
+  const fInicio  = g('psi-a-inicio');
+  const fFim     = g('psi-a-fim');
 
   lista = lista.filter(a => {
-    if (fNome   && !((a.nome||'').toLowerCase().includes(fNome)))          return false;
-    if (fCpf    && !(a.cpf||'').replace(/\D/g,'').includes(fCpf))         return false;
-    if (fTipo   && a.tipo   !== fTipo)                                      return false;
-    if (fArea   && a.area   !== fArea)                                      return false;
-    if (fProf   && !((a.profissional||'').toLowerCase().includes(fProf)))  return false;
-    if (fInicio && (a.data||'') < fInicio)                                  return false;
-    if (fFim    && (a.data||'') > fFim)                                     return false;
+    const data = _psiDataDe(a);
+    if (fNome    && !(a.nome||'').toLowerCase().includes(fNome))          return false;
+    if (fCpf     && !(a.cpf||'').replace(/\D/g,'').includes(fCpf))       return false;
+    if (fPublico && a.publico !== fPublico)                                return false;
+    if (fTipo    && a.tipo    !== fTipo)                                   return false;
+    if (fArea    && a.area    !== fArea)                                   return false;
+    if (fProf    && !(a.profissional||'').toLowerCase().includes(fProf))  return false;
+    if (fInicio  && data < fInicio)                                        return false;
+    if (fFim     && data > fFim)                                           return false;
     return true;
   });
-
-  lista.sort((a,b) => (b.arquivadoEm||b.data||'').localeCompare(a.arquivadoEm||a.data||''));
+  lista.sort((a,b)=>(b.arquivadoEm||b.data||'').localeCompare(a.arquivadoEm||a.data||''));
 
   const tbody = document.getElementById('tbody-psi-arquivados');
   if (!tbody) return;
-
-  const totalArq = (dados.atendimentos||[]).filter(a => a.arquivado).length;
-  const label = document.getElementById('psi-arq-count-label');
-  if (label) label.textContent = 'Arquivados (' + lista.length + ' de ' + totalArq + ')';
+  const totalArq = (dados.atendimentos||[]).filter(a=>a.arquivado).length;
+  const lbl = document.getElementById('psi-arq-count-label');
+  if (lbl) lbl.textContent='Arquivados ('+lista.length+' de '+totalArq+')';
 
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#888">Nenhum atendimento arquivado encontrado.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:24px;color:#888">Nenhum registro arquivado encontrado.</td></tr>';
     return;
   }
-
+  const PUB_COR  = { 'Vítima':'color:#c0392b;font-weight:600', 'Monitorado':'color:#2563eb;font-weight:600' };
   const podeMod = podeAlterarPsi();
-  tbody.innerHTML = lista.map(a => {
-    const partes  = (a.data||'').split('-');
-    const dataFmt = partes.length === 3 ? partes[2]+'/'+partes[1]+'/'+partes[0] : (a.data||'');
+  tbody.innerHTML = lista.map(a=>{
+    const dataFmt = (() => { const d=_psiDataDe(a).split('-'); return d.length===3?d[2]+'/'+d[1]+'/'+d[0]:(a.dataHora||a.data||''); })();
     const arqFmt  = a.arquivadoEm ? new Date(a.arquivadoEm).toLocaleDateString('pt-BR') : '—';
     const btnD    = podeMod ? '<button class="btn-sm btn-outline" onclick="desarquivarPsi(\''+a.id+'\')">↩ Desarquivar</button> ' : '';
     const btnE    = podeMod ? '<button class="btn-sm btn-danger"  onclick="excluirPsiArquivado(\''+a.id+'\')">🗑️</button>' : '';
     return '<tr>'
-      + '<td style="white-space:nowrap">' + dataFmt + '</td>'
-      + '<td style="white-space:nowrap;color:#888;font-size:.82rem">' + arqFmt + '</td>'
-      + '<td><strong>' + (a.nome||'') + '</strong></td>'
-      + '<td>' + (a.cpf||'') + '</td>'
-      + '<td>' + (a.tipo||'') + '</td>'
-      + '<td>' + (a.area||'') + '</td>'
-      + '<td>' + (a.carater||'') + '</td>'
-      + '<td>' + (a.medida||'') + '</td>'
-      + '<td>' + (a.profissional||'') + '</td>'
-      + '<td style="white-space:nowrap">' + btnD + btnE + '</td>'
-      + '</tr>';
+      +'<td style="white-space:nowrap">'+dataFmt+'</td>'
+      +'<td style="white-space:nowrap;color:#888;font-size:.82rem">'+arqFmt+'</td>'
+      +'<td style="'+(PUB_COR[a.publico]||'')+'">'+(a.publico||'—')+'</td>'
+      +'<td><strong>'+(a.nome||'')+'</strong></td>'
+      +'<td style="font-size:.82rem">'+(a.processo||'—')+'</td>'
+      +'<td>'+(a.tipo||'')+'</td>'
+      +'<td>'+(a.area||'')+'</td>'
+      +'<td>'+(a.situacao||'')+'</td>'
+      +'<td>'+(a.profissional||'')+'</td>'
+      +'<td style="white-space:nowrap">'+btnD+btnE+'</td>'
+      +'</tr>';
   }).join('');
 }
 
 function limparFiltrosPsiArq() {
-  ['psi-a-nome','psi-a-cpf','psi-a-prof','psi-a-inicio','psi-a-fim'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-  ['psi-a-tipo','psi-a-area'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
+  ['psi-a-nome','psi-a-cpf','psi-a-prof','psi-a-inicio','psi-a-fim'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  ['psi-a-publico','psi-a-tipo','psi-a-area'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   renderizarPsiArquivados();
 }
 
 function desarquivarPsi(id) {
   if (!podeAlterarPsi()) { _mostrarToast('Sem permissao.', 'erro'); return; }
-  if (!confirm('Desarquivar este atendimento?')) return;
+  if (!confirm('Desarquivar este registro?')) return;
   const dados = getPsi();
-  const a = (dados.atendimentos||[]).find(x => x.id === id);
+  const a = (dados.atendimentos||[]).find(x=>x.id===id);
   if (a) { delete a.arquivado; delete a.arquivadoEm; }
   salvarPsi(dados);
   renderizarPsiArquivados();
   atualizarBadgePsiArq();
-  _mostrarToast('Atendimento desarquivado.', 'sucesso');
+  _mostrarToast('Registro desarquivado.', 'sucesso');
 }
 
 function excluirPsiArquivado(id) {
   if (!podeAlterarPsi()) { _mostrarToast('Sem permissao.', 'erro'); return; }
-  if (!confirm('Excluir permanentemente este atendimento arquivado?')) return;
+  if (!confirm('Excluir permanentemente este registro arquivado?')) return;
   const dados = getPsi();
-  dados.atendimentos = (dados.atendimentos||[]).filter(a => a.id !== id);
+  dados.atendimentos = (dados.atendimentos||[]).filter(a=>a.id!==id);
   salvarPsi(dados);
   renderizarPsiArquivados();
   atualizarBadgePsiArq();
-  _mostrarToast('Atendimento excluido permanentemente.', 'sucesso');
+  _mostrarToast('Registro excluido permanentemente.', 'sucesso');
 }
 
 function exportarPsiArquivados() {
   const dados = getPsi();
-  let lista = (dados.atendimentos||[]).filter(a => a.arquivado);
+  const lista = (dados.atendimentos||[]).filter(a=>a.arquivado);
 
-  const fNome   = (document.getElementById('psi-a-nome')?.value   || '').toLowerCase();
-  const fCpf    = (document.getElementById('psi-a-cpf')?.value    || '').replace(/\D/g,'');
-  const fTipo   = document.getElementById('psi-a-tipo')?.value    || '';
-  const fArea   = document.getElementById('psi-a-area')?.value    || '';
-  const fProf   = (document.getElementById('psi-a-prof')?.value   || '').toLowerCase();
-  const fInicio = document.getElementById('psi-a-inicio')?.value  || '';
-  const fFim    = document.getElementById('psi-a-fim')?.value     || '';
+  const g    = id => (document.getElementById(id)?.value||'');
+  const fNome=g('psi-a-nome').toLowerCase(), fCpf=g('psi-a-cpf').replace(/\D/g,'');
+  const fPublico=g('psi-a-publico'), fTipo=g('psi-a-tipo'), fArea=g('psi-a-area');
+  const fProf=g('psi-a-prof').toLowerCase(), fInicio=g('psi-a-inicio'), fFim=g('psi-a-fim');
 
-  const filtrados = lista.filter(a => {
-    if (fNome   && !((a.nome||'').toLowerCase().includes(fNome)))          return false;
-    if (fCpf    && !(a.cpf||'').replace(/\D/g,'').includes(fCpf))         return false;
-    if (fTipo   && a.tipo   !== fTipo)                                      return false;
-    if (fArea   && a.area   !== fArea)                                      return false;
-    if (fProf   && !((a.profissional||'').toLowerCase().includes(fProf)))  return false;
-    if (fInicio && (a.data||'') < fInicio)                                  return false;
-    if (fFim    && (a.data||'') > fFim)                                     return false;
+  const filtrados = lista.filter(a=>{
+    const data=_psiDataDe(a);
+    if (fNome    && !(a.nome||'').toLowerCase().includes(fNome))         return false;
+    if (fCpf     && !(a.cpf||'').replace(/\D/g,'').includes(fCpf))      return false;
+    if (fPublico && a.publico!==fPublico)                                 return false;
+    if (fTipo    && a.tipo!==fTipo)                                       return false;
+    if (fArea    && a.area!==fArea)                                       return false;
+    if (fProf    && !(a.profissional||'').toLowerCase().includes(fProf)) return false;
+    if (fInicio  && data<fInicio)                                         return false;
+    if (fFim     && data>fFim)                                            return false;
     return true;
   });
 
-  if (!filtrados.length) { _mostrarToast('Nenhum dado arquivado para exportar.', 'erro'); return; }
-
-  const rows = filtrados.map(a => {
-    const partes  = (a.data||'').split('-');
-    const dataFmt = partes.length === 3 ? partes[2]+'/'+partes[1]+'/'+partes[0] : (a.data||'');
-    return {
-      'Data':             dataFmt,
-      'Arquivado em':     a.arquivadoEm ? new Date(a.arquivadoEm).toLocaleDateString('pt-BR') : '',
-      'Nome':             a.nome||'',
-      'CPF':              a.cpf||'',
-      'N Processo':       a.processo||'',
-      'Medida':           a.medida||'',
-      'Tipo Atendimento': a.tipo||'',
-      'Area':             a.area||'',
-      'Carater':          a.carater||'',
-      'Profissional':     a.profissional||'',
-      'Objetivo':         a.objetivo||'',
-      'Resultado':        a.resultado||'',
-      'Observacao':       a.obs||''
-    };
-  });
-
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Psicossocial Arquivados');
-  XLSX.writeFile(wb, 'psicossocial_arquivados_CME.xlsx');
-  _mostrarToast(filtrados.length + ' registro(s) exportados!', 'sucesso');
+  if (!filtrados.length) { _mostrarToast('Nenhum dado para exportar.', 'erro'); return; }
+  const rows = filtrados.map(a=>({
+    'Data/Hora':       a.dataHora||a.data||'',
+    'Arquivado em':    a.arquivadoEm ? new Date(a.arquivadoEm).toLocaleDateString('pt-BR') : '',
+    'Publico':         a.publico||'',
+    'Nome':            a.nome||'',
+    'CPF':             a.cpf||'',
+    'N Processo':      a.processo||'',
+    'Medida':          a.medida||'',
+    'Tipo Atendimento':a.tipo||'',
+    'Area':            a.area||'',
+    'Situacao':        a.situacao||'',
+    'Profissional':    a.profissional||'',
+    'Encaminhamentos': (a.encaminhamentos||[]).join(', ')
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Psicossocial Arquivados');
+  XLSX.writeFile(wb,'psicossocial_arquivados_CME.xlsx');
+  _mostrarToast(filtrados.length+' registro(s) exportados!','sucesso');
 }
 
 /* ═══════════════════════ FUNÇÕES EXPORT EXCEL ═══════════════════ */
