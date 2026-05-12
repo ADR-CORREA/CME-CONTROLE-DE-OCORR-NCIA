@@ -1152,42 +1152,173 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
 
     <!-- ─── JURÍDICO ─── -->
     <div class="tab-panel" id="panel-juridico">
-      <div class="table-wrapper">
-        <div class="table-toolbar">
-          <div class="table-search">
-            <span>🔍</span>
-            <input type="text" placeholder="Buscar monitorado..." oninput="filtrarJuridico(this.value)">
-          </div>
-          <div class="table-actions">
-            <button class="btn-secondary" onclick="renderizarJuridico()">🔄 Atualizar</button>
-            <button class="btn-secondary" onclick="exportarJuridicoExcel()">📥 Exportar Excel</button>
-          </div>
-        </div>
-        <div class="table-scroll">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Monitorado</th>
-                <th>Medida</th>
-                <th>Tipo Violação</th>
-                <th>Data Violação</th>
-                <th>Data PRODOC</th>
-                <th>Nº PRODOC</th>
-                <th>Dias / Violação</th>
-                <th>Dias / PRODOC</th>
-                <th>Via 60 dias</th>
-                <th>Via 180 dias</th>
-                <th>Autorizado?</th>
-                <th>Status Caso</th>
-                <th>Ação Jurídico</th>
-              </tr>
-            </thead>
-            <tbody id="tbody-juridico"></tbody>
-          </table>
+      <div class="sub-tabs" style="margin-bottom:0">
+        <div class="sub-tab active" id="jur-stab-ocorrencias" onclick="mudarSubAbaJur('ocorrencias')">⚖️ Ocorrências Jurídicas</div>
+        <div class="sub-tab" id="jur-stab-semcom" onclick="mudarSubAbaJur('semcom')">
+          📵 Sem Comunicação
+          <span id="jur-semcom-badge" class="notif-badge" style="display:none">0</span>
         </div>
       </div>
-    </div>
+
+      <!-- Sub-painel: Ocorrências Jurídicas (conteúdo original) -->
+      <div class="sub-panel active" id="jur-panel-ocorrencias">
+        <div class="table-wrapper">
+          <div class="table-toolbar">
+            <div class="table-search">
+              <span>🔍</span>
+              <input type="text" placeholder="Buscar monitorado..." oninput="filtrarJuridico(this.value)">
+            </div>
+            <div class="table-actions">
+              <button class="btn-secondary" onclick="renderizarJuridico()">🔄 Atualizar</button>
+              <button class="btn-secondary" onclick="exportarJuridicoExcel()">📥 Exportar Excel</button>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Monitorado</th>
+                  <th>Medida</th>
+                  <th>Tipo Violação</th>
+                  <th>Data Violação</th>
+                  <th>Data PRODOC</th>
+                  <th>Nº PRODOC</th>
+                  <th>Dias / Violação</th>
+                  <th>Dias / PRODOC</th>
+                  <th>Via 60 dias</th>
+                  <th>Via 180 dias</th>
+                  <th>Autorizado?</th>
+                  <th>Status Caso</th>
+                  <th>Ação Jurídico</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-juridico"></tbody>
+            </table>
+          </div>
+        </div>
+      </div><!-- /jur-panel-ocorrencias -->
+
+      <!-- Sub-painel: Sem Comunicação -->
+      <div class="sub-panel" id="jur-panel-semcom">
+
+        <!-- Toolbar -->
+        <div class="table-toolbar" style="flex-wrap:wrap;gap:8px">
+          <div style="font-weight:600;color:var(--az1);font-size:1rem">📵 Monitorados Sem Comunicação — Aquiles</div>
+          <div class="table-actions" style="flex-wrap:wrap;gap:6px">
+            <span id="semcom-ultima-importacao" style="font-size:.82rem;color:#888;align-self:center"></span>
+            <label class="btn-secondary" style="cursor:pointer;margin:0">
+              📂 Importar Excel Aquiles
+              <input type="file" id="semcom-file-input" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="importarExcelSemCom(this)">
+            </label>
+            <button class="btn-secondary" onclick="renderizarSemCom()">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="exportarSemComExcel()">📥 Exportar Excel</button>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-grid" style="margin:12px 0 8px 0;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
+          <div class="kpi-card" style="background:#f0f9ff;border-left:4px solid #0284c7">
+            <div class="kpi-icon">📋</div>
+            <div class="kpi-value" id="sc-kpi-total">0</div>
+            <div class="kpi-label">Total</div>
+          </div>
+          <div class="kpi-card" style="background:#fefce8;border-left:4px solid #ca8a04">
+            <div class="kpi-icon">⏱️</div>
+            <div class="kpi-value" id="sc-kpi-4h">0</div>
+            <div class="kpi-label">+4 horas</div>
+          </div>
+          <div class="kpi-card" style="background:#fff7ed;border-left:4px solid #ea580c">
+            <div class="kpi-icon">📅</div>
+            <div class="kpi-value" id="sc-kpi-1d">0</div>
+            <div class="kpi-label">+1 dia</div>
+          </div>
+          <div class="kpi-card" style="background:#fef2f2;border-left:4px solid #dc2626">
+            <div class="kpi-icon">📆</div>
+            <div class="kpi-value" id="sc-kpi-7d">0</div>
+            <div class="kpi-label">+7 dias</div>
+          </div>
+          <div class="kpi-card" style="background:#fdf4ff;border-left:4px solid #9333ea">
+            <div class="kpi-icon">🗓️</div>
+            <div class="kpi-value" id="sc-kpi-30d">0</div>
+            <div class="kpi-label">+30 dias</div>
+          </div>
+          <div class="kpi-card" style="background:#1a1a2e;border-left:4px solid #e11d48">
+            <div class="kpi-icon">⚠️</div>
+            <div class="kpi-value" id="sc-kpi-180d" style="color:#f87171">0</div>
+            <div class="kpi-label" style="color:#fca5a5">≥180 dias — DESVINCULAR</div>
+          </div>
+          <div class="kpi-card" style="background:#f0fdf4;border-left:4px solid #16a34a">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-value" id="sc-kpi-desvinc">0</div>
+            <div class="kpi-label">Desvinculados</div>
+          </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="tri-filtros">
+          <div class="tri-filtros-title">🔍 Filtros</div>
+          <div class="tri-filtros-grid">
+            <div class="form-field" style="margin:0">
+              <label>Nome</label>
+              <input type="text" id="sc-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemCom()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Registro</label>
+              <input type="text" id="sc-f-registro" placeholder="Nº registro..." oninput="renderizarSemCom()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Intervalo</label>
+              <select id="sc-f-intervalo" onchange="renderizarSemCom()">
+                <option value="">Todos</option>
+                <option>1. at&eacute; 30 min</option>
+                <option>2. at&eacute; 1 hora</option>
+                <option>3. at&eacute; 3 horas</option>
+                <option>4. at&eacute; 4 horas</option>
+                <option>5. mais de 4h</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Situação</label>
+              <select id="sc-f-situacao" onchange="renderizarSemCom()">
+                <option value="">Todas</option>
+                <option value="ativo">Ativo</option>
+                <option value="tratativa">Com tratativa</option>
+                <option value="desvinculado">Desvinculado</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Mín. dias sem com.</label>
+              <input type="number" id="sc-f-dias-min" placeholder="ex: 180" min="0" oninput="renderizarSemCom()" style="width:100%">
+            </div>
+            <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemCom()">✕ Limpar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="est-section-title" id="sc-count-label">Registros</div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th>Nº</th>
+              <th>Nome</th>
+              <th>Registro</th>
+              <th>Última Comunicação</th>
+              <th>Tempo Sem Com.</th>
+              <th>Dias</th>
+              <th>Intervalo</th>
+              <th>Unidade</th>
+              <th>Situação</th>
+              <th>Tratativas</th>
+              <th>Ações</th>
+            </tr></thead>
+            <tbody id="tbody-semcom"></tbody>
+          </table>
+        </div>
+
+      </div><!-- /jur-panel-semcom -->
+    </div><!-- /panel-juridico -->
 
     <!-- ─── RELATÓRIO ─── -->
     <div class="tab-panel" id="panel-relatorio">
@@ -2428,6 +2559,164 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-ver-ocorrencia')">Fechar</button>
       <button class="btn-primary" id="ver-btn-editar" onclick="">✏ Editar esta Ocorrência</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: REGISTRAR TRATATIVA (Sem Comunicação) -->
+<div class="modal-overlay" id="modal-semcom-tratativa">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-header">
+      <h3>📝 Registrar Tratativa</h3>
+      <button class="modal-close" onclick="fecharModal('modal-semcom-tratativa')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="trat-monit-id">
+      <div class="form-section">
+        <div class="form-section-title">Monitorado</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Nome</label>
+            <input class="auto-field" readonly id="trat-nome">
+          </div>
+          <div class="form-field">
+            <label>Registro</label>
+            <input class="auto-field" readonly id="trat-registro">
+          </div>
+          <div class="form-field">
+            <label>Tempo sem comunicação</label>
+            <input class="auto-field" readonly id="trat-tempo">
+          </div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Nova Tratativa</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Data / Hora *</label>
+            <input type="datetime-local" id="trat-data">
+          </div>
+          <div class="form-field">
+            <label>Servidor responsável *</label>
+            <input type="text" id="trat-servidor" placeholder="Nome do servidor">
+          </div>
+        </div>
+        <div class="form-field full">
+          <label>O que foi tratado / providência tomada *</label>
+          <textarea id="trat-descricao" rows="4" placeholder="Descreva a tratativa realizada: contato tentado, resposta obtida, encaminhamentos, etc."></textarea>
+        </div>
+      </div>
+      <!-- Histórico de tratativas anteriores -->
+      <div class="form-section">
+        <div class="form-section-title">Histórico de Tratativas</div>
+        <div id="trat-historico" style="max-height:180px;overflow-y:auto;font-size:.87rem"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-semcom-tratativa')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarTratativaSemCom()">💾 Salvar Tratativa</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DESVINCULAÇÃO (Sem Comunicação) -->
+<div class="modal-overlay" id="modal-semcom-desvinc">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-header">
+      <h3>⚡ Registrar Desvinculação</h3>
+      <button class="modal-close" onclick="fecharModal('modal-semcom-desvinc')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="desvinc-monit-id">
+      <div class="form-section">
+        <div class="form-section-title">Monitorado</div>
+        <div class="form-grid three">
+          <div class="form-field">
+            <label>Nome</label>
+            <input class="auto-field" readonly id="desvinc-nome">
+          </div>
+          <div class="form-field">
+            <label>Registro</label>
+            <input class="auto-field" readonly id="desvinc-registro">
+          </div>
+          <div class="form-field">
+            <label>Dias sem comunicação</label>
+            <input class="auto-field" readonly id="desvinc-dias" style="color:#dc2626;font-weight:bold">
+          </div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Dados da Desvinculação</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Data da desvinculação *</label>
+            <input type="date" id="desvinc-data">
+          </div>
+          <div class="form-field">
+            <label>Servidor que realizou *</label>
+            <input type="text" id="desvinc-servidor" placeholder="Nome do servidor">
+          </div>
+          <div class="form-field">
+            <label>Nº Ato Conjunto / Autorização</label>
+            <input type="text" id="desvinc-ato" placeholder="Ex: Ato nº 001/2026">
+          </div>
+          <div class="form-field">
+            <label>Sistema (desktop utilizado)</label>
+            <input type="text" id="desvinc-sistema" placeholder="Ex: Sistema Aquiles Desktop">
+          </div>
+        </div>
+        <div class="form-field full">
+          <label>Observações</label>
+          <textarea id="desvinc-obs" rows="3" placeholder="Informações adicionais sobre a desvinculação..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-semcom-desvinc')">Cancelar</button>
+      <button class="btn-primary" style="background:#dc2626" onclick="salvarDesvinculacao()">⚡ Confirmar Desvinculação</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: VISUALIZAR MONITORADO (Sem Comunicação) -->
+<div class="modal-overlay" id="modal-semcom-ver">
+  <div class="modal-box" style="max-width:660px">
+    <div class="modal-header">
+      <h3 id="ver-semcom-title">Visualizar Monitorado</h3>
+      <button class="modal-close" onclick="fecharModal('modal-semcom-ver')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <div class="form-section-title">Dados Aquiles</div>
+        <div class="form-grid three">
+          <div class="form-field"><label>Nome</label><input class="auto-field" readonly id="vsem-nome"></div>
+          <div class="form-field"><label>Registro</label><input class="auto-field" readonly id="vsem-registro"></div>
+          <div class="form-field"><label>Unidade</label><input class="auto-field" readonly id="vsem-unidade"></div>
+          <div class="form-field"><label>Última Comunicação</label><input class="auto-field" readonly id="vsem-ultima"></div>
+          <div class="form-field"><label>Tempo sem comunicação</label><input class="auto-field" readonly id="vsem-tempo"></div>
+          <div class="form-field"><label>Dias sem comunicação</label><input class="auto-field" readonly id="vsem-dias" style="font-weight:bold"></div>
+          <div class="form-field"><label>Intervalo</label><input class="auto-field" readonly id="vsem-intervalo"></div>
+          <div class="form-field"><label>Importado em</label><input class="auto-field" readonly id="vsem-importado"></div>
+          <div class="form-field"><label>Situação</label><input class="auto-field" readonly id="vsem-situacao" style="font-weight:bold"></div>
+        </div>
+      </div>
+      <div class="form-section" id="vsem-sec-desvinc" style="display:none">
+        <div class="form-section-title" style="color:#dc2626">⚡ Desvinculação Registrada</div>
+        <div class="form-grid">
+          <div class="form-field"><label>Data</label><input class="auto-field" readonly id="vsem-desvinc-data"></div>
+          <div class="form-field"><label>Servidor</label><input class="auto-field" readonly id="vsem-desvinc-servidor"></div>
+          <div class="form-field"><label>Ato / Autorização</label><input class="auto-field" readonly id="vsem-desvinc-ato"></div>
+          <div class="form-field"><label>Sistema</label><input class="auto-field" readonly id="vsem-desvinc-sistema"></div>
+        </div>
+        <div class="form-field full"><label>Observações</label><textarea class="auto-field" readonly id="vsem-desvinc-obs" rows="2" style="resize:none"></textarea></div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Histórico de Tratativas</div>
+        <div id="vsem-historico" style="max-height:220px;overflow-y:auto;font-size:.87rem"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-semcom-ver')">Fechar</button>
     </div>
   </div>
 </div>
@@ -3684,7 +3973,7 @@ function mudarAba(aba) {
   if (aba === "dashboard") atualizarDashboard();
   if (aba === "criticos") renderizarCriticos();
   if (aba === "ocorrencias") { marcarOcVisto(); renderizarOcorrencias(); }
-  if (aba === "juridico") renderizarJuridico();
+  if (aba === "juridico") { renderizarJuridico(); atualizarBadgeSemCom(); }
   if (aba === "comunicacao") { marcarComVisto(); renderizarComunicacao(); }
   if (aba === "estoque") renderizarEstoque();
   if (aba === "triagem") { renderizarTriagem(); atualizarBadgeTriagemArq(); }
@@ -3709,6 +3998,7 @@ function atualizarTudo() {
   atualizarBadgeOc();
   atualizarBadgeTriagemArq();
   atualizarBadgePsiArq();
+  atualizarBadgeSemCom();
 }
 
 /* ─── DASHBOARD ──────────────────────────────────────── */
@@ -4000,6 +4290,419 @@ function renderizarJuridico() {
   }).join("");
 }
 function filtrarJuridico(v) { filtroJur = v; renderizarJuridico(); }
+
+/* ═══════════════════════════════════════════════════════════
+   MÓDULO: SEM COMUNICAÇÃO (sub-aba Jurídico)
+   ═══════════════════════════════════════════════════════════ */
+
+function getSemCom()       { return carregarStore('semcomunicacao', { monitorados: [], ultimaImportacao: null }); }
+function salvarSemCom(d)   { salvarStore('semcomunicacao', d); }
+
+// ── Sub-abas Jurídico ──────────────────────────────────────
+function mudarSubAbaJur(aba) {
+  ['ocorrencias','semcom'].forEach(a => {
+    document.getElementById('jur-stab-' + a)?.classList.toggle('active', a === aba);
+    document.getElementById('jur-panel-' + a)?.classList.toggle('active', a === aba);
+  });
+  if (aba === 'semcom') renderizarSemCom();
+}
+
+// ── Helpers ────────────────────────────────────────────────
+function _parseDiasSemCom(tempoStr) {
+  if (!tempoStr) return 0;
+  const s = String(tempoStr).trim();
+  // "76 days 02:33:31" or "2 days 04:28:52" or "18:45:59" or "0:30:00"
+  const mDays = s.match(/^(\d+)\s*days?/i);
+  return mDays ? parseInt(mDays[1]) : 0;
+}
+
+function _corDias(dias, desvinculado) {
+  if (desvinculado) return 'background:#dcfce7';
+  if (dias >= 180)  return 'background:#fee2e2;font-weight:bold;color:#dc2626';
+  if (dias >= 30)   return 'background:#fdf4ff';
+  if (dias >= 7)    return 'background:#fef2f2';
+  if (dias >= 1)    return 'background:#fff7ed';
+  return '';
+}
+
+// ── Importar Excel Aquiles ─────────────────────────────────
+function importarExcelSemCom(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const buf = e.target.result;
+    const uint8 = new Uint8Array(buf);
+
+    // ── 1. Detectar encoding ───────────────────────────────
+    // Lê os primeiros 1000 bytes como ASCII para checar o meta charset
+    const head = new TextDecoder('ascii', { fatal: false }).decode(uint8.slice(0, 1000));
+    const metaCharset = head.match(/charset=["']?\s*([a-zA-Z0-9_-]+)/i);
+    let encoding = 'utf-8'; // padrão
+    if (metaCharset) {
+      const c = metaCharset[1].toLowerCase().replace(/[_-]/g,'');
+      if (c.includes('1252') || c.includes('ansi'))   encoding = 'windows-1252';
+      else if (c.includes('latin') || c.includes('iso88591')) encoding = 'windows-1252';
+      else if (c.includes('utf8') || c.includes('utf-8'))    encoding = 'utf-8';
+    }
+    // BOM override
+    if (uint8[0]===0xEF && uint8[1]===0xBB && uint8[2]===0xBF) encoding = 'utf-8';
+    if (uint8[0]===0xFF && uint8[1]===0xFE) encoding = 'utf-16le';
+    if (uint8[0]===0xFE && uint8[1]===0xFF) encoding = 'utf-16be';
+
+    // ── 2. Decodificar com fallback ────────────────────────
+    let text;
+    try {
+      text = new TextDecoder(encoding, { fatal: true }).decode(buf);
+    } catch(_) {
+      try { text = new TextDecoder('utf-8',        { fatal: true  }).decode(buf); }
+      catch(_) { text = new TextDecoder('windows-1252', { fatal: false }).decode(buf); }
+    }
+
+    // ── 3. Parse HTML ──────────────────────────────────────
+    const doc = new DOMParser().parseFromString(text, 'text/html');
+
+    // Escolhe a tabela com mais linhas (tabela de dados do Aquiles)
+    const tables = Array.from(doc.querySelectorAll('table'));
+    if (!tables.length) { _mostrarToast('Nenhuma tabela encontrada no arquivo.', 'erro'); input.value=''; return; }
+    const dataTable = tables.reduce((best, t) =>
+      t.querySelectorAll('tr').length > best.querySelectorAll('tr').length ? t : best, tables[0]);
+
+    const rows = Array.from(dataTable.querySelectorAll('tr'));
+
+    // ── 4. Encontrar linha do cabeçalho ───────────────────
+    let headerIdx = -1, headerTexts = null;
+    for (let i = 0; i < Math.min(rows.length, 10); i++) {
+      const cells = Array.from(rows[i].querySelectorAll('th,td'));
+      const txts  = cells.map(c => c.textContent.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''));
+      // procura 'nome' E ('registro' OU 'matricula')
+      if (txts.some(t => t === 'nome' || t.startsWith('nome')) &&
+          txts.some(t => t.includes('registro') || t.includes('matricula'))) {
+        headerIdx = i; headerTexts = txts; break;
+      }
+    }
+    if (headerIdx < 0) {
+      _mostrarToast('Cabeçalho não encontrado. Colunas esperadas: Nome, Registro, Data, Tempo sem comunicacao.', 'erro');
+      input.value = ''; return;
+    }
+
+    // ── 5. Mapear colunas (normaliza acentos na busca) ─────
+    const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const col  = keyword => headerTexts.findIndex(h => h.includes(norm(keyword)));
+    const cNome      = col('nome');
+    const cReg       = col('registro');
+    const cData      = col('data');
+    const cTempo     = col('tempo');      // "tempo sem comunicacao"
+    const cIntervalo = col('intervalo');
+    const cUnidade   = col('unidade');
+
+    if (cNome < 0 || cReg < 0) {
+      _mostrarToast('Colunas Nome/Registro não encontradas. Verifique o arquivo.', 'erro');
+      input.value = ''; return;
+    }
+
+    // ── 6. Processar linhas de dados ───────────────────────
+    const dados = getSemCom();
+    const agora = new Date().toISOString();
+    let novos = 0, atualizados = 0, pulados = 0;
+
+    for (let i = headerIdx + 1; i < rows.length; i++) {
+      const cells = Array.from(rows[i].querySelectorAll('td'));
+      if (cells.length < 2) { pulados++; continue; }
+      const gc = idx => (idx >= 0 && idx < cells.length) ? cells[idx].textContent.trim() : '';
+      const nome     = gc(cNome);
+      const registro = gc(cReg);
+      if (!nome || !registro || !/\d/.test(registro)) { pulados++; continue; } // pula linhas sem dados válidos
+      const dataUlt  = gc(cData);
+      const tempo    = gc(cTempo);
+      const intervalo = gc(cIntervalo);
+      const unidade  = gc(cUnidade);
+      const dias     = _parseDiasSemCom(tempo);
+
+      const idx = dados.monitorados.findIndex(m => m.registro === registro);
+      if (idx >= 0) {
+        // Atualiza só campos vindos do Aquiles — preserva tratativas, desvinculação, situação
+        Object.assign(dados.monitorados[idx], { nome, ultimaComunicacao: dataUlt, tempoSemCom: tempo, intervalo, unidade, diasSemCom: dias, atualizadoEm: agora });
+        atualizados++;
+      } else {
+        dados.monitorados.push({
+          id: 'sc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+          registro, nome, ultimaComunicacao: dataUlt,
+          tempoSemCom: tempo, diasSemCom: dias,
+          intervalo, unidade,
+          situacao: 'ativo', tratativas: [], desvinculacao: null,
+          importadoEm: agora, atualizadoEm: agora,
+        });
+        novos++;
+      }
+    }
+
+    dados.ultimaImportacao = agora;
+    salvarSemCom(dados);
+    atualizarBadgeSemCom();
+    renderizarSemCom();
+    input.value = '';
+    _mostrarToast(`Importado com sucesso: ${novos} novos + ${atualizados} atualizados.`, 'sucesso');
+  };
+
+  reader.onerror = () => { _mostrarToast('Erro ao ler o arquivo. Tente novamente.', 'erro'); input.value = ''; };
+  reader.readAsArrayBuffer(file); // lê como binário para detectar encoding corretamente
+}
+
+// ── Badge ──────────────────────────────────────────────────
+function atualizarBadgeSemCom() {
+  const dados = getSemCom();
+  const ct180 = dados.monitorados.filter(m => m.diasSemCom >= 180 && m.situacao !== 'desvinculado').length;
+  const badge = document.getElementById('jur-semcom-badge');
+  if (!badge) return;
+  badge.textContent = ct180;
+  badge.style.display = ct180 > 0 ? 'flex' : 'none';
+}
+
+// ── Renderizar tabela ──────────────────────────────────────
+function renderizarSemCom() {
+  const dados = getSemCom();
+  const fNome     = (document.getElementById('sc-f-nome')?.value || '').toLowerCase().trim();
+  const fReg      = (document.getElementById('sc-f-registro')?.value || '').toLowerCase().trim();
+  const fIntervalo = (document.getElementById('sc-f-intervalo')?.value || '').toLowerCase().trim();
+  const fSituacao = document.getElementById('sc-f-situacao')?.value || '';
+  const fDiasMin  = parseInt(document.getElementById('sc-f-dias-min')?.value || '0') || 0;
+
+  let lista = dados.monitorados || [];
+  if (fNome)     lista = lista.filter(m => m.nome.toLowerCase().includes(fNome));
+  if (fReg)      lista = lista.filter(m => m.registro.toLowerCase().includes(fReg));
+  if (fIntervalo) lista = lista.filter(m => (m.intervalo||'').toLowerCase().includes(fIntervalo));
+  if (fSituacao === 'desvinculado') lista = lista.filter(m => m.situacao === 'desvinculado');
+  else if (fSituacao === 'tratativa') lista = lista.filter(m => (m.tratativas||[]).length > 0 && m.situacao !== 'desvinculado');
+  else if (fSituacao === 'ativo')    lista = lista.filter(m => m.situacao !== 'desvinculado');
+  if (fDiasMin > 0) lista = lista.filter(m => (m.diasSemCom||0) >= fDiasMin);
+
+  // Ordenar: maiores dias primeiro (críticos no topo)
+  lista.sort((a,b) => (b.diasSemCom||0) - (a.diasSemCom||0));
+
+  // KPIs
+  const all = dados.monitorados || [];
+  document.getElementById('sc-kpi-total').textContent  = all.length;
+  document.getElementById('sc-kpi-4h').textContent     = all.filter(m => m.diasSemCom === 0).length;
+  document.getElementById('sc-kpi-1d').textContent     = all.filter(m => m.diasSemCom >= 1 && m.diasSemCom < 7).length;
+  document.getElementById('sc-kpi-7d').textContent     = all.filter(m => m.diasSemCom >= 7 && m.diasSemCom < 30).length;
+  document.getElementById('sc-kpi-30d').textContent    = all.filter(m => m.diasSemCom >= 30 && m.diasSemCom < 180).length;
+  document.getElementById('sc-kpi-180d').textContent   = all.filter(m => m.diasSemCom >= 180 && m.situacao !== 'desvinculado').length;
+  document.getElementById('sc-kpi-desvinc').textContent = all.filter(m => m.situacao === 'desvinculado').length;
+
+  // Última importação
+  const uiEl = document.getElementById('semcom-ultima-importacao');
+  if (uiEl && dados.ultimaImportacao) {
+    uiEl.textContent = 'Última importação: ' + new Date(dados.ultimaImportacao).toLocaleString('pt-BR');
+  }
+
+  // Count label
+  const countEl = document.getElementById('sc-count-label');
+  if (countEl) countEl.textContent = `${lista.length} registro${lista.length !== 1 ? 's' : ''} encontrado${lista.length !== 1 ? 's' : ''}`;
+
+  const tbody = document.getElementById('tbody-semcom');
+  if (!tbody) return;
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:#888">Nenhum registro encontrado. Importe o Excel do Aquiles.</td></tr>';
+    return;
+  }
+
+  const desv = m => m.situacao === 'desvinculado';
+  tbody.innerHTML = lista.map((m, i) => {
+    const rowStyle = _corDias(m.diasSemCom, desv(m));
+    const badges180 = m.diasSemCom >= 180 && !desv(m) ? '<span style="background:#dc2626;color:#fff;border-radius:4px;padding:1px 5px;font-size:.75rem;margin-left:4px">⚠️ 180d</span>' : '';
+    const tratQt = (m.tratativas||[]).length;
+    const sitLabel = desv(m)
+      ? '<span style="color:#16a34a;font-weight:bold">✅ Desvinculado</span>'
+      : tratQt > 0
+        ? '<span style="color:#2563eb">📝 Com tratativa</span>'
+        : '<span style="color:#6b7280">Ativo</span>';
+    const btnDesvinc = !desv(m) ? `<button class="btn-sm" style="background:#dc2626;color:#fff;border:none;border-radius:4px;padding:2px 7px;cursor:pointer;font-size:.8rem" onclick="abrirModalDesvinc('${m.id}')">⚡ Desvincular</button>` : '';
+    return `<tr style="${rowStyle}">
+      <td>${i+1}</td>
+      <td><strong>${m.nome}</strong>${badges180}</td>
+      <td style="font-family:var(--font-mono)">${m.registro}</td>
+      <td style="font-size:.82rem">${(m.ultimaComunicacao||'').slice(0,16).replace('T',' ')}</td>
+      <td style="font-size:.82rem">${m.tempoSemCom||'—'}</td>
+      <td style="font-weight:bold;color:${m.diasSemCom>=180?'#dc2626':m.diasSemCom>=7?'#ea580c':'#374151'}">${m.diasSemCom}</td>
+      <td style="font-size:.8rem">${m.intervalo||'—'}</td>
+      <td style="font-size:.8rem">${m.unidade||'—'}</td>
+      <td>${sitLabel}</td>
+      <td style="text-align:center">${tratQt > 0 ? `<span style="background:#dbeafe;color:#1d4ed8;border-radius:10px;padding:1px 8px;font-size:.82rem">${tratQt}</span>` : '—'}</td>
+      <td style="white-space:nowrap;display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+        <button class="btn-sm btn-outline" onclick="verMonitoradoSemCom('${m.id}')" title="Visualizar">👁</button>
+        <button class="btn-sm btn-outline" style="color:#2563eb;border-color:#2563eb" onclick="abrirModalTratativa('${m.id}')">📝</button>
+        ${btnDesvinc}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function limparFiltrosSemCom() {
+  ['sc-f-nome','sc-f-registro','sc-f-intervalo','sc-f-situacao','sc-f-dias-min'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  renderizarSemCom();
+}
+
+// ── Modal: Registrar Tratativa ─────────────────────────────
+function abrirModalTratativa(monId) {
+  const dados = getSemCom();
+  const m = dados.monitorados.find(x => x.id === monId);
+  if (!m) return;
+  document.getElementById('trat-monit-id').value = monId;
+  document.getElementById('trat-nome').value = m.nome;
+  document.getElementById('trat-registro').value = m.registro;
+  document.getElementById('trat-tempo').value = m.tempoSemCom || '—';
+  const now = new Date();
+  document.getElementById('trat-data').value = now.toISOString().slice(0,16);
+  document.getElementById('trat-servidor').value = usuarioAtual?.nome || '';
+  document.getElementById('trat-descricao').value = '';
+  // Histórico
+  const hist = document.getElementById('trat-historico');
+  const trats = (m.tratativas||[]).slice().reverse();
+  hist.innerHTML = trats.length
+    ? trats.map(t => `<div style="border-left:3px solid #2563eb;padding:6px 10px;margin-bottom:6px;background:#f0f7ff;border-radius:0 6px 6px 0">
+        <div style="font-weight:600;color:#1d4ed8;font-size:.82rem">${new Date(t.data).toLocaleString('pt-BR')} — ${t.servidor}</div>
+        <div style="margin-top:3px;color:#374151">${t.descricao}</div>
+      </div>`).join('')
+    : '<div style="color:#888;font-size:.85rem;padding:8px">Nenhuma tratativa registrada ainda.</div>';
+  document.getElementById('modal-semcom-tratativa').classList.add('open');
+}
+
+function salvarTratativaSemCom() {
+  const monId = document.getElementById('trat-monit-id').value;
+  const data  = document.getElementById('trat-data').value;
+  const srv   = document.getElementById('trat-servidor').value.trim();
+  const desc  = document.getElementById('trat-descricao').value.trim();
+  if (!data || !srv || !desc) { _mostrarToast('Preencha todos os campos obrigatórios.', 'erro'); return; }
+  const dados = getSemCom();
+  const m = dados.monitorados.find(x => x.id === monId);
+  if (!m) return;
+  if (!m.tratativas) m.tratativas = [];
+  m.tratativas.push({ data: new Date(data).toISOString(), servidor: srv, descricao: desc });
+  if (m.situacao === 'ativo') m.situacao = 'ativo'; // mantém ativo, mas tratativa fica registrada
+  salvarSemCom(dados);
+  fecharModal('modal-semcom-tratativa');
+  renderizarSemCom();
+  _mostrarToast('Tratativa registrada com sucesso!', 'sucesso');
+}
+
+// ── Modal: Desvinculação ───────────────────────────────────
+function abrirModalDesvinc(monId) {
+  const dados = getSemCom();
+  const m = dados.monitorados.find(x => x.id === monId);
+  if (!m) return;
+  document.getElementById('desvinc-monit-id').value = monId;
+  document.getElementById('desvinc-nome').value = m.nome;
+  document.getElementById('desvinc-registro').value = m.registro;
+  document.getElementById('desvinc-dias').value = m.diasSemCom + ' dias';
+  document.getElementById('desvinc-data').value = new Date().toISOString().slice(0,10);
+  document.getElementById('desvinc-servidor').value = usuarioAtual?.nome || '';
+  document.getElementById('desvinc-ato').value = '';
+  document.getElementById('desvinc-sistema').value = 'Sistema Aquiles Desktop';
+  document.getElementById('desvinc-obs').value = '';
+  document.getElementById('modal-semcom-desvinc').classList.add('open');
+}
+
+function salvarDesvinculacao() {
+  const monId = document.getElementById('desvinc-monit-id').value;
+  const data  = document.getElementById('desvinc-data').value;
+  const srv   = document.getElementById('desvinc-servidor').value.trim();
+  if (!data || !srv) { _mostrarToast('Informe a data e o servidor.', 'erro'); return; }
+  const dados = getSemCom();
+  const m = dados.monitorados.find(x => x.id === monId);
+  if (!m) return;
+  m.situacao = 'desvinculado';
+  m.desvinculacao = {
+    data,
+    servidor: srv,
+    ato: document.getElementById('desvinc-ato').value.trim(),
+    sistema: document.getElementById('desvinc-sistema').value.trim(),
+    obs: document.getElementById('desvinc-obs').value.trim(),
+    registradoEm: new Date().toISOString(),
+  };
+  salvarSemCom(dados);
+  atualizarBadgeSemCom();
+  fecharModal('modal-semcom-desvinc');
+  renderizarSemCom();
+  _mostrarToast('Desvinculação registrada!', 'sucesso');
+}
+
+// ── Modal: Visualizar ──────────────────────────────────────
+function verMonitoradoSemCom(monId) {
+  const dados = getSemCom();
+  const m = dados.monitorados.find(x => x.id === monId);
+  if (!m) return;
+  document.getElementById('ver-semcom-title').textContent = m.nome;
+  document.getElementById('vsem-nome').value      = m.nome;
+  document.getElementById('vsem-registro').value  = m.registro;
+  document.getElementById('vsem-unidade').value   = m.unidade || '—';
+  document.getElementById('vsem-ultima').value    = (m.ultimaComunicacao||'').slice(0,16).replace('T',' ');
+  document.getElementById('vsem-tempo').value     = m.tempoSemCom || '—';
+  document.getElementById('vsem-dias').value      = m.diasSemCom + ' dias';
+  document.getElementById('vsem-intervalo').value = m.intervalo || '—';
+  document.getElementById('vsem-importado').value = m.importadoEm ? new Date(m.importadoEm).toLocaleString('pt-BR') : '—';
+  document.getElementById('vsem-situacao').value  = m.situacao === 'desvinculado' ? 'Desvinculado' : m.situacao === 'ativo' ? 'Ativo' : m.situacao;
+  // Desvinculação
+  const secDesvinc = document.getElementById('vsem-sec-desvinc');
+  if (m.desvinculacao) {
+    secDesvinc.style.display = '';
+    document.getElementById('vsem-desvinc-data').value    = m.desvinculacao.data || '—';
+    document.getElementById('vsem-desvinc-servidor').value = m.desvinculacao.servidor || '—';
+    document.getElementById('vsem-desvinc-ato').value     = m.desvinculacao.ato || '—';
+    document.getElementById('vsem-desvinc-sistema').value = m.desvinculacao.sistema || '—';
+    document.getElementById('vsem-desvinc-obs').value     = m.desvinculacao.obs || '';
+  } else {
+    secDesvinc.style.display = 'none';
+  }
+  // Histórico tratativas
+  const hist = document.getElementById('vsem-historico');
+  const trats = (m.tratativas||[]).slice().reverse();
+  hist.innerHTML = trats.length
+    ? trats.map(t => `<div style="border-left:3px solid #2563eb;padding:6px 10px;margin-bottom:6px;background:#f0f7ff;border-radius:0 6px 6px 0">
+        <div style="font-weight:600;color:#1d4ed8;font-size:.82rem">${new Date(t.data).toLocaleString('pt-BR')} — ${t.servidor}</div>
+        <div style="margin-top:3px;color:#374151">${t.descricao}</div>
+      </div>`).join('')
+    : '<div style="color:#888;font-size:.85rem;padding:8px">Nenhuma tratativa registrada.</div>';
+  document.getElementById('modal-semcom-ver').classList.add('open');
+}
+
+// ── Exportar Excel ─────────────────────────────────────────
+function exportarSemComExcel() {
+  const dados = getSemCom();
+  const lista = (dados.monitorados || []).sort((a,b) => (b.diasSemCom||0) - (a.diasSemCom||0));
+  if (!lista.length) { _mostrarToast('Nenhum registro para exportar.', 'erro'); return; }
+  const rows = lista.map((m, i) => ({
+    'Nº':                   i + 1,
+    'Nome':                 m.nome,
+    'Registro':             m.registro,
+    'Última Comunicação':   (m.ultimaComunicacao||'').slice(0,16).replace('T',' '),
+    'Tempo Sem Comunicação': m.tempoSemCom || '',
+    'Dias Sem Comunicação': m.diasSemCom || 0,
+    'Intervalo':            m.intervalo || '',
+    'Unidade Prisional':    m.unidade || '',
+    'Situação':             m.situacao === 'desvinculado' ? 'Desvinculado' : 'Ativo',
+    'Qtd. Tratativas':      (m.tratativas||[]).length,
+    'Última Tratativa':     m.tratativas?.length ? new Date(m.tratativas[m.tratativas.length-1].data).toLocaleString('pt-BR') : '',
+    'Última Tratativa - Servidor': m.tratativas?.length ? m.tratativas[m.tratativas.length-1].servidor : '',
+    'Última Tratativa - Descrição': m.tratativas?.length ? m.tratativas[m.tratativas.length-1].descricao : '',
+    'Desvinculação - Data': m.desvinculacao?.data || '',
+    'Desvinculação - Servidor': m.desvinculacao?.servidor || '',
+    'Desvinculação - Ato':  m.desvinculacao?.ato || '',
+    'Desvinculação - Sistema': m.desvinculacao?.sistema || '',
+    'Desvinculação - Obs':  m.desvinculacao?.obs || '',
+    'Importado em':         m.importadoEm ? new Date(m.importadoEm).toLocaleString('pt-BR') : '',
+    'Atualizado em':        m.atualizadoEm ? new Date(m.atualizadoEm).toLocaleString('pt-BR') : '',
+  }));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:4},{wch:35},{wch:14},{wch:20},{wch:25},{wch:8},{wch:18},{wch:18},{wch:14},{wch:6},{wch:20},{wch:25},{wch:40},{wch:15},{wch:25},{wch:20},{wch:22},{wch:30},{wch:20},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Sem Comunicação');
+  XLSX.writeFile(wb, 'sem_comunicacao_CME.xlsx');
+  _mostrarToast('Excel exportado com sucesso!', 'sucesso');
+}
 
 // Ciclo de plantões: referência 01/05/2026 = DELTA (índice 3)
 const PLANTOES = ['ALFA', 'BRAVO', 'CHARLIE', 'DELTA', 'ECHO'];
