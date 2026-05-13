@@ -3789,7 +3789,7 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
           <div class="form-field"><label>Quantidade *</label>
             <input type="number" id="sai-quantidade" min="1" placeholder="0" oninput="atualizarCamposSerialSaida()"></div>
           <div class="form-field"><label>Estado do Item *</label>
-            <select id="sai-estado">
+            <select id="sai-estado" onchange="atualizarCamposSerialSaida()">
               <option value="">Selecione...</option>
               <option value="Novo">Novo</option>
               <option value="Reutilizado">Reutilizado</option>
@@ -8339,6 +8339,37 @@ function salvarConfigEstoque() {
 
 /* ─ Storage ────────────────────────────────────────────── */
 
+/**
+ * Constrói mapa { serial → {estado, temCarregador, temChip} } para um tipo de item.
+ * Usa est.registros (formato novo) se existir, senão reconstrói a partir de movimentações.
+ */
+function _buildSerialEstadoMap(est, itemTipo) {
+  const regs = (est.registros || {})[itemTipo] || [];
+  if (regs.length > 0) {
+    const map = {};
+    regs.forEach(r => {
+      const id = r.imei || r.serial || '';
+      if (id) map[id] = { estado: r.estado || '', temCarregador: !!r.temCarregador, temChip: !!r.temChip };
+    });
+    return map;
+  }
+  // Fallback: reconstrói a partir de movimentações (format antigo usa est.seriais)
+  const map = {};
+  const movs = [...(est.movimentacoes || [])].sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+  movs.forEach(m => {
+    if (m.item !== itemTipo) return;
+    const seriais = m.seriais || [];
+    const isEntrada = m.tipo === 'Entrada' || m.tipo === 'Devolução';
+    const isSaida   = m.tipo === 'Saída'   || m.tipo === 'Baixa';
+    if (isEntrada) {
+      seriais.forEach(s => { map[s] = { estado: m.estado || '', temCarregador: false, temChip: false }; });
+    } else if (isSaida) {
+      seriais.forEach(s => { delete map[s]; });
+    }
+  });
+  return map;
+}
+
 /** Reconstrói d.itensPorEstado = { novo:{…}, reutilizado:{…} } a partir de movimentações e registros */
 function _recalcularItensPorEstado(d) {
   const novo = {};
@@ -8371,11 +8402,12 @@ function _recalcularItensPorEstado(d) {
       }
     }
   });
-  // Para itens serializados: conta diretamente pelos registros
+  // Para itens serializados: usa _buildSerialEstadoMap (suporta formato novo e antigo)
   ITENS_COM_SERIAL.forEach(tipo => {
-    const regs = (d.registros || {})[tipo] || [];
-    novo[tipo]        = regs.filter(r => r.estado === 'Novo').length;
-    reutilizado[tipo] = regs.filter(r => r.estado === 'Reutilizado').length;
+    const map = _buildSerialEstadoMap(d, tipo);
+    const vals = Object.values(map);
+    novo[tipo]        = vals.filter(v => v.estado === 'Novo').length;
+    reutilizado[tipo] = vals.filter(v => v.estado === 'Reutilizado').length;
   });
   d.itensPorEstado = { novo, reutilizado };
 }
@@ -8476,17 +8508,19 @@ function renderizarEstoque() {
       <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
     </tr>`);
     if (ITENS_COM_SERIAL.includes(tipo)) {
-      const tipoRegs = (regs[tipo] || []);
-      if (tipoRegs.length > 0) {
-        const novos   = tipoRegs.filter(r => r.estado === 'Novo');
-        const reutils = tipoRegs.filter(r => r.estado === 'Reutilizado');
-        const outros  = tipoRegs.filter(r => r.estado !== 'Novo' && r.estado !== 'Reutilizado');
+      // Monta mapa serial→estado (suporta formato novo e antigo via movimentações)
+      const serialMap = _buildSerialEstadoMap(est, tipo);
+      const todosSeriais = Object.keys(serialMap);
+      if (todosSeriais.length > 0) {
+        const novosIds   = todosSeriais.filter(s => serialMap[s].estado === 'Novo');
+        const reutilIds  = todosSeriais.filter(s => serialMap[s].estado === 'Reutilizado');
+        const outrosIds  = todosSeriais.filter(s => serialMap[s].estado !== 'Novo' && serialMap[s].estado !== 'Reutilizado');
         let partes = [];
-        if (novos.length)   partes.push(`📦 <strong>Novos (${novos.length}):</strong> ${novos.map(r=>r.serial||r.imei).join(' · ')}`);
-        if (reutils.length) partes.push(`🔄 <strong>Reutilizados (${reutils.length}):</strong> ${reutils.map(r=>r.serial||r.imei).join(' · ')}`);
-        if (outros.length)  partes.push(`📋 <strong>Outros (${outros.length}):</strong> ${outros.map(r=>r.serial||r.imei).join(' · ')}`);
+        if (novosIds.length)   partes.push(`<span style="color:#1a7f37">📦 <strong>Novos (${novosIds.length}):</strong> ${novosIds.join(' · ')}</span>`);
+        if (reutilIds.length)  partes.push(`<span style="color:#b45309">🔄 <strong>Reutilizados (${reutilIds.length}):</strong> ${reutilIds.join(' · ')}</span>`);
+        if (outrosIds.length)  partes.push(`<span style="color:#555">📋 <strong>Sem estado (${outrosIds.length}):</strong> ${outrosIds.join(' · ')}</span>`);
         rowsTorn.push(`<tr style="background:#f8f9ff">
-          <td colspan="7" style="font-size:.78rem;color:#555;padding:4px 12px">${partes.join(' &nbsp;|&nbsp; ')}</td>
+          <td colspan="7" style="font-size:.78rem;padding:4px 12px;line-height:1.8">${partes.join('<br>')}</td>
         </tr>`);
       } else {
         const seriais = (est.seriais || {})[tipo] || [];
@@ -8542,25 +8576,29 @@ function renderizarEstoque() {
     <td style="text-align:center">${comCarregador > 0 ? `🔋 ${comCarregador}` : '—'}</td>
     <td style="text-align:center">${comChip > 0 ? `📶 ${comChip}` : '—'}</td>
   </tr>`);
-  if (dppRegs.length > 0) {
-    const novos   = dppRegs.filter(r => r.estado === 'Novo');
-    const reutils = dppRegs.filter(r => r.estado === 'Reutilizado');
-    const outros  = dppRegs.filter(r => r.estado !== 'Novo' && r.estado !== 'Reutilizado');
-    let partes = [];
-    if (novos.length)   partes.push(`📦 <strong>Novos (${novos.length}):</strong> ${novos.map(r=>r.imei||r.serial).join(' · ')}`);
-    if (reutils.length) partes.push(`🔄 <strong>Reutilizados (${reutils.length}):</strong> ${reutils.map(r=>r.imei||r.serial).join(' · ')}`);
-    if (outros.length)  partes.push(`📋 <strong>Outros (${outros.length}):</strong> ${outros.map(r=>r.imei||r.serial).join(' · ')}`);
-    rowsDpp.push(`<tr style="background:#f8f9ff">
-      <td colspan="8" style="font-size:.78rem;color:#555;padding:4px 12px">${partes.join(' &nbsp;|&nbsp; ')}</td>
-    </tr>`);
-  } else {
-    const seriais = (est.seriais || {})[tipo] || [];
-    if (seriais.length > 0) {
+  {
+    const dppSerialMap = _buildSerialEstadoMap(est, tipo);
+    const dppTodos = Object.keys(dppSerialMap);
+    if (dppTodos.length > 0) {
+      const novosIds  = dppTodos.filter(s => dppSerialMap[s].estado === 'Novo');
+      const reutilIds = dppTodos.filter(s => dppSerialMap[s].estado === 'Reutilizado');
+      const outrosIds = dppTodos.filter(s => dppSerialMap[s].estado !== 'Novo' && dppSerialMap[s].estado !== 'Reutilizado');
+      let partes = [];
+      if (novosIds.length)   partes.push(`<span style="color:#1a7f37">📦 <strong>Novos (${novosIds.length}):</strong> ${novosIds.join(' · ')}</span>`);
+      if (reutilIds.length)  partes.push(`<span style="color:#b45309">🔄 <strong>Reutilizados (${reutilIds.length}):</strong> ${reutilIds.join(' · ')}</span>`);
+      if (outrosIds.length)  partes.push(`<span style="color:#555">📋 <strong>Sem estado (${outrosIds.length}):</strong> ${outrosIds.join(' · ')}</span>`);
       rowsDpp.push(`<tr style="background:#f8f9ff">
-        <td colspan="8" style="font-size:.78rem;color:#555;padding:4px 12px">
-          📋 <strong>IMEIs em estoque:</strong> ${seriais.join(' · ')}
-        </td>
+        <td colspan="8" style="font-size:.78rem;padding:4px 12px;line-height:1.8">${partes.join('<br>')}</td>
       </tr>`);
+    } else {
+      const seriais = (est.seriais || {})[tipo] || [];
+      if (seriais.length > 0) {
+        rowsDpp.push(`<tr style="background:#f8f9ff">
+          <td colspan="8" style="font-size:.78rem;color:#555;padding:4px 12px">
+            📋 <strong>IMEIs em estoque:</strong> ${seriais.join(' · ')}
+          </td>
+        </tr>`);
+      }
     }
   }
   document.getElementById('tbody-est-dpp').innerHTML = rowsDpp.join('');
@@ -8845,14 +8883,14 @@ function atualizarCamposSerialSaida() {
   if (ITENS_COM_SERIAL.includes(itemTipo) && qtd > 0) {
     container.style.display = '';
     const est = getEstoque();
-    const regs = (est.registros || {})[itemTipo] || [];
-    const disponiveis = regs.length > 0
-      ? regs.map(r => ({ id: r.imei||r.serial, estado: r.estado, temCarregador: r.temCarregador, temChip: r.temChip }))
-      : (est.seriais || {})[itemTipo]?.map(s => ({ id: s, estado: '', temCarregador: false, temChip: false })) || [];
+    const estadoSel = (document.getElementById('sai-estado')?.value || '').trim();
+    // Usa mapa serial→estado para suportar formato antigo e novo
+    const serialMap = _buildSerialEstadoMap(est, itemTipo);
+    let disponiveis = Object.entries(serialMap).map(([id, info]) => ({ id, ...info }));
+    if (estadoSel) disponiveis = disponiveis.filter(it => it.estado === estadoSel);
 
     lista.innerHTML = '';
     for (let i = 0; i < qtd; i++) {
-      const wrpId = 'sai-serial-wrp-' + i;
       const sugId = 'sai-serial-sug-' + i;
       const div = document.createElement('div');
       div.style.cssText = 'margin-bottom:8px';
@@ -8872,7 +8910,10 @@ function atualizarCamposSerialSaida() {
       lista.appendChild(div);
     }
     if (disponiveis.length === 0) {
-      lista.innerHTML += '<p style="color:#e74c3c;font-size:.83rem;margin:4px 0">⚠️ Nenhum número de série cadastrado para este item.</p>';
+      const msg = estadoSel
+        ? `<p style="color:#b45309;font-size:.83rem;margin:4px 0">⚠️ Nenhum item <strong>${estadoSel}</strong> disponível em estoque para este tipo.</p>`
+        : '<p style="color:#e74c3c;font-size:.83rem;margin:4px 0">⚠️ Nenhum número de série cadastrado para este item.</p>';
+      lista.innerHTML += msg;
     }
   } else {
     container.style.display = 'none';
@@ -8884,22 +8925,34 @@ function filtrarSugestoesSaida(input, sugId, itemTipo) {
   const sug = document.getElementById(sugId);
   if (!sug) return;
   const est = getEstoque();
-  const regs = (est.registros || {})[itemTipo] || [];
-  const simples = (est.seriais || {})[itemTipo] || [];
   const query = (input.value || '').toLowerCase();
 
-  let items = regs.length > 0
-    ? regs.map(r => ({ id: r.imei||r.serial, estado: r.estado, temCarregador: r.temCarregador, temChip: r.temChip }))
-    : simples.map(s => ({ id: s, estado: '', temCarregador: false, temChip: false }));
+  // Usa _buildSerialEstadoMap para suportar formato antigo e novo
+  const serialMap = _buildSerialEstadoMap(est, itemTipo);
+  let items = Object.entries(serialMap).map(([id, info]) => ({ id, ...info }));
 
-  // Exclude already selected in other rows
+  // Filtrar pelo estado selecionado no formulário de saída
+  const estadoSelecionado = (document.getElementById('sai-estado')?.value || '').trim();
+  if (estadoSelecionado) {
+    items = items.filter(it => it.estado === estadoSelecionado);
+  }
+
+  // Excluir já selecionados em outras linhas
   const outrasInputs = document.querySelectorAll('.sai-serial-input');
   const jaUsados = Array.from(outrasInputs).filter(inp => inp !== input).map(inp => inp.value.trim()).filter(Boolean);
   items = items.filter(it => !jaUsados.includes(it.id));
 
   if (query) items = items.filter(it => it.id.toLowerCase().includes(query));
 
-  if (items.length === 0) { sug.style.display = 'none'; return; }
+  if (items.length === 0) {
+    sug.style.display = 'none';
+    // Aviso se o filtro por estado não encontrou nada
+    if (estadoSelecionado && Object.keys(serialMap).length > 0) {
+      sug.style.display = 'block';
+      sug.innerHTML = `<div style="padding:8px 12px;color:#b45309;font-size:.82rem">⚠️ Nenhum item <strong>${estadoSelecionado}</strong> disponível em estoque.</div>`;
+    }
+    return;
+  }
 
   sug.style.display = 'block';
   sug.innerHTML = items.map(it => {
