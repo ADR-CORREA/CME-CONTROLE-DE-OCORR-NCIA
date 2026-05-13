@@ -8341,7 +8341,9 @@ function salvarConfigEstoque() {
 
 /**
  * Constrói mapa { serial → {estado, temCarregador, temChip} } para um tipo de item.
- * Usa est.registros (formato novo) se existir, senão reconstrói a partir de movimentações.
+ * Usa est.registros (formato novo) se existir.
+ * Fallback: usa est.seriais como lista atual e busca o estado no histórico de movimentações.
+ * Dessa forma, seriais já removidos via Saída nunca aparecem no mapa.
  */
 function _buildSerialEstadoMap(est, itemTipo) {
   const regs = (est.registros || {})[itemTipo] || [];
@@ -8353,19 +8355,19 @@ function _buildSerialEstadoMap(est, itemTipo) {
     });
     return map;
   }
-  // Fallback: reconstrói a partir de movimentações (format antigo usa est.seriais)
+  // Fallback para formato antigo: est.seriais é a lista ATUAL em estoque (já atualizada na Saída)
+  const atuais = (est.seriais || {})[itemTipo] || [];
   const map = {};
-  const movs = [...(est.movimentacoes || [])].sort((a, b) => (a.data || '').localeCompare(b.data || ''));
-  movs.forEach(m => {
-    if (m.item !== itemTipo) return;
-    const seriais = m.seriais || [];
-    const isEntrada = m.tipo === 'Entrada' || m.tipo === 'Devolução';
-    const isSaida   = m.tipo === 'Saída'   || m.tipo === 'Baixa';
-    if (isEntrada) {
-      seriais.forEach(s => { map[s] = { estado: m.estado || '', temCarregador: false, temChip: false }; });
-    } else if (isSaida) {
-      seriais.forEach(s => { delete map[s]; });
-    }
+  // Movimentos do mais novo para o mais antigo (para pegar o estado da última entrada)
+  const movs = [...(est.movimentacoes || [])].sort((a, b) => (b.ts || b.id || '').localeCompare(a.ts || a.id || ''));
+  atuais.forEach(serial => {
+    // Encontra a movimentação de Entrada/Devolução mais recente que incluiu este serial
+    const mov = movs.find(m =>
+      m.item === itemTipo &&
+      (m.tipo === 'Entrada' || m.tipo === 'Devolução') &&
+      (m.seriais || []).includes(serial)
+    );
+    map[serial] = { estado: mov ? (mov.estado || '') : '', temCarregador: false, temChip: false };
   });
   return map;
 }
@@ -8604,7 +8606,8 @@ function renderizarEstoque() {
   document.getElementById('tbody-est-dpp').innerHTML = rowsDpp.join('');
 
   /* Histórico */
-  const isAdmin = usuarioAtual?.nivel === 'admin';
+  const isAdmin   = usuarioAtual?.nivel === 'admin';
+  const podVerEst = podeAlterarEstoque(); // admin ou estoque
   const movs = (est.movimentacoes || []).slice(0, 300);
   const tbH  = document.getElementById('tbody-est-hist');
   if (!movs.length) {
@@ -8615,9 +8618,13 @@ function renderizarEstoque() {
   tbH.innerHTML = movs.map(m => {
     const isSaida = m.tipo === 'Saída';
     const dtEntrega = m.dataEntrega ? m.dataEntrega.split('-').reverse().join('/') : '—';
+    const btnVer = podVerEst
+      ? `<button class="btn-sm" style="background:#e8f0ff;color:#1a4fa3" onclick="verDetalheMovEstoque('${m.id}')">👁</button>`
+      : '';
     const btnDel = isAdmin
       ? `<button class="btn-sm btn-danger" onclick="excluirMovEstoque('${m.id}')">🗑</button>`
-      : '—';
+      : '';
+    const acoes = (btnVer || btnDel) ? `${btnVer}${btnDel}` : '—';
     return `<tr>
       <td style="white-space:nowrap;font-size:.8rem">${new Date(m.ts).toLocaleString('pt-BR')}</td>
       <td><span class="badge ${badgeMov[m.tipo]||''}">${m.tipo}</span></td>
@@ -8632,9 +8639,64 @@ function renderizarEstoque() {
       <td>${isSaida ? (m.plantonista||'—') : '—'}</td>
       <td>${isSaida ? dtEntrega : '—'}</td>
       <td>${m.obs||'—'}</td>
-      <td style="text-align:center">${btnDel}</td>
+      <td style="text-align:center;white-space:nowrap;gap:4px;display:table-cell">${acoes}</td>
     </tr>`;
   }).join('');
+}
+
+function verDetalheMovEstoque(id) {
+  if (!podeAlterarEstoque()) return;
+  const est = getEstoque();
+  const m = (est.movimentacoes || []).find(x => x.id === id);
+  if (!m) return;
+  const isSaida = m.tipo === 'Saída';
+  const isEntrada = m.tipo === 'Entrada' || m.tipo === 'Devolução';
+  const dtFormatada = new Date(m.ts).toLocaleString('pt-BR');
+  const dtEntrega = m.dataEntrega ? m.dataEntrega.split('-').reverse().join('/') : '—';
+  const badgeColor = { 'Entrada':'#1a7f37', 'Saída':'#c0392b', 'Devolução':'#b45309', 'Baixa':'#7f5800' }[m.tipo] || '#555';
+
+  // Seriais / IMEIs registrados no movimento
+  let serialHtml = '';
+  if ((m.seriais || []).length > 0) {
+    serialHtml = _vsec('Números de Série / IMEI registrados',
+      `<div style="grid-column:1/-1;padding:8px;background:#f8f9ff;border-radius:6px;font-family:monospace;font-size:.88rem;line-height:1.9">
+        ${m.seriais.map(s => `<span style="display:inline-block;background:#e8f0ff;border-radius:4px;padding:2px 8px;margin:2px">${s}</span>`).join('')}
+      </div>`
+    );
+  } else if (m.numSerie) {
+    serialHtml = _vsec('Nº de Série / Patrimônio', _vf('', m.numSerie));
+  }
+
+  const html = `
+    <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
+      <span style="background:${badgeColor};color:#fff;padding:4px 14px;border-radius:20px;font-weight:700;font-size:.9rem">${m.tipo}</span>
+      <span style="color:#888;font-size:.85rem">${dtFormatada}</span>
+      <span style="margin-left:auto;font-size:.82rem;color:#aaa">ID: ${m.id}</span>
+    </div>
+    ${_vsec('Item', `
+      ${_vf('Categoria', m.categoria || '—')}
+      ${_vf('Tipo de Item', m.item || '—')}
+      ${m.tamanho ? _vf('Tamanho', m.tamanho) : ''}
+      ${_vf('Quantidade', m.quantidade)}
+      ${_vf('Estado do Item', m.estado || '—')}
+    `)}
+    ${_vsec('Responsável e Origem', `
+      ${_vf('Responsável', m.responsavel || '—')}
+      ${_vf('Motivo', m.motivo || '—')}
+    `)}
+    ${isEntrada ? '' : _vsec('Destino / Saída', `
+      ${_vf('Plantão', m.plantao || '—')}
+      ${_vf('Plantonista', m.plantonista || '—')}
+      ${_vf('Data de Entrega', dtEntrega)}
+    `)}
+    ${m.monitorado ? _vsec('Monitorado', `
+      ${_vf('Nome', m.monitorado || '—')}
+      ${m.processo ? _vf('Processo', m.processo) : ''}
+    `) : ''}
+    ${m.obs ? _vsec('Observações', _vta('', m.obs)) : ''}
+    ${serialHtml}
+  `;
+  _abrirViewer(`Detalhe — ${m.tipo} de ${m.item || 'Item'}`, html, null);
 }
 
 function excluirMovEstoque(id) {
