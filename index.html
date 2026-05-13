@@ -2009,7 +2009,7 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
         <div class="est-section-title">Tornozeleira Eletrônica</div>
         <div class="table-wrapper">
           <table class="data-table">
-            <thead><tr><th>Item</th><th>Tamanho</th><th style="text-align:center">Qtd. Atual</th><th style="text-align:center">Mínimo</th><th>Status</th></tr></thead>
+            <thead><tr><th>Item</th><th>Tamanho</th><th style="text-align:center">Total</th><th style="text-align:center">📦 Novos</th><th style="text-align:center">🔄 Reutilizados</th><th style="text-align:center">Mínimo</th><th>Status</th></tr></thead>
             <tbody id="tbody-est-torn"></tbody>
           </table>
         </div>
@@ -2018,7 +2018,7 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
         <div class="est-section-title">DPP — Dispositivo de Proteção Pessoal</div>
         <div class="table-wrapper">
           <table class="data-table">
-            <thead><tr><th>Item</th><th style="text-align:center">Qtd. Atual</th><th style="text-align:center">Mínimo</th><th>Status</th><th style="text-align:center">Com Carregador</th><th style="text-align:center">Com Chip</th></tr></thead>
+            <thead><tr><th>Item</th><th style="text-align:center">Total</th><th style="text-align:center">📦 Novos</th><th style="text-align:center">🔄 Reutilizados</th><th style="text-align:center">Mínimo</th><th>Status</th><th style="text-align:center">Com Carregador</th><th style="text-align:center">Com Chip</th></tr></thead>
             <tbody id="tbody-est-dpp"></tbody>
           </table>
         </div>
@@ -8338,6 +8338,48 @@ function salvarConfigEstoque() {
 }
 
 /* ─ Storage ────────────────────────────────────────────── */
+
+/** Reconstrói d.itensPorEstado = { novo:{…}, reutilizado:{…} } a partir de movimentações e registros */
+function _recalcularItensPorEstado(d) {
+  const novo = {};
+  const reutilizado = {};
+  // Inicializa todos os itens conhecidos com 0
+  Object.keys(EST_PADRAO.itens).forEach(k => { novo[k] = 0; reutilizado[k] = 0; });
+  // Para itens NÃO-serializados: processa movimentações em ordem cronológica
+  const movs = [...(d.movimentacoes || [])].sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+  movs.forEach(m => {
+    const tipo = m.item || '';
+    if (ITENS_COM_SERIAL.includes(tipo)) return; // tratado via registros abaixo
+    const chave = tipo === 'Cinta' ? 'Cinta_' + (m.tamanho || '') : tipo;
+    if (!(chave in EST_PADRAO.itens)) return;
+    const qtd = parseInt(m.quantidade) || 0;
+    const est = (m.estado || '').trim();
+    const isEntrada = m.tipo === 'Entrada' || m.tipo === 'Devolução';
+    const isSaida   = m.tipo === 'Saída'   || m.tipo === 'Baixa';
+    if (isEntrada) {
+      if (est === 'Novo') novo[chave] = (novo[chave] || 0) + qtd;
+      else if (est === 'Reutilizado') reutilizado[chave] = (reutilizado[chave] || 0) + qtd;
+    } else if (isSaida) {
+      if (est === 'Novo') novo[chave] = Math.max(0, (novo[chave] || 0) - qtd);
+      else if (est === 'Reutilizado') reutilizado[chave] = Math.max(0, (reutilizado[chave] || 0) - qtd);
+      else {
+        // sem estado definido: desconta do pool maior
+        const n = novo[chave] || 0;
+        const r = reutilizado[chave] || 0;
+        if (n >= r) novo[chave] = Math.max(0, n - qtd);
+        else reutilizado[chave] = Math.max(0, r - qtd);
+      }
+    }
+  });
+  // Para itens serializados: conta diretamente pelos registros
+  ITENS_COM_SERIAL.forEach(tipo => {
+    const regs = (d.registros || {})[tipo] || [];
+    novo[tipo]        = regs.filter(r => r.estado === 'Novo').length;
+    reutilizado[tipo] = regs.filter(r => r.estado === 'Reutilizado').length;
+  });
+  d.itensPorEstado = { novo, reutilizado };
+}
+
 function getEstoque() {
   const d = carregarStore('estoque', null);
   if (!d) return JSON.parse(JSON.stringify(EST_PADRAO));
@@ -8350,9 +8392,13 @@ function getEstoque() {
   Object.keys(EST_PADRAO.itens).forEach(k => { if (!(k in d.itens)) d.itens[k] = 0; });
   // Migração: remover itens obsoletos (Carregador do DPP, Chip do DPP)
   ['Carregador do DPP', 'Chip do DPP'].forEach(k => { delete d.itens[k]; delete d.seriais[k]; });
+  _recalcularItensPorEstado(d);
   return d;
 }
-function salvarEstoque(d) { salvarStore('estoque', d); }
+function salvarEstoque(d) {
+  _recalcularItensPorEstado(d);
+  salvarStore('estoque', d);
+}
 
 /* ─ Helpers ────────────────────────────────────────────── */
 function estChave(tipo, tamanho) { return tipo === 'Cinta' ? 'Cinta_' + tamanho : tipo; }
@@ -8410,17 +8456,22 @@ function renderizarEstoque() {
     : '';
 
   /* Tabela Tornozeleira */
-  const tbTorn  = document.getElementById('tbody-est-torn');
+  const tbTorn   = document.getElementById('tbody-est-torn');
   const rowsTorn = [];
+  const ipe = est.itensPorEstado || { novo: {}, reutilizado: {} };
   ['Módulo eletrônico de monitoração','Trava','Carregador da tornozeleira'].forEach(tipo => {
     const chave = estChave(tipo, '');
-    const qtd = itens[tipo] || 0;
-    const min = _getMin(chave, EST_MINIMO[tipo]);
-    const cls = estStatusCls(qtd, min);
+    const qtd   = itens[tipo] || 0;
+    const min   = _getMin(chave, EST_MINIMO[tipo]);
+    const cls   = estStatusCls(qtd, min);
+    const nv    = ipe.novo[tipo] || 0;
+    const re    = ipe.reutilizado[tipo] || 0;
     const rowStyle = qtd <= min ? ' style="background:#ffeaea"' : '';
     rowsTorn.push(`<tr${rowStyle}>
       <td>${tipo}</td><td style="color:var(--cz2)">—</td>
       <td style="text-align:center"><strong>${qtd}</strong></td>
+      <td style="text-align:center">${nv > 0 ? `<span style="color:#1a7f37;font-weight:600">📦 ${nv}</span>` : '<span style="color:#aaa">—</span>'}</td>
+      <td style="text-align:center">${re > 0 ? `<span style="color:#b45309;font-weight:600">🔄 ${re}</span>` : '<span style="color:#aaa">—</span>'}</td>
       <td style="text-align:center">${min}</td>
       <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
     </tr>`);
@@ -8435,13 +8486,13 @@ function renderizarEstoque() {
         if (reutils.length) partes.push(`🔄 <strong>Reutilizados (${reutils.length}):</strong> ${reutils.map(r=>r.serial||r.imei).join(' · ')}`);
         if (outros.length)  partes.push(`📋 <strong>Outros (${outros.length}):</strong> ${outros.map(r=>r.serial||r.imei).join(' · ')}`);
         rowsTorn.push(`<tr style="background:#f8f9ff">
-          <td colspan="5" style="font-size:.78rem;color:#555;padding:4px 12px">${partes.join(' &nbsp;|&nbsp; ')}</td>
+          <td colspan="7" style="font-size:.78rem;color:#555;padding:4px 12px">${partes.join(' &nbsp;|&nbsp; ')}</td>
         </tr>`);
       } else {
         const seriais = (est.seriais || {})[tipo] || [];
         if (seriais.length > 0) {
           rowsTorn.push(`<tr style="background:#f8f9ff">
-            <td colspan="5" style="font-size:.78rem;color:#555;padding:4px 12px">
+            <td colspan="7" style="font-size:.78rem;color:#555;padding:4px 12px">
               📋 <strong>Nºs de série em estoque:</strong> ${seriais.join(' · ')}
             </td>
           </tr>`);
@@ -8454,10 +8505,14 @@ function renderizarEstoque() {
     const qtd = itens[k] || 0;
     const min = _getMin(k, EST_MINIMO['Cinta']);
     const cls = estStatusCls(qtd, min);
+    const nv  = ipe.novo[k] || 0;
+    const re  = ipe.reutilizado[k] || 0;
     const rowStyle = qtd <= min ? ' style="background:#ffeaea"' : '';
     rowsTorn.push(`<tr${rowStyle}>
       <td>Cinta</td><td>${tam}</td>
       <td style="text-align:center"><strong>${qtd}</strong></td>
+      <td style="text-align:center">${nv > 0 ? `<span style="color:#1a7f37;font-weight:600">📦 ${nv}</span>` : '<span style="color:#aaa">—</span>'}</td>
+      <td style="text-align:center">${re > 0 ? `<span style="color:#b45309;font-weight:600">🔄 ${re}</span>` : '<span style="color:#aaa">—</span>'}</td>
       <td style="text-align:center">${min}</td>
       <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
     </tr>`);
@@ -8472,12 +8527,16 @@ function renderizarEstoque() {
   const min = _getMin(chave, EST_MINIMO[tipo]);
   const cls = estStatusCls(qtd, min);
   const rowStyle = qtd <= min ? ' style="background:#ffeaea"' : '';
-  const dppRegs = (regs[tipo] || []);
+  const dppRegs       = (regs[tipo] || []);
   const comCarregador = dppRegs.filter(r => r.temCarregador).length;
   const comChip       = dppRegs.filter(r => r.temChip).length;
+  const dppNovo    = ipe.novo[tipo] || 0;
+  const dppReutil  = ipe.reutilizado[tipo] || 0;
   rowsDpp.push(`<tr${rowStyle}>
     <td>${tipo}</td>
     <td style="text-align:center"><strong>${qtd}</strong></td>
+    <td style="text-align:center">${dppNovo > 0 ? `<span style="color:#1a7f37;font-weight:600">📦 ${dppNovo}</span>` : '<span style="color:#aaa">—</span>'}</td>
+    <td style="text-align:center">${dppReutil > 0 ? `<span style="color:#b45309;font-weight:600">🔄 ${dppReutil}</span>` : '<span style="color:#aaa">—</span>'}</td>
     <td style="text-align:center">${min}</td>
     <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
     <td style="text-align:center">${comCarregador > 0 ? `🔋 ${comCarregador}` : '—'}</td>
@@ -8492,13 +8551,13 @@ function renderizarEstoque() {
     if (reutils.length) partes.push(`🔄 <strong>Reutilizados (${reutils.length}):</strong> ${reutils.map(r=>r.imei||r.serial).join(' · ')}`);
     if (outros.length)  partes.push(`📋 <strong>Outros (${outros.length}):</strong> ${outros.map(r=>r.imei||r.serial).join(' · ')}`);
     rowsDpp.push(`<tr style="background:#f8f9ff">
-      <td colspan="6" style="font-size:.78rem;color:#555;padding:4px 12px">${partes.join(' &nbsp;|&nbsp; ')}</td>
+      <td colspan="8" style="font-size:.78rem;color:#555;padding:4px 12px">${partes.join(' &nbsp;|&nbsp; ')}</td>
     </tr>`);
   } else {
     const seriais = (est.seriais || {})[tipo] || [];
     if (seriais.length > 0) {
       rowsDpp.push(`<tr style="background:#f8f9ff">
-        <td colspan="6" style="font-size:.78rem;color:#555;padding:4px 12px">
+        <td colspan="8" style="font-size:.78rem;color:#555;padding:4px 12px">
           📋 <strong>IMEIs em estoque:</strong> ${seriais.join(' · ')}
         </td>
       </tr>`);
