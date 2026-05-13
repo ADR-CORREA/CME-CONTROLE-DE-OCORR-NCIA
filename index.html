@@ -528,6 +528,7 @@ input, select, textarea, button { font-family: var(--font-sans); }
   transition: all .2s;
 }
 .btn-danger:hover { background: var(--vm2); color: var(--br); }
+.btn-sm { padding: 3px 8px !important; font-size: .75rem !important; border-radius: 4px !important; }
 .btn-edit {
   background: var(--az5);
   color: var(--az2);
@@ -1208,17 +1209,29 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
 
         <!-- Toolbar -->
         <div class="table-toolbar" style="flex-wrap:wrap;gap:8px">
-          <div style="font-weight:600;color:var(--az1);font-size:1rem">📵 Monitorados Sem Comunicação — Aquiles</div>
+          <div style="font-weight:600;color:var(--az1);font-size:1rem">📵 Monitorados Sem Comunicação — AKILES</div>
           <div class="table-actions" style="flex-wrap:wrap;gap:6px">
             <span id="semcom-ultima-importacao" style="font-size:.82rem;color:#888;align-self:center"></span>
             <label class="btn-secondary" style="cursor:pointer;margin:0">
-              📂 Importar Excel Aquiles
+              📂 Importar Excel AKILES
               <input type="file" id="semcom-file-input" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="importarExcelSemCom(this)">
             </label>
             <button class="btn-secondary" onclick="renderizarSemCom()">🔄 Atualizar</button>
             <button class="btn-secondary" onclick="exportarSemComExcel()">📥 Exportar Excel</button>
           </div>
         </div>
+
+        <!-- Sub-abas internas: Ativos / Desvinculados -->
+        <div class="sub-tabs" style="margin:10px 0 0 0;border-bottom:1px solid #e2e8f0">
+          <div class="sub-tab active" id="sc-stab-ativos" onclick="mudarSubAbaSemCom('ativos')" style="font-size:.88rem">📡 Ativos</div>
+          <div class="sub-tab" id="sc-stab-desvinculados" onclick="mudarSubAbaSemCom('desvinculados')" style="font-size:.88rem">
+            ✅ Desvinculados
+            <span id="sc-desvinc-badge" class="notif-badge" style="display:none;background:#16a34a">0</span>
+          </div>
+        </div>
+
+        <!-- ── Painel: Ativos ── -->
+        <div class="sub-panel active" id="sc-panel-ativos" style="padding:0">
 
         <!-- KPIs -->
         <div class="kpi-grid" style="margin:12px 0 8px 0;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
@@ -1320,6 +1333,69 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
             <tbody id="tbody-semcom"></tbody>
           </table>
         </div>
+        </div><!-- /sc-panel-ativos -->
+
+        <!-- ── Painel: Desvinculados ── -->
+        <div class="sub-panel" id="sc-panel-desvinculados" style="padding:0">
+          <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
+            <div style="font-weight:600;color:#16a34a">✅ Monitorados Desvinculados</div>
+            <div class="table-actions">
+              <button class="btn-secondary" onclick="renderizarSemComDesvinc()">🔄 Atualizar</button>
+              <button class="btn-secondary" onclick="exportarDesvinculadosExcel()">📥 Exportar Excel</button>
+            </div>
+          </div>
+
+          <!-- Filtros desvinculados -->
+          <div class="tri-filtros" style="margin-top:8px">
+            <div class="tri-filtros-title">🔍 Filtros</div>
+            <div class="tri-filtros-grid">
+              <div class="form-field" style="margin:0">
+                <label>Nome</label>
+                <input type="text" id="scde-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemComDesvinc()">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Registro</label>
+                <input type="text" id="scde-f-registro" placeholder="Nº registro..." oninput="renderizarSemComDesvinc()">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Servidor que desvinculou</label>
+                <input type="text" id="scde-f-servidor" placeholder="Nome do servidor..." oninput="renderizarSemComDesvinc()">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Data desvinculação início</label>
+                <input type="date" id="scde-f-inicio" onchange="renderizarSemComDesvinc()">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Data desvinculação fim</label>
+                <input type="date" id="scde-f-fim" onchange="renderizarSemComDesvinc()">
+              </div>
+              <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+                <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemComDesvinc()">✕ Limpar</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="est-section-title" id="sc-desvinc-count-label">Desvinculados</div>
+          <div class="table-scroll">
+            <table class="data-table" style="font-size:.83rem">
+              <thead><tr>
+                <th>Nº</th>
+                <th>Nome</th>
+                <th>Registro</th>
+                <th>Última Comunicação</th>
+                <th>Dias (na desvinc.)</th>
+                <th>Unidade</th>
+                <th>Data Desvinculação</th>
+                <th>Servidor</th>
+                <th>Ato / Autorização</th>
+                <th>Sistema</th>
+                <th>Observações</th>
+                <th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-semcom-desvinc"></tbody>
+            </table>
+          </div>
+        </div><!-- /sc-panel-desvinculados -->
 
       </div><!-- /jur-panel-semcom -->
 
@@ -1902,55 +1978,78 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
         </div>
       </div>
 
-      <div id="est-aviso-perm" class="est-aviso-perm" style="display:none">
-        🔒 <strong>Modo visualização:</strong> seu perfil não possui permissão para alterar o estoque.
-      </div>
-      <div id="est-alertas"></div>
-
-      <!-- KPI Cards -->
-      <div class="est-kpi-grid">
-        <div class="est-kpi"><div class="est-kpi-num" id="est-k-mod">0</div><div class="est-kpi-label">Módulo Eletrônico</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="est-k-cinta">0</div><div class="est-kpi-label">Cintas (total)</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="est-k-trava">0</div><div class="est-kpi-label">Travas</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="est-k-carrtor">0</div><div class="est-kpi-label">Carregadores Tornozeleira</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="est-k-dpp">0</div><div class="est-kpi-label">Dispositivos DPP</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="est-k-carrdpp">0</div><div class="est-kpi-label">Carregadores DPP</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="est-k-chip">0</div><div class="est-kpi-label">Chips DPP</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="est-k-total">0</div><div class="est-kpi-label">Total Geral</div></div>
-        <div class="est-kpi alerta"><div class="est-kpi-num" id="est-k-baixo">0</div><div class="est-kpi-label">Estoque Baixo</div></div>
-        <div class="est-kpi perigo"><div class="est-kpi-num" id="est-k-zero">0</div><div class="est-kpi-label">Sem Estoque</div></div>
+      <!-- Sub-tabs -->
+      <div class="sub-tabs" style="margin-bottom:0">
+        <div class="sub-tab active" id="est-stab-estoque"  onclick="mudarSubAbaEstoque('estoque')">📦 Estoque</div>
+        <div class="sub-tab"       id="est-stab-consultar" onclick="mudarSubAbaEstoque('consultar')">🔍 Consultar</div>
       </div>
 
-      <!-- Tabela Tornozeleira -->
-      <div class="est-section-title">Tornozeleira Eletrônica</div>
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead><tr><th>Item</th><th>Tamanho</th><th style="text-align:center">Qtd. Atual</th><th style="text-align:center">Mínimo</th><th>Status</th></tr></thead>
-          <tbody id="tbody-est-torn"></tbody>
-        </table>
-      </div>
+      <!-- Sub-panel Estoque -->
+      <div id="est-panel-estoque" class="sub-panel" style="display:block">
+        <div id="est-aviso-perm" class="est-aviso-perm" style="display:none">
+          🔒 <strong>Modo visualização:</strong> seu perfil não possui permissão para alterar o estoque.
+        </div>
+        <div id="est-alertas"></div>
 
-      <!-- Tabela DPP -->
-      <div class="est-section-title">DPP — Dispositivo de Proteção Pessoal</div>
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead><tr><th>Item</th><th style="text-align:center">Qtd. Atual</th><th style="text-align:center">Mínimo</th><th>Status</th></tr></thead>
-          <tbody id="tbody-est-dpp"></tbody>
-        </table>
-      </div>
+        <!-- KPI Cards -->
+        <div class="est-kpi-grid">
+          <div class="est-kpi"><div class="est-kpi-num" id="est-k-mod">0</div><div class="est-kpi-label">Módulo Eletrônico</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="est-k-cinta">0</div><div class="est-kpi-label">Cintas (total)</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="est-k-trava">0</div><div class="est-kpi-label">Travas</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="est-k-carrtor">0</div><div class="est-kpi-label">Carregadores Tornozeleira</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="est-k-dpp">0</div><div class="est-kpi-label">Dispositivos DPP</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="est-k-novo">0</div><div class="est-kpi-label">Tornozeleiras Novas</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="est-k-reutil">0</div><div class="est-kpi-label">Tornozeleiras Reutilizadas</div></div>
+          <div class="est-kpi"><div class="est-kpi-num" id="est-k-total">0</div><div class="est-kpi-label">Total Geral</div></div>
+          <div class="est-kpi alerta"><div class="est-kpi-num" id="est-k-baixo">0</div><div class="est-kpi-label">Estoque Baixo</div></div>
+          <div class="est-kpi perigo"><div class="est-kpi-num" id="est-k-zero">0</div><div class="est-kpi-label">Sem Estoque</div></div>
+        </div>
 
-      <!-- Histórico -->
-      <div class="est-section-title" style="margin-top:28px">Histórico de Movimentações</div>
-      <div class="table-wrapper" style="overflow-x:auto">
-        <table class="data-table">
-          <thead><tr>
-            <th>Data/Hora</th><th>Tipo</th><th>Categoria</th><th>Item</th><th>Tamanho</th>
-            <th>Qtd</th><th>Responsável</th><th>Motivo</th><th>Monitorado</th>
-            <th>Plantão</th><th>Plantonista</th><th>Dt. Entrega</th><th>Observação</th>
-          </tr></thead>
-          <tbody id="tbody-est-hist"></tbody>
-        </table>
-      </div>
+        <!-- Tabela Tornozeleira -->
+        <div class="est-section-title">Tornozeleira Eletrônica</div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>Item</th><th>Tamanho</th><th style="text-align:center">Qtd. Atual</th><th style="text-align:center">Mínimo</th><th>Status</th></tr></thead>
+            <tbody id="tbody-est-torn"></tbody>
+          </table>
+        </div>
+
+        <!-- Tabela DPP -->
+        <div class="est-section-title">DPP — Dispositivo de Proteção Pessoal</div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>Item</th><th style="text-align:center">Qtd. Atual</th><th style="text-align:center">Mínimo</th><th>Status</th><th style="text-align:center">Com Carregador</th><th style="text-align:center">Com Chip</th></tr></thead>
+            <tbody id="tbody-est-dpp"></tbody>
+          </table>
+        </div>
+
+        <!-- Histórico -->
+        <div class="est-section-title" style="margin-top:28px">Histórico de Movimentações</div>
+        <div class="table-wrapper" style="overflow-x:auto">
+          <table class="data-table">
+            <thead><tr>
+              <th>Data/Hora</th><th>Tipo</th><th>Categoria</th><th>Item</th><th>Tamanho</th>
+              <th>Qtd</th><th>Responsável</th><th>Motivo</th><th>Monitorado</th>
+              <th>Plantão</th><th>Plantonista</th><th>Dt. Entrega</th><th>Observação</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="tbody-est-hist"></tbody>
+          </table>
+        </div>
+      </div><!-- /est-panel-estoque -->
+
+      <!-- Sub-panel Consultar -->
+      <div id="est-panel-consultar" class="sub-panel" style="display:none">
+        <div style="max-width:600px;margin:24px auto 0">
+          <div class="form-field" style="margin-bottom:16px">
+            <label style="font-size:1rem;font-weight:600">🔍 Buscar por Nº de Série / IMEI</label>
+            <input type="text" id="est-consultar-input" placeholder="Digite o nº de série, IMEI ou número de registro..."
+              oninput="consultarSerial(this.value)"
+              style="width:100%;padding:10px 14px;font-size:1rem;border:1px solid #ccc;border-radius:8px;margin-top:6px">
+          </div>
+          <div id="est-consultar-resultado"></div>
+        </div>
+      </div><!-- /est-panel-consultar -->
+
     </div><!-- /panel-estoque -->
 
     <!-- ─── TRIAGEM ─── -->
@@ -2681,6 +2780,21 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
   </div>
 </div>
 
+<!-- MODAL VISUALIZADOR GENÉRICO — usado por todos os módulos -->
+<div class="modal-overlay" id="modal-viewer">
+  <div class="modal-box" style="max-width:680px">
+    <div class="modal-header">
+      <h3 id="viewer-title">Visualizar Registro</h3>
+      <button class="modal-close" onclick="fecharModal('modal-viewer')">✕</button>
+    </div>
+    <div class="modal-body" id="viewer-body" style="padding-top:4px"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-viewer')">Fechar</button>
+      <button class="btn-primary" id="viewer-btn-editar" style="display:none">✏ Editar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: OFC / VINCULAÇÃO — Adicionar / Editar -->
 <div class="modal-overlay" id="modal-ofc">
   <div class="modal-box" style="max-width:700px">
@@ -2933,7 +3047,7 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
           </div>
           <div class="form-field">
             <label>Sistema (desktop utilizado)</label>
-            <input type="text" id="desvinc-sistema" placeholder="Ex: Sistema Aquiles Desktop">
+            <input type="text" id="desvinc-sistema" placeholder="Ex: Sistema AKILES Desktop">
           </div>
         </div>
         <div class="form-field full">
@@ -2958,7 +3072,7 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
     </div>
     <div class="modal-body">
       <div class="form-section">
-        <div class="form-section-title">Dados Aquiles</div>
+        <div class="form-section-title">Dados AKILES</div>
         <div class="form-grid three">
           <div class="form-field"><label>Nome</label><input class="auto-field" readonly id="vsem-nome"></div>
           <div class="form-field"><label>Registro</label><input class="auto-field" readonly id="vsem-registro"></div>
@@ -3619,16 +3733,15 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
           <input type="number" id="ent-quantidade" min="1" placeholder="0" oninput="atualizarCamposSerialEntrada()"></div>
         <div class="form-field"><label>Nº de Série / Patrimônio</label>
           <input type="text" id="ent-numserie" placeholder="Identificação patrimonial"></div>
-        <div class="form-field"><label>Estado do Item</label>
+        <div class="form-field"><label>Estado do Item *</label>
           <select id="ent-estado">
             <option value="">Selecione...</option>
             <option value="Novo">Novo</option>
             <option value="Reutilizado">Reutilizado</option>
-            <option value="Danificado">Danificado</option>
           </select></div>
       </div>
       <div id="ent-seriais-container" style="display:none">
-        <div class="form-section-title" style="margin-top:12px">Números de Série</div>
+        <div class="form-section-title" style="margin-top:12px" id="ent-seriais-titulo">Números de Série</div>
         <div id="ent-seriais-lista"></div>
       </div>
       <div class="form-grid">
@@ -3675,9 +3788,15 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
         <div class="form-grid">
           <div class="form-field"><label>Quantidade *</label>
             <input type="number" id="sai-quantidade" min="1" placeholder="0" oninput="atualizarCamposSerialSaida()"></div>
+          <div class="form-field"><label>Estado do Item *</label>
+            <select id="sai-estado">
+              <option value="">Selecione...</option>
+              <option value="Novo">Novo</option>
+              <option value="Reutilizado">Reutilizado</option>
+            </select></div>
         </div>
         <div id="sai-seriais-container" style="display:none">
-          <div class="form-section-title" style="margin-top:12px">Selecionar Números de Série</div>
+          <div class="form-section-title" style="margin-top:12px" id="sai-seriais-titulo">Selecionar Números de Série</div>
           <div id="sai-seriais-lista"></div>
         </div>
       </div>
@@ -3756,7 +3875,7 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
           <input type="text" id="dev-responsavel" placeholder="Nome do servidor"></div>
       </div>
       <div id="dev-seriais-container" style="display:none">
-        <div class="form-section-title" style="margin-top:12px">Números de Série</div>
+        <div class="form-section-title" style="margin-top:12px" id="dev-seriais-titulo">Números de Série</div>
         <div id="dev-seriais-lista"></div>
       </div>
       <div class="form-grid">
@@ -4377,7 +4496,10 @@ function renderizarCriticos() {
             ? `<span style="color:#1F4E78;font-size:.78rem;font-weight:600">📡 Enc.<br><small>${formatDate(oc.encaminhadoComEm)}</small></span>`
             : `<button class="btn-sm btn-primary" style="font-size:.75rem" onclick="abrirModalEncaminharCom(${findIdx(oc.id)})">📡 Enc. p/ COM</button>`
       }</td>
-      <td><button class="btn-edit" onclick="editarOcorrencia(${findIdx(oc.id)})">Editar</button></td>
+      <td style="white-space:nowrap">
+        <button class="btn-sm btn-outline" onclick="verOcorrenciaIdx(${findIdx(oc.id)})" title="Visualizar">👁</button>
+        <button class="btn-edit" onclick="editarOcorrencia(${findIdx(oc.id)})" style="margin-left:4px">Editar</button>
+      </td>
     </tr>`;
   }).join("");
 }
@@ -4983,6 +5105,20 @@ function _parseDiasSemCom(tempoStr) {
   return mDays ? parseInt(mDays[1]) : 0;
 }
 
+// Calcula dias dinamicamente a partir da data da última comunicação.
+// Cresce automaticamente a cada dia sem precisar reimportar o Excel.
+function _diasSemComAtual(m) {
+  if (m.ultimaComunicacao) {
+    const ultima = new Date(m.ultimaComunicacao);
+    if (!isNaN(ultima)) {
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      return Math.floor((hoje - ultima) / 86400000);
+    }
+  }
+  return m.diasSemCom || 0; // fallback se não houver data
+}
+
 function _corDias(dias, desvinculado) {
   if (desvinculado) return 'background:#dcfce7';
   if (dias >= 180)  return 'background:#fee2e2;font-weight:bold;color:#dc2626';
@@ -4992,7 +5128,7 @@ function _corDias(dias, desvinculado) {
   return '';
 }
 
-// ── Importar Excel Aquiles ─────────────────────────────────
+// ── Importar Excel AKILES ─────────────────────────────────
 function importarExcelSemCom(input) {
   const file = input.files[0];
   if (!file) return;
@@ -5030,7 +5166,7 @@ function importarExcelSemCom(input) {
     // ── 3. Parse HTML ──────────────────────────────────────
     const doc = new DOMParser().parseFromString(text, 'text/html');
 
-    // Escolhe a tabela com mais linhas (tabela de dados do Aquiles)
+    // Escolhe a tabela com mais linhas (tabela de dados do AKILES)
     const tables = Array.from(doc.querySelectorAll('table'));
     if (!tables.length) { _mostrarToast('Nenhuma tabela encontrada no arquivo.', 'erro'); input.value=''; return; }
     const dataTable = tables.reduce((best, t) =>
@@ -5089,7 +5225,7 @@ function importarExcelSemCom(input) {
 
       const idx = dados.monitorados.findIndex(m => m.registro === registro);
       if (idx >= 0) {
-        // Atualiza só campos vindos do Aquiles — preserva tratativas, desvinculação, situação
+        // Atualiza só campos vindos do AKILES — preserva tratativas, desvinculação, situação
         Object.assign(dados.monitorados[idx], { nome, ultimaComunicacao: dataUlt, tempoSemCom: tempo, intervalo, unidade, diasSemCom: dias, atualizadoEm: agora });
         atualizados++;
       } else {
@@ -5117,14 +5253,127 @@ function importarExcelSemCom(input) {
   reader.readAsArrayBuffer(file); // lê como binário para detectar encoding corretamente
 }
 
+// ── Sub-abas internas do Sem Comunicação ──────────────────
+function mudarSubAbaSemCom(aba) {
+  ['ativos','desvinculados'].forEach(a => {
+    document.getElementById('sc-stab-'      + a)?.classList.toggle('active', a === aba);
+    document.getElementById('sc-panel-'     + a)?.classList.toggle('active', a === aba);
+  });
+  if (aba === 'desvinculados') renderizarSemComDesvinc();
+  if (aba === 'ativos')        renderizarSemCom();
+}
+
 // ── Badge ──────────────────────────────────────────────────
 function atualizarBadgeSemCom() {
   const dados = getSemCom();
-  const ct180 = dados.monitorados.filter(m => m.diasSemCom >= 180 && m.situacao !== 'desvinculado').length;
+  const ct180 = dados.monitorados.filter(m => _diasSemComAtual(m) >= 180 && m.situacao !== 'desvinculado').length;
   const badge = document.getElementById('jur-semcom-badge');
-  if (!badge) return;
-  badge.textContent = ct180;
-  badge.style.display = ct180 > 0 ? 'flex' : 'none';
+  if (badge) { badge.textContent = ct180; badge.style.display = ct180 > 0 ? 'flex' : 'none'; }
+
+  // Badge dos desvinculados (verde)
+  const ctDesvinc = dados.monitorados.filter(m => m.situacao === 'desvinculado').length;
+  const bdDesvinc = document.getElementById('sc-desvinc-badge');
+  if (bdDesvinc) { bdDesvinc.textContent = ctDesvinc; bdDesvinc.style.display = ctDesvinc > 0 ? 'flex' : 'none'; }
+}
+
+// ── Renderizar Desvinculados ───────────────────────────────
+function renderizarSemComDesvinc() {
+  const dados  = getSemCom();
+  const fNome  = (document.getElementById('scde-f-nome')?.value     || '').toLowerCase().trim();
+  const fReg   = (document.getElementById('scde-f-registro')?.value || '').toLowerCase().trim();
+  const fSrv   = (document.getElementById('scde-f-servidor')?.value || '').toLowerCase().trim();
+  const fIni   = document.getElementById('scde-f-inicio')?.value || '';
+  const fFim   = document.getElementById('scde-f-fim')?.value    || '';
+
+  let lista = (dados.monitorados || []).filter(m => m.situacao === 'desvinculado');
+  if (fNome) lista = lista.filter(m => m.nome.toLowerCase().includes(fNome));
+  if (fReg)  lista = lista.filter(m => (m.registro||'').toLowerCase().includes(fReg));
+  if (fSrv)  lista = lista.filter(m => (m.desvinculacao?.servidor||'').toLowerCase().includes(fSrv));
+  if (fIni)  lista = lista.filter(m => (m.desvinculacao?.data||'') >= fIni);
+  if (fFim)  lista = lista.filter(m => (m.desvinculacao?.data||'') <= fFim);
+
+  lista.sort((a,b) => (b.desvinculacao?.data||'').localeCompare(a.desvinculacao?.data||''));
+
+  const countEl = document.getElementById('sc-desvinc-count-label');
+  if (countEl) countEl.textContent = `${lista.length} desvinculado${lista.length !== 1 ? 's' : ''}`;
+
+  const tbody = document.getElementById('tbody-semcom-desvinc');
+  if (!tbody) return;
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:32px;color:#888">Nenhum monitorado desvinculado ainda.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = lista.map((m, i) => {
+    const dv = m.desvinculacao || {};
+    const dataDesvinc = dv.data ? dv.data.split('-').reverse().join('/') : '—';
+    const diasNaDesvinc = m.diasSemCom || _diasSemComAtual(m);
+    return `<tr style="background:#f0fdf4">
+      <td>${i + 1}</td>
+      <td><strong>${m.nome}</strong></td>
+      <td style="font-family:var(--font-mono)">${m.registro}</td>
+      <td style="font-size:.82rem">${(m.ultimaComunicacao||'').slice(0,16).replace('T',' ')}</td>
+      <td style="text-align:center;font-weight:bold;color:#dc2626">${diasNaDesvinc}d</td>
+      <td style="font-size:.8rem">${m.unidade||'—'}</td>
+      <td style="font-family:var(--font-mono);font-size:.82rem"><strong>${dataDesvinc}</strong></td>
+      <td>${dv.servidor||'—'}</td>
+      <td style="font-size:.8rem">${dv.ato||'—'}</td>
+      <td style="font-size:.8rem">${dv.sistema||'—'}</td>
+      <td style="font-size:.79rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${dv.obs||''}">${dv.obs||'—'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-sm btn-outline" onclick="verMonitoradoSemCom('${m.id}')" title="Visualizar">👁</button>
+        <button class="btn-sm btn-outline" style="color:#ea580c;border-color:#ea580c;margin-left:4px" onclick="reverterDesvinculacao('${m.id}')" title="Reverter">↩</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function limparFiltrosSemComDesvinc() {
+  ['scde-f-nome','scde-f-registro','scde-f-servidor','scde-f-inicio','scde-f-fim'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  renderizarSemComDesvinc();
+}
+
+// Reverter desvinculação (volta para Ativos)
+function reverterDesvinculacao(id) {
+  if (!confirm('Reverter desvinculação? O monitorado voltará para a lista de Ativos.')) return;
+  const dados = getSemCom();
+  const m = dados.monitorados.find(x => x.id === id);
+  if (!m) return;
+  m.situacao = 'ativo';
+  m.desvinculacao = null;
+  salvarSemCom(dados);
+  atualizarBadgeSemCom();
+  renderizarSemComDesvinc();
+  _mostrarToast('↩ Desvinculação revertida. Monitorado voltou para Ativos.', 'sucesso');
+}
+
+// Exportar desvinculados
+function exportarDesvinculadosExcel() {
+  const lista = (getSemCom().monitorados || []).filter(m => m.situacao === 'desvinculado')
+    .sort((a,b) => (b.desvinculacao?.data||'').localeCompare(a.desvinculacao?.data||''));
+  if (!lista.length) { _mostrarToast('Nenhum desvinculado para exportar.', 'erro'); return; }
+  const rows = lista.map((m, i) => ({
+    'Nº':                   i + 1,
+    'Nome':                 m.nome,
+    'Registro':             m.registro,
+    'Última Comunicação':   (m.ultimaComunicacao||'').slice(0,16).replace('T',' '),
+    'Dias (na desvinc.)':   m.diasSemCom || 0,
+    'Unidade':              m.unidade || '',
+    'Data Desvinculação':   m.desvinculacao?.data || '',
+    'Servidor':             m.desvinculacao?.servidor || '',
+    'Ato / Autorização':    m.desvinculacao?.ato || '',
+    'Sistema':              m.desvinculacao?.sistema || '',
+    'Observações':          m.desvinculacao?.obs || '',
+    'Qtd. Tratativas':      (m.tratativas||[]).length,
+  }));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:4},{wch:35},{wch:14},{wch:20},{wch:10},{wch:18},{wch:16},{wch:25},{wch:22},{wch:22},{wch:30},{wch:8}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Desvinculados');
+  XLSX.writeFile(wb, 'desvinculados_CME.xlsx');
+  _mostrarToast('Excel exportado!', 'sucesso');
 }
 
 // ── Renderizar tabela ──────────────────────────────────────
@@ -5143,19 +5392,19 @@ function renderizarSemCom() {
   if (fSituacao === 'desvinculado') lista = lista.filter(m => m.situacao === 'desvinculado');
   else if (fSituacao === 'tratativa') lista = lista.filter(m => (m.tratativas||[]).length > 0 && m.situacao !== 'desvinculado');
   else if (fSituacao === 'ativo')    lista = lista.filter(m => m.situacao !== 'desvinculado');
-  if (fDiasMin > 0) lista = lista.filter(m => (m.diasSemCom||0) >= fDiasMin);
+  if (fDiasMin > 0) lista = lista.filter(m => _diasSemComAtual(m) >= fDiasMin);
 
   // Ordenar: maiores dias primeiro (críticos no topo)
-  lista.sort((a,b) => (b.diasSemCom||0) - (a.diasSemCom||0));
+  lista.sort((a,b) => _diasSemComAtual(b) - _diasSemComAtual(a));
 
-  // KPIs
+  // KPIs — calculados dinamicamente
   const all = dados.monitorados || [];
   document.getElementById('sc-kpi-total').textContent  = all.length;
-  document.getElementById('sc-kpi-4h').textContent     = all.filter(m => m.diasSemCom === 0).length;
-  document.getElementById('sc-kpi-1d').textContent     = all.filter(m => m.diasSemCom >= 1 && m.diasSemCom < 7).length;
-  document.getElementById('sc-kpi-7d').textContent     = all.filter(m => m.diasSemCom >= 7 && m.diasSemCom < 30).length;
-  document.getElementById('sc-kpi-30d').textContent    = all.filter(m => m.diasSemCom >= 30 && m.diasSemCom < 180).length;
-  document.getElementById('sc-kpi-180d').textContent   = all.filter(m => m.diasSemCom >= 180 && m.situacao !== 'desvinculado').length;
+  document.getElementById('sc-kpi-4h').textContent     = all.filter(m => _diasSemComAtual(m) === 0).length;
+  document.getElementById('sc-kpi-1d').textContent     = all.filter(m => { const d = _diasSemComAtual(m); return d >= 1 && d < 7; }).length;
+  document.getElementById('sc-kpi-7d').textContent     = all.filter(m => { const d = _diasSemComAtual(m); return d >= 7 && d < 30; }).length;
+  document.getElementById('sc-kpi-30d').textContent    = all.filter(m => { const d = _diasSemComAtual(m); return d >= 30 && d < 180; }).length;
+  document.getElementById('sc-kpi-180d').textContent   = all.filter(m => _diasSemComAtual(m) >= 180 && m.situacao !== 'desvinculado').length;
   document.getElementById('sc-kpi-desvinc').textContent = all.filter(m => m.situacao === 'desvinculado').length;
 
   // Última importação
@@ -5171,14 +5420,15 @@ function renderizarSemCom() {
   const tbody = document.getElementById('tbody-semcom');
   if (!tbody) return;
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:#888">Nenhum registro encontrado. Importe o Excel do Aquiles.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:#888">Nenhum registro encontrado. Importe o Excel do AKILES.</td></tr>';
     return;
   }
 
   const desv = m => m.situacao === 'desvinculado';
   tbody.innerHTML = lista.map((m, i) => {
-    const rowStyle = _corDias(m.diasSemCom, desv(m));
-    const badges180 = m.diasSemCom >= 180 && !desv(m) ? '<span style="background:#dc2626;color:#fff;border-radius:4px;padding:1px 5px;font-size:.75rem;margin-left:4px">⚠️ 180d</span>' : '';
+    const dias = _diasSemComAtual(m);
+    const rowStyle = _corDias(dias, desv(m));
+    const badges180 = dias >= 180 && !desv(m) ? '<span style="background:#dc2626;color:#fff;border-radius:4px;padding:1px 5px;font-size:.75rem;margin-left:4px">⚠️ 180d</span>' : '';
     const tratQt = (m.tratativas||[]).length;
     const sitLabel = desv(m)
       ? '<span style="color:#16a34a;font-weight:bold">✅ Desvinculado</span>'
@@ -5192,7 +5442,7 @@ function renderizarSemCom() {
       <td style="font-family:var(--font-mono)">${m.registro}</td>
       <td style="font-size:.82rem">${(m.ultimaComunicacao||'').slice(0,16).replace('T',' ')}</td>
       <td style="font-size:.82rem">${m.tempoSemCom||'—'}</td>
-      <td style="font-weight:bold;color:${m.diasSemCom>=180?'#dc2626':m.diasSemCom>=7?'#ea580c':'#374151'}">${m.diasSemCom}</td>
+      <td style="font-weight:bold;color:${dias>=180?'#dc2626':dias>=7?'#ea580c':'#374151'}">${dias}</td>
       <td style="font-size:.8rem">${m.intervalo||'—'}</td>
       <td style="font-size:.8rem">${m.unidade||'—'}</td>
       <td>${sitLabel}</td>
@@ -5264,11 +5514,11 @@ function abrirModalDesvinc(monId) {
   document.getElementById('desvinc-monit-id').value = monId;
   document.getElementById('desvinc-nome').value = m.nome;
   document.getElementById('desvinc-registro').value = m.registro;
-  document.getElementById('desvinc-dias').value = m.diasSemCom + ' dias';
+  document.getElementById('desvinc-dias').value = _diasSemComAtual(m) + ' dias';
   document.getElementById('desvinc-data').value = new Date().toISOString().slice(0,10);
   document.getElementById('desvinc-servidor').value = usuarioAtual?.nome || '';
   document.getElementById('desvinc-ato').value = '';
-  document.getElementById('desvinc-sistema').value = 'Sistema Aquiles Desktop';
+  document.getElementById('desvinc-sistema').value = 'Sistema AKILES Desktop';
   document.getElementById('desvinc-obs').value = '';
   document.getElementById('modal-semcom-desvinc').classList.add('open');
 }
@@ -5293,8 +5543,9 @@ function salvarDesvinculacao() {
   salvarSemCom(dados);
   atualizarBadgeSemCom();
   fecharModal('modal-semcom-desvinc');
-  renderizarSemCom();
-  _mostrarToast('Desvinculação registrada!', 'sucesso');
+  // Redireciona automaticamente para a sub-aba Desvinculados
+  mudarSubAbaSemCom('desvinculados');
+  _mostrarToast('✅ Desvinculação registrada! Registro movido para Desvinculados.', 'sucesso');
 }
 
 // ── Modal: Visualizar ──────────────────────────────────────
@@ -5308,7 +5559,7 @@ function verMonitoradoSemCom(monId) {
   document.getElementById('vsem-unidade').value   = m.unidade || '—';
   document.getElementById('vsem-ultima').value    = (m.ultimaComunicacao||'').slice(0,16).replace('T',' ');
   document.getElementById('vsem-tempo').value     = m.tempoSemCom || '—';
-  document.getElementById('vsem-dias').value      = m.diasSemCom + ' dias';
+  document.getElementById('vsem-dias').value      = _diasSemComAtual(m) + ' dias';
   document.getElementById('vsem-intervalo').value = m.intervalo || '—';
   document.getElementById('vsem-importado').value = m.importadoEm ? new Date(m.importadoEm).toLocaleString('pt-BR') : '—';
   document.getElementById('vsem-situacao').value  = m.situacao === 'desvinculado' ? 'Desvinculado' : m.situacao === 'ativo' ? 'Ativo' : m.situacao;
@@ -5347,7 +5598,7 @@ function exportarSemComExcel() {
     'Registro':             m.registro,
     'Última Comunicação':   (m.ultimaComunicacao||'').slice(0,16).replace('T',' '),
     'Tempo Sem Comunicação': m.tempoSemCom || '',
-    'Dias Sem Comunicação': m.diasSemCom || 0,
+    'Dias Sem Comunicação': _diasSemComAtual(m),
     'Intervalo':            m.intervalo || '',
     'Unidade Prisional':    m.unidade || '',
     'Situação':             m.situacao === 'desvinculado' ? 'Desvinculado' : 'Ativo',
@@ -5370,6 +5621,145 @@ function exportarSemComExcel() {
   XLSX.writeFile(wb, 'sem_comunicacao_CME.xlsx');
   _mostrarToast('Excel exportado com sucesso!', 'sucesso');
 }
+
+/* ═══════════════════════════════════════════════════════════
+   VISUALIZADOR GENÉRICO — usado por todos os módulos
+   ═══════════════════════════════════════════════════════════ */
+
+function _vf(label, value, span2) {
+  const v = (value === null || value === undefined || value === '') ? '—' : String(value);
+  return `<div class="form-field" style="margin:0${span2?';grid-column:span 2':''}">
+    <label style="font-size:.8rem;color:#666">${label}</label>
+    <input class="auto-field" readonly value="${v.replace(/"/g,'&quot;')}" style="background:#f8fafc;border-color:#e2e8f0">
+  </div>`;
+}
+function _vta(label, value) {
+  const v = (value === null || value === undefined || value === '') ? '—' : String(value);
+  return `<div class="form-field full" style="margin:0">
+    <label style="font-size:.8rem;color:#666">${label}</label>
+    <textarea class="auto-field" readonly rows="3" style="resize:none;background:#f8fafc;border-color:#e2e8f0">${v}</textarea>
+  </div>`;
+}
+function _vsec(title, html) {
+  return `<div class="form-section" style="margin-bottom:12px">
+    <div class="form-section-title">${title}</div>
+    <div class="form-grid" style="gap:8px">${html}</div>
+  </div>`;
+}
+function _abrirViewer(title, bodyHtml, onEditar) {
+  document.getElementById('viewer-title').textContent = title;
+  document.getElementById('viewer-body').innerHTML = bodyHtml;
+  const btn = document.getElementById('viewer-btn-editar');
+  if (onEditar) {
+    btn.style.display = '';
+    btn.onclick = () => { fecharModal('modal-viewer'); onEditar(); };
+  } else {
+    btn.style.display = 'none';
+  }
+  document.getElementById('modal-viewer').classList.add('open');
+}
+
+// ── Críticos / Comunicação — reutiliza modal de ocorrência ─
+function verOcorrenciaIdx(idx) { visualizarOcorrencia(idx); }
+
+// ── Relatório ───────────────────────────────────────────────
+function verRelatorio(id) {
+  const r = (getRelatorios().registros||[]).find(x => x.id === id);
+  if (!r) return;
+  const html =
+    _vsec('Dados do Relatório',
+      _vf('Tipo de Relatório', r.tipo) +
+      _vf('Monitorado', r.monitorado) +
+      _vf('Servidor Responsável', r.servidor) +
+      _vf('Data de Recebimento', r.dataRecebimento ? r.dataRecebimento.split('-').reverse().join('/') : '') +
+      _vf('Data Envio à Comunicação', r.dataEnvio ? r.dataEnvio.split('-').reverse().join('/') : '') +
+      _vf('Enviado COM em', r.comEnviadoEm ? r.comEnviadoEm.replace('T',' ').slice(0,16) : 'Não enviado')
+    ) +
+    _vsec('Observações', _vta('Observação', r.obs));
+  const podeEd = usuarioAtual && ['admin','gerencia','relatorio'].includes(usuarioAtual.nivel);
+  _abrirViewer('Relatório — ' + (r.monitorado||''), html, podeEd ? () => abrirModalRelatorio(id) : null);
+}
+
+// ── Gerência ────────────────────────────────────────────────
+function verGerencia(id) {
+  const d = (getGerencia().demandas||[]).find(x => x.id === id);
+  if (!d) return;
+  const statusMap = { pendente:'⏳ Pendente', andamento:'🔵 Em andamento', concluida:'✅ Concluída' };
+  const html =
+    _vsec('Demanda',
+      _vf('Título', d.titulo, true) +
+      _vf('Prazo', d.prazo ? d.prazo.split('-').reverse().join('/') : '') +
+      _vf('Responsável', d.responsavel) +
+      _vf('Status', statusMap[d.status] || d.status)
+    ) +
+    _vsec('Detalhes',
+      _vta('Descrição', d.descricao)
+    );
+  const podeEd = usuarioAtual && ['admin','gerencia'].includes(usuarioAtual.nivel);
+  _abrirViewer('Demanda — ' + (d.titulo||''), html, podeEd ? () => abrirModalGerencia(id) : null);
+}
+
+// ── Triagem ─────────────────────────────────────────────────
+function verTriagem(id) {
+  const a = ((getTriagem().atendimentos)||[]).find(x => x.id === id);
+  if (!a) return;
+  const html =
+    _vsec('Identificação',
+      _vf('Nome', a.nome) +
+      _vf('CPF', a.cpf) +
+      _vf('Data', a.data ? a.data.split('-').reverse().join('/') : '') +
+      _vf('Responsável', a.responsavel)
+    ) +
+    _vsec('Dados da Medida',
+      _vf('Tipo de Atendimento', a.tipo) +
+      _vf('Medida', a.medida) +
+      _vf('Condição na Medida', a.condicao) +
+      _vf('Advogado?', a.adv) +
+      _vf('Cliente/Monitorado', a.clienteMonitorado)
+    ) +
+    _vsec('Observações', _vta('Observação', a.obs));
+  const podeEd = podeAlterarTriagem();
+  _abrirViewer('Triagem — ' + (a.nome||''), html, podeEd ? () => abrirModalTriagem(id) : null);
+}
+
+// ── Psicossocial ────────────────────────────────────────────
+function verPsi(id) {
+  const a = ((getPsi().atendimentos)||[]).find(x => x.id === id);
+  if (!a) return;
+  const html =
+    _vsec('Identificação',
+      _vf('Público', a.publico) +
+      _vf('Nome', a.nome) +
+      _vf('CPF', a.cpf) +
+      _vf('Processo', a.processo) +
+      _vf('Medida', a.medida) +
+      _vf('Data/Hora', a.dataHora ? a.dataHora.replace('T',' ') : a.data)
+    ) +
+    _vsec('Atendimento',
+      _vf('Tipo', a.tipo) +
+      _vf('Modalidade', a.modalidade) +
+      _vf('Área', a.area) +
+      _vf('Caráter', a.carater) +
+      _vf('Profissional', a.profissional) +
+      _vf('Próximo Atendimento', a.proximoAtend ? a.proximoAtend.split('-').reverse().join('/') : '') +
+      _vf('Situação Verificada', a.situacao) +
+      _vf('Nível de Risco', a.risco) +
+      _vf('Origem', a.origem)
+    ) +
+    (a.fatoresVul?.length ? _vsec('Fatores de Vulnerabilidade', _vf('Fatores', a.fatoresVul.join(', '), true)) : '') +
+    (a.encaminhamentos?.length ? _vsec('Encaminhamentos', _vf('Realizados', a.encaminhamentos.join(', '), true)) : '') +
+    _vsec('Registro Técnico',
+      _vta('Descrição', a.descricao) +
+      _vta('Análise Técnica', a.analise) +
+      _vta('Providência', a.providencia) +
+      _vta('Observações', a.obs)
+    );
+  const podeEd = podeAlterarPsi();
+  _abrirViewer('Psicossocial — ' + (a.nome||''), html, podeEd ? () => abrirModalPsi(id) : null);
+}
+
+// ── Comunicação — reutiliza visualizarOcorrencia ────────────
+function verComunicacao(idx) { visualizarOcorrencia(idx); }
 
 // Ciclo de plantões: referência 01/05/2026 = DELTA (índice 3)
 const PLANTOES = ['ALFA', 'BRAVO', 'CHARLIE', 'DELTA', 'ECHO'];
@@ -6046,9 +6436,10 @@ function renderizarRelatorio() {
       <td>${envFmt||'—'}</td>
       <td>${r.servidor||''}</td>
       <td>${r.obs||'—'}</td>
-      <td>
-        <button class="btn-sm btn-outline" onclick="abrirModalRelatorio('${r.id}')">✏️</button>
-        <button class="btn-sm btn-danger"  onclick="excluirRelatorio('${r.id}')">🗑️</button>
+      <td style="white-space:nowrap">
+        <button class="btn-sm btn-outline" onclick="verRelatorio('${r.id}')" title="Visualizar">👁</button>
+        <button class="btn-sm btn-outline" onclick="abrirModalRelatorio('${r.id}')" style="margin-left:4px">✏️</button>
+        <button class="btn-sm btn-danger"  onclick="excluirRelatorio('${r.id}')" style="margin-left:4px">🗑️</button>
       </td>
     </tr>`;
   }).join('');
@@ -6567,9 +6958,10 @@ function renderizarGerencia() {
       <td>${d.descricao||''}</td>
       <td>${d.responsavel||''}</td>
       <td>${statusBadge}</td>
-      <td>
-        <button class="btn-sm btn-outline" onclick="abrirModalGerencia('${d.id}')">✏️</button>
-        <button class="btn-sm btn-danger" onclick="excluirDemandaGerencia('${d.id}')">🗑️</button>
+      <td style="white-space:nowrap">
+        <button class="btn-sm btn-outline" onclick="verGerencia('${d.id}')" title="Visualizar">👁</button>
+        <button class="btn-sm btn-outline" onclick="abrirModalGerencia('${d.id}')" style="margin-left:4px">✏️</button>
+        <button class="btn-sm btn-danger"  onclick="excluirDemandaGerencia('${d.id}')" style="margin-left:4px">🗑️</button>
       </td>
     </tr>`;
   }).join('');
@@ -6763,9 +7155,10 @@ function renderizarTriagem() {
     const dataFmt = (a.data||'').split('-').reverse().join('/');
     const hora    = a.criadoEm ? new Date(a.criadoEm).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '';
     const btns    = podeMod
-      ? `<button class="btn-sm btn-outline" onclick="abrirModalTriagem('${a.id}')">✏️</button>
-         <button class="btn-sm btn-danger"  onclick="excluirAtendimentoTriagem('${a.id}')">🗑️</button>`
-      : '';
+      ? `<button class="btn-sm btn-outline" onclick="verTriagem('${a.id}')" title="Visualizar">👁</button>
+         <button class="btn-sm btn-outline" onclick="abrirModalTriagem('${a.id}')" style="margin-left:4px">✏️</button>
+         <button class="btn-sm btn-danger"  onclick="excluirAtendimentoTriagem('${a.id}')" style="margin-left:4px">🗑️</button>`
+      : `<button class="btn-sm btn-outline" onclick="verTriagem('${a.id}')" title="Visualizar">👁</button>`;
     return `<tr>
       <td>${dataFmt}${hora ? ' ' + hora : ''}</td>
       <td>${a.nome||''}</td>
@@ -7248,6 +7641,7 @@ function renderizarPsi() {
     const hora    = a.dataHora ? a.dataHora.slice(11,16) : '';
     const proxFmt = a.proximoAtend ? (() => { const p=a.proximoAtend.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; })() : '—';
     const risco   = a.risco ? '<span style="'+( RISCO_COR[a.risco]||'')+'">'+a.risco+'</span>' : '—';
+    const btnVer  = '<button class="btn-sm btn-outline" onclick="verPsi(\''+a.id+'\')" title="Visualizar">👁</button> ';
     const btnEd   = podeMod ? '<button class="btn-sm btn-outline" onclick="abrirModalPsi(\''+a.id+'\')">✏️</button> ' : '';
     const btnEx   = podeMod ? '<button class="btn-sm btn-danger"  onclick="excluirAtendimentoPsi(\''+a.id+'\')">🗑️</button>' : '';
     return '<tr>'
@@ -7263,7 +7657,7 @@ function renderizarPsi() {
       +'<td>'+risco+'</td>'
       +'<td>'+(a.profissional||'')+'</td>'
       +'<td style="white-space:nowrap">'+proxFmt+'</td>'
-      +(podeMod ? '<td style="white-space:nowrap">'+btnEd+btnEx+'</td>' : '')
+      +'<td style="white-space:nowrap">'+btnVer+btnEd+btnEx+'</td>'
       +'</tr>';
   }).join('');
 }
@@ -7771,9 +8165,10 @@ function renderizarComunicacao() {
       ? '<span style="background:#c0392b;color:#fff;font-size:.68rem;border-radius:3px;padding:1px 5px;font-weight:700;margin-left:4px">🚨 CRÍTICO</span>'
       : '';
     const btnEdit = podeEdit
-      ? `<button class="btn-sm btn-outline" onclick="abrirModalComunicacao(${idx})">✏️ Atualizar PRODOC</button>
-         <button class="btn-sm btn-primary" onclick="abrirModalComOcorrencia(${idx})">✅ Marcar Enviado</button>`
-      : '—';
+      ? `<button class="btn-sm btn-outline" onclick="verComunicacao(${idx})" title="Visualizar">👁</button>
+         <button class="btn-sm btn-outline" onclick="abrirModalComunicacao(${idx})" style="margin-left:4px">✏️ PRODOC</button>
+         <button class="btn-sm btn-primary" onclick="abrirModalComOcorrencia(${idx})" style="margin-left:4px">✅ Enviado</button>`
+      : `<button class="btn-sm btn-outline" onclick="verComunicacao(${idx})" title="Visualizar">👁</button>`;
     return `<tr>
       <td>${o.id}</td>
       <td>${o.monitorado||''}${badgeCrit}</td>
@@ -7860,7 +8255,7 @@ const EST_TAMANHOS = ['17 cm','18 cm','19 cm','20 cm','21 cm','22 cm','23 cm','2
 
 const EST_TIPOS = {
   'Tornozeleira': ['Módulo eletrônico de monitoração','Cinta','Trava','Carregador da tornozeleira'],
-  'DPP — Dispositivo de Proteção Pessoal': ['Dispositivo DPP','Carregador do DPP','Chip do DPP']
+  'DPP — Dispositivo de Proteção Pessoal': ['Dispositivo DPP']
 };
 
 const ITENS_COM_SERIAL = ['Módulo eletrônico de monitoração', 'Dispositivo DPP'];
@@ -7871,8 +8266,6 @@ const EST_MINIMO = {
   'Trava': 20,
   'Carregador da tornozeleira': 5,
   'Dispositivo DPP': 3,
-  'Carregador do DPP': 3,
-  'Chip do DPP': 3,
 };
 
 const EST_PADRAO = {
@@ -7883,10 +8276,11 @@ const EST_PADRAO = {
     'Cinta_25 cm': 0, 'Cinta_26 cm': 0, 'Cinta_27 cm': 0, 'Cinta_28 cm': 0,
     'Cinta_29 cm': 0, 'Cinta_30 cm': 0,
     'Trava': 0, 'Carregador da tornozeleira': 0,
-    'Dispositivo DPP': 0, 'Carregador do DPP': 0, 'Chip do DPP': 0,
+    'Dispositivo DPP': 0,
   },
   movimentacoes: [],
   seriais: {},
+  registros: {},
   configuracoes: { estoqueMinimo: Object.assign({}, EST_MINIMO) }
 };
 
@@ -7951,8 +8345,11 @@ function getEstoque() {
   if (!d.itens) d.itens = {};
   if (!d.movimentacoes) d.movimentacoes = [];
   if (!d.seriais) d.seriais = {};
+  if (!d.registros) d.registros = {};
   if (!d.configuracoes) d.configuracoes = { estoqueMinimo: Object.assign({}, EST_MINIMO) };
   Object.keys(EST_PADRAO.itens).forEach(k => { if (!(k in d.itens)) d.itens[k] = 0; });
+  // Migração: remover itens obsoletos (Carregador do DPP, Chip do DPP)
+  ['Carregador do DPP', 'Chip do DPP'].forEach(k => { delete d.itens[k]; delete d.seriais[k]; });
   return d;
 }
 function salvarEstoque(d) { salvarStore('estoque', d); }
@@ -7967,6 +8364,7 @@ function estStatusLabel(cls)     { return cls === 'ok' ? 'DISPONÍVEL' : cls ===
 function renderizarEstoque() {
   const est   = getEstoque();
   const itens = est.itens;
+  const regs  = est.registros || {};
 
   /* Permissão visual */
   const podAlt = podeAlterarEstoque();
@@ -7979,9 +8377,11 @@ function renderizarEstoque() {
   const trava    = itens['Trava'] || 0;
   const carrTorn = itens['Carregador da tornozeleira'] || 0;
   const dpp      = itens['Dispositivo DPP'] || 0;
-  const carrDpp  = itens['Carregador do DPP'] || 0;
-  const chip     = itens['Chip do DPP'] || 0;
-  const total    = mod + cinta + trava + carrTorn + dpp + carrDpp + chip;
+  const total    = mod + cinta + trava + carrTorn + dpp;
+
+  const modRegs  = regs['Módulo eletrônico de monitoração'] || [];
+  const modNovo  = modRegs.filter(r => r.estado === 'Novo').length;
+  const modReutil= modRegs.filter(r => r.estado === 'Reutilizado').length;
 
   const _cfgMin = getConfigEstoque().minimos || {};
   const _getMin = (chave, fallback) => _cfgMin[chave] !== undefined ? _cfgMin[chave] : (fallback || 0);
@@ -7996,8 +8396,9 @@ function renderizarEstoque() {
 
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   set('est-k-mod', mod);   set('est-k-cinta', cinta);   set('est-k-trava', trava);
-  set('est-k-carrtor', carrTorn); set('est-k-dpp', dpp); set('est-k-carrdpp', carrDpp);
-  set('est-k-chip', chip); set('est-k-total', total);
+  set('est-k-carrtor', carrTorn); set('est-k-dpp', dpp);
+  set('est-k-novo', modNovo); set('est-k-reutil', modReutil);
+  set('est-k-total', total);
   set('est-k-baixo', baixo); set('est-k-zero', zero);
 
   /* Alertas sem estoque */
@@ -8024,13 +8425,27 @@ function renderizarEstoque() {
       <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
     </tr>`);
     if (ITENS_COM_SERIAL.includes(tipo)) {
-      const seriais = (est.seriais || {})[tipo] || [];
-      if (seriais.length > 0) {
+      const tipoRegs = (regs[tipo] || []);
+      if (tipoRegs.length > 0) {
+        const novos   = tipoRegs.filter(r => r.estado === 'Novo');
+        const reutils = tipoRegs.filter(r => r.estado === 'Reutilizado');
+        const outros  = tipoRegs.filter(r => r.estado !== 'Novo' && r.estado !== 'Reutilizado');
+        let partes = [];
+        if (novos.length)   partes.push(`📦 <strong>Novos (${novos.length}):</strong> ${novos.map(r=>r.serial||r.imei).join(' · ')}`);
+        if (reutils.length) partes.push(`🔄 <strong>Reutilizados (${reutils.length}):</strong> ${reutils.map(r=>r.serial||r.imei).join(' · ')}`);
+        if (outros.length)  partes.push(`📋 <strong>Outros (${outros.length}):</strong> ${outros.map(r=>r.serial||r.imei).join(' · ')}`);
         rowsTorn.push(`<tr style="background:#f8f9ff">
-          <td colspan="5" style="font-size:.78rem;color:#555;padding:4px 12px">
-            📋 <strong>Nºs de série em estoque:</strong> ${seriais.join(' · ')}
-          </td>
+          <td colspan="5" style="font-size:.78rem;color:#555;padding:4px 12px">${partes.join(' &nbsp;|&nbsp; ')}</td>
         </tr>`);
+      } else {
+        const seriais = (est.seriais || {})[tipo] || [];
+        if (seriais.length > 0) {
+          rowsTorn.push(`<tr style="background:#f8f9ff">
+            <td colspan="5" style="font-size:.78rem;color:#555;padding:4px 12px">
+              📋 <strong>Nºs de série em estoque:</strong> ${seriais.join(' · ')}
+            </td>
+          </tr>`);
+        }
       }
     }
   });
@@ -8051,42 +8466,61 @@ function renderizarEstoque() {
 
   /* Tabela DPP */
   const rowsDpp = [];
-  ['Dispositivo DPP','Carregador do DPP','Chip do DPP'].forEach(tipo => {
-    const chave = estChave(tipo, '');
-    const qtd = itens[tipo] || 0;
-    const min = _getMin(chave, EST_MINIMO[tipo]);
-    const cls = estStatusCls(qtd, min);
-    const rowStyle = qtd <= min ? ' style="background:#ffeaea"' : '';
-    rowsDpp.push(`<tr${rowStyle}>
-      <td>${tipo}</td>
-      <td style="text-align:center"><strong>${qtd}</strong></td>
-      <td style="text-align:center">${min}</td>
-      <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
+  const tipo = 'Dispositivo DPP';
+  const chave = estChave(tipo, '');
+  const qtd = itens[tipo] || 0;
+  const min = _getMin(chave, EST_MINIMO[tipo]);
+  const cls = estStatusCls(qtd, min);
+  const rowStyle = qtd <= min ? ' style="background:#ffeaea"' : '';
+  const dppRegs = (regs[tipo] || []);
+  const comCarregador = dppRegs.filter(r => r.temCarregador).length;
+  const comChip       = dppRegs.filter(r => r.temChip).length;
+  rowsDpp.push(`<tr${rowStyle}>
+    <td>${tipo}</td>
+    <td style="text-align:center"><strong>${qtd}</strong></td>
+    <td style="text-align:center">${min}</td>
+    <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
+    <td style="text-align:center">${comCarregador > 0 ? `🔋 ${comCarregador}` : '—'}</td>
+    <td style="text-align:center">${comChip > 0 ? `📶 ${comChip}` : '—'}</td>
+  </tr>`);
+  if (dppRegs.length > 0) {
+    const novos   = dppRegs.filter(r => r.estado === 'Novo');
+    const reutils = dppRegs.filter(r => r.estado === 'Reutilizado');
+    const outros  = dppRegs.filter(r => r.estado !== 'Novo' && r.estado !== 'Reutilizado');
+    let partes = [];
+    if (novos.length)   partes.push(`📦 <strong>Novos (${novos.length}):</strong> ${novos.map(r=>r.imei||r.serial).join(' · ')}`);
+    if (reutils.length) partes.push(`🔄 <strong>Reutilizados (${reutils.length}):</strong> ${reutils.map(r=>r.imei||r.serial).join(' · ')}`);
+    if (outros.length)  partes.push(`📋 <strong>Outros (${outros.length}):</strong> ${outros.map(r=>r.imei||r.serial).join(' · ')}`);
+    rowsDpp.push(`<tr style="background:#f8f9ff">
+      <td colspan="6" style="font-size:.78rem;color:#555;padding:4px 12px">${partes.join(' &nbsp;|&nbsp; ')}</td>
     </tr>`);
-    if (ITENS_COM_SERIAL.includes(tipo)) {
-      const seriais = (est.seriais || {})[tipo] || [];
-      if (seriais.length > 0) {
-        rowsDpp.push(`<tr style="background:#f8f9ff">
-          <td colspan="4" style="font-size:.78rem;color:#555;padding:4px 12px">
-            📋 <strong>Nºs de série em estoque:</strong> ${seriais.join(' · ')}
-          </td>
-        </tr>`);
-      }
+  } else {
+    const seriais = (est.seriais || {})[tipo] || [];
+    if (seriais.length > 0) {
+      rowsDpp.push(`<tr style="background:#f8f9ff">
+        <td colspan="6" style="font-size:.78rem;color:#555;padding:4px 12px">
+          📋 <strong>IMEIs em estoque:</strong> ${seriais.join(' · ')}
+        </td>
+      </tr>`);
     }
-  });
+  }
   document.getElementById('tbody-est-dpp').innerHTML = rowsDpp.join('');
 
   /* Histórico */
+  const isAdmin = usuarioAtual?.nivel === 'admin';
   const movs = (est.movimentacoes || []).slice(0, 300);
   const tbH  = document.getElementById('tbody-est-hist');
   if (!movs.length) {
-    tbH.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:28px;color:var(--cz2)">Nenhuma movimentação registrada ainda.</td></tr>`;
+    tbH.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--cz2)">Nenhuma movimentação registrada ainda.</td></tr>`;
     return;
   }
   const badgeMov = { 'Entrada':'badge-ok', 'Saída':'badge-vencido', 'Devolução':'badge-atencao', 'Baixa':'badge-vencendo' };
   tbH.innerHTML = movs.map(m => {
     const isSaida = m.tipo === 'Saída';
     const dtEntrega = m.dataEntrega ? m.dataEntrega.split('-').reverse().join('/') : '—';
+    const btnDel = isAdmin
+      ? `<button class="btn-sm btn-danger" onclick="excluirMovEstoque('${m.id}')">🗑</button>`
+      : '—';
     return `<tr>
       <td style="white-space:nowrap;font-size:.8rem">${new Date(m.ts).toLocaleString('pt-BR')}</td>
       <td><span class="badge ${badgeMov[m.tipo]||''}">${m.tipo}</span></td>
@@ -8101,9 +8535,110 @@ function renderizarEstoque() {
       <td>${isSaida ? (m.plantonista||'—') : '—'}</td>
       <td>${isSaida ? dtEntrega : '—'}</td>
       <td>${m.obs||'—'}</td>
+      <td style="text-align:center">${btnDel}</td>
     </tr>`;
   }).join('');
 }
+
+function excluirMovEstoque(id) {
+  if (usuarioAtual?.nivel !== 'admin') return;
+  if (!confirm('Excluir esta movimentação do histórico?')) return;
+  const est = getEstoque();
+  est.movimentacoes = (est.movimentacoes || []).filter(m => m.id !== id);
+  salvarEstoque(est);
+  renderizarEstoque();
+  _mostrarToast('Movimentação excluída.', 'ok');
+}
+
+function mudarSubAbaEstoque(aba) {
+  document.getElementById('est-panel-estoque').style.display  = aba === 'estoque'  ? 'block' : 'none';
+  document.getElementById('est-panel-consultar').style.display = aba === 'consultar' ? 'block' : 'none';
+  document.getElementById('est-stab-estoque').classList.toggle('active',  aba === 'estoque');
+  document.getElementById('est-stab-consultar').classList.toggle('active', aba === 'consultar');
+  if (aba === 'consultar') {
+    const inp = document.getElementById('est-consultar-input');
+    if (inp) { inp.value = ''; inp.focus(); }
+    document.getElementById('est-consultar-resultado').innerHTML = '';
+  }
+}
+
+function consultarSerial(valor) {
+  const resultado = document.getElementById('est-consultar-resultado');
+  if (!resultado) return;
+  const query = (valor || '').trim().toLowerCase();
+  if (query.length < 2) { resultado.innerHTML = ''; return; }
+  const est = getEstoque();
+  const regs = est.registros || {};
+  const movs = est.movimentacoes || [];
+  let encontrado = null;
+  let tipoEncontrado = '';
+
+  for (const [tipo, lista] of Object.entries(regs)) {
+    const reg = lista.find(r => (r.imei||r.serial||'').toLowerCase().includes(query));
+    if (reg) { encontrado = reg; tipoEncontrado = tipo; break; }
+  }
+
+  if (!encontrado) {
+    // Fallback: buscar em seriais simples
+    for (const [tipo, lista] of Object.entries(est.seriais || {})) {
+      const sn = lista.find(s => s.toLowerCase().includes(query));
+      if (sn) {
+        resultado.innerHTML = `<div style="background:#f0f4ff;border-radius:8px;padding:16px">
+          <strong>${tipo}</strong><br>
+          Nº de Série: <code>${sn}</code><br>
+          <em style="color:#888">Cadastrado antes do novo sistema — sem detalhes de estado.</em>
+        </div>`;
+        renderizarHistoricoConsulta(sn, movs, resultado);
+        return;
+      }
+    }
+    resultado.innerHTML = `<div style="color:#888;text-align:center;padding:20px">Nenhum resultado encontrado para "<strong>${_escHtml(valor)}</strong>".</div>`;
+    return;
+  }
+
+  const isDpp = tipoEncontrado === 'Dispositivo DPP';
+  const id = encontrado.imei || encontrado.serial;
+  const emEstoque = (est.seriais[tipoEncontrado] || []).includes(id);
+  const entradaEm = encontrado.entradaEm ? new Date(encontrado.entradaEm).toLocaleString('pt-BR') : '—';
+
+  let extra = '';
+  if (isDpp) {
+    extra = `<div style="margin-top:8px">
+      🔋 Carregador: <strong>${encontrado.temCarregador ? 'Sim' : 'Não'}</strong> &nbsp;|&nbsp;
+      📶 Chip: <strong>${encontrado.temChip ? 'Sim' : 'Não'}</strong>
+    </div>`;
+  }
+
+  resultado.innerHTML = `<div style="background:#f0f4ff;border-radius:8px;padding:16px;margin-bottom:16px">
+    <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px">📋 ${tipoEncontrado}</div>
+    <div><strong>${isDpp ? 'IMEI' : 'Nº de Série'}:</strong> <code>${id}</code></div>
+    <div><strong>Estado:</strong> ${encontrado.estado || '—'}</div>
+    <div><strong>Entrada em:</strong> ${entradaEm}</div>
+    <div><strong>Em estoque:</strong> <span style="color:${emEstoque ? '#27ae60' : '#e74c3c'};font-weight:700">${emEstoque ? 'Sim' : 'Não'}</span></div>
+    ${extra}
+  </div>`;
+  renderizarHistoricoConsulta(id, movs, resultado);
+}
+
+function renderizarHistoricoConsulta(id, movs, container) {
+  const hist = movs.filter(m => (m.seriais || []).includes(id));
+  if (!hist.length) { container.innerHTML += '<p style="color:#888;font-size:.88rem">Nenhuma movimentação registrada para este item.</p>'; return; }
+  const badgeMov = { 'Entrada':'badge-ok', 'Saída':'badge-vencido', 'Devolução':'badge-atencao', 'Baixa':'badge-vencendo' };
+  container.innerHTML += `<div class="est-section-title" style="margin-top:0">Histórico de Movimentações</div>
+    <div class="table-wrapper"><table class="data-table">
+      <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Responsável</th><th>Motivo</th><th>Observação</th></tr></thead>
+      <tbody>${hist.map(m=>`<tr>
+        <td style="white-space:nowrap;font-size:.8rem">${new Date(m.ts).toLocaleString('pt-BR')}</td>
+        <td><span class="badge ${badgeMov[m.tipo]||''}">${m.tipo}</span></td>
+        <td>${m.item||''}</td>
+        <td>${m.responsavel||''}</td>
+        <td>${m.motivo||'—'}</td>
+        <td>${m.obs||'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+}
+
+function _escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 /* ─ Abrir modais ────────────────────────────────────────── */
 function atualizarPlantaoSaida() {
@@ -8120,7 +8655,7 @@ function abrirModalEstoque(tipo) {
   const pfxs = { entrada:'ent', saida:'sai', devolucao:'dev', baixa:'bxa' };
   const pfx  = pfxs[tipo];
   // Limpar campos
-  ['categoria','tipo','tamanho','quantidade','responsavel','obs','motivo','monitorado','processo','numserie','plantao','plantonista','data-entrega'].forEach(f => {
+  ['categoria','tipo','tamanho','quantidade','responsavel','obs','motivo','monitorado','processo','numserie','plantao','plantonista','data-entrega','estado'].forEach(f => {
     const el = document.getElementById(pfx + '-' + f);
     if (!el) return;
     if (el.tagName === 'SELECT') el.selectedIndex = 0;
@@ -8167,23 +8702,41 @@ function toggleTamanhoEst(pfx) {
 }
 
 /* ─ Campos dinâmicos de número de série ─────────────────── */
+function _serialLabel(itemTipo) {
+  return itemTipo === 'Dispositivo DPP' ? 'IMEI' : 'Nº de série';
+}
+
 function atualizarCamposSerialEntrada() {
   const itemTipo = document.getElementById('ent-tipo')?.value || '';
   const qtd = parseInt(document.getElementById('ent-quantidade')?.value) || 0;
   const container = document.getElementById('ent-seriais-container');
   const lista = document.getElementById('ent-seriais-lista');
+  const titulo = document.getElementById('ent-seriais-titulo');
   if (!container || !lista) return;
+  const isDpp = itemTipo === 'Dispositivo DPP';
+  if (titulo) titulo.textContent = isDpp ? 'IMEI do Dispositivo DPP' : 'Números de Série';
   if (ITENS_COM_SERIAL.includes(itemTipo) && qtd > 0) {
     container.style.display = '';
-    const existentes = Array.from(lista.querySelectorAll('input')).map(i => i.value);
+    const existentes = Array.from(lista.querySelectorAll('.ent-serial-input')).map(i => i.value);
     lista.innerHTML = '';
+    const lbl = _serialLabel(itemTipo);
     for (let i = 0; i < qtd; i++) {
       const div = document.createElement('div');
-      div.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px';
+      div.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap';
+      let extras = '';
+      if (isDpp) {
+        extras = `
+          <label style="display:flex;align-items:center;gap:4px;font-size:.85rem;cursor:pointer;white-space:nowrap">
+            <input type="checkbox" class="ent-carregador-input"> 🔋 Carregador
+          </label>
+          <label style="display:flex;align-items:center;gap:4px;font-size:.85rem;cursor:pointer;white-space:nowrap">
+            <input type="checkbox" class="ent-chip-input"> 📶 Chip
+          </label>`;
+      }
       div.innerHTML = `<span style="min-width:24px;font-weight:600;color:#555">${i+1}.</span>
-        <input type="text" placeholder="Nº de série ${i+1}" value="${existentes[i]||''}"
-          style="flex:1;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:.9rem"
-          class="ent-serial-input">`;
+        <input type="text" placeholder="${lbl} ${i+1}" value="${existentes[i]||''}"
+          style="flex:1;min-width:160px;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:.9rem"
+          class="ent-serial-input">${extras}`;
       lista.appendChild(div);
     }
   } else {
@@ -8197,16 +8750,20 @@ function atualizarCamposSerialDevolucao() {
   const qtd = parseInt(document.getElementById('dev-quantidade')?.value) || 0;
   const container = document.getElementById('dev-seriais-container');
   const lista = document.getElementById('dev-seriais-lista');
+  const titulo = document.getElementById('dev-seriais-titulo');
   if (!container || !lista) return;
+  const isDpp = itemTipo === 'Dispositivo DPP';
+  if (titulo) titulo.textContent = isDpp ? 'IMEI do Dispositivo DPP' : 'Números de Série';
   if (ITENS_COM_SERIAL.includes(itemTipo) && qtd > 0) {
     container.style.display = '';
-    const existentes = Array.from(lista.querySelectorAll('input')).map(i => i.value);
+    const existentes = Array.from(lista.querySelectorAll('.dev-serial-input')).map(i => i.value);
     lista.innerHTML = '';
+    const lbl = _serialLabel(itemTipo);
     for (let i = 0; i < qtd; i++) {
       const div = document.createElement('div');
       div.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px';
       div.innerHTML = `<span style="min-width:24px;font-weight:600;color:#555">${i+1}.</span>
-        <input type="text" placeholder="Nº de série ${i+1}" value="${existentes[i]||''}"
+        <input type="text" placeholder="${lbl} ${i+1}" value="${existentes[i]||''}"
           style="flex:1;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:.9rem"
           class="dev-serial-input">`;
       lista.appendChild(div);
@@ -8222,23 +8779,37 @@ function atualizarCamposSerialSaida() {
   const qtd = parseInt(document.getElementById('sai-quantidade')?.value) || 0;
   const container = document.getElementById('sai-seriais-container');
   const lista = document.getElementById('sai-seriais-lista');
+  const titulo = document.getElementById('sai-seriais-titulo');
   if (!container || !lista) return;
+  const isDpp = itemTipo === 'Dispositivo DPP';
+  if (titulo) titulo.textContent = isDpp ? 'Selecionar IMEI do Dispositivo DPP' : 'Selecionar Números de Série';
   if (ITENS_COM_SERIAL.includes(itemTipo) && qtd > 0) {
     container.style.display = '';
     const est = getEstoque();
-    const disponiveis = (est.seriais || {})[itemTipo] || [];
-    const existentes = Array.from(lista.querySelectorAll('input,select')).map(i => i.value);
+    const regs = (est.registros || {})[itemTipo] || [];
+    const disponiveis = regs.length > 0
+      ? regs.map(r => ({ id: r.imei||r.serial, estado: r.estado, temCarregador: r.temCarregador, temChip: r.temChip }))
+      : (est.seriais || {})[itemTipo]?.map(s => ({ id: s, estado: '', temCarregador: false, temChip: false })) || [];
+
     lista.innerHTML = '';
     for (let i = 0; i < qtd; i++) {
+      const wrpId = 'sai-serial-wrp-' + i;
+      const sugId = 'sai-serial-sug-' + i;
       const div = document.createElement('div');
-      div.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px';
-      const dlId = 'sai-serial-dl-' + i;
-      div.innerHTML = `<span style="min-width:24px;font-weight:600;color:#555">${i+1}.</span>
-        <input type="text" list="${dlId}" placeholder="Selecione ou digite o nº de série"
-          value="${existentes[i]||''}"
-          style="flex:1;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:.9rem"
-          class="sai-serial-input">
-        <datalist id="${dlId}">${disponiveis.map(s=>`<option value="${s}">`).join('')}</datalist>`;
+      div.style.cssText = 'margin-bottom:8px';
+      const lbl = _serialLabel(itemTipo);
+      div.innerHTML = `<div style="display:flex;align-items:center;gap:8px">
+          <span style="min-width:24px;font-weight:600;color:#555">${i+1}.</span>
+          <div style="flex:1;position:relative">
+            <input type="text" placeholder="Selecione ou digite o ${lbl.toLowerCase()}"
+              style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:.9rem;box-sizing:border-box"
+              class="sai-serial-input"
+              oninput="filtrarSugestoesSaida(this, '${sugId}', '${itemTipo}')"
+              onfocus="filtrarSugestoesSaida(this, '${sugId}', '${itemTipo}')"
+              onblur="setTimeout(()=>{const s=document.getElementById('${sugId}');if(s)s.style.display='none'},200)">
+            <div id="${sugId}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:0 0 6px 6px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:200;max-height:200px;overflow-y:auto"></div>
+          </div>
+        </div>`;
       lista.appendChild(div);
     }
     if (disponiveis.length === 0) {
@@ -8248,6 +8819,49 @@ function atualizarCamposSerialSaida() {
     container.style.display = 'none';
     lista.innerHTML = '';
   }
+}
+
+function filtrarSugestoesSaida(input, sugId, itemTipo) {
+  const sug = document.getElementById(sugId);
+  if (!sug) return;
+  const est = getEstoque();
+  const regs = (est.registros || {})[itemTipo] || [];
+  const simples = (est.seriais || {})[itemTipo] || [];
+  const query = (input.value || '').toLowerCase();
+
+  let items = regs.length > 0
+    ? regs.map(r => ({ id: r.imei||r.serial, estado: r.estado, temCarregador: r.temCarregador, temChip: r.temChip }))
+    : simples.map(s => ({ id: s, estado: '', temCarregador: false, temChip: false }));
+
+  // Exclude already selected in other rows
+  const outrasInputs = document.querySelectorAll('.sai-serial-input');
+  const jaUsados = Array.from(outrasInputs).filter(inp => inp !== input).map(inp => inp.value.trim()).filter(Boolean);
+  items = items.filter(it => !jaUsados.includes(it.id));
+
+  if (query) items = items.filter(it => it.id.toLowerCase().includes(query));
+
+  if (items.length === 0) { sug.style.display = 'none'; return; }
+
+  sug.style.display = 'block';
+  sug.innerHTML = items.map(it => {
+    const badges = [];
+    if (it.estado) badges.push(`<span style="font-size:.75rem;background:${it.estado==='Novo'?'#e8f5e9':'#fff3e0'};color:#333;padding:1px 5px;border-radius:3px">${it.estado}</span>`);
+    if (it.temCarregador) badges.push('🔋');
+    if (it.temChip) badges.push('📶');
+    return `<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px"
+        onmousedown="preencherSerialSaida(event, '${it.id}', '${sugId}')"
+        onmouseover="this.style.background='#f5f7ff'" onmouseout="this.style.background=''">
+      <code style="flex:1">${it.id}</code> ${badges.join(' ')}
+    </div>`;
+  }).join('');
+}
+
+function preencherSerialSaida(event, valor, sugId) {
+  event.preventDefault();
+  const sug = document.getElementById(sugId);
+  const input = sug?.previousElementSibling;
+  if (input) input.value = valor;
+  if (sug) sug.style.display = 'none';
 }
 
 /* ─ Salvar movimentação ─────────────────────────────────── */
@@ -8266,11 +8880,14 @@ function salvarMovEstoque(tipo) {
   const qtd       = parseInt(g('quantidade')) || 0;
   const resp      = g('responsavel');
 
+  const estadoVal = g('estado');
+
   if (!categoria)                            return alert('Selecione a categoria.');
   if (!itemTipo)                             return alert('Selecione o tipo de item.');
   if (itemTipo === 'Cinta' && !tamanho)      return alert('Selecione o tamanho da cinta.');
   if (qtd < 1)                               return alert('Informe uma quantidade válida (mínimo 1).');
   if (!resp)                                 return alert('Informe o responsável.');
+  if ((tipo === 'entrada' || tipo === 'saida') && !estadoVal) return alert('Selecione o Estado do Item (Novo ou Reutilizado).');
   if ((tipo === 'saida' || tipo === 'baixa') && !g('motivo')) return alert('Informe o motivo.');
   if (tipo === 'saida' && !g('plantao'))     return alert('Selecione o plantão que recebe.');
   if (tipo === 'saida' && !g('plantonista')) return alert('Informe o nome do plantonista.');
@@ -8289,20 +8906,37 @@ function salvarMovEstoque(tipo) {
     ? qtdAtual + qtd
     : qtdAtual - qtd;
 
-  // Inicializar est.seriais se não existir
+  // Inicializar est.seriais e est.registros se não existirem
   if (!est.seriais) est.seriais = {};
+  if (!est.registros) est.registros = {};
 
   // Gerenciar números de série
   if (ITENS_COM_SERIAL.includes(itemTipo)) {
     if (!est.seriais[itemTipo]) est.seriais[itemTipo] = [];
+    if (!est.registros[itemTipo]) est.registros[itemTipo] = [];
+    const isDpp = itemTipo === 'Dispositivo DPP';
 
     if (tipo === 'entrada' || tipo === 'devolucao') {
       // Adicionar seriais da entrada
-      const inputs = document.querySelectorAll('.ent-serial-input, .dev-serial-input');
-      inputs.forEach(inp => {
+      const rows = document.querySelectorAll('#ent-seriais-lista > div, #dev-seriais-lista > div');
+      rows.forEach(row => {
+        const inp = row.querySelector('.ent-serial-input, .dev-serial-input');
+        if (!inp) return;
         const sn = inp.value.trim();
-        if (sn && !est.seriais[itemTipo].includes(sn)) {
-          est.seriais[itemTipo].push(sn);
+        if (!sn) return;
+        if (!est.seriais[itemTipo].includes(sn)) est.seriais[itemTipo].push(sn);
+        // Registro detalhado
+        const jaExiste = est.registros[itemTipo].find(r => (r.imei||r.serial) === sn);
+        if (!jaExiste) {
+          const reg = { estado: estadoVal, entradaEm: new Date().toISOString() };
+          if (isDpp) {
+            reg.imei = sn;
+            reg.temCarregador = !!(row.querySelector('.ent-carregador-input')?.checked);
+            reg.temChip       = !!(row.querySelector('.ent-chip-input')?.checked);
+          } else {
+            reg.serial = sn;
+          }
+          est.registros[itemTipo].push(reg);
         }
       });
     } else if (tipo === 'saida' || tipo === 'baixa') {
@@ -8312,6 +8946,7 @@ function salvarMovEstoque(tipo) {
         const sn = inp.value.trim();
         if (sn) {
           est.seriais[itemTipo] = est.seriais[itemTipo].filter(s => s !== sn);
+          est.registros[itemTipo] = est.registros[itemTipo].filter(r => (r.imei||r.serial) !== sn);
         }
       });
     }
@@ -9024,13 +9659,14 @@ function limparModelo() {
           'Cinta_25 cm':0,'Cinta_26 cm':0,'Cinta_27 cm':0,'Cinta_28 cm':0,
           'Cinta_29 cm':0,'Cinta_30 cm':0,
           'Trava':0,'Carregador da tornozeleira':0,
-          'Dispositivo DPP':0,'Carregador do DPP':0,'Chip do DPP':0,
+          'Dispositivo DPP':0,
         },
         movimentacoes: [],
         seriais: {},
+        registros: {},
         configuracoes: { estoqueMinimo: {
           'Módulo eletrônico de monitoração':5,'Cinta':3,'Trava':20,
-          'Carregador da tornozeleira':5,'Dispositivo DPP':3,'Carregador do DPP':3,'Chip do DPP':3
+          'Carregador da tornozeleira':5,'Dispositivo DPP':3
         }}
       };
       _cache['estoque'] = estPad;
