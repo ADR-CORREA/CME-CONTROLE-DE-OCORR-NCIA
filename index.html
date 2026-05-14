@@ -1686,13 +1686,21 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
           <div class="dash-title">📝 Gerador de Modelos de Documento</div>
           <div class="dash-update">Preencha os campos e gere o texto padrão para copiar</div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn-secondary" onclick="limparModelo()">🗑️ Limpar</button>
-          <button class="btn-secondary" onclick="copiarModelo()">📋 Copiar Texto</button>
-          <button class="btn-primary" onclick="baixarModeloPDF()">🖨️ Gerar PDF</button>
-        </div>
       </div>
 
+      <!-- Sub-abas Modelos -->
+      <div class="sub-tabs" style="margin-bottom:0">
+        <div class="sub-tab active" id="mod-stab-plantao"       onclick="mudarSubAbaModelos('plantao')">📋 Plantão</div>
+        <div class="sub-tab"        id="mod-stab-multi"          onclick="mudarSubAbaModelos('multi')">⚕️ Equipe Multidisciplinar</div>
+      </div>
+
+      <!-- Sub-panel Plantão -->
+      <div id="mod-panel-plantao" style="display:block">
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px">
+          <button class="btn-secondary" onclick="limparModelo()">🗑️ Limpar</button>
+          <button class="btn-secondary" onclick="copiarModelo()">📋 Copiar Texto</button>
+          <button class="btn-primary"   onclick="baixarModeloPDF()">🖨️ Gerar PDF</button>
+        </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:4px">
         <!-- Coluna Formulário -->
         <div style="background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow)">
@@ -1820,6 +1828,176 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
           <div id="mod-copy-msg" style="display:none;margin-top:8px;padding:8px 12px;background:#e8f5e9;border-radius:6px;color:#1a4226;font-size:.84rem;font-weight:600">✅ Texto copiado para a área de transferência!</div>
         </div>
       </div>
+      </div><!-- /mod-panel-plantao -->
+
+      <!-- Sub-panel Equipe Multidisciplinar -->
+      <div id="mod-panel-multi" style="display:none">
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px">
+          <button class="btn-secondary" onclick="limparModeloMulti()">🗑️ Limpar</button>
+          <button class="btn-secondary" onclick="copiarModeloMulti()">📋 Copiar Texto</button>
+          <button class="btn-primary"   onclick="imprimirModeloMulti()">🖨️ Imprimir</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+
+          <!-- Coluna Formulário -->
+          <div style="background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow)">
+            <div style="font-weight:700;color:var(--az1);font-size:.95rem;margin-bottom:16px;border-bottom:1px solid #e0e6ed;padding-bottom:8px">📋 Dados do Documento</div>
+
+            <div class="form-field">
+              <label>Modelo *</label>
+              <select id="multi-modelo" onchange="gerarModeloMulti()">
+                <option value="">-- Escolha o modelo --</option>
+                <optgroup label="── Relatórios Sociais ──">
+                  <option value="rel-social-1">Relatório Social Informativo (Modelo 1)</option>
+                  <option value="rel-social-2">Relatório Social — Ausência de Dados (Modelo 2)</option>
+                </optgroup>
+                <optgroup label="── MPU — Medidas Protetivas ──">
+                  <option value="mpu-zona">MPU — Relatório de Zona de Exclusão</option>
+                  <option value="mpu-endereco">MPU — Relatório Endereço Próximo Vítima/Agressor</option>
+                </optgroup>
+                <optgroup label="── UPR — Dispositivo de Proteção ──">
+                  <option value="upr-aceite">Termo de Aceite da Vítima ao UPR</option>
+                  <option value="upr-recusa">Termo de Recusa da Vítima ao UPR</option>
+                  <option value="upr-orientacao">Termo de Orientação à Vítima</option>
+                  <option value="upr-nao-comparecimento">Termo de Não Comparecimento</option>
+                  <option value="upr-oficio">Ofício ao Juízo — Manifestação da Vítima</option>
+                  <option value="upr-ausencia">Termo de Ausência de Interesse em Receber UPR</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <!-- Campos comuns -->
+            <div class="form-field" id="multi-row-processo">
+              <label>Processo nº</label>
+              <input type="text" id="multi-processo" placeholder="Nº do processo" oninput="gerarModeloMulti()">
+            </div>
+            <div class="form-field" id="multi-row-vitima">
+              <label>Nome da Vítima</label>
+              <input type="text" id="multi-vitima" placeholder="Nome completo da vítima" oninput="gerarModeloMulti()">
+            </div>
+            <div class="form-field" id="multi-row-reu">
+              <label>Nome do Réu / Agressor</label>
+              <input type="text" id="multi-reu" placeholder="Nome completo do réu" oninput="gerarModeloMulti()">
+            </div>
+
+            <!-- Campos condicionais: Relatório Social -->
+            <div id="multi-row-rel" style="display:none">
+              <div class="form-field">
+                <label>Classe</label>
+                <input type="text" id="multi-classe" placeholder="Ex: Ação Penal – Procedimento Sumaríssimo" oninput="gerarModeloMulti()">
+              </div>
+              <div class="form-field">
+                <label>Órgão Julgador</label>
+                <input type="text" id="multi-orgao" placeholder="Vara / Comarca / Município – AP" oninput="gerarModeloMulti()">
+              </div>
+              <div class="form-field">
+                <label>Assunto</label>
+                <input type="text" id="multi-assunto-rel" placeholder="Ex: Violência Doméstica Contra a Mulher" oninput="gerarModeloMulti()">
+              </div>
+              <div class="form-field">
+                <label>Data da Decisão</label>
+                <input type="date" id="multi-data-decisao" oninput="gerarModeloMulti()">
+              </div>
+              <div class="form-field">
+                <label>Nº do Ofício</label>
+                <input type="text" id="multi-oficio" placeholder="Nº do ofício recebido" oninput="gerarModeloMulti()">
+              </div>
+              <div class="form-field">
+                <label>Telefone da Vítima</label>
+                <input type="text" id="multi-tel-vitima" placeholder="(xx) xxxxx-xxxx" oninput="gerarModeloMulti()">
+              </div>
+            </div>
+
+            <!-- Campos condicionais: MPU -->
+            <div id="multi-row-mpu" style="display:none">
+              <div class="form-field">
+                <label>Data do Atendimento</label>
+                <input type="date" id="multi-data-atend" oninput="gerarModeloMulti()">
+              </div>
+              <div class="form-field">
+                <label>Endereço do Réu (Requerido)</label>
+                <input type="text" id="multi-end-reu" placeholder="Endereço completo do réu" oninput="gerarModeloMulti()">
+              </div>
+              <div class="form-field">
+                <label>Endereço da Vítima (Requerente)</label>
+                <input type="text" id="multi-end-vitima" placeholder="Endereço completo da vítima" oninput="gerarModeloMulti()">
+              </div>
+              <div class="form-grid">
+                <div class="form-field">
+                  <label>Raio Atual (metros)</label>
+                  <input type="number" id="multi-raio-atual" placeholder="Ex: 300" oninput="gerarModeloMulti()">
+                </div>
+                <div class="form-field">
+                  <label>Raio Sugerido (metros)</label>
+                  <input type="number" id="multi-raio-sug" placeholder="Ex: 150" oninput="gerarModeloMulti()">
+                </div>
+              </div>
+            </div>
+
+            <!-- Campos condicionais: UPR -->
+            <div id="multi-row-upr" style="display:none">
+              <div class="form-field">
+                <label>CPF da Vítima</label>
+                <input type="text" id="multi-cpf-vitima" placeholder="000.000.000-00" oninput="gerarModeloMulti()">
+              </div>
+              <!-- Campo específico para Ofício -->
+              <div id="multi-row-oficio-upr" style="display:none">
+                <div class="form-field">
+                  <label>Nº do Ofício</label>
+                  <input type="text" id="multi-oficio-upr" placeholder="Nº / CME / IAPEN" oninput="gerarModeloMulti()">
+                </div>
+                <div class="form-field">
+                  <label>Vara</label>
+                  <input type="text" id="multi-vara" placeholder="Vara de destino do ofício" oninput="gerarModeloMulti()">
+                </div>
+                <div class="form-field">
+                  <label>Manifestação da Vítima</label>
+                  <select id="multi-manifestacao" onchange="gerarModeloMulti()">
+                    <option value="">-- Selecione --</option>
+                    <option value="ACEITE">ACEITE do dispositivo</option>
+                    <option value="RECUSA">RECUSA do dispositivo</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Campos do técnico (comuns a todos) -->
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e0e6ed">
+              <div class="form-field">
+                <label>Nome do(a) Técnico(a)</label>
+                <input type="text" id="multi-tecnico" placeholder="Nome completo" oninput="gerarModeloMulti()">
+              </div>
+              <div class="form-field">
+                <label>Cargo</label>
+                <input type="text" id="multi-cargo" placeholder="Ex: Assistente Social" oninput="gerarModeloMulti()">
+              </div>
+              <div class="form-field">
+                <label>CRESS nº</label>
+                <input type="text" id="multi-cress" placeholder="Ex: 487/AP" oninput="gerarModeloMulti()">
+              </div>
+              <div class="form-field">
+                <label>Município / UF</label>
+                <input type="text" id="multi-municipio" value="Macapá/AP" oninput="gerarModeloMulti()">
+              </div>
+              <div class="form-field">
+                <label>Data do Documento</label>
+                <input type="date" id="multi-data" oninput="gerarModeloMulti()">
+              </div>
+            </div>
+          </div>
+
+          <!-- Coluna Texto Gerado -->
+          <div style="background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column">
+            <div style="font-weight:700;color:var(--az1);font-size:.95rem;margin-bottom:16px;border-bottom:1px solid #e0e6ed;padding-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+              <span>📄 Texto Gerado (editável)</span>
+              <span id="multi-char-count" style="font-size:.75rem;color:#888;font-weight:400">0 caracteres</span>
+            </div>
+            <textarea id="multi-texto" rows="28" style="flex:1;resize:vertical;font-family:var(--font-mono);font-size:.8rem;line-height:1.6;border:1px solid #e0e6ed;border-radius:6px;padding:12px;background:#f8faff;color:#1a1a2e;outline:none" placeholder="Selecione um modelo e preencha os campos para gerar o texto..." oninput="document.getElementById('multi-char-count').textContent=this.value.length+' caracteres'"></textarea>
+            <div id="multi-copy-msg" style="display:none;margin-top:8px;padding:8px 12px;background:#e8f5e9;border-radius:6px;color:#1a4226;font-size:.84rem;font-weight:600">✅ Texto copiado para a área de transferência!</div>
+          </div>
+        </div>
+      </div><!-- /mod-panel-multi -->
+
     </div>
 
     <!-- ─── ADMINISTRAÇÃO ─── -->
@@ -2041,10 +2219,11 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
       <div id="est-panel-consultar" class="sub-panel" style="display:none">
         <div style="max-width:600px;margin:24px auto 0">
           <div class="form-field" style="margin-bottom:16px">
-            <label style="font-size:1rem;font-weight:600">🔍 Buscar por Nº de Série / IMEI</label>
-            <input type="text" id="est-consultar-input" placeholder="Digite o nº de série, IMEI ou número de registro..."
+            <label style="font-size:1rem;font-weight:600">🔍 Buscar no Estoque</label>
+            <input type="text" id="est-consultar-input" placeholder="IMEI, nº de série, nome, responsável, monitorado, plantão, motivo..."
               oninput="consultarSerial(this.value)"
               style="width:100%;padding:10px 14px;font-size:1rem;border:1px solid #ccc;border-radius:8px;margin-top:6px">
+            <span style="font-size:.78rem;color:#aaa;margin-top:4px;display:block">Pesquisa em todos os campos do estoque e do histórico de movimentações</span>
           </div>
           <div id="est-consultar-resultado"></div>
         </div>
@@ -3492,6 +3671,9 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
           <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-dep-quim"> Tratamento dependência química</label>
           <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-qual"> Qualificação profissional</label>
           <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-plantao"> Articulação com Plantão CME</label>
+          <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-escritorio"> Escritório Social</label>
+          <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-semast"> SEMAST</label>
+          <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-seas"> SEAS</label>
           <label style="display:flex;align-items:center;gap:7px;font-weight:400;cursor:pointer"><input type="checkbox" id="psi-enc-outros"> Outros</label>
         </div>
         <div class="form-field" id="psi-row-enc-outros" style="display:none;margin-top:8px">
@@ -7680,7 +7862,8 @@ function _psiLimparModal() {
    'psi-vul-dep-quim','psi-vul-transtorno','psi-vul-rua','psi-vul-conflito','psi-vul-rede'].forEach(id=>{ const e=document.getElementById(id); if(e) e.checked=false; });
   // Checkboxes encaminhamentos
   ['psi-enc-cmb','psi-enc-creas','psi-enc-cras','psi-enc-dp','psi-enc-mp','psi-enc-saude',
-   'psi-enc-dep-quim','psi-enc-qual','psi-enc-plantao','psi-enc-outros'].forEach(id=>{ const e=document.getElementById(id); if(e) e.checked=false; });
+   'psi-enc-dep-quim','psi-enc-qual','psi-enc-plantao','psi-enc-escritorio','psi-enc-semast',
+   'psi-enc-seas','psi-enc-outros'].forEach(id=>{ const e=document.getElementById(id); if(e) e.checked=false; });
   const rowEnc = document.getElementById('psi-row-enc-outros');
   if (rowEnc) rowEnc.style.display = 'none';
   // Esconder seções vítima
@@ -7782,7 +7965,7 @@ function salvarAtendimentoPsi() {
   const fatoresVul = vulIds.filter(v=>gc('psi-vul-'+v));
 
   // Coletar checkboxes encaminhamentos
-  const encIds = ['cmb','creas','cras','dp','mp','saude','dep-quim','qual','plantao','outros'];
+  const encIds = ['cmb','creas','cras','dp','mp','saude','dep-quim','qual','plantao','escritorio','semast','seas','outros'];
   const encaminhamentos = encIds.filter(v=>gc('psi-enc-'+v));
 
   const dados = getPsi();
@@ -8727,72 +8910,143 @@ function consultarSerial(valor) {
   const query = (valor || '').trim().toLowerCase();
   if (query.length < 2) { resultado.innerHTML = ''; return; }
   const est = getEstoque();
-  const regs = est.registros || {};
   const movs = est.movimentacoes || [];
-  let encontrado = null;
-  let tipoEncontrado = '';
+  const badgeMov = { 'Entrada':'badge-ok', 'Saída':'badge-vencido', 'Devolução':'badge-atencao', 'Baixa':'badge-vencendo' };
 
-  for (const [tipo, lista] of Object.entries(regs)) {
-    const reg = lista.find(r => (r.imei||r.serial||'').toLowerCase().includes(query));
-    if (reg) { encontrado = reg; tipoEncontrado = tipo; break; }
+  // ── 1. Busca em registros (unidades físicas cadastradas) ─────────────────
+  const unidadesEncontradas = [];
+  for (const [tipo, lista] of Object.entries(est.registros || {})) {
+    lista.forEach(r => {
+      const id = r.imei || r.serial || '';
+      const textoReg = [id, r.estado, tipo].join(' ').toLowerCase();
+      if (textoReg.includes(query)) {
+        const emEstoque = (est.seriais[tipo] || []).includes(id) ||
+          !!(est.registros[tipo] || []).find(x => (x.imei||x.serial) === id);
+        unidadesEncontradas.push({ tipo, reg: r, id, emEstoque });
+      }
+    });
+  }
+  // Fallback: seriais simples (formato antigo)
+  for (const [tipo, lista] of Object.entries(est.seriais || {})) {
+    lista.forEach(sn => {
+      if (sn.toLowerCase().includes(query)) {
+        const jaEncontrado = unidadesEncontradas.find(u => u.id === sn);
+        if (!jaEncontrado) {
+          unidadesEncontradas.push({ tipo, reg: { serial: sn, estado: '—' }, id: sn, emEstoque: true, simples: true });
+        }
+      }
+    });
   }
 
-  if (!encontrado) {
-    // Fallback: buscar em seriais simples
-    for (const [tipo, lista] of Object.entries(est.seriais || {})) {
-      const sn = lista.find(s => s.toLowerCase().includes(query));
-      if (sn) {
-        resultado.innerHTML = `<div style="background:#f0f4ff;border-radius:8px;padding:16px">
-          <strong>${tipo}</strong><br>
-          Nº de Série: <code>${sn}</code><br>
-          <em style="color:#888">Cadastrado antes do novo sistema — sem detalhes de estado.</em>
-        </div>`;
-        renderizarHistoricoConsulta(sn, movs, resultado);
-        return;
-      }
-    }
-    resultado.innerHTML = `<div style="color:#888;text-align:center;padding:20px">Nenhum resultado encontrado para "<strong>${_escHtml(valor)}</strong>".</div>`;
+  // ── 2. Busca em movimentações (todos os campos) ──────────────────────────
+  const _txt = v => (v || '').toString().toLowerCase();
+  const movsEncontrados = movs.filter(m => {
+    return [
+      m.tipo, m.categoria, m.item, m.tamanho, m.responsavel,
+      m.motivo, m.monitorado, m.processo, m.obs, m.plantao,
+      m.plantonista, m.numSerie, m.estado, m.dataEntrega,
+      ...(m.seriais || [])
+    ].some(v => _txt(v).includes(query));
+  });
+
+  // ── 3. Montar resultado ──────────────────────────────────────────────────
+  if (unidadesEncontradas.length === 0 && movsEncontrados.length === 0) {
+    resultado.innerHTML = `<div style="color:#888;text-align:center;padding:28px">
+      Nenhum resultado encontrado para "<strong>${_escHtml(valor)}</strong>".<br>
+      <span style="font-size:.82rem">Tente buscar por IMEI, série, nome do responsável, monitorado, plantão, motivo...</span>
+    </div>`;
     return;
   }
 
-  const isDpp = tipoEncontrado === 'Dispositivo DPP';
-  const id = encontrado.imei || encontrado.serial;
-  const emEstoque = (est.seriais[tipoEncontrado] || []).includes(id);
-  const entradaEm = encontrado.entradaEm ? new Date(encontrado.entradaEm).toLocaleString('pt-BR') : '—';
+  let html = '';
 
-  let extra = '';
-  if (isDpp) {
-    extra = `<div style="margin-top:8px">
-      🔋 Carregador: <strong>${encontrado.temCarregador ? 'Sim' : 'Não'}</strong> &nbsp;|&nbsp;
-      📶 Chip: <strong>${encontrado.temChip ? 'Sim' : 'Não'}</strong>
-    </div>`;
+  // Bloco de unidades físicas
+  if (unidadesEncontradas.length > 0) {
+    html += `<div class="est-section-title">📋 Unidades encontradas (${unidadesEncontradas.length})</div>`;
+    unidadesEncontradas.forEach(({ tipo, reg, id, emEstoque, simples }) => {
+      const isDpp = tipo === 'Dispositivo DPP';
+      const labelId = isDpp ? 'IMEI' : 'Nº de Série';
+      const statusColor = emEstoque ? '#1a7f37' : '#c0392b';
+      const statusLabel = emEstoque ? '✅ Em estoque' : '📤 Fora do estoque';
+      const extraDpp = isDpp && !simples
+        ? `<span style="margin-left:12px">🔋 ${reg.temCarregador ? 'Com carregador' : 'Sem carregador'} &nbsp; 📶 ${reg.temChip ? 'Com chip' : 'Sem chip'}</span>`
+        : '';
+      const historicoUnidade = movs.filter(m => (m.seriais || []).includes(id));
+      html += `
+        <div style="background:#f0f4ff;border:1px solid #d0deff;border-radius:10px;padding:14px 16px;margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+            <span style="font-weight:700;font-size:.95rem">${tipo}</span>
+            <span style="font-size:.8rem;background:${reg.estado==='Novo'?'#e8f5e9':reg.estado==='Reutilizado'?'#fff3e0':'#f5f5f5'};
+              color:#333;padding:2px 8px;border-radius:4px">${reg.estado||'—'}</span>
+            <span style="font-size:.82rem;color:${statusColor};font-weight:600">${statusLabel}</span>
+          </div>
+          <div style="font-family:monospace;font-size:.95rem;margin-bottom:4px">
+            <strong>${labelId}:</strong> <code style="background:#e8f0ff;padding:2px 8px;border-radius:4px">${id}</code>${extraDpp}
+          </div>
+          ${simples ? `<div style="font-size:.78rem;color:#aaa;margin-top:4px">⚠️ Cadastrado no formato antigo — detalhes limitados.</div>` : ''}
+          ${historicoUnidade.length > 0 ? `
+          <div style="margin-top:10px;font-size:.82rem;color:#555;border-top:1px solid #dde6ff;padding-top:8px">
+            <strong>Movimentações (${historicoUnidade.length}):</strong><br>
+            ${historicoUnidade.map(m=>`
+              <div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #eef1ff;cursor:pointer"
+                   onclick="verDetalheMovEstoque('${m.id}')" title="Ver detalhes">
+                <span class="badge ${badgeMov[m.tipo]||''}" style="font-size:.72rem;padding:1px 6px">${m.tipo}</span>
+                <span>${new Date(m.ts).toLocaleString('pt-BR')}</span>
+                <span style="color:#777">${m.responsavel||''}</span>
+                ${m.plantao ? `<span style="color:#555">🏢 ${m.plantao}</span>` : ''}
+                <span style="margin-left:auto;color:#1a4fa3;font-size:.8rem">👁 detalhe</span>
+              </div>`).join('')}
+          </div>` : ''}
+        </div>`;
+    });
   }
 
-  resultado.innerHTML = `<div style="background:#f0f4ff;border-radius:8px;padding:16px;margin-bottom:16px">
-    <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px">📋 ${tipoEncontrado}</div>
-    <div><strong>${isDpp ? 'IMEI' : 'Nº de Série'}:</strong> <code>${id}</code></div>
-    <div><strong>Estado:</strong> ${encontrado.estado || '—'}</div>
-    <div><strong>Entrada em:</strong> ${entradaEm}</div>
-    <div><strong>Em estoque:</strong> <span style="color:${emEstoque ? '#27ae60' : '#e74c3c'};font-weight:700">${emEstoque ? 'Sim' : 'Não'}</span></div>
-    ${extra}
-  </div>`;
-  renderizarHistoricoConsulta(id, movs, resultado);
+  // Bloco de movimentações encontradas
+  if (movsEncontrados.length > 0) {
+    // Remove movimentos já listados como historico de unidades para evitar repetição? Não - o usuário pode querer ver
+    html += `<div class="est-section-title" style="margin-top:${unidadesEncontradas.length?'16px':'0'}">
+      📑 Movimentações encontradas (${movsEncontrados.length})
+    </div>
+    <div class="table-wrapper"><table class="data-table">
+      <thead><tr>
+        <th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Estado</th>
+        <th>Responsável</th><th>Monitorado</th><th>Plantão</th><th>Motivo</th><th>Série/IMEI</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${movsEncontrados.map(m => {
+          const series = (m.seriais || []).join(', ') || m.numSerie || '—';
+          return `<tr style="cursor:pointer" onclick="verDetalheMovEstoque('${m.id}')" title="Clique para ver detalhes">
+            <td style="white-space:nowrap;font-size:.78rem">${new Date(m.ts).toLocaleString('pt-BR')}</td>
+            <td><span class="badge ${badgeMov[m.tipo]||''}">${m.tipo}</span></td>
+            <td style="font-size:.82rem">${m.item||''}</td>
+            <td style="font-size:.82rem">${m.estado||'—'}</td>
+            <td style="font-size:.82rem">${m.responsavel||'—'}</td>
+            <td style="font-size:.82rem">${m.monitorado||'—'}</td>
+            <td style="font-size:.82rem">${m.plantao||'—'}</td>
+            <td style="font-size:.82rem;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.motivo||'—'}</td>
+            <td style="font-family:monospace;font-size:.78rem;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${series}</td>
+            <td><button class="btn-sm" style="background:#e8f0ff;color:#1a4fa3" onclick="event.stopPropagation();verDetalheMovEstoque('${m.id}')">👁</button></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table></div>`;
+  }
+
+  resultado.innerHTML = html;
 }
 
 function renderizarHistoricoConsulta(id, movs, container) {
+  // Mantido para compatibilidade — agora consultarSerial já inclui o histórico inline
   const hist = movs.filter(m => (m.seriais || []).includes(id));
-  if (!hist.length) { container.innerHTML += '<p style="color:#888;font-size:.88rem">Nenhuma movimentação registrada para este item.</p>'; return; }
+  if (!hist.length) return;
   const badgeMov = { 'Entrada':'badge-ok', 'Saída':'badge-vencido', 'Devolução':'badge-atencao', 'Baixa':'badge-vencendo' };
-  container.innerHTML += `<div class="est-section-title" style="margin-top:0">Histórico de Movimentações</div>
+  container.innerHTML += `<div class="est-section-title" style="margin-top:0">Histórico</div>
     <div class="table-wrapper"><table class="data-table">
-      <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Responsável</th><th>Motivo</th><th>Observação</th></tr></thead>
-      <tbody>${hist.map(m=>`<tr>
+      <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Responsável</th><th>Motivo</th></tr></thead>
+      <tbody>${hist.map(m=>`<tr style="cursor:pointer" onclick="verDetalheMovEstoque('${m.id}')">
         <td style="white-space:nowrap;font-size:.8rem">${new Date(m.ts).toLocaleString('pt-BR')}</td>
         <td><span class="badge ${badgeMov[m.tipo]||''}">${m.tipo}</span></td>
-        <td>${m.item||''}</td>
-        <td>${m.responsavel||''}</td>
-        <td>${m.motivo||'—'}</td>
-        <td>${m.obs||'—'}</td>
+        <td>${m.item||''}</td><td>${m.responsavel||''}</td><td>${m.motivo||'—'}</td>
       </tr>`).join('')}</tbody>
     </table></div>`;
 }
@@ -9229,6 +9483,14 @@ function renderizarModelos() {
   if (dt && !dt.value) {
     const n = new Date(); n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
     dt.value = n.toISOString().slice(0,16);
+  }
+  // Pré-preencher campos do sub-painel Equipe Multidisciplinar
+  const multiTec = document.getElementById('multi-tecnico');
+  if (multiTec && !multiTec.value) multiTec.value = usuarioAtual?.nome || '';
+  const multiData = document.getElementById('multi-data');
+  if (multiData && !multiData.value) {
+    const hoje = new Date().toISOString().slice(0,10);
+    multiData.value = hoje;
   }
 }
 
@@ -9754,6 +10016,350 @@ function limparModelo() {
     if (el) el.style.display = 'none';
   });
   document.getElementById('mod-char-count').textContent = '0 caracteres';
+}
+
+/* ═══════════════════ MODELOS — SUB-ABA / NAVEGAÇÃO ══════════════════════ */
+function mudarSubAbaModelos(aba) {
+  ['plantao','multi'].forEach(a => {
+    document.getElementById('mod-stab-' + a)?.classList.toggle('active', a === aba);
+    document.getElementById('mod-panel-' + a).style.display = a === aba ? 'block' : 'none';
+  });
+}
+
+/* ═══════════════════ MODELOS — EQUIPE MULTIDISCIPLINAR ══════════════════ */
+
+function _mV(id) { return (document.getElementById(id)?.value || '').trim(); }
+function _mFmtData(val) {
+  if (!val) return '____';
+  const [y,m,d] = val.split('-');
+  const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  return `${parseInt(d)} de ${meses[parseInt(m)-1]} de ${y}`;
+}
+
+function gerarModeloMulti() {
+  const modelo   = _mV('multi-modelo');
+  const processo = _mV('multi-processo') || '[NÚMERO DO PROCESSO]';
+  const vitima   = _mV('multi-vitima')   || '[NOME DA VÍTIMA]';
+  const reu      = _mV('multi-reu')      || '[NOME DO RÉU]';
+  const tecnico  = _mV('multi-tecnico')  || '[NOME DO(A) TÉCNICO(A)]';
+  const cargo    = _mV('multi-cargo')    || 'Assistente Social';
+  const cress    = _mV('multi-cress')    || '___/AP';
+  const mun      = _mV('multi-municipio')|| 'Macapá/AP';
+  const dataDoc  = _mFmtData(_mV('multi-data'));
+
+  // Mostrar/ocultar campos condicionais
+  const isRel  = modelo === 'rel-social-1' || modelo === 'rel-social-2';
+  const isMpu  = modelo === 'mpu-zona' || modelo === 'mpu-endereco';
+  const isUpr  = modelo.startsWith('upr-');
+  const isOficioUpr = modelo === 'upr-oficio';
+  document.getElementById('multi-row-rel').style.display        = isRel ? '' : 'none';
+  document.getElementById('multi-row-mpu').style.display        = isMpu ? '' : 'none';
+  document.getElementById('multi-row-upr').style.display        = isUpr ? '' : 'none';
+  document.getElementById('multi-row-oficio-upr').style.display = isOficioUpr ? '' : 'none';
+
+  let texto = '';
+
+  if (modelo === 'rel-social-1') {
+    const classe    = _mV('multi-classe')       || '[CLASSE]';
+    const orgao     = _mV('multi-orgao')        || '[ÓRGÃO JULGADOR]';
+    const assunto   = _mV('multi-assunto-rel')  || '[ASSUNTO]';
+    const dataDecis = _mFmtData(_mV('multi-data-decisao')) || '[DATA DA DECISÃO]';
+    const oficio    = _mV('multi-oficio')       || '[NÚMERO DO OFÍCIO]';
+    const tel       = _mV('multi-tel-vitima')   || '[NÚMERO]';
+
+    texto = `RELATÓRIO SOCIAL INFORMATIVO
+
+Processo nº: ${processo}
+Classe: ${classe}
+Órgão Julgador: ${orgao}
+Assunto: ${assunto}
+Vítima: ${vitima}
+Réu: ${reu}
+
+MM. Juiz,
+
+Em cumprimento à determinação de Vossa Excelência, proferida em ${dataDecis}, nos autos do processo em epígrafe, e encaminhada a este Setor Psicossocial por meio do Ofício nº ${oficio}, foram adotadas as providências cabíveis no âmbito da Central de Monitoração Eletrônica – CME, tendo como sujeito da análise a vítima acima identificada.
+
+Conforme informações constantes nos autos, foi realizada tentativa de contato com a vítima por meio do telefone informado (${tel}), não sendo possível estabelecer comunicação. Verificou-se, ainda, que o referido contato possui cadastro em aplicativos de mensagens instantâneas, como o WhatsApp. Ademais, até a presente data, não houve comparecimento da vítima à Central de Monitoração Eletrônica para o recebimento da Unidade de Rastreamento Preventivo – UPR.
+
+No que se refere ao réu, não constam registros de acompanhamento psicossocial neste setor. Após consulta ao sistema Akiles, constatou-se que o réu não compareceu à Central de Monitoração Eletrônica para cumprimento da determinação judicial referente à instalação do equipamento de monitoração eletrônica.
+
+Diante desse contexto, resta inviabilizada a implementação da zona de exclusão no endereço da vítima, considerando que a efetivação dessa medida depende, obrigatoriamente, da prévia vinculação do réu ao sistema de monitoração eletrônica.
+
+Assim, devolve-se o presente feito para as providências que Vossa Excelência entender cabíveis, ressaltando que as intervenções realizadas por este Setor Psicossocial observaram rigorosamente os princípios e diretrizes estabelecidos na Resolução nº 412/2021 do Conselho Nacional de Justiça – CNJ, inexistindo omissão ou descumprimento das atribuições institucionais.
+
+É o relatório.
+
+Macapá/AP, ${dataDoc}.
+
+${tecnico}
+${cargo} – CRESS nº ${cress}
+Central de Monitoração Eletrônica – IAPEN`;
+
+  } else if (modelo === 'rel-social-2') {
+    const classe    = _mV('multi-classe')      || '[CLASSE]';
+    const orgao     = _mV('multi-orgao')       || '[ÓRGÃO JULGADOR]';
+    const assunto   = _mV('multi-assunto-rel') || '[ASSUNTO]';
+    const dataDecis = _mFmtData(_mV('multi-data-decisao')) || '[DATA DA DECISÃO]';
+    const oficio    = _mV('multi-oficio')      || '[NÚMERO DO OFÍCIO]';
+
+    texto = `MODELO PADRÃO – AUSÊNCIA DE DADOS / IMPOSSIBILIDADE DE CONTATO
+RELATÓRIO SOCIAL INFORMATIVO
+
+Processo nº: ${processo}
+Classe: ${classe}
+Órgão Julgador: ${orgao}
+Assunto: ${assunto}
+Vítima: ${vitima}
+Réu: ${reu}
+
+MM. Juiz,
+
+Em cumprimento à determinação de Vossa Excelência, proferida em ${dataDecis}, nos autos do processo em epígrafe, e encaminhada a este Setor Psicossocial por meio do Ofício nº ${oficio}, informa-se que não foi possível a realização de intervenção psicossocial, em razão da insuficiência de dados pessoais e de contato das partes constantes nos autos.
+
+Ressalta-se que o expediente encaminhado a esta Central não continha informações mínimas que possibilitassem a localização da vítima e do réu, tais como endereço atualizado, telefone válido ou outros meios de contato, inviabilizando qualquer tentativa de comunicação direta.
+
+No âmbito deste Setor Psicossocial, não há registros anteriores de acompanhamento das partes, tampouco foi possível realizar consulta eficaz aos sistemas disponíveis, diante da ausência de dados identificadores suficientes.
+
+Dessa forma, não foi possível estabelecer contato com a vítima ou com o réu, tampouco adotar medidas de acompanhamento ou orientação, considerando que a atuação desta Central depende, necessariamente, da existência de dados mínimos que permitam a vinculação das partes ao sistema de monitoração eletrônica ou ao atendimento psicossocial.
+
+Diante do exposto, devolve-se o presente feito para as providências que Vossa Excelência entender cabíveis, destacando-se que a impossibilidade de atuação decorre exclusivamente da ausência de informações essenciais nos autos, não havendo omissão ou descumprimento das atribuições institucionais por parte deste Setor Psicossocial, cujas ações seguem os princípios e diretrizes estabelecidos na Resolução nº 412/2021 do Conselho Nacional de Justiça – CNJ.
+
+É o relatório.
+
+${mun}, ${dataDoc}.
+
+${tecnico}
+${cargo} – CRESS nº ${cress}
+Central de Monitoração Eletrônica – IAPEN`;
+
+  } else if (modelo === 'mpu-zona' || modelo === 'mpu-endereco') {
+    const dataAtend  = _mFmtData(_mV('multi-data-atend')) || '____';
+    const endReu     = _mV('multi-end-reu')    || '________________________________';
+    const endVitima  = _mV('multi-end-vitima') || '________________________________';
+    const raioAtual  = _mV('multi-raio-atual') || '___';
+    const raioSug    = _mV('multi-raio-sug')   || '___';
+
+    texto = `MM. Juiz,
+
+Em cumprimento à decisão judicial que determinou a aplicação das medidas protetivas previstas no art. 22 da Lei nº 11.340/2006, especialmente quanto à fixação de distância mínima entre as partes, esta Central de Monitoramento Eletrônico – CME procedeu à instalação do dispositivo de monitoração eletrônica no requerido e à parametrização da respectiva zona de exclusão.
+
+Durante atendimento técnico realizado em ${dataAtend}, o requerido informou residir no endereço ${endReu}, situado nas proximidades da residência da requerente, localizada em ${endVitima}.
+
+Após a configuração da zona de exclusão conforme determinado por este Juízo (raio de ${raioAtual} metros), foram identificados alertas recorrentes de violação automática no sistema de monitoramento eletrônico, decorrentes da constatação de que o endereço informado pelo requerido encontra-se inserido dentro do perímetro de restrição estabelecido.
+
+Conforme demonstrativo cartográfico anexo, verifica-se sobreposição territorial entre os imóveis, circunstância que inviabiliza o cumprimento integral da medida nos moldes fixados, em razão da configuração geográfica da localidade, caracterizada por área urbana consolidada e reduzido distanciamento entre residências.
+
+O requerido declarou não possuir, até o presente momento, alternativa habitacional diversa. Não há registro, nesta Central, de mudança de endereço por parte da requerente.
+
+Diante do exposto, esta equipe técnica submete à apreciação de Vossa Excelência a situação fática constatada, sugerindo, caso assim entenda pertinente, a reavaliação da parametrização da zona de exclusão, com eventual adequação do raio de distanciamento para ${raioSug} metros, ou outro limite que este Juízo considere proporcional e suficiente para garantir a proteção da vítima e a efetividade da medida.
+
+Esclarece-se que a presente manifestação visa exclusivamente adequar tecnicamente o monitoramento eletrônico à realidade territorial observada, não implicando mitigação da proteção conferida à requerente.
+
+Permanecemos à disposição para esclarecimentos complementares.
+
+É o relatório.
+
+${mun}, ${dataDoc}.
+
+${tecnico}
+${cargo}
+CRESS nº ${cress}
+Central de Monitoramento Eletrônico – CME`;
+
+  } else if (modelo === 'upr-aceite') {
+    const cpf = _mV('multi-cpf-vitima') || '___.___.___-__';
+    texto = `TERMO DE ACEITE DA VÍTIMA AO DISPOSITIVO DE PROTEÇÃO PREVENTIVA – UPR
+
+GOVERNO DO ESTADO DO AMAPÁ
+SECRETARIA DE ESTADO DE JUSTIÇA E SEGURANÇA PÚBLICA
+INSTITUTO DE ADMINISTRAÇÃO PENITENCIÁRIA DO AMAPÁ
+CENTRAL DE MONITORAMENTO ELETRÔNICO – CME
+
+Nome da vítima: ${vitima}
+Processo nº: ${processo}
+Ação: Medidas Protetivas de Urgência – Lei nº 11.340/2006 (Lei Maria da Penha)
+Agressor: ${reu}
+
+Eu, ${vitima}, portadora do CPF nº ${cpf}, na condição de vítima no processo supracitado, declaro que compareci à Central de Monitoramento Eletrônico – CME, onde recebi as devidas orientações acerca da finalidade, funcionamento e caráter protetivo do dispositivo denominado Unidade de Rastreamento Preventivo – UPR.
+
+Declaro estar ciente das orientações recebidas e aceito utilizar o referido dispositivo, comprometendo-me a zelar por sua correta utilização.
+
+${mun}, ${dataDoc}.
+
+________________________________
+${vitima}
+
+________________________________
+${tecnico}
+${cargo} – CRESS nº ${cress}`;
+
+  } else if (modelo === 'upr-recusa') {
+    const cpf = _mV('multi-cpf-vitima') || '___.___.___-__';
+    texto = `TERMO DE RECUSA DA VÍTIMA AO DISPOSITIVO UPR
+
+Nome da vítima: ${vitima}
+Processo nº: ${processo}
+Ação: Medidas Protetivas de Urgência – Lei Maria da Penha
+Agressor: ${reu}
+
+Eu, ${vitima}, portadora do CPF nº ${cpf}, declaro que compareci à Central de Monitoramento Eletrônico – CME e fui devidamente orientada acerca da finalidade e funcionamento da Unidade de Rastreamento Preventivo – UPR.
+
+Após receber as informações necessárias, declaro que NÃO tenho interesse em receber ou utilizar o referido dispositivo, estando ciente de que a recusa poderá inviabilizar a implementação da medida protetiva referente ao uso da UPR.
+
+${mun}, ${dataDoc}.
+
+________________________________
+${vitima}
+
+________________________________
+${tecnico}
+${cargo} – CRESS nº ${cress}`;
+
+  } else if (modelo === 'upr-orientacao') {
+    texto = `TERMO DE ORIENTAÇÃO À VÍTIMA
+
+Declaro que a Sra. ${vitima}, vítima no processo nº ${processo}, compareceu à Central de Monitoramento Eletrônico – CME e recebeu orientações técnicas acerca da finalidade, funcionamento e caráter protetivo da Unidade de Rastreamento Preventivo – UPR.
+
+Na presente data, a vítima optou por analisar as informações recebidas, não manifestando decisão definitiva quanto à aceitação ou recusa do dispositivo.
+
+${mun}, ${dataDoc}.
+
+________________________________
+${vitima}
+
+________________________________
+${tecnico}
+${cargo} – CRESS nº ${cress}`;
+
+  } else if (modelo === 'upr-nao-comparecimento') {
+    texto = `TERMO DE NÃO COMPARECIMENTO DA VÍTIMA
+
+Certifico que a Sra. ${vitima}, vítima no processo nº ${processo}, foi devidamente comunicada para comparecer à Central de Monitoramento Eletrônico – CME para orientação e possível implementação do dispositivo UPR.
+
+Entretanto, até a presente data, não houve comparecimento da referida vítima.
+
+${mun}, ${dataDoc}.
+
+________________________________
+${tecnico}
+${cargo} – CRESS nº ${cress}`;
+
+  } else if (modelo === 'upr-oficio') {
+    const oficio      = _mV('multi-oficio-upr')  || '_____';
+    const vara        = _mV('multi-vara')         || '__________________________';
+    const manifest    = _mV('multi-manifestacao') || '(   )';
+    const aceiteMark  = manifest === 'ACEITE' ? '(X)' : '(   )';
+    const recusaMark  = manifest === 'RECUSA' ? '(X)' : '(   )';
+
+    texto = `OFÍCIO Nº ${oficio} / CME / IAPEN
+${mun}, ${dataDoc}.
+
+Ao Juízo da Vara ${vara}
+
+Assunto: Informação acerca da manifestação da vítima – Dispositivo UPR
+
+A Central de Monitoramento Eletrônico – CME informa que a Sra. ${vitima}, vítima no processo nº ${processo}, compareceu a esta Central e recebeu orientações sobre o funcionamento do dispositivo de proteção preventiva – UPR.
+
+Após atendimento realizado, a vítima manifestou:
+
+${aceiteMark} ACEITE do dispositivo
+${recusaMark} RECUSA do dispositivo
+
+Encaminhamos a presente informação para conhecimento e providências cabíveis.
+
+________________________________
+${tecnico}
+${cargo} – CRESS nº ${cress}`;
+
+  } else if (modelo === 'upr-ausencia') {
+    const cpf = _mV('multi-cpf-vitima') || '___.___.___-__';
+    texto = `TERMO DE AUSÊNCIA DE INTERESSE EM RECEBER UNIDADE DE RASTREAMENTO PREVENTIVO – UPR
+
+NOME: ${vitima}.
+NÚMERO DE PROCESSO: ${processo}.
+AÇÃO: Medidas Protetivas de Urgência – Lei nº 11.340/2006
+AGRESSOR: ${reu}.
+
+Eu, ${vitima}, portadora do CPF nº ${cpf}, na condição de vítima no processo nº ${processo} (PJe). Declaro que compareci à Central de Monitoração Eletrônica – CME, nesta data, e que fui devidamente orientada acerca da finalidade, funcionamento e caráter protetivo da Unidade de Rastreamento Preventivo – UPR.
+
+Declaro, ainda, que não desejo receber ou utilizar o referido dispositivo, ciente de que a recusa inviabiliza a implementação da medida protetiva determinada judicialmente no que se refere ao uso da UPR.
+
+A presente manifestação é feita de forma livre, consciente e espontânea, estando ciente de que tal decisão será comunicada ao Juízo competente.
+
+${mun}, ${dataDoc}.
+
+______________________________________
+Requerente`;
+
+  } else {
+    texto = '';
+  }
+
+  const ta = document.getElementById('multi-texto');
+  if (ta) {
+    ta.value = texto;
+    document.getElementById('multi-char-count').textContent = texto.length + ' caracteres';
+  }
+}
+
+function limparModeloMulti() {
+  ['multi-modelo','multi-processo','multi-vitima','multi-reu','multi-classe','multi-orgao',
+   'multi-assunto-rel','multi-data-decisao','multi-oficio','multi-tel-vitima',
+   'multi-data-atend','multi-end-reu','multi-end-vitima','multi-raio-atual','multi-raio-sug',
+   'multi-cpf-vitima','multi-oficio-upr','multi-vara','multi-manifestacao',
+   'multi-tecnico','multi-cargo','multi-cress','multi-data'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const mun = document.getElementById('multi-municipio');
+  if (mun) mun.value = 'Macapá/AP';
+  const ta = document.getElementById('multi-texto');
+  if (ta) ta.value = '';
+  document.getElementById('multi-char-count').textContent = '0 caracteres';
+  ['multi-row-rel','multi-row-mpu','multi-row-upr','multi-row-oficio-upr'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
+function copiarModeloMulti() {
+  const ta = document.getElementById('multi-texto');
+  if (!ta || !ta.value.trim()) { _mostrarToast('⚠️ Gere o texto antes de copiar.', 'erro'); return; }
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const msg = document.getElementById('multi-copy-msg');
+    if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 3000); }
+  });
+}
+
+function imprimirModeloMulti() {
+  const ta = document.getElementById('multi-texto');
+  if (!ta || !ta.value.trim()) { _mostrarToast('⚠️ Gere o texto antes de imprimir.', 'erro'); return; }
+  const modelo  = document.getElementById('multi-modelo')?.value || '';
+  const vitima  = _mV('multi-vitima')  || '';
+  const tecnico = _mV('multi-tecnico') || '';
+  const nomes   = { 'rel-social-1':'Relatório Social Informativo', 'rel-social-2':'Relatório Social – Ausência de Dados',
+                    'mpu-zona':'MPU – Zona de Exclusão', 'mpu-endereco':'MPU – Relatório Endereço',
+                    'upr-aceite':'Termo de Aceite UPR', 'upr-recusa':'Termo de Recusa UPR',
+                    'upr-orientacao':'Termo de Orientação UPR', 'upr-nao-comparecimento':'Termo Não Comparecimento',
+                    'upr-oficio':'Ofício ao Juízo', 'upr-ausencia':'Termo de Ausência UPR' };
+  const titulo  = nomes[modelo] || 'Documento';
+  const conteudo = ta.value.replace(/\n/g, '<br>');
+  const janela = window.open('', '_blank');
+  janela.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>${titulo}</title>
+    <style>
+      body { font-family: 'Times New Roman', serif; font-size: 12pt; margin: 3cm 2.5cm; line-height: 1.8; color: #000; }
+      h1   { font-size: 13pt; text-align: center; font-weight: bold; margin-bottom: 24pt; }
+      p    { text-align: justify; margin: 0 0 12pt; }
+      @media print { body { margin: 2.5cm 2cm; } }
+    </style>
+  </head><body>
+    <div style="white-space:pre-wrap;font-family:'Times New Roman',serif;font-size:12pt;line-height:1.8">${conteudo}</div>
+  </body></html>`);
+  janela.document.close();
+  janela.focus();
+  setTimeout(() => janela.print(), 500);
 }
 
 // Sincronizar logo da topbar com a do login (evita base64 duplicado/corrompido)
