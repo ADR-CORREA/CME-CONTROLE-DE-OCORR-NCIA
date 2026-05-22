@@ -1597,8 +1597,9 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
     <!-- ─── RELATÓRIO ─── -->
     <div class="tab-panel" id="panel-relatorio">
       <div class="sub-tabs">
-        <div class="sub-tab active" id="rel-stab-lista" onclick="mudarSubAbaRel('lista')">📄 Relatórios</div>
-        <div class="sub-tab" id="rel-stab-arquivadas" onclick="mudarSubAbaRel('arquivadas')">📁 Arquivadas</div>
+        <div class="sub-tab active" id="rel-stab-lista"      onclick="mudarSubAbaRel('lista')">📄 Relatórios</div>
+        <div class="sub-tab"        id="rel-stab-arquivadas" onclick="mudarSubAbaRel('arquivadas')">📁 Arquivadas</div>
+        <div class="sub-tab"        id="rel-stab-gerador"    onclick="mudarSubAbaRel('gerador')">⚡ Gerador de Violações</div>
       </div>
       <div class="sub-panel active" id="rel-panel-lista">
         <div class="table-wrapper">
@@ -1689,6 +1690,66 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           </table>
         </div>
       </div>
+
+      <!-- ── Sub-painel: Gerador de Violações ── -->
+      <div class="sub-panel" id="rel-panel-gerador">
+        <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin:8px 0">
+          <div style="font-weight:700;color:#1F4E78;font-size:1rem">⚡ Gerador de Relatório de Violações — AKILES</div>
+        </div>
+
+        <!-- Upload -->
+        <div style="background:#f0f9ff;border:2px dashed #0284c7;border-radius:12px;padding:28px;text-align:center;margin-bottom:16px">
+          <div style="font-size:2rem;margin-bottom:8px">📊</div>
+          <div style="font-weight:600;color:#1F4E78;margin-bottom:6px">Importe a planilha exportada do AKILES AP</div>
+          <div style="font-size:.85rem;color:#666;margin-bottom:14px">Formatos aceitos: <strong>.xlsx</strong> ou <strong>.csv</strong></div>
+          <label class="btn-primary" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px">
+            📂 Selecionar planilha do AKILES
+            <input type="file" id="rv-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="rv_importarPlanilha(this)">
+          </label>
+        </div>
+
+        <!-- Status / resultado da importação -->
+        <div id="rv-status" style="display:none;margin-bottom:14px">
+          <div id="rv-status-msg" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;color:#15803d;font-weight:600;margin-bottom:12px"></div>
+
+          <!-- Opções -->
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px">
+            <div class="form-field" style="margin:0;flex:0 0 auto">
+              <label style="font-size:.85rem">Assinante principal</label>
+              <select id="rv-assinante" style="padding:5px 10px;border:1px solid #ddd;border-radius:6px;font-size:.85rem" onchange="rv_atualizarAssinante()">
+                <option value="">-- Selecione o servidor --</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0;flex:0 0 auto">
+              <label style="font-size:.85rem">Gerente (opcional)</label>
+              <select id="rv-gerente" style="padding:5px 10px;border:1px solid #ddd;border-radius:6px;font-size:.85rem">
+                <option value="">-- Sem gerente --</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Aviso assinatura -->
+          <div id="rv-aviso-ass" style="display:none;background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:.83rem;color:#92400e;margin-bottom:12px">
+            ⚠️ O servidor selecionado não tem assinatura cadastrada. <a href="#" onclick="mudarAba('admin');return false" style="color:#92400e;font-weight:600">Cadastrar assinatura →</a>
+          </div>
+
+          <!-- Lista de monitorados -->
+          <div style="font-weight:600;font-size:.9rem;margin-bottom:8px;color:#1F4E78" id="rv-lista-titulo"></div>
+          <div id="rv-lista-monitorados" style="max-height:260px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px"></div>
+
+          <!-- Botão gerar -->
+          <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn-primary" onclick="rv_gerarTodos()" style="display:flex;align-items:center;gap:8px">
+              ⚡ Gerar todos os relatórios
+            </button>
+            <button class="btn-secondary" onclick="rv_gerarSelecionados()">
+              ✅ Gerar selecionados
+            </button>
+            <button class="btn-secondary" onclick="rv_limpar()">🗑️ Limpar</button>
+          </div>
+        </div>
+      </div><!-- /rel-panel-gerador -->
+
     </div>
 
     <!-- ─── GERÊNCIA ─── -->
@@ -7699,12 +7760,13 @@ function mudarSubAbaCom(aba) {
 
 // Navegação sub-abas Relatório
 function mudarSubAbaRel(aba) {
-  ['lista','arquivadas'].forEach(a => {
+  ['lista','arquivadas','gerador'].forEach(a => {
     document.getElementById('rel-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('rel-panel-' + a)?.classList.toggle('active', a === aba);
   });
   if (aba === 'lista')      renderizarRelatorio();
   if (aba === 'arquivadas') renderizarRelArquivadas();
+  if (aba === 'gerador')    rv_inicializar();
 }
 
 // Navegação sub-abas Gerência
@@ -12349,6 +12411,468 @@ function r2_iconeArquivo(nome) {
     </div>
   </div>
 </div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   GERADOR DE RELATÓRIO DE VIOLAÇÕES — AKILES AP
+   Replica o sistema Python gerar_relatorios.py no navegador
+   ═══════════════════════════════════════════════════════════════ */
+
+const _RV_MESES = ['janeiro','fevereiro','março','abril','maio','junho',
+                   'julho','agosto','setembro','outubro','novembro','dezembro'];
+
+let _rv_grupos = [];      // dados agrupados por monitorado+processo
+let _rv_planilha = '';    // nome do arquivo
+
+// ── Inicializar painel ────────────────────────────────────────
+function rv_inicializar() {
+  // Popular selects de assinantes com usuários do sistema
+  const us = getUsuarios();
+  const opts = us.map((u,i) =>
+    `<option value="${i}">${u.nome}${u.cargo ? ' — '+u.cargo : ''}${u.assinatura ? ' ✅' : ' ⚠️'}</option>`
+  ).join('');
+  const sel1 = document.getElementById('rv-assinante');
+  const sel2 = document.getElementById('rv-gerente');
+  if (sel1) { sel1.innerHTML = '<option value="">-- Selecione o servidor --</option>' + opts; }
+  if (sel2) { sel2.innerHTML = '<option value="">-- Sem gerente --</option>' + opts; }
+  // Auto-selecionar usuário logado
+  const myIdx = us.findIndex(u => u.usuario === usuarioAtual?.usuario);
+  if (myIdx >= 0 && sel1) { sel1.value = myIdx; rv_atualizarAssinante(); }
+}
+
+function rv_atualizarAssinante() {
+  const sel   = document.getElementById('rv-assinante');
+  const aviso = document.getElementById('rv-aviso-ass');
+  if (!sel || !aviso) return;
+  const idx = parseInt(sel.value);
+  if (isNaN(idx)) { aviso.style.display = 'none'; return; }
+  const us = getUsuarios();
+  aviso.style.display = us[idx]?.assinatura ? 'none' : '';
+}
+
+// ── Importar planilha AKILES ──────────────────────────────────
+function rv_importarPlanilha(input) {
+  const file = input.files[0];
+  if (!file) return;
+  _rv_planilha = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    let rows = [];
+    try {
+      const wb  = XLSX.read(e.target.result, { type: 'array', cellDates: true, raw: false });
+      const ws  = wb.Sheets[wb.SheetNames[0]];
+      rows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: false });
+    } catch(err) {
+      _mostrarToast('Erro ao ler o arquivo: ' + err.message, 'erro'); return;
+    }
+    if (!rows.length) { _mostrarToast('Planilha vazia.', 'erro'); return; }
+
+    // Mapear colunas (igual ao Python pick_col)
+    const cols = Object.keys(rows[0]);
+    const pick = (candidatos) => {
+      const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+      for (const cand of candidatos)
+        for (const col of cols)
+          if (norm(col).includes(norm(cand))) return col;
+      return null;
+    };
+
+    const cNome    = pick(['Nome']);
+    const cProc    = pick(['Processo','Numero do Processo']);
+    const cCpf     = pick(['CPF']);
+    const cComp    = pick(['Competência','Competencia','Vara','Foro']);
+    const cComarca = pick(['Comarca']);
+    const cTipo    = pick(['Tipo']);
+    const cId      = pick(['ID']);
+    const cOcorreu = pick(['Ocorreu','Data']);
+    const cDur     = pick(['Duração','Duracao','Tempo']);
+
+    if (!cNome || !cProc) {
+      _mostrarToast('Colunas "Nome" e "Processo" não encontradas na planilha.', 'erro'); return;
+    }
+
+    // Normalizar linhas
+    rows = rows.map(r => ({
+      nome:        (r[cNome]    || '').toString().trim(),
+      processo:    (r[cProc]    || '').toString().trim(),
+      cpf:         (r[cCpf]    || '').toString().trim(),
+      competencia: (r[cComp]   || '').toString().trim(),
+      comarca:     (r[cComarca]|| '').toString().trim(),
+      tipo:        (r[cTipo]   || '').toString().trim(),
+      idOc:        (r[cId]     || '').toString().trim(),
+      ocorreu:     (r[cOcorreu]|| '').toString().trim(),
+      duracao:     (r[cDur]    || '').toString().trim(),
+    })).filter(r => r.nome);
+
+    // Agrupar por nome+processo
+    const mapa = {};
+    rows.forEach(r => {
+      const chave = r.nome + '|||' + r.processo;
+      if (!mapa[chave]) mapa[chave] = [];
+      mapa[chave].push(r);
+    });
+    _rv_grupos = Object.values(mapa);
+
+    rv_renderizarLista();
+    document.getElementById('rv-status').style.display = '';
+    rv_atualizarAssinante();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── Renderizar lista de monitorados ──────────────────────────
+function rv_renderizarLista() {
+  const el = document.getElementById('rv-lista-monitorados');
+  const tit = document.getElementById('rv-lista-titulo');
+  const msg = document.getElementById('rv-status-msg');
+  if (!el) return;
+
+  msg.textContent = `✅ ${_rv_grupos.length} monitorado(s) encontrado(s) em "${_rv_planilha}"`;
+  tit.textContent = `Selecione os monitorados para gerar (${_rv_grupos.length} total):`;
+
+  el.innerHTML = _rv_grupos.map((g, i) => {
+    const r0    = g[0];
+    const total = g.length;
+    const tipos = [...new Set(g.map(x => x.tipo))].length;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #f0f0f0;font-size:.85rem">
+      <input type="checkbox" id="rv-chk-${i}" checked style="accent-color:#1F4E78;width:16px;height:16px">
+      <label for="rv-chk-${i}" style="flex:1;cursor:pointer">
+        <span style="font-weight:600">${r0.nome}</span>
+        <span style="color:#888;margin-left:6px;font-size:.78rem">${r0.processo}</span>
+      </label>
+      <span style="color:#1F4E78;font-size:.78rem;white-space:nowrap">${total} ocorrência${total!==1?'s':''} · ${tipos} tipo${tipos!==1?'s':''}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Gerar ─────────────────────────────────────────────────────
+function rv_gerarTodos() {
+  document.querySelectorAll('[id^="rv-chk-"]').forEach(c => c.checked = true);
+  rv_gerarSelecionados();
+}
+
+function rv_gerarSelecionados() {
+  const selecionados = _rv_grupos.filter((_, i) =>
+    document.getElementById(`rv-chk-${i}`)?.checked
+  );
+  if (!selecionados.length) { _mostrarToast('Selecione ao menos um monitorado.', 'erro'); return; }
+
+  // Obter info de assinantes
+  const us = getUsuarios();
+  const idxAss = parseInt(document.getElementById('rv-assinante')?.value);
+  const idxGer = parseInt(document.getElementById('rv-gerente')?.value);
+  const infoAss = isNaN(idxAss) ? null : us[idxAss] || null;
+  const infoGer = isNaN(idxGer) ? null : us[idxGer] || null;
+
+  if (!infoAss) { _mostrarToast('Selecione o servidor assinante.', 'erro'); return; }
+
+  // Gerar um HTML por monitorado e abrir numa janela
+  const html = rv_montarHtmlCompleto(selecionados, infoAss, infoGer);
+  const janela = window.open('', '_blank');
+  if (!janela) { _mostrarToast('⚠️ Popup bloqueado! Permita popups.', 'erro'); return; }
+  janela.document.write(html);
+  janela.document.close();
+  janela.focus();
+  _mostrarToast(`⚡ ${selecionados.length} relatório(s) gerado(s)! Escolha "Salvar como PDF".`, 'sucesso');
+}
+
+// ── Montar HTML completo (todos os monitorados, quebra de página entre eles) ──
+function rv_montarHtmlCompleto(grupos, infoAss, infoGer) {
+  const hoje  = new Date();
+  const dataExtenso = `Macapá, ${String(hoje.getDate()).padStart(2,'0')} de ${_RV_MESES[hoje.getMonth()]} de ${hoje.getFullYear()}.`;
+  const dataHora    = hoje.toLocaleString('pt-BR');
+
+  const cmeSrc   = window._CME_LOGO_B64   ? 'data:image/png;base64,' + window._CME_LOGO_B64   : '';
+  const iapenSrc = window._IAPEN_LOGO_B64 ? 'data:image/png;base64,' + window._IAPEN_LOGO_B64 : '';
+
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // Cabeçalho institucional (reutilizado em cada documento)
+  const cabecalho = `
+    <div class="cabecalho">
+      <div class="cab-logo">${cmeSrc ? `<img src="${cmeSrc}" alt="CME">` : ''}</div>
+      <div class="cab-texto">
+        <div class="t-gov">GOVERNO DO ESTADO DO AMAPÁ</div>
+        <div class="t-sub">SECRETARIA DE ESTADO DE JUSTIÇA E SEGURANÇA PÚBLICA</div>
+        <div class="t-sub">INSTITUTO DE ADMINISTRAÇÃO PENITENCIÁRIA DO AMAPÁ</div>
+        <div class="t-cme">CENTRAL DE MONITORAMENTO ELETRÔNICO – CME</div>
+      </div>
+      <div class="cab-logo">${iapenSrc ? `<img src="${iapenSrc}" alt="IAPEN">` : ''}</div>
+    </div>
+    <hr class="div-main">`;
+
+  // Rodapé institucional
+  const rodape = `
+    <div class="rodape">
+      <p>CENTRAL DE MONITORAMENTO ELETRÔNICO – CME</p>
+      <p>Av. Machado de Assis, 372 – Centro – CEP: 68900-066, Macapá-AP</p>
+      <p>E-mail: cme@iapen.ap.gov.br | Telefone: (96) 98415-2844</p>
+      <p style="color:#aaa;margin-top:4px">Gerado em ${dataHora}</p>
+    </div>`;
+
+  // Bloco de assinatura
+  function blocoAssinatura(info) {
+    if (!info) return '';
+    const assImg = info.assinatura
+      ? `<img src="${info.assinatura}" style="max-height:70px;max-width:200px;object-fit:contain;display:block;margin:0 auto 4px auto">`
+      : '';
+    return `<div style="text-align:center;margin-top:8px">
+      ${assImg}
+      <div style="border-top:1px solid #000;width:260px;margin:0 auto 4px auto"></div>
+      <div style="font-weight:bold;font-size:10.5pt">${esc(info.nome)}</div>
+      ${info.cargo  ? `<div style="font-size:10pt">${esc(info.cargo)}</div>` : ''}
+      ${info.cress  ? `<div style="font-size:9.5pt">${esc(info.cress)}</div>` : ''}
+      <div style="font-size:9.5pt">Central de Monitoração Eletrônica – CME/IAPEN</div>
+    </div>`;
+  }
+
+  // Montar conteúdo de cada grupo
+  const docs = grupos.map(grupo => {
+    const r0 = grupo[0];
+
+    // Formatar CPF
+    function fmtCpf(c) {
+      const d = c.replace(/\D/g,'').padStart(11,'0');
+      return d.length === 11 ? `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}` : c;
+    }
+
+    // Formatar data/hora
+    function fmtOcorreu(v) {
+      if (!v) return '—';
+      // Tenta parsear
+      const dias = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+      const d = new Date(v);
+      if (!isNaN(d.getTime())) {
+        const dd = String(d.getDate()).padStart(2,'0');
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        const hh = String(d.getHours()).padStart(2,'0');
+        const mi = String(d.getMinutes()).padStart(2,'0');
+        return `${dd}/${mm}/${d.getFullYear()} (${dias[d.getDay()]}) ${hh}:${mi}`;
+      }
+      return v;
+    }
+
+    // Resumo por tipo de violação
+    const contagem = {};
+    grupo.forEach(r => { contagem[r.tipo] = (contagem[r.tipo]||0) + 1; });
+    const totalViol = grupo.length;
+
+    const resumoRows = Object.entries(contagem).map(([tipo, qtd]) =>
+      `<tr><td>${esc(tipo)}</td><td style="text-align:center">${qtd}</td></tr>`
+    ).join('');
+
+    // Tabela de violações
+    const violRows = grupo.map(r =>
+      `<tr>
+        <td>${esc(r.tipo)}</td>
+        <td>${esc(r.idOc)}</td>
+        <td style="white-space:nowrap">${esc(fmtOcorreu(r.ocorreu))}</td>
+        <td>${esc(r.duracao)}</td>
+      </tr>`
+    ).join('');
+
+    // Síntese técnica — análise da bateria (igual ao Python)
+    const TIPO_BAT = 'Dispositivo desligado por falta de carga na bateria';
+    function parseDuracaoMin(s) {
+      const d = parseInt((s.match(/(\d+)\s*d/)||[])[1]||0);
+      const h = parseInt((s.match(/(\d+)\s*h/)||[])[1]||0);
+      const m = parseInt((s.match(/(\d+)\s*min/)||[])[1]||0);
+      return d*1440 + h*60 + m;
+    }
+    const batRows = grupo.filter(r => r.tipo === TIPO_BAT);
+    let maxMin = -1, maxRow = null;
+    batRows.forEach(r => { const m = parseDuracaoMin(r.duracao); if (m > maxMin) { maxMin = m; maxRow = r; } });
+
+    let parabat = '';
+    if (maxRow) {
+      const ocFmt = fmtOcorreu(maxRow.ocorreu);
+      if (maxMin > 1440) {
+        parabat = `Entre as ocorrências de descarregamento do dispositivo, o maior período registrado foi de <strong>${esc(maxRow.duracao)}</strong>, referente à ocorrência ID ${esc(maxRow.idOc)}, iniciada em ${esc(ocFmt)}. Durante o período em que o equipamento permaneceu sem carga, a Central de Monitoramento Eletrônico ficou impossibilitada ou substancialmente limitada de fiscalizar de forma efetiva a localização do monitorado em tempo real, comprometendo a rastreabilidade dos deslocamentos e a verificação adequada do cumprimento das condições judiciais estabelecidas.`;
+      } else {
+        parabat = `Entre as ocorrências de descarregamento do dispositivo, o maior período registrado foi de <strong>${esc(maxRow.duracao)}</strong>, referente à ocorrência ID ${esc(maxRow.idOc)}, iniciada em ${esc(ocFmt)}. Tais eventos demandam atenção operacional, pois podem prejudicar temporariamente a continuidade do acompanhamento em tempo real.`;
+      }
+    }
+
+    return `
+      <!-- ═══ CAPA ═══ -->
+      <div class="pagina">
+        ${cabecalho}
+        <h2 class="titulo-rel">RELATÓRIO DE MONITORAÇÃO ELETRÔNICA</h2>
+
+        <div class="secao-tit">DADOS PESSOAIS</div>
+        <p class="dado"><strong>MONITORADO:</strong> ${esc(r0.nome)}</p>
+        <p class="dado"><strong>CPF:</strong> ${esc(fmtCpf(r0.cpf)) || 'NÃO INFORMADO'}</p>
+        <p class="dado"><strong>ENDEREÇO:</strong> _______________________________________________</p>
+        <p class="dado"><strong>CONTATO:</strong> _______________________________________________</p>
+
+        <div class="secao-tit">DADOS PROCESSUAIS</div>
+        <p class="dado"><strong>PROCESSO Nº:</strong> ${esc(r0.processo) || 'NÃO INFORMADO'}</p>
+        <p class="dado"><strong>VARA:</strong> ${esc(r0.competencia) || 'NÃO INFORMADO'}</p>
+        <p class="dado"><strong>COMARCA:</strong> ${esc(r0.comarca) || 'NÃO INFORMADO'}</p>
+
+        <div class="secao-tit">DADOS DA MONITORAÇÃO</div>
+        <p class="dado"><strong>DATA DE INÍCIO:</strong> _______________&nbsp;&nbsp;&nbsp;<strong>DATA DE TÉRMINO:</strong> _______________</p>
+
+        <p class="corpo" style="margin-top:12px">
+          Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos
+          dos deveres e obrigações do monitorado, gerados pelo sistema de monitoração eletrônica
+          no período de ___ a ___.
+        </p>
+
+        <div class="secao-tit">RESUMO QUANTITATIVO DE VIOLAÇÕES</div>
+        <table class="tabela-dados">
+          <thead><tr><th>Tipo de Violação</th><th style="width:60px;text-align:center">Qtd.</th></tr></thead>
+          <tbody>
+            ${resumoRows}
+            <tr style="font-weight:bold"><td>TOTAL</td><td style="text-align:center">${totalViol}</td></tr>
+          </tbody>
+        </table>
+
+        ${rodape}
+      </div>
+
+      <!-- ═══ RELATÓRIO ═══ -->
+      <div class="pagina quebra-antes">
+        ${cabecalho}
+        <h2 class="titulo-rel">RELATÓRIO DE VIOLAÇÕES DE MONITORAMENTO ELETRÔNICO</h2>
+
+        <div class="ident-bloco">
+          <p><strong>Nome do Monitorado:</strong> ${esc(r0.nome)}</p>
+          <p><strong>CPF:</strong> ${esc(fmtCpf(r0.cpf)) || 'NÃO INFORMADO'}</p>
+          <p><strong>Número do Processo:</strong> ${esc(r0.processo) || 'NÃO INFORMADO'}</p>
+          <p><strong>Competência:</strong> ${esc(r0.competencia) || 'NÃO INFORMADO'}</p>
+          <p><strong>Comarca:</strong> ${esc(r0.comarca) || 'NÃO INFORMADO'}</p>
+        </div>
+
+        <table class="tabela-dados">
+          <thead><tr>
+            <th>Tipo de Ocorrência</th>
+            <th>ID da Ocorrência</th>
+            <th>Ocorreu</th>
+            <th>Duração</th>
+          </tr></thead>
+          <tbody>${violRows}</tbody>
+        </table>
+
+        <!-- Nota de autenticidade -->
+        <p class="corpo" style="margin-top:16px;text-indent:1.25cm">
+          As informações contidas neste relatório foram extraídas diretamente do Sistema AKILES AP,
+          plataforma oficial de monitoramento eletrônico adotada pela Central de Monitoramento Eletrônico
+          (CME/IAPEN-AP). Os dados são reproduzidos na íntegra, sem qualquer modificação, supressão ou
+          acréscimo de conteúdo, refletindo fielmente os registros gerados e armazenados automaticamente
+          pelo sistema. Este documento possui validade para fins administrativos e judiciais, nos termos
+          da legislação vigente.
+        </p>
+
+        <!-- Síntese técnica -->
+        <h3 style="text-align:center;margin-top:18px;font-size:11pt">SÍNTESE TÉCNICA DAS OCORRÊNCIAS</h3>
+
+        <p class="corpo" style="text-indent:1.25cm">
+          Da análise dos registros extraídos do Sistema AKILES AP, verifica-se que o presente
+          relatório apresenta ocorrências relacionadas a possíveis descumprimentos dos deveres e
+          obrigações do monitorado, conforme registros constantes nas tabelas acima.
+        </p>
+
+        ${parabat ? `<p class="corpo" style="text-indent:1.25cm">${parabat}</p>` : ''}
+
+        <p class="corpo" style="text-indent:1.25cm">
+          Ressalta-se que o presente relatório possui finalidade técnica e informativa,
+          limitando-se a apresentar os registros constantes no sistema oficial de monitoração
+          eletrônica utilizado pela Central de Monitoramento Eletrônico — CME/IAPEN/AP, bem
+          como a contextualizar tecnicamente as ocorrências identificadas. A análise jurídica
+          quanto às consequências processuais, executórias ou administrativas decorrentes dos
+          fatos comunicados compete ao Juízo competente.
+        </p>
+
+        <p class="corpo" style="text-indent:1.25cm">
+          Dessa forma, encaminham-se as informações para conhecimento e deliberação da
+          autoridade judicial, permanecendo esta Central à disposição para eventuais
+          esclarecimentos complementares.
+        </p>
+
+        <div style="text-align:right;margin-top:24px;font-size:10pt">${dataExtenso}</div>
+
+        <div style="display:flex;justify-content:${infoGer ? 'space-around' : 'center'};margin-top:24px;flex-wrap:wrap;gap:20px">
+          ${blocoAssinatura(infoAss)}
+          ${infoGer ? blocoAssinatura(infoGer) : ''}
+        </div>
+
+        ${rodape}
+      </div>`;
+  }).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<meta charset="UTF-8">
+<title>Relatório de Violações — CME/IAPEN</title>
+<style>
+  @page { margin: 2cm; size: A4 portrait; }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #000; margin: 0; padding: 0; }
+
+  /* Cabeçalho */
+  .cabecalho { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .cab-logo  { flex: 0 0 auto; }
+  .cab-logo img { max-width: 80px; max-height: 80px; object-fit: contain; }
+  .cab-texto { flex: 1; text-align: center; }
+  .t-gov  { font-size: 10.5pt; font-weight: bold; }
+  .t-sub  { font-size: 8.5pt; margin: 1px 0; }
+  .t-cme  { font-size: 11pt; font-weight: bold; margin-top: 4px; }
+  .div-main { border: none; border-top: 2.5px solid #000; margin: 8px 0 16px 0; }
+
+  /* Conteúdo */
+  .titulo-rel  { font-size: 13pt; font-weight: bold; text-align: center; text-transform: uppercase; margin: 0 0 16px 0; }
+  .secao-tit   { font-size: 11pt; font-weight: bold; text-decoration: underline; margin: 14px 0 4px 0; }
+  .dado        { margin: 3px 0; font-size: 10.5pt; }
+  .corpo       { margin: 7px 0; text-align: justify; font-size: 11pt; }
+  .ident-bloco { border-left: 3px solid #000; padding: 8px 14px; background: #f7f7f7; margin: 12px 0; font-size: 10.5pt; }
+  .ident-bloco p { margin: 3px 0; }
+
+  /* Tabela */
+  .tabela-dados { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 10pt; }
+  .tabela-dados th { background: #1F4E78; color: #fff; padding: 7px 10px; text-align: left; }
+  .tabela-dados td { padding: 6px 10px; border: 1px solid #ccc; vertical-align: top; }
+  .tabela-dados tr:nth-child(even) td { background: #f5f8fc; }
+
+  /* Rodapé */
+  .rodape { margin-top: 30px; border-top: 1px solid #000; padding-top: 8px;
+            text-align: center; font-size: 8.5pt; color: #444; }
+  .rodape p { margin: 2px 0; }
+
+  /* Paginação */
+  .pagina       { min-height: 100vh; padding-bottom: 20px; }
+  .quebra-antes { page-break-before: always; }
+
+  /* Botão imprimir */
+  .btn-print { display: block; margin: 24px auto 0; padding: 12px 36px;
+               background: #1F4E78; color: #fff; border: none; border-radius: 8px;
+               font-size: 13pt; cursor: pointer; font-family: Arial; }
+  @media print { .no-print { display: none !important; } }
+</style>
+</head><body>
+
+${docs}
+
+<div class="no-print" style="text-align:center;padding:24px">
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar como PDF</button>
+  <p style="font-size:9pt;color:#777;margin-top:8px">
+    No diálogo de impressão escolha <strong>"Salvar como PDF"</strong> e desative <em>Cabeçalhos e rodapés</em> do navegador.
+  </p>
+</div>
+
+<script>window.onload=function(){setTimeout(function(){window.print();},700);};<\/script>
+</body></html>`;
+}
+
+// ── Limpar ─────────────────────────────────────────────────────
+function rv_limpar() {
+  _rv_grupos = [];
+  _rv_planilha = '';
+  document.getElementById('rv-status').style.display = 'none';
+  document.getElementById('rv-file-input').value = '';
+  _mostrarToast('Painel limpo.', 'sucesso');
+}
+</script>
 
 </body>
 </html>
