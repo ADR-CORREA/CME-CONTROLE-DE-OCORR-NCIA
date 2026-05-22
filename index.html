@@ -11048,13 +11048,49 @@ function r2_renderizarListaMon(lista) {
     el.innerHTML = '<div style="color:#aaa;font-size:.83rem;text-align:center;padding:20px 0">Nenhum monitorado.<br>Clique em + Monitorado.</div>';
     return;
   }
-  el.innerHTML = lista.map(m =>
-    `<div class="r2-mon-item ${m.nome === r2_state.monitorado ? 'active' : ''}"
-          onclick="r2_selecionarMonitorado('${m.nome.replace(/'/g,"&#39;")}')"
-          title="${m.nome.replace(/"/g,'&quot;')}">
-       📁 ${m.nome}
-     </div>`
-  ).join('');
+  const isAdmin = usuarioAtual?.nivel === 'admin';
+  el.innerHTML = lista.map(m => {
+    const nomeEsc = m.nome.replace(/'/g,"&#39;").replace(/"/g,'&quot;');
+    return `<div style="display:flex;align-items:center;gap:4px">
+      <div class="r2-mon-item ${m.nome === r2_state.monitorado ? 'active' : ''}"
+           style="flex:1"
+           onclick="r2_selecionarMonitorado('${nomeEsc}')"
+           title="${nomeEsc}">
+        📁 ${m.nome}
+      </div>
+      ${isAdmin ? `<button onclick="r2_confirmarDeleteMonitorado('${nomeEsc}')"
+        title="Excluir pasta do monitorado"
+        style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#ccc;font-size:.85rem;padding:4px;border-radius:4px;transition:color .15s"
+        onmouseover="this.style.color='#dc3545'" onmouseout="this.style.color='#ccc'">🗑️</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/* ── Excluir monitorado inteiro (admin) ───────────────────────── */
+function r2_confirmarDeleteMonitorado(nome) {
+  if (!confirm(`⚠️ ATENÇÃO!\n\nExcluir TODOS os arquivos do monitorado "${nome}"?\n\nEsta ação é IRREVERSÍVEL e apagará permanentemente todos os documentos das pastas Processo e Docs do monitorado.`)) return;
+  r2_deletarMonitorado(nome);
+}
+
+async function r2_deletarMonitorado(nome) {
+  try {
+    _mostrarToast('🗑️ Excluindo monitorado…', 'sucesso');
+    await r2_api('DELETE', `/delete-monitorado?monitorado=${encodeURIComponent(nome)}`);
+    _mostrarToast(`✅ Monitorado "${nome}" excluído com sucesso.`, 'sucesso');
+    addLog(`R2: monitorado excluído — ${nome}`);
+    // Limpar seleção se era o monitorado ativo
+    if (r2_state.monitorado === nome) {
+      r2_state.monitorado = '';
+      r2_state.pasta = '';
+      document.getElementById('r2-breadcrumb').style.display = 'none';
+      document.getElementById('r2-guia-inicial').style.display  = 'block';
+      document.getElementById('r2-pastas-view').style.display   = 'none';
+      document.getElementById('r2-arquivos-view').style.display = 'none';
+    }
+    await r2_carregarMonitorados();
+  } catch(e) {
+    _mostrarToast(`⚠️ Erro: ${e.message}`, 'erro');
+  }
 }
 
 function r2_filtrarMonitorados(q) {
@@ -11138,6 +11174,34 @@ async function r2_abrirPasta(pasta) {
   await r2_carregarArquivos();
 }
 
+/* ── Definição das categorias da pasta Processo ───────────────── */
+const R2_PROCESSO_CATEGORIAS = [
+  {
+    id: 'termo-vinculacao',
+    nome: 'Termo de Vinculação',
+    icone: '📋',
+    obs: null,
+  },
+  {
+    id: 'decisao-vinculacao',
+    nome: 'Decisão Judicial de Vinculação',
+    icone: '⚖️',
+    obs: null,
+  },
+  {
+    id: 'termo-desvinculacao',
+    nome: 'Termo de Desvinculação',
+    icone: '📋',
+    obs: 'Na falta do termo de desvinculação, utilize o Relatório de Listagem de Eventos de Monitorados e o Relatório de Utilização de Dispositivos.',
+  },
+  {
+    id: 'decisao-desvinculacao',
+    nome: 'Decisão Judicial de Desvinculação',
+    icone: '⚖️',
+    obs: null,
+  },
+];
+
 /* ── Listar arquivos ──────────────────────────────────────────── */
 async function r2_carregarArquivos() {
   const tbody = document.getElementById('r2-tabela-body');
@@ -11146,33 +11210,159 @@ async function r2_carregarArquivos() {
     const q = new URLSearchParams({ monitorado: r2_state.monitorado, pasta: r2_state.pasta });
     const data = await r2_api('GET', `/list?${q}`);
     const arquivos = (data.arquivos || []).filter(f => !f.nome.endsWith('.keep'));
+
+    // Vista estruturada para a pasta Processo
+    if (r2_state.pasta === 'Processo') {
+      r2_renderizarProcesso(arquivos);
+      return;
+    }
+
+    // Vista genérica para outras pastas
     if (!arquivos.length) {
       tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:#aaa">Nenhum arquivo nesta pasta.</td></tr>';
       return;
     }
-    const nivelAdmin = ['admin', 'gerencia'].includes(usuarioAtual?.nivel);
-    tbody.innerHTML = arquivos.map(f => {
-      const tamanho = r2_formatarBytes(f.tamanho);
-      const data_env = f.enviado ? new Date(f.enviado).toLocaleString('pt-BR') : '—';
-      const escapedKey = f.key.replace(/"/g, '&quot;');
-      return `<tr style="border-top:1px solid #f0f0f0;transition:background .15s" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background=''">
-        <td style="padding:9px 14px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.nome}">
-          ${r2_iconeArquivo(f.nome)} ${f.nome}
-        </td>
-        <td style="padding:9px 8px;text-align:right;color:#777;white-space:nowrap">${tamanho}</td>
-        <td style="padding:9px 8px;color:#555;white-space:nowrap">${f.usuario || '—'}</td>
-        <td style="padding:9px 8px;color:#777;white-space:nowrap;font-size:.81rem">${data_env}</td>
-        <td style="padding:9px 8px;text-align:center;white-space:nowrap">
-          <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78"
-                  onclick="r2_baixarArquivo('${escapedKey}','${f.nome.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
-          ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828;margin-left:4px"
-                onclick="r2_confirmarDelete('${escapedKey}','${f.nome.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
-        </td>
-      </tr>`;
-    }).join('');
+    const nivelAdmin = usuarioAtual?.nivel === 'admin';
+    tbody.innerHTML = arquivos.map(f => r2_linhaArquivo(f, nivelAdmin)).join('');
   } catch(e) {
     tbody.innerHTML = `<tr><td colspan="5" style="padding:20px;text-align:center;color:#dc3545">${e.message}</td></tr>`;
   }
+}
+
+/* ── Vista estruturada — pasta Processo ───────────────────────── */
+function r2_renderizarProcesso(arquivos) {
+  const tbody    = document.getElementById('r2-tabela-body');
+  const nivelAdmin = usuarioAtual?.nivel === 'admin';
+
+  // Agrupar arquivos por categoria (prefixo [categoria] no nome)
+  function getCategoria(nome) {
+    const m = nome.match(/^\[(.+?)\]\s*/);
+    return m ? m[1] : '__outros__';
+  }
+  const porCategoria = {};
+  arquivos.forEach(f => {
+    const cat = getCategoria(f.nome);
+    if (!porCategoria[cat]) porCategoria[cat] = [];
+    porCategoria[cat].push(f);
+  });
+
+  // Renderizar cada categoria predefinida
+  let html = '';
+  R2_PROCESSO_CATEGORIAS.forEach(cat => {
+    const arqs = porCategoria[cat.nome] || [];
+    const inputId = `r2-file-${cat.id}`;
+
+    html += `<tr>
+      <td colspan="5" style="padding:0">
+        <div style="border:1px solid #e0e0e0;border-radius:8px;margin:6px 0;overflow:hidden">
+          <!-- Cabeçalho da categoria -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8f9fa;border-bottom:${arqs.length || cat.obs ? '1px solid #e8e8e8' : 'none'}">
+            <div>
+              <span style="font-weight:600;font-size:.92rem">${cat.icone} ${cat.nome}</span>
+              ${cat.obs ? `<div style="color:#dc3545;font-size:.78rem;margin-top:3px;font-style:italic">⚠️ ${cat.obs}</div>` : ''}
+            </div>
+            <label style="cursor:pointer;background:#1F4E78;color:#fff;padding:5px 12px;border-radius:5px;font-size:.82rem;white-space:nowrap;display:flex;align-items:center;gap:5px">
+              📎 Anexar
+              <input type="file" id="${inputId}" style="display:none" onchange="r2_enviarComCategoria(this,'${cat.nome.replace(/'/g,"&#39;")}')">
+            </label>
+          </div>
+          <!-- Arquivos desta categoria -->
+          ${arqs.length ? arqs.map(f => {
+            const ek = f.key.replace(/"/g,'&quot;');
+            const nomeLimpo = f.nome.replace(/^\[.+?\]\s*/, '');
+            const dt = f.enviado ? new Date(f.enviado).toLocaleString('pt-BR') : '—';
+            return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid #f0f0f0;font-size:.85rem">
+              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${nomeLimpo}">${r2_iconeArquivo(nomeLimpo)} ${nomeLimpo}</span>
+              <span style="color:#888;white-space:nowrap;font-size:.78rem">${r2_formatarBytes(f.tamanho)}</span>
+              <span style="color:#999;white-space:nowrap;font-size:.78rem">${f.usuario||'—'}</span>
+              <span style="color:#aaa;white-space:nowrap;font-size:.75rem">${dt}</span>
+              <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78" onclick="r2_baixarArquivo('${ek}','${nomeLimpo.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
+              ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828" onclick="r2_confirmarDelete('${ek}','${nomeLimpo.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
+            </div>`;
+          }).join('') : `<div style="padding:8px 14px;color:#bbb;font-size:.82rem;font-style:italic">Nenhum documento anexado.</div>`}
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  // Outros arquivos não categorizados
+  const outros = porCategoria['__outros__'] || [];
+  if (outros.length) {
+    html += `<tr><td colspan="5" style="padding:0">
+      <div style="border:1px solid #e0e0e0;border-radius:8px;margin:6px 0;overflow:hidden">
+        <div style="padding:10px 14px;background:#f8f9fa;font-weight:600;font-size:.9rem">📎 Outros documentos</div>
+        ${outros.map(f => {
+          const ek = f.key.replace(/"/g,'&quot;');
+          const dt = f.enviado ? new Date(f.enviado).toLocaleString('pt-BR') : '—';
+          return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid #f0f0f0;font-size:.85rem">
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r2_iconeArquivo(f.nome)} ${f.nome}</span>
+            <span style="color:#888;font-size:.78rem">${r2_formatarBytes(f.tamanho)}</span>
+            <span style="color:#999;font-size:.78rem">${f.usuario||'—'}</span>
+            <span style="color:#aaa;font-size:.75rem">${dt}</span>
+            <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78" onclick="r2_baixarArquivo('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
+            ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828" onclick="r2_confirmarDelete('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    </td></tr>`;
+  }
+
+  tbody.innerHTML = html;
+}
+
+/* ── Upload com categoria (pasta Processo) ────────────────────── */
+async function r2_enviarComCategoria(input, categoria) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  const wrap = document.getElementById('r2-progress-wrap');
+  const bar  = document.getElementById('r2-progress-bar');
+  const txt  = document.getElementById('r2-progress-text');
+  wrap.style.display = 'block';
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    bar.style.width = Math.round((i / files.length) * 100) + '%';
+    txt.textContent = `Enviando (${i+1}/${files.length}): ${file.name}`;
+    // Prefixar o nome com a categoria para agrupamento
+    const nomeComCat = `[${categoria}] ${file.name}`;
+    try {
+      await r2_api('POST', '/upload', {
+        'X-Monitorado': r2_state.monitorado,
+        'X-Pasta':      r2_state.pasta,
+        'X-Filename':   nomeComCat,
+        'Content-Type': file.type || 'application/octet-stream',
+      }, file);
+    } catch(e) {
+      _mostrarToast(`⚠️ Erro ao enviar ${file.name}: ${e.message}`, 'erro');
+    }
+  }
+  bar.style.width = '100%';
+  txt.textContent = `✅ ${files.length} arquivo(s) enviado(s)!`;
+  setTimeout(() => { wrap.style.display = 'none'; bar.style.width = '0%'; }, 2500);
+  input.value = '';
+  addLog(`R2: arquivo(s) enviado(s) — ${categoria} — ${r2_state.monitorado}`);
+  await r2_carregarArquivos();
+  await r2_atualizarContagens(r2_state.monitorado);
+}
+
+/* ── Linha de arquivo genérica ────────────────────────────────── */
+function r2_linhaArquivo(f, nivelAdmin) {
+  const tamanho  = r2_formatarBytes(f.tamanho);
+  const data_env = f.enviado ? new Date(f.enviado).toLocaleString('pt-BR') : '—';
+  const ek       = f.key.replace(/"/g, '&quot;');
+  return `<tr style="border-top:1px solid #f0f0f0;transition:background .15s" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background=''">
+    <td style="padding:9px 14px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.nome}">
+      ${r2_iconeArquivo(f.nome)} ${f.nome}
+    </td>
+    <td style="padding:9px 8px;text-align:right;color:#777;white-space:nowrap">${tamanho}</td>
+    <td style="padding:9px 8px;color:#555;white-space:nowrap">${f.usuario || '—'}</td>
+    <td style="padding:9px 8px;color:#777;white-space:nowrap;font-size:.81rem">${data_env}</td>
+    <td style="padding:9px 8px;text-align:center;white-space:nowrap">
+      <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78"
+              onclick="r2_baixarArquivo('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
+      ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828;margin-left:4px"
+            onclick="r2_confirmarDelete('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
+    </td>
+  </tr>`;
 }
 
 /* ── Upload ───────────────────────────────────────────────────── */
