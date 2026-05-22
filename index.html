@@ -13888,11 +13888,11 @@ function com_gerarOficio() {
   const signat     = document.getElementById('com-of-signatario').value.trim();
   const decreto    = document.getElementById('com-of-decreto').value.trim();
 
-  if (!modeloId)  return _mostrarToast('⚠️ Selecione o modelo de ofício.','erro');
-  if (!dest)      return _mostrarToast('⚠️ Selecione comarca e vara.','erro');
-  if (!numero)    return _mostrarToast('⚠️ Informe o número do ofício.','erro');
-  if (!nomeMon)   return _mostrarToast('⚠️ Informe o nome do monitorado.','erro');
-  if (!processo)  return _mostrarToast('⚠️ Informe o número do processo.','erro');
+  if (!modeloId)  return _mostrarToast('&#9888; Selecione o modelo de of&#237;cio.','erro');
+  if (!dest)      return _mostrarToast('&#9888; Selecione comarca e vara.','erro');
+  if (!numero)    return _mostrarToast('&#9888; Informe o n&#250;mero do of&#237;cio.','erro');
+  if (!nomeMon)   return _mostrarToast('&#9888; Informe o nome do monitorado.','erro');
+  if (!processo)  return _mostrarToast('&#9888; Informe o n&#250;mero do processo.','erro');
 
   const modelo = COM_MODELOS.find(m => m.id === modeloId);
   if (!modelo) return;
@@ -13909,9 +13909,9 @@ function com_gerarOficio() {
   const paragrafos = modelo.corpo(campos);
 
   // Número e data formatados
-  const ano        = dataOficio ? dataOficio.split('-')[0] : String(new Date().getFullYear());
-  const numFmt     = `${numero}/${ano} - CME/IAPEN`;
-  const dataLonga  = dataOficio ? com_fmtDataLonga(dataOficio) : '';
+  const ano       = dataOficio ? dataOficio.split('-')[0] : String(new Date().getFullYear());
+  const numFmt    = `${numero}/${ano} - CME/IAPEN`;
+  const dataLonga = dataOficio ? com_fmtDataLonga(dataOficio) : '';
 
   // Escapes para HTML/Word
   const esc = s => String(s||'')
@@ -13925,52 +13925,153 @@ function com_gerarOficio() {
   };
 
   const paragsHtml = paragrafos
-    .map(p => `<p style="text-align:justify;margin:12pt 0;line-height:1.5">${escP(p)}</p>`)
+    .map(p => `<p style="text-align:justify;margin:10pt 0;line-height:1.5;font-size:12pt">${escP(p)}</p>`)
     .join('\n');
 
+  // Logo: tenta capturar do topbar via canvas; se falhar, usa src direto
+  function com_getLogoDataUrl() {
+    const img = document.getElementById('topbar-logo');
+    if (!img || !img.src || img.src === window.location.href) return '';
+    try {
+      const c = document.createElement('canvas');
+      c.width  = img.naturalWidth  || 90;
+      c.height = img.naturalHeight || 90;
+      c.getContext('2d').drawImage(img, 0, 0);
+      return c.toDataURL('image/png');
+    } catch(e) {
+      return img.src; // usa URL direta se CORS bloquear canvas
+    }
+  }
+  const logoSrc = com_getLogoDataUrl();
+  const logoCell = logoSrc
+    ? `<img src="${logoSrc}" width="75" height="75" style="display:block;margin:auto">`
+    : `<div style="width:75pt;height:75pt;border:1pt solid #ccc;display:flex;align-items:center;justify-content:center;font-size:7pt;color:#999;text-align:center">CME/<br>IAPEN</div>`;
+
   const doc = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
-  xmlns:w='urn:schemas-microsoft-com:office:word'>
-<head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
+  xmlns:w='urn:schemas-microsoft-com:office:word'
+  xmlns:v='urn:schemas-microsoft-com:vml'>
+<head>
+<meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
 <style>
-  @page { margin:2.5cm 3cm 3.5cm 3cm; }
-  body  { font-family:Arial,sans-serif; font-size:12pt; line-height:1.5; color:#000; }
-  p     { margin:8pt 0; }
-  .rod  { font-size:9pt; text-align:center; border-top:1pt solid #000; padding-top:6pt; margin-top:54pt; }
-</style></head>
+  @page {
+    margin: 2.5cm 3cm 3cm 3cm;
+  }
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #000;
+  }
+  p { margin: 0; padding: 0; }
+  table { border-collapse: collapse; width: 100%; }
+  td { vertical-align: middle; }
+  .linha-dupla {
+    border-top: 3pt solid #1a3a6b;
+    border-bottom: 1pt solid #1a3a6b;
+    height: 4pt;
+    margin: 6pt 0 14pt 0;
+  }
+  .rodape {
+    font-family: Arial, sans-serif;
+    font-size: 8.5pt;
+    text-align: center;
+    color: #333;
+    border-top: 1pt solid #1a3a6b;
+    padding-top: 6pt;
+    margin-top: 60pt;
+  }
+</style>
+</head>
 <body>
-<p style="text-align:right;margin-bottom:0"><b>Of&#237;cio n&#176; ${esc(numFmt)}.</b></p>
-<p style="text-align:right;margin-top:0">Macap&#225;/AP, ${esc(dataLonga)}.</p>
 
-<p style="margin-top:22pt">A Sua Excel&#234;ncia o (a) Senhor (a)<br>
-<b>${esc(dest)}.</b></p>
+<!-- ══ CABEÇALHO ══════════════════════════════════════════════ -->
+<table style="width:100%;border-collapse:collapse;margin-bottom:4pt">
+  <tr>
+    <td style="width:85pt;text-align:center;vertical-align:middle;padding:0 8pt 0 0">
+      ${logoCell}
+    </td>
+    <td style="text-align:center;vertical-align:middle;padding:4pt 0">
+      <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;text-transform:uppercase;letter-spacing:.5pt;margin:0;color:#1a3a6b">Governo do Estado do Amap&#225;</p>
+      <p style="font-family:Arial,sans-serif;font-size:8.5pt;margin:1pt 0;color:#333">Secretaria de Estado da Justi&#231;a e Seguran&#231;a P&#250;blica &#8211; SEJUSP</p>
+      <p style="font-family:Arial,sans-serif;font-size:10pt;font-weight:bold;text-transform:uppercase;margin:2pt 0;color:#1a3a6b">Instituto de Administra&#231;&#227;o Penitenci&#225;ria &#8211; IAPEN/AP</p>
+      <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;margin:1pt 0;color:#000">Central de Monitoramento Eletr&#244;nico &#8211; CME</p>
+    </td>
+    <td style="width:85pt;text-align:center;vertical-align:middle;padding:0 0 0 8pt">
+      ${logoCell}
+    </td>
+  </tr>
+</table>
 
-<p><b>Assunto: ${esc(modelo.assunto)}.</b></p>
-<p>Processo n&#176;: ${esc(processo)}.</p>
+<!-- Linha dupla separadora -->
+<table style="width:100%;border-collapse:collapse;margin:4pt 0 16pt 0">
+  <tr>
+    <td style="height:3pt;background:#1a3a6b;font-size:0">&nbsp;</td>
+  </tr>
+  <tr>
+    <td style="height:2pt">&nbsp;</td>
+  </tr>
+  <tr>
+    <td style="height:1pt;background:#1a3a6b;font-size:0">&nbsp;</td>
+  </tr>
+</table>
 
-<p style="margin-top:16pt">${esc(saudacao)}</p>
+<!-- ══ IDENTIFICAÇÃO DO OFÍCIO ══════════════════════════════════ -->
+<p style="text-align:right;font-size:12pt;font-weight:bold;margin:0 0 2pt 0">
+  Of&#237;cio n&#176; <b>${esc(numFmt)}</b>
+</p>
+<p style="text-align:right;font-size:12pt;margin:0 0 20pt 0">
+  Macap&#225;/AP, ${esc(dataLonga)}.
+</p>
 
+<!-- ══ DESTINATÁRIO ══════════════════════════════════════════════ -->
+<p style="font-size:12pt;margin:0 0 2pt 0">A Sua Excel&#234;ncia o (a) Senhor (a)</p>
+<p style="font-size:12pt;font-weight:bold;margin:0 0 14pt 0">${esc(dest)}.</p>
+
+<!-- ══ REFERÊNCIA ════════════════════════════════════════════════ -->
+<p style="font-size:12pt;margin:0 0 2pt 0"><b>Assunto:</b> ${esc(modelo.assunto)}.</p>
+<p style="font-size:12pt;margin:0 0 18pt 0"><b>Processo n&#176;:</b> ${esc(processo)}.</p>
+
+<!-- ══ SAUDAÇÃO ══════════════════════════════════════════════════ -->
+<p style="font-size:12pt;margin:0 0 10pt 0">${esc(saudacao)}</p>
+
+<!-- ══ CORPO ═════════════════════════════════════════════════════ -->
 ${paragsHtml}
 
-<p style="margin-top:10pt">Sem mais, esta CME encontra-se &#224; disposi&#231;&#227;o, podendo ser contatada no telefone constantes no rodap&#233;.</p>
+<!-- ══ ENCERRAMENTO ══════════════════════════════════════════════ -->
+<p style="font-size:12pt;margin:14pt 0 10pt 0">
+  Sem mais, esta CME encontra-se &#224; disposi&#231;&#227;o, podendo ser contatada pelos dados constantes no rodap&#233;.
+</p>
+<p style="font-size:12pt;margin:0 0 0 0">Respeitosamente,</p>
 
-<p style="margin-top:10pt">Respeitosamente,</p>
+<!-- ══ ASSINATURA ════════════════════════════════════════════════ -->
+<table style="width:100%;margin-top:60pt">
+  <tr>
+    <td style="width:55%;text-align:center;vertical-align:bottom">
+      <p style="border-top:1pt solid #000;padding-top:6pt;font-size:12pt;font-weight:bold;margin:0">${esc(signat)}</p>
+      <p style="font-size:11pt;margin:2pt 0 0 0">Gerente de Monitoramento Eletr&#244;nico &#8211; CME/IAPEN</p>
+      <p style="font-size:10pt;color:#444;margin:2pt 0 0 0">Decreto n&#176; ${esc(decreto)}</p>
+    </td>
+    <td style="width:45%"></td>
+  </tr>
+</table>
 
-<p style="margin-top:54pt">${esc(signat)}<br>
-Gerente de Monitoramento Eletr&#244;nico &#8211; CME/ IAPEN<br>
-Decreto n&#176; ${esc(decreto)}</p>
+<!-- ══ RODAPÉ ════════════════════════════════════════════════════ -->
+<div class="rodape">
+  <b>CENTRAL DE MONITORAMENTO ELETR&#212;NICO &#8211; CME / IAPEN-AP</b><br>
+  Av. Machado de Assis, 372 &#8211; Centro &#8211; CEP: 68900-066, Macap&#225;-AP<br>
+  &#128222;&nbsp;(096) 98415-2844&nbsp;&nbsp;|&nbsp;&nbsp;&#9993;&nbsp;cme.iapen.ap@gmail.com
+</div>
 
-<div class="rod">CENTRAL DE MONITORAMENTO ELETR&#212;NICO - CME<br>
-Av. Machado de Assis, 372 &#8211; Centro &#8211; CEP: 68900-066, Macap&#225;-AP.<br>
-Telefone (096) 98415 2844 &nbsp;|&nbsp; E-mail: cme.iapen.ap@gmail.com</div>
-</body></html>`;
+</body>
+</html>`;
 
-  const blob    = new Blob([doc], {type:'application/msword;charset=utf-8'});
+  const blob    = new Blob(['﻿' + doc], {type:'application/msword;charset=utf-8'});
   const url     = URL.createObjectURL(blob);
   const a       = document.createElement('a');
-  const nomeArq = `Oficio_${numero}_${nomeMon.split(' ')[0]}.doc`;
+  const nomeArq = `Oficio_${numero}_${nomeMon.replace(/\s+/g,'_').substring(0,20)}.doc`;
   a.href = url; a.download = nomeArq; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
-  _mostrarToast(`&#10004; Of&#237;cio gerado: ${nomeArq}`, 'sucesso');
+  setTimeout(() => URL.revokeObjectURL(url), 8000);
+  _mostrarToast('&#10004; Of&#237;cio gerado: ' + nomeArq, 'sucesso');
 }
 
 /* ─── Preview / Limpar / Copiar ────────────────────────────── */
