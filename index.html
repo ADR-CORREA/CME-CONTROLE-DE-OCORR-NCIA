@@ -1769,9 +1769,10 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
       </div>
 
       <!-- Sub-abas Modelos -->
-      <div class="sub-tabs" style="margin-bottom:0">
-        <div class="sub-tab active" id="mod-stab-plantao"       onclick="mudarSubAbaModelos('plantao')">📋 Plantão</div>
-        <div class="sub-tab"        id="mod-stab-multi"          onclick="mudarSubAbaModelos('multi')">⚕️ Equipe Multidisciplinar</div>
+      <div class="sub-tabs" style="margin-bottom:0" id="mod-subtabs-wrap">
+        <div class="sub-tab active" id="mod-stab-plantao" onclick="mudarSubAbaModelos('plantao')">📋 Plantão</div>
+        <div class="sub-tab"        id="mod-stab-multi"   onclick="mudarSubAbaModelos('multi')">⚕️ Equipe Multidisciplinar</div>
+        <div class="sub-tab"        id="mod-stab-comunicacao" onclick="mudarSubAbaModelos('comunicacao')">📡 Comunicação</div>
       </div>
 
       <!-- Sub-panel Plantão -->
@@ -2080,6 +2081,15 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           </div>
         </div>
       </div><!-- /mod-panel-multi -->
+
+      <!-- Sub-panel Comunicação -->
+      <div id="mod-panel-comunicacao" style="display:none">
+        <div style="padding:32px;text-align:center;color:#888">
+          <div style="font-size:2.5rem;margin-bottom:12px">📡</div>
+          <div style="font-size:1rem;font-weight:600;color:#1F4E78;margin-bottom:6px">Modelos de Comunicação</div>
+          <div style="font-size:.88rem">Em breve — os modelos de ofícios e comunicações serão implementados aqui.</div>
+        </div>
+      </div><!-- /mod-panel-comunicacao -->
 
     </div>
 
@@ -5100,8 +5110,8 @@ function fazerLogout() {
 // ── Mapa de abas permitidas por nível ─────────────────────
 const TABS_POR_NIVEL = {
   plantao:    ['dashboard', 'criticos', 'ocorrencias', 'links', 'modelos', 'arquivos'],
-  comunicacao: ['comunicacao', 'links', 'arquivos'],
-  relatorio:  ['relatorio', 'links', 'arquivos'],
+  comunicacao: ['comunicacao', 'links', 'modelos', 'arquivos'],
+  relatorio:  ['relatorio', 'links', 'modelos', 'arquivos'],
   juridico:   ['criticos', 'ocorrencias', 'juridico', 'links', 'modelos', 'arquivos'],
   estoque:    ['estoque', 'links', 'arquivos'],
   triagem:       ['triagem', 'links', 'arquivos'],
@@ -10428,6 +10438,8 @@ const _agora_fmt = () => {
 };
 
 function renderizarModelos() {
+  // Aplicar visibilidade das sub-abas por nível
+  aplicarVisibilidadeModelos();
   // Preencher servidor com usuário logado
   const srv = document.getElementById('mod-servidor');
   if (srv && !srv.value) srv.value = usuarioAtual?.nome || '';
@@ -10946,10 +10958,36 @@ function limparModelo() {
 }
 
 /* ═══════════════════ MODELOS — SUB-ABA / NAVEGAÇÃO ══════════════════════ */
+
+// Define quais sub-abas cada nível pode ver
+const MODELOS_POR_NIVEL = {
+  plantao:     ['plantao'],
+  relatorio:   ['multi'],
+  comunicacao: ['comunicacao'],
+  juridico:    ['plantao', 'multi', 'comunicacao'],
+  gerencia:    ['plantao', 'multi', 'comunicacao'],
+  admin:       ['plantao', 'multi', 'comunicacao'],
+};
+
+function aplicarVisibilidadeModelos() {
+  const nivel = usuarioAtual?.nivel || 'plantao';
+  const permitidas = MODELOS_POR_NIVEL[nivel] || ['plantao'];
+  const todas = ['plantao', 'multi', 'comunicacao'];
+
+  todas.forEach(a => {
+    const stab = document.getElementById('mod-stab-' + a);
+    if (stab) stab.style.display = permitidas.includes(a) ? '' : 'none';
+  });
+
+  // Auto-navegar para a primeira sub-aba permitida
+  mudarSubAbaModelos(permitidas[0]);
+}
+
 function mudarSubAbaModelos(aba) {
-  ['plantao','multi'].forEach(a => {
+  ['plantao','multi','comunicacao'].forEach(a => {
     document.getElementById('mod-stab-' + a)?.classList.toggle('active', a === aba);
-    document.getElementById('mod-panel-' + a).style.display = a === aba ? 'block' : 'none';
+    const panel = document.getElementById('mod-panel-' + a);
+    if (panel) panel.style.display = a === aba ? 'block' : 'none';
   });
 }
 
