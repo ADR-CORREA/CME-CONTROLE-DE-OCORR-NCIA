@@ -12680,7 +12680,7 @@ function rv_importarPlanilha(input) {
     const cTipo    = pick(['Tipo']);
     const cId      = pick(['ID']);
     const cOcorreu = pick(['Ocorreu','Data']);
-    const cDur     = pick(['Duração','Duracao','Tempo']);
+    const cDur     = pick(['Duração','Duracao','Duracao da','Tempo','Duration']);
 
     if (!cNome || !cProc) {
       _mostrarToast('Colunas "Nome" e "Processo" não encontradas na planilha.', 'erro'); return;
@@ -12885,7 +12885,7 @@ function rv_montarWordDoc(grupo, infoAss, infoGer) {
 <html xmlns:o="urn:schemas-microsoft-com:office:office"
       xmlns:w="urn:schemas-microsoft-com:office:word"
       xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="UTF-8">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <xml><w:WordDocument>
   <w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/>
 </w:WordDocument></xml>
@@ -12926,16 +12926,6 @@ table{border-collapse:collapse}
   <hr style="border:none;border-top:2pt solid #000;margin:3pt 0 0 0">
 </div>
 
-<!-- RODAPÉ WORD -->
-<div style="mso-element:footer" id="f1">
-  <p style="text-align:center;font-size:9pt;margin:0">
-    CENTRAL DE MONITORAMENTO ELETRÔNICO – CME<br>
-    Av. Machado de Assis, 372 – Centro – CEP: 68900-066, Macapá-AP<br>
-    E-mail: cme@iapen.ap.gov.br / Telefone: (96) 98415-2844
-  </p>
-  <p style="text-align:right;font-size:9pt;margin:0"><span style="mso-field-code:' PAGE \* MERGEFORMAT '">1</span></p>
-</div>
-
 <div class="Section1">
 
 <!-- ════════════ CAPA ════════════ -->
@@ -12971,10 +12961,10 @@ table{border-collapse:collapse}
 </table>
 
 <!-- ════════════ QUEBRA DE PÁGINA ════════════ -->
-<p class="quebra"></p>
+<br style="mso-page-break-before:always;clear:all">
 
 <!-- ════════════ RELATÓRIO ════════════ -->
-<p class="center" style="font-size:14pt;font-weight:bold;margin-bottom:12pt">RELATÓRIO DE VIOLAÇÕES DE MONITORAMENTO ELETRÔNICO</p>
+<p class="center" style="font-size:14pt;font-weight:bold;margin-bottom:12pt;mso-page-break-before:always;page-break-before:always">RELATÓRIO DE VIOLAÇÕES DE MONITORAMENTO ELETRÔNICO</p>
 
 <p style="margin:2pt 0"><b>Nome do Monitorado:</b> ${nome}</p>
 <p style="margin:2pt 0"><b>CPF:</b> ${cpf}</p>
@@ -13011,6 +13001,16 @@ ${batPar}
   ${infoGer ? blocoAss(infoGer) : ''}
 </p>
 
+</div>
+
+<!-- RODAPÉ WORD — posicionado após a seção para não aparecer no topo -->
+<div style="mso-element:footer" id="f1">
+  <p style="text-align:center;font-size:9pt;margin:0">
+    CENTRAL DE MONITORAMENTO ELETRÔNICO – CME<br>
+    Av. Machado de Assis, 372 – Centro – CEP: 68900-066, Macapá-AP<br>
+    E-mail: cme@iapen.ap.gov.br / Telefone: (96) 98415-2844
+  </p>
+  <p style="text-align:right;font-size:9pt;margin:0"><span style="mso-field-code:' PAGE \* MERGEFORMAT '">1</span></p>
 </div>
 </body></html>`;
 }
