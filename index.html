@@ -12790,6 +12790,10 @@ function rv_montarWordDoc(grupo, infoAss, infoGer) {
   const dataExt = `Macapá, ${String(hoje.getDate()).padStart(2,'0')} de ${_RV_MESES[hoje.getMonth()]} de ${hoje.getFullYear()}.`;
 
   function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmtCpf(c) {
+    const d = String(c||'').replace(/\D/g,'').padStart(11,'0');
+    return d.length === 11 ? `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}` : String(c||'');
+  }
 
   // ── helpers ──
   function parseDurMin(s) {
@@ -12811,8 +12815,8 @@ function rv_montarWordDoc(grupo, infoAss, infoGer) {
   // ── dados do monitorado ──
   const nome    = esc(r0.nome    || 'NÃO INFORMADO');
   const proc    = esc(r0.processo|| 'NÃO INFORMADO');
-  const cpf     = esc(r0.cpf     || 'NÃO INFORMADO');
-  const vara    = esc(r0.vara    || 'NÃO INFORMADO');
+  const cpf     = esc(fmtCpf(r0.cpf) || 'NÃO INFORMADO');
+  const vara    = esc(r0.competencia || 'NÃO INFORMADO');
   const comarca = esc(r0.comarca || 'NÃO INFORMADO');
 
   // ── resumo por tipo (capa) ──
@@ -12827,7 +12831,7 @@ function rv_montarWordDoc(grupo, infoAss, infoGer) {
   const violRows = grupo.map(x=>`
     <tr>
       <td style="border:1px solid #999;padding:4pt 6pt;font-size:10pt">${esc(x.tipo)}</td>
-      <td style="border:1px solid #999;padding:4pt 6pt;font-size:10pt">${esc(x.id)}</td>
+      <td style="border:1px solid #999;padding:4pt 6pt;font-size:10pt">${esc(x.idOc)}</td>
       <td style="border:1px solid #999;padding:4pt 6pt;font-size:10pt">${esc(fmtData(x.ocorreu))}</td>
       <td style="border:1px solid #999;padding:4pt 6pt;font-size:10pt">${esc(x.duracao)}</td>
     </tr>
@@ -12841,7 +12845,7 @@ function rv_montarWordDoc(grupo, infoAss, infoGer) {
 
   let batPar = '';
   if (maxBat) {
-    const dur = esc(maxBat.duracao); const id = esc(maxBat.id);
+    const dur = esc(maxBat.duracao); const id = esc(maxBat.idOc);
     const dt  = fmtData(maxBat.ocorreu);
     const m   = dt.match(/(\d{2}\/\d{2}\/\d{4}).*?(\d{2}:\d{2})/);
     const dataHora = m ? `${m[1]} às ${m[2]}` : dt;
