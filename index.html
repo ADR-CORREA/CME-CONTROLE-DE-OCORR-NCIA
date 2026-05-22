@@ -4657,6 +4657,134 @@ function carregarStore(chave, padrao) {
 /* USUÁRIOS PADRÃO */
 /* USUARIOS_PADRAO — senhas armazenadas como SHA-256(salt+senha). Nunca altere os hashes manualmente. */
 const _SHA_SALT = 'cme_iapen_2026_';
+
+/* ── Varas Processuais do Amapá ──────────────────────────── */
+const VARAS_PROCESSUAIS = [
+  { comarca: 'COMARCA DE CALÇOENE', varas: [
+    'VARA ÚNICA',
+  ]},
+  { comarca: 'COMARCA DE FERREIRA GOMES', varas: [
+    'VARA ÚNICA',
+  ]},
+  { comarca: 'COMARCA DE LARANJAL DO JARI', varas: [
+    '1ª VARA DE COMPETÊNCIA GERAL E TRIBUNAL DO JÚRI',
+    '2ª VARA DE COMPETÊNCIA GERAL, INFÂNCIA E JUVENTUDE',
+    '3ª VARA DE COMPETÊNCIA GERAL',
+  ]},
+  { comarca: 'COMARCA DE MACAPÁ', varas: [
+    '1ª VARA DE EXECUÇÃO PENAL DE MACAPÁ',
+    'JUIZADO DE VIOLÊNCIA DOMÉSTICA E FAMILIAR CONTRA A MULHER - 1ª VARA',
+    'JUIZADO DE VIOLÊNCIA DOMÉSTICA E FAMILIAR CONTRA A MULHER - 2ª VARA',
+    'JUIZADO ESPECIAL CÍVEL - 5ª VARA - NORTE',
+    'JUIZADO ESPECIAL CÍVEL - 6ª VARA - SUL',
+    'JUIZADO ESPECIAL CÍVEL - 7ª VARA DO - UNIFAP',
+    'JUIZADO ESPECIAL CÍVEL CENTRAL - 1ª VARA',
+    'JUIZADO ESPECIAL CÍVEL CENTRAL - 2ª VARA',
+    'JUIZADO ESPECIAL CÍVEL CENTRAL - 3ª VARA',
+    'JUIZADO ESPECIAL CÍVEL CENTRAL - 4ª VARA',
+    'JUIZADO ESPECIAL DA FAZENDA PÚBLICA - 1ª VARA',
+    'JUIZADO ESPECIAL DA FAZENDA PÚBLICA - 2ª VARA',
+    'JUIZADO ESPECIAL DA FAZENDA PÚBLICA - 3ª VARA',
+    'PLANTÃO CRIMINAL DA COMARCA DE MACAPÁ',
+    'VARA CÍVEL E DE FZD PÚBLICA - 1ª VARA',
+    'VARA CÍVEL E DE FZD PÚBLICA - 2ª VARA',
+    'VARA CÍVEL E DE FZD PÚBLICA - 3ª VARA',
+    'VARA CÍVEL E DE FZD PÚBLICA - 4ª VARA',
+    'VARA CÍVEL E DE FZD PÚBLICA - 5ª VARA',
+    'VARA CÍVEL E DE FZD PÚBLICA - 6ª VARA',
+    'VARA CRIMINAL - 1ª VARA',
+    'VARA CRIMINAL - 2ª VARA',
+    'VARA CRIMINAL - 3ª VARA - CRIMINAL E DE AUDITORIA MILITAR',
+    'VARA CRIMINAL - 4ª VARA',
+    'VARA CRIMINAL - 5ª VARA',
+    'VARA DA FAMÍLIA, ÓRFÃOS E SUCESSÕES - 1ª VARA',
+    'VARA DA FAMÍLIA, ÓRFÃOS E SUCESSÕES - 2ª VARA',
+    'VARA DA FAMÍLIA, ÓRFÃOS E SUCESSÕES - 3ª VARA',
+    'VARA DA FAMÍLIA, ÓRFÃOS E SUCESSÕES - 4ª VARA',
+    'VARA DAS GARANTIAS - 1ª VARA',
+    'VARA DAS GARANTIAS - 2ª VARA',
+    'VARA DE EXECUÇÕES PENAIS - 1ª VARA',
+    'VARA DE EXECUÇÕES PENAIS - 2ª VARA',
+    'VARA DO JUIZADO DA INFÂNCIA E JUVENTUDE',
+    'VARA DO TRIBUNAL DO JÚRI',
+    'TRIBUNAL DE JUSTIÇA',
+    'VARA DO JUIZADO ESPECIAL CRIMINAL',
+  ]},
+  { comarca: 'COMARCA DE MAZAGÃO', varas: [
+    'VARA ÚNICA',
+  ]},
+  { comarca: 'COMARCA DE OIAPOQUE', varas: [
+    '1ª VARA DE OIAPOQUE',
+    '2ª VARA DE OIAPOQUE',
+  ]},
+  { comarca: 'COMARCA DE PEDRA BRANCA DO AMAPARI', varas: [
+    'VARA ÚNICA',
+  ]},
+  { comarca: 'COMARCA DE PORTO GRANDE', varas: [
+    'VARA ÚNICA',
+  ]},
+  { comarca: 'COMARCA DE SANTANA', varas: [
+    '1ª VARA CRIMINAL DE SANTANA',
+    '2ª VARA CRIMINAL DE SANTANA',
+    'JUIZADO ESPECIAL CÍVEL',
+    'PLANTÃO CRIMINAL DA COMARCA DE SANTANA',
+    'VARA CÍVEL E DE FAZENDA PÚBLICA - 1ª VARA',
+    'VARA CÍVEL E DE FAZENDA PÚBLICA - 2ª VARA',
+    'VARA CÍVEL E DE FAZENDA PÚBLICA - 3ª VARA',
+    'VARA CRIMINAL E TRIBUNAL DO JÚRI - 1ª VARA',
+    'VARA CRIMINAL E TRIBUNAL DO JÚRI - 2ª VARA',
+    'VARA DA INFÂNCIA E DA JUVENTUDE',
+    'VARA DO JUIZADO ESPECIAL E DE VIOLÊNCIA DOMÉSTICA E FAMILIAR CONTRA A MULHER',
+  ]},
+  { comarca: 'COMARCA DE TARTARUGALZINHO', varas: [
+    'VARA ÚNICA',
+  ]},
+  { comarca: 'COMARCA DE VITÓRIA DO JARI', varas: [
+    'VARA ÚNICA',
+  ]},
+  { comarca: 'COMARCA DO AMAPÁ', varas: [
+    'VARA ÚNICA',
+  ]},
+  { comarca: 'OUTROS ESTADOS', varas: [
+    'VARA CRIMINAL ESTADUAL DE OUTRO ESTADO',
+    'VARA CRIMINAL FEDERAL DE OUTRO ESTADO',
+    'VARA DE EXECUÇÃO PENAL DE OUTRO ESTADO',
+  ]},
+  { comarca: 'VARA ELEITORAL', varas: [
+    '10ª ZONA ELEITORAL - MACAPÁ (ZONA NORTE) - ITAUBAL E CUTIAS',
+    '11ª ZONA ELEITORAL - SERRA DO NAVIO E PEDRA BRANCA DO AMAPARI',
+    '12ª ZONA ELEITORAL - PORTO GRANDE E FERREIRA GOMES',
+    '14ª ZONA ELEITORAL - MACAPÁ',
+    '1ª ZONA ELEITORAL - AMAPÁ, CALÇOENE E PRACUÚBA',
+    '2ª ZONA ELEITORAL - MACAPÁ (ZONA SUL)',
+    '4ª ZONA ELEITORAL - OIAPOQUE',
+    '5ª ZONA ELEITORAL - MAZAGÃO',
+    '6ª ZONA ELEITORAL - SANTANA',
+    '7ª ZONA ELEITORAL - LARANJAL DO JARI E VITÓRIA DO JARI',
+    '8ª ZONA ELEITORAL - TARTARUGALZINHO',
+  ]},
+  { comarca: 'VARA FEDERAL', varas: [
+    '1ª VARA CÍVEL FEDERAL',
+    '2ª VARA CÍVEL FEDERAL',
+    '3ª VARA FEDERAL - JUIZADO ESPECIAL FEDERAL CÍVEL',
+    '4ª VARA FEDERAL - CRIMINAL E JUIZADO ESPECIAL FEDERAL CRIMINAL ADJUNTO',
+    '5ª VARA FEDERAL - JUIZADO ESPECIAL FEDERAL CÍVEL',
+    '6ª VARA FEDERAL - CÍVEL',
+    'VARA ÚNICA DA SUBSEÇÃO JUDICIÁRIA DE LARANJAL DO JARI',
+    'VARA ÚNICA DA SUBSEÇÃO JUDICIÁRIA DE OIAPOQUE',
+  ]},
+];
+
+/* Gera <optgroup> + <option> para qualquer <select> */
+function _varasSelectOptions(valorSelecionado = '') {
+  return VARAS_PROCESSUAIS.map(g =>
+    `<optgroup label="${g.comarca}">${
+      g.varas.map(v =>
+        `<option value="${v}"${v === valorSelecionado ? ' selected' : ''}>${v}</option>`
+      ).join('')
+    }</optgroup>`
+  ).join('');
+}
 const USUARIOS_PADRAO = [
   { usuario: "admin",        senha: "a6b893f39bec5621db142a2fe3d2aa18e6f28878c2caf81ce033c42e11e0ef95", nome: "Administrador",          nivel: "admin"        },
   { usuario: "gerente",      senha: "4f903ad9e20314258f9d7e393be4db414a4d9c4a4b5ed7ee981f91dc094161c1", nome: "Gerência CME",          nivel: "gerencia"     },
