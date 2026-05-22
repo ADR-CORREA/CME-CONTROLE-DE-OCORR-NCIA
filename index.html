@@ -1770,9 +1770,10 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
       <!-- Sub-abas Modelos -->
       <div class="sub-tabs" style="margin-bottom:0" id="mod-subtabs-wrap">
-        <div class="sub-tab active" id="mod-stab-plantao" onclick="mudarSubAbaModelos('plantao')">📋 Plantão</div>
-        <div class="sub-tab"        id="mod-stab-multi"   onclick="mudarSubAbaModelos('multi')">⚕️ Equipe Multidisciplinar</div>
-        <div class="sub-tab"        id="mod-stab-comunicacao" onclick="mudarSubAbaModelos('comunicacao')">📡 Comunicação</div>
+        <div class="sub-tab active" id="mod-stab-plantao"       onclick="mudarSubAbaModelos('plantao')">📋 Plantão</div>
+        <div class="sub-tab"        id="mod-stab-multi"          onclick="mudarSubAbaModelos('multi')">⚕️ Equipe Multidisciplinar</div>
+        <div class="sub-tab"        id="mod-stab-comunicacao"    onclick="mudarSubAbaModelos('comunicacao')">📡 Comunicação</div>
+        <div class="sub-tab"        id="mod-stab-juridico-mod"   onclick="mudarSubAbaModelos('juridico-mod')">⚖️ Jurídico</div>
       </div>
 
       <!-- Sub-panel Plantão -->
@@ -2090,6 +2091,15 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <div style="font-size:.88rem">Em breve — os modelos de ofícios e comunicações serão implementados aqui.</div>
         </div>
       </div><!-- /mod-panel-comunicacao -->
+
+      <!-- Sub-panel Jurídico -->
+      <div id="mod-panel-juridico-mod" style="display:none">
+        <div style="padding:32px;text-align:center;color:#888">
+          <div style="font-size:2.5rem;margin-bottom:12px">⚖️</div>
+          <div style="font-size:1rem;font-weight:600;color:#1F4E78;margin-bottom:6px">Modelos Jurídicos</div>
+          <div style="font-size:.88rem">Em breve — os modelos de documentos do Jurídico serão implementados aqui.</div>
+        </div>
+      </div><!-- /mod-panel-juridico-mod -->
 
     </div>
 
@@ -5117,7 +5127,7 @@ const TABS_POR_NIVEL = {
   triagem:       ['triagem', 'links', 'arquivos'],
   psicossocial:  ['psicossocial', 'links', 'modelos', 'arquivos'],
   gerencia:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
-               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia', 'arquivos'],
+               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'gerencia', 'arquivos'],
   admin:      ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
                'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia', 'admin', 'arquivos'],
 };
@@ -10964,27 +10974,28 @@ const MODELOS_POR_NIVEL = {
   plantao:     ['plantao'],
   relatorio:   ['multi'],
   comunicacao: ['comunicacao'],
-  juridico:    ['plantao', 'multi', 'comunicacao'],
-  gerencia:    ['plantao', 'multi', 'comunicacao'],
-  admin:       ['plantao', 'multi', 'comunicacao'],
+  juridico:    ['juridico-mod'],   // sub-aba própria do jurídico (a definir)
+  gerencia:    [],                 // gerência não tem acesso a modelos
+  admin:       ['plantao', 'multi', 'comunicacao', 'juridico-mod'],
 };
+
+const _TODAS_MODELOS_ABAS = ['plantao', 'multi', 'comunicacao', 'juridico-mod'];
 
 function aplicarVisibilidadeModelos() {
   const nivel = usuarioAtual?.nivel || 'plantao';
   const permitidas = MODELOS_POR_NIVEL[nivel] || ['plantao'];
-  const todas = ['plantao', 'multi', 'comunicacao'];
 
-  todas.forEach(a => {
+  _TODAS_MODELOS_ABAS.forEach(a => {
     const stab = document.getElementById('mod-stab-' + a);
     if (stab) stab.style.display = permitidas.includes(a) ? '' : 'none';
   });
 
   // Auto-navegar para a primeira sub-aba permitida
-  mudarSubAbaModelos(permitidas[0]);
+  if (permitidas.length) mudarSubAbaModelos(permitidas[0]);
 }
 
 function mudarSubAbaModelos(aba) {
-  ['plantao','multi','comunicacao'].forEach(a => {
+  _TODAS_MODELOS_ABAS.forEach(a => {
     document.getElementById('mod-stab-' + a)?.classList.toggle('active', a === aba);
     const panel = document.getElementById('mod-panel-' + a);
     if (panel) panel.style.display = a === aba ? 'block' : 'none';
