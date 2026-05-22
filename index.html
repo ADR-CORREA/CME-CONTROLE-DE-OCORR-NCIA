@@ -12756,15 +12756,15 @@ function rv_gerarSelecionados(modo = 'html') {
   if (!infoAss) { _mostrarToast('Selecione o servidor assinante.', 'erro'); return; }
 
   if (modo === 'word') {
-    // Gerar um .doc por monitorado selecionado
-    selecionados.forEach((grupo, idx) => {
-      const html = rv_montarHtmlCompleto([grupo], infoAss, infoGer, true);
+    selecionados.forEach(grupo => {
+      const html = rv_montarWordDoc(grupo, infoAss, infoGer);
       const blob = new Blob(['﻿' + html], { type: 'application/msword;charset=utf-8' });
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       const nome = (grupo[0]?.nome || 'monitorado').replace(/[^a-zA-Z0-9 ]/g, '_').slice(0, 40);
+      const proc = (grupo[0]?.processo || '').replace(/[^a-zA-Z0-9 ]/g, '_').slice(0, 30);
       a.href     = url;
-      a.download = `Relatorio_${nome}.doc`;
+      a.download = `${nome}${proc ? ' - ' + proc : ''}.doc`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -12781,6 +12781,223 @@ function rv_gerarSelecionados(modo = 'html') {
     janela.focus();
     _mostrarToast(`⚡ ${selecionados.length} relatório(s) gerado(s)! Escolha "Salvar como PDF".`, 'sucesso');
   }
+}
+
+// ── Gerador Word (.doc) — estrutura idêntica ao Python gerar_relatorios.py ──
+function rv_montarWordDoc(grupo, infoAss, infoGer) {
+  const r0      = grupo[0] || {};
+  const hoje    = new Date();
+  const dataExt = `Macapá, ${String(hoje.getDate()).padStart(2,'0')} de ${_RV_MESES[hoje.getMonth()]} de ${hoje.getFullYear()}.`;
+
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ── helpers ──
+  function parseDurMin(s) {
+    s = String(s||'').trim();
+    if (!s || s==='nan') return 0;
+    const d = (s.match(/(\d+)\s*d/)||[0,0])[1]*1440;
+    const h = (s.match(/(\d+)\s*h/)||[0,0])[1]*60;
+    const m = (s.match(/(\d+)\s*min/)||[0,0])[1];
+    return d+h+m;
+  }
+  function fmtData(v) {
+    if (!v||v==='nan') return '';
+    const dias = ['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado','Domingo'];
+    const dt = new Date(String(v).trim().replace(/^(\d{2})\/(\d{2})\/(\d{4})/,'$3-$2-$1'));
+    if (isNaN(dt)) return v;
+    return `${dt.toLocaleDateString('pt-BR')} (${dias[dt.getDay()==0?6:dt.getDay()-1]}) ${dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`;
+  }
+
+  // ── dados do monitorado ──
+  const nome    = esc(r0.nome    || 'NÃO INFORMADO');
+  const proc    = esc(r0.processo|| 'NÃO INFORMADO');
+  const cpf     = esc(r0.cpf     || 'NÃO INFORMADO');
+  const vara    = esc(r0.vara    || 'NÃO INFORMADO');
+  const comarca = esc(r0.comarca || 'NÃO INFORMADO');
+
+  // ── resumo por tipo (capa) ──
+  const contagem = {};
+  grupo.forEach(x => { contagem[x.tipo] = (contagem[x.tipo]||0)+1; });
+  const totalViol = Object.values(contagem).reduce((a,b)=>a+b,0);
+  const resumoRows = Object.entries(contagem).map(([t,q])=>`
+    <tr><td style="border:1px solid #999;padding:4pt 8pt">${esc(t)}</td>
+        <td style="border:1px solid #999;padding:4pt 8pt;text-align:center">${q}</td></tr>`).join('');
+
+  // ── tabela de violações (relatório) ──
+  const violRows = grupo.map(x=>`
+    <tr>
+      <td style="border:1px solid #999;padding:4pt 6pt;font-size:10pt">${esc(x.tipo)}</td>
+      <td style="border:1px solid #999;padding:4pt 6pt;font-size:10pt">${esc(x.id)}</td>
+      <td style="border:1px solid #999;padding:4pt 6pt;font-size:10pt">${esc(fmtData(x.ocorreu))}</td>
+      <td style="border:1px solid #999;padding:4pt 6pt;font-size:10pt">${esc(x.duracao)}</td>
+    </tr>
+    <tr><td colspan="4" style="border:1px solid #999;padding:2pt 6pt;font-size:9pt">&nbsp;</td></tr>`).join('');
+
+  // ── análise de bateria ──
+  const TIPO_BAT = 'Dispositivo desligado por falta de carga na bateria';
+  const bats = grupo.filter(x => x.tipo === TIPO_BAT);
+  let maxMin = -1, maxBat = null;
+  bats.forEach(x => { const m = parseDurMin(x.duracao); if(m>maxMin){maxMin=m;maxBat=x;} });
+
+  let batPar = '';
+  if (maxBat) {
+    const dur = esc(maxBat.duracao); const id = esc(maxBat.id);
+    const dt  = fmtData(maxBat.ocorreu);
+    const m   = dt.match(/(\d{2}\/\d{2}\/\d{4}).*?(\d{2}:\d{2})/);
+    const dataHora = m ? `${m[1]} às ${m[2]}` : dt;
+    batPar = maxMin > 1440
+      ? `<p style="text-align:justify;text-indent:1.25cm;font-size:11pt;margin:6pt 0">Entre as ocorrências de descarregamento do dispositivo, o maior período registrado foi de <b>${dur}</b>, referente à ocorrência ID ${id}, iniciada em ${esc(dataHora)}. Durante o período em que o equipamento permaneceu sem carga, a Central de Monitoramento Eletrônico ficou impossibilitada ou substancialmente limitada de fiscalizar de forma efetiva a localização do monitorado em tempo real, comprometendo a rastreabilidade dos deslocamentos e a verificação adequada do cumprimento das condições judiciais estabelecidas.</p>`
+      : `<p style="text-align:justify;text-indent:1.25cm;font-size:11pt;margin:6pt 0">Entre as ocorrências de descarregamento do dispositivo, o maior período registrado foi de <b>${dur}</b>, referente à ocorrência ID ${id}, iniciada em ${esc(dataHora)}. Tais eventos demandam atenção operacional, pois podem prejudicar temporariamente a continuidade do acompanhamento em tempo real.</p>`;
+  }
+
+  // ── assinaturas ──
+  function blocoAss(info) {
+    const img = info?.assinatura
+      ? `<p style="text-align:center;margin:0"><img src="${info.assinatura}" height="70" style="display:block;margin:0 auto"></p>` : '';
+    return `<div style="text-align:center;width:260pt;display:inline-block;vertical-align:top;margin:0 20pt">
+      ${img}
+      <p style="text-align:center;border-top:1px solid #000;margin:2pt 0 4pt 0;padding-top:4pt">&nbsp;</p>
+      <p style="text-align:center;font-weight:bold;margin:2pt 0">${esc(info?.nome||'')}</p>
+      ${info?.cargo ? `<p style="text-align:center;margin:2pt 0">${esc(info.cargo)}</p>` : ''}
+      ${info?.cress ? `<p style="text-align:center;margin:2pt 0;font-size:9.5pt">${esc(info.cress)}</p>` : ''}
+      <p style="text-align:center;margin:2pt 0;font-size:9.5pt">Central de Monitoração Eletrônica – CME/IAPEN</p>
+    </div>`;
+  }
+
+  const cmeSrc   = window._CME_LOGO_B64   ? `<img src="data:image/png;base64,${window._CME_LOGO_B64}"   height="60">` : '';
+  const iapenSrc = window._IAPEN_LOGO_B64 ? `<img src="data:image/png;base64,${window._IAPEN_LOGO_B64}" height="60">` : '';
+
+  return `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8">
+<xml><w:WordDocument>
+  <w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/>
+</w:WordDocument></xml>
+<style>
+@page Section1 {
+  size:210mm 297mm; margin:2cm;
+  mso-header-margin:1.2cm; mso-footer-margin:1.2cm;
+  mso-header:h1; mso-footer:f1;
+}
+div.Section1{page:Section1}
+body{font-family:Arial;font-size:11pt;color:#000;margin:0}
+p{margin:0 0 6pt 0;line-height:1.4}
+table{border-collapse:collapse}
+.secao{font-weight:bold;text-decoration:underline;font-size:11pt;margin:10pt 0 4pt 0}
+.dado p{margin:2pt 0}
+.justify{text-align:justify;text-indent:1.25cm}
+.center{text-align:center}
+.quebra{mso-page-break-before:always;font-size:1pt;margin:0;padding:0}
+</style>
+</head><body>
+
+<!-- CABEÇALHO WORD -->
+<div style="mso-element:header" id="h1">
+  <table width="100%" style="border:none;border-collapse:collapse">
+    <tr>
+      <td width="14%" style="border:none;text-align:left;vertical-align:middle">${cmeSrc}</td>
+      <td width="72%" style="border:none;text-align:center;vertical-align:middle">
+        <p style="font-weight:bold;font-size:10pt;margin:1pt 0;line-height:1.35">
+          GOVERNO DO ESTADO DO AMAPÁ<br>
+          SECRETARIA DE ESTADO DE JUSTIÇA E SEGURANÇA PÚBLICA<br>
+          INSTITUTO DE ADMINISTRAÇÃO PENITENCIÁRIA DO AMAPÁ<br>
+          CENTRAL DE MONITORAMENTO ELETRÔNICO – CME
+        </p>
+      </td>
+      <td width="14%" style="border:none;text-align:right;vertical-align:middle">${iapenSrc}</td>
+    </tr>
+  </table>
+  <hr style="border:none;border-top:2pt solid #000;margin:3pt 0 0 0">
+</div>
+
+<!-- RODAPÉ WORD -->
+<div style="mso-element:footer" id="f1">
+  <p style="text-align:center;font-size:9pt;margin:0">
+    CENTRAL DE MONITORAMENTO ELETRÔNICO – CME<br>
+    Av. Machado de Assis, 372 – Centro – CEP: 68900-066, Macapá-AP<br>
+    E-mail: cme@iapen.ap.gov.br | Telefone: (96) 98415-2844
+  </p>
+</div>
+
+<div class="Section1">
+
+<!-- ════════════ CAPA ════════════ -->
+<p class="center" style="font-size:14pt;font-weight:bold;margin-top:30pt;margin-bottom:14pt">RELATÓRIO DE MONITORAÇÃO ELETRÔNICA</p>
+
+<p class="secao">DADOS PESSOAIS</p>
+<p><b>MONITORADO:</b> ${nome}</p>
+<p><b>CPF:</b> ${cpf}</p>
+<p><b>ENDEREÇO:</b> ___</p>
+<p><b>CONTATO:</b> ___</p>
+
+<p class="secao">DADOS PROCESSUAIS</p>
+<p><b>PROCESSO Nº:</b> ${proc}</p>
+<p><b>VARA:</b> ${vara}</p>
+<p><b>COMARCA:</b> ${comarca}</p>
+
+<p class="secao">DADOS DA MONITORAÇÃO</p>
+<p><b>DATA DE INÍCIO:</b> ___ &nbsp;&nbsp;&nbsp;&nbsp; <b>DATA DE TÉRMINO:</b> ___</p>
+
+<p style="text-align:justify;margin-top:10pt">Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos dos deveres e obrigações do monitorado, gerados pelo sistema de monitoração eletrônica no período de ___ a ___.</p>
+
+<p style="font-weight:bold;margin-top:12pt;margin-bottom:4pt">RESUMO QUANTITATIVO DE VIOLAÇÕES:</p>
+<table style="border-collapse:collapse;width:55%">
+  <tr>
+    <th style="border:1px solid #999;padding:4pt 8pt;background:#1F4E78;color:#fff;text-align:left">Tipo de Violação</th>
+    <th style="border:1px solid #999;padding:4pt 8pt;background:#1F4E78;color:#fff;text-align:center">Qtd.</th>
+  </tr>
+  ${resumoRows}
+  <tr>
+    <td style="border:1px solid #999;padding:4pt 8pt;font-weight:bold">TOTAL</td>
+    <td style="border:1px solid #999;padding:4pt 8pt;font-weight:bold;text-align:center">${totalViol}</td>
+  </tr>
+</table>
+
+<!-- ════════════ QUEBRA DE PÁGINA ════════════ -->
+<p class="quebra"></p>
+
+<!-- ════════════ RELATÓRIO ════════════ -->
+<p class="center" style="font-size:14pt;font-weight:bold;margin-bottom:12pt">RELATÓRIO DE VIOLAÇÕES DE MONITORAMENTO ELETRÔNICO</p>
+
+<p style="margin:2pt 0"><b>Nome do Monitorado:</b> ${nome}</p>
+<p style="margin:2pt 0"><b>CPF:</b> ${cpf}</p>
+<p style="margin:2pt 0"><b>Número do Processo:</b> ${proc}</p>
+<p style="margin:2pt 0"><b>Competência:</b> ${vara}</p>
+<p style="margin:2pt 0"><b>Comarca:</b> ${comarca}</p>
+
+<table style="border-collapse:collapse;width:100%;margin-top:10pt">
+  <tr>
+    <th style="border:1px solid #999;padding:5pt 7pt;background:#1F4E78;color:#fff;text-align:left;font-size:10pt">Tipo de Ocorrência</th>
+    <th style="border:1px solid #999;padding:5pt 7pt;background:#1F4E78;color:#fff;text-align:left;font-size:10pt">ID da Ocorrência</th>
+    <th style="border:1px solid #999;padding:5pt 7pt;background:#1F4E78;color:#fff;text-align:left;font-size:10pt">Ocorreu</th>
+    <th style="border:1px solid #999;padding:5pt 7pt;background:#1F4E78;color:#fff;text-align:left;font-size:10pt">Duração</th>
+  </tr>
+  ${violRows}
+</table>
+
+<p class="justify" style="margin-top:14pt">As informações contidas neste relatório foram extraídas diretamente do Sistema AKILES AP, plataforma oficial de monitoramento eletrônico adotada pela Central de Monitoramento Eletrônico (CME/IAPEN-AP). Os dados são reproduzidos na íntegra, sem qualquer modificação, supressão ou acréscimo de conteúdo, refletindo fielmente os registros gerados e armazenados automaticamente pelo sistema. Este documento possui validade para fins administrativos e judiciais, nos termos da legislação vigente.</p>
+
+<p class="center" style="font-weight:bold;margin-top:16pt;margin-bottom:6pt">SÍNTESE TÉCNICA DAS OCORRÊNCIAS</p>
+
+<p class="justify">Da análise dos registros extraídos do Sistema AKILES AP, verifica-se que o presente relatório apresenta ocorrências relacionadas a possíveis descumprimentos dos deveres e obrigações do monitorado, conforme registros constantes nas tabelas acima.</p>
+
+${batPar}
+
+<p class="justify">Ressalta-se que o presente relatório possui finalidade técnica e informativa, limitando-se a apresentar os registros constantes no sistema oficial de monitoração eletrônica utilizado pela Central de Monitoramento Eletrônico — CME/IAPEN/AP, bem como a contextualizar tecnicamente as ocorrências identificadas. A análise jurídica quanto às consequências processuais, executórias ou administrativas decorrentes dos fatos comunicados compete ao Juízo competente.</p>
+
+<p class="justify">Dessa forma, encaminham-se as informações para conhecimento e deliberação da autoridade judicial, permanecendo esta Central à disposição para eventuais esclarecimentos complementares.</p>
+
+<p style="text-align:right;margin-top:24pt">${dataExt}</p>
+
+<p style="text-align:center;margin-top:28pt">
+  ${blocoAss(infoAss)}
+  ${infoGer ? blocoAss(infoGer) : ''}
+</p>
+
+</div>
+</body></html>`;
 }
 
 // ── Montar HTML completo (todos os monitorados, quebra de página entre eles) ──
