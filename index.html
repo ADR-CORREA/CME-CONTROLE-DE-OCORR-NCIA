@@ -12857,14 +12857,11 @@ function rv_montarWordDoc(grupo, infoAss, infoGer) {
   // ── assinaturas ──
   function blocoAss(info) {
     const img = info?.assinatura
-      ? `<p style="text-align:center;margin:0"><img src="${info.assinatura}" height="70" style="display:block;margin:0 auto"></p>` : '';
-    return `<div style="text-align:center;width:260pt;display:inline-block;vertical-align:top;margin:0 20pt">
-      ${img}
-      <p style="text-align:center;border-top:1px solid #000;margin:2pt 0 4pt 0;padding-top:4pt">&nbsp;</p>
-      <p style="text-align:center;font-weight:bold;margin:2pt 0">${esc(info?.nome||'')}</p>
-      ${info?.cargo ? `<p style="text-align:center;margin:2pt 0">${esc(info.cargo)}</p>` : ''}
-      ${info?.cress ? `<p style="text-align:center;margin:2pt 0;font-size:9.5pt">${esc(info.cress)}</p>` : ''}
-      <p style="text-align:center;margin:2pt 0;font-size:9.5pt">Central de Monitoração Eletrônica – CME/IAPEN</p>
+      ? `<p style="text-align:center;margin:0 0 6pt 0"><img src="${info.assinatura}" width="144" style="display:block;margin:0 auto"></p>` : '';
+    const linhas = [info?.nome, info?.cargo, info?.cress].filter(Boolean).map(l =>
+      `<p style="text-align:center;font-weight:bold;margin:2pt 0">${esc(l)}</p>`).join('');
+    return `<div style="text-align:center;display:inline-block;vertical-align:top;margin:0 20pt">
+      ${img}${linhas}
     </div>`;
   }
 
@@ -12921,8 +12918,9 @@ table{border-collapse:collapse}
   <p style="text-align:center;font-size:9pt;margin:0">
     CENTRAL DE MONITORAMENTO ELETRÔNICO – CME<br>
     Av. Machado de Assis, 372 – Centro – CEP: 68900-066, Macapá-AP<br>
-    E-mail: cme@iapen.ap.gov.br | Telefone: (96) 98415-2844
+    E-mail: cme@iapen.ap.gov.br / Telefone: (96) 98415-2844
   </p>
+  <p style="text-align:right;font-size:9pt;margin:0"><span style="mso-field-code:' PAGE \* MERGEFORMAT '">1</span></p>
 </div>
 
 <div class="Section1">
@@ -12949,8 +12947,8 @@ table{border-collapse:collapse}
 <p style="font-weight:bold;margin-top:12pt;margin-bottom:4pt">RESUMO QUANTITATIVO DE VIOLAÇÕES:</p>
 <table style="border-collapse:collapse;width:55%">
   <tr>
-    <th style="border:1px solid #999;padding:4pt 8pt;background:#1F4E78;color:#fff;text-align:left">Tipo de Violação</th>
-    <th style="border:1px solid #999;padding:4pt 8pt;background:#1F4E78;color:#fff;text-align:center">Qtd.</th>
+    <th style="border:1px solid #999;padding:4pt 8pt;font-weight:bold;text-align:left">Tipo de Violação</th>
+    <th style="border:1px solid #999;padding:4pt 8pt;font-weight:bold;text-align:center">Qtd.</th>
   </tr>
   ${resumoRows}
   <tr>
@@ -12973,10 +12971,10 @@ table{border-collapse:collapse}
 
 <table style="border-collapse:collapse;width:100%;margin-top:10pt">
   <tr>
-    <th style="border:1px solid #999;padding:5pt 7pt;background:#1F4E78;color:#fff;text-align:left;font-size:10pt">Tipo de Ocorrência</th>
-    <th style="border:1px solid #999;padding:5pt 7pt;background:#1F4E78;color:#fff;text-align:left;font-size:10pt">ID da Ocorrência</th>
-    <th style="border:1px solid #999;padding:5pt 7pt;background:#1F4E78;color:#fff;text-align:left;font-size:10pt">Ocorreu</th>
-    <th style="border:1px solid #999;padding:5pt 7pt;background:#1F4E78;color:#fff;text-align:left;font-size:10pt">Duração</th>
+    <th style="border:1px solid #999;padding:5pt 7pt;font-weight:bold;text-align:left;font-size:10pt">Tipo de Ocorrência</th>
+    <th style="border:1px solid #999;padding:5pt 7pt;font-weight:bold;text-align:left;font-size:10pt">ID da Ocorrência</th>
+    <th style="border:1px solid #999;padding:5pt 7pt;font-weight:bold;text-align:left;font-size:10pt">Ocorreu</th>
+    <th style="border:1px solid #999;padding:5pt 7pt;font-weight:bold;text-align:left;font-size:10pt">Duração</th>
   </tr>
   ${violRows}
 </table>
