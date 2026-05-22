@@ -3350,69 +3350,74 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
 <!-- MODAL: EDITAR USUÁRIO (admin) -->
 <div class="modal-overlay" id="modal-editar-usuario">
-  <div class="modal-box" style="max-width:460px">
+  <div class="modal-box" style="max-width:480px">
     <div class="modal-header">
       <div class="modal-title">✏️ Editar Usuário</div>
       <button class="modal-close" onclick="fecharModal('modal-editar-usuario')">✕</button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body" style="max-height:75vh;overflow-y:auto">
       <input type="hidden" id="edit-user-idx">
 
-      <div class="sub-tabs" style="margin-bottom:16px;border-bottom:2px solid #e2e8f0">
-        <button id="edit-tab-dados" onclick="editUser_mudarAba('dados')"
-          style="padding:7px 18px;border:none;background:none;cursor:pointer;font-size:.88rem;border-bottom:2px solid #1F4E78;margin-bottom:-2px;font-weight:600;color:#1F4E78">
-          👤 Dados
-        </button>
-        <button id="edit-tab-senha" onclick="editUser_mudarAba('senha')"
-          style="padding:7px 18px;border:none;background:none;cursor:pointer;font-size:.88rem;color:#888">
-          🔑 Trocar Senha
-        </button>
+      <!-- ── SEÇÃO: DADOS ── -->
+      <div style="font-size:.8rem;font-weight:700;color:#1F4E78;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-bottom:4px;border-bottom:2px solid #e2e8f0">
+        👤 Dados do Servidor
+      </div>
+      <div class="form-field">
+        <label>Nome completo</label>
+        <input type="text" id="edit-nome" placeholder="Nome do servidor">
+      </div>
+      <div class="form-field">
+        <label>Usuário (login)</label>
+        <input type="text" id="edit-usuario" placeholder="Login de acesso">
+      </div>
+      <div class="form-field">
+        <label>Cargo / Função <span style="color:#888;font-weight:400;font-size:.8rem">(aparece na assinatura)</span></label>
+        <input type="text" id="edit-cargo" placeholder="Ex: Policial Penal, Assistente Social...">
+      </div>
+      <div class="form-field">
+        <label>CRESS / Registro Profissional <span style="color:#888;font-weight:400;font-size:.8rem">(opcional)</span></label>
+        <input type="text" id="edit-cress" placeholder="Ex: 12345/AP">
+      </div>
+      <div class="form-field">
+        <label>Nível de acesso</label>
+        <select id="edit-nivel">
+          <option value="plantao">Operador / Plantão</option>
+          <option value="comunicacao">Comunicação Processual</option>
+          <option value="relatorio">Relatório</option>
+          <option value="juridico">Jurídico</option>
+          <option value="gerencia">Gerência</option>
+          <option value="admin">Administrador</option>
+        </select>
       </div>
 
-      <!-- Painel: Dados -->
-      <div id="edit-panel-dados">
-        <div class="form-field">
-          <label>Nome completo</label>
-          <input type="text" id="edit-nome" placeholder="Nome do servidor">
-        </div>
-        <div class="form-field">
-          <label>Usuário (login)</label>
-          <input type="text" id="edit-usuario" placeholder="Login de acesso">
-        </div>
-        <div class="form-field">
-          <label>Cargo / Função</label>
-          <input type="text" id="edit-cargo" placeholder="Ex: Assistente Social, Técnico...">
-        </div>
-        <div class="form-field">
-          <label>CRESS / Registro Profissional</label>
-          <input type="text" id="edit-cress" placeholder="Ex: 12345/AP">
-        </div>
-        <div class="form-field">
-          <label>Nível de acesso</label>
-          <select id="edit-nivel">
-            <option value="plantao">Operador / Plantão</option>
-            <option value="comunicacao">Comunicação Processual</option>
-            <option value="relatorio">Relatório</option>
-            <option value="juridico">Jurídico</option>
-            <option value="gerencia">Gerência</option>
-            <option value="admin">Administrador</option>
-          </select>
+      <!-- ── SEÇÃO: ASSINATURA ── -->
+      <div style="font-size:.8rem;font-weight:700;color:#1F4E78;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;padding-bottom:4px;border-bottom:2px solid #e2e8f0">
+        ✍️ Foto da Assinatura
+      </div>
+      <div id="edit-ass-preview-wrap" style="display:none;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:10px;text-align:center">
+        <img id="edit-ass-preview" src="" style="max-height:70px;max-width:100%;object-fit:contain">
+        <div style="margin-top:6px">
+          <button onclick="editUser_removerAss()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:.8rem">🗑️ Remover assinatura</button>
         </div>
       </div>
+      <div id="edit-ass-sem" style="color:#888;font-size:.85rem;margin-bottom:8px">Nenhuma assinatura cadastrada.</div>
+      <label style="display:inline-flex;align-items:center;gap:8px;background:#f1f5f9;border:1px dashed #94a3b8;border-radius:8px;padding:9px 16px;cursor:pointer;font-size:.85rem;color:#475569">
+        📷 Carregar imagem de assinatura
+        <input type="file" id="edit-ass-input" accept="image/*" style="display:none" onchange="editUser_previewAss(this)">
+      </label>
+      <div style="font-size:.75rem;color:#94a3b8;margin-top:5px">PNG transparente recomendado. Aparecerá acima do nome nos documentos.</div>
 
-      <!-- Painel: Senha -->
-      <div id="edit-panel-senha" style="display:none">
-        <div class="sys-alert" style="background:#fef9c3;border-left:3px solid #ca8a04;color:#78350f;padding:10px 14px;margin-bottom:16px;border-radius:6px;font-size:.85rem">
-          ⚠️ Você está redefinindo a senha como <strong>administrador</strong>. O usuário precisará usar a nova senha no próximo login.
-        </div>
-        <div class="form-field">
-          <label>Nova senha</label>
-          <input type="password" id="edit-nova-senha" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
-        </div>
-        <div class="form-field">
-          <label>Confirmar nova senha</label>
-          <input type="password" id="edit-conf-senha" placeholder="Repita a senha" autocomplete="new-password">
-        </div>
+      <!-- ── SEÇÃO: SENHA ── -->
+      <div style="font-size:.8rem;font-weight:700;color:#1F4E78;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;padding-bottom:4px;border-bottom:2px solid #e2e8f0">
+        🔑 Redefinir Senha <span style="font-weight:400;font-style:italic;text-transform:none;font-size:.75rem;color:#888">(deixe em branco para não alterar)</span>
+      </div>
+      <div class="form-field">
+        <label>Nova senha</label>
+        <input type="password" id="edit-nova-senha" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+      </div>
+      <div class="form-field">
+        <label>Confirmar nova senha</label>
+        <input type="password" id="edit-conf-senha" placeholder="Repita a senha" autocomplete="new-password">
       </div>
 
       <div id="edit-user-msg" style="margin-top:10px"></div>
@@ -6984,88 +6989,125 @@ function removerUsuario(idx) {
 }
 
 /* ── EDITAR USUÁRIO (admin) ──────────────────────────────── */
+let _editAssNovaBase64 = null;   // nova assinatura carregada (ou null = sem mudança)
+let _editAssRemover    = false;  // flag: remover assinatura existente
+
 function abrirModalEditarUsuario(idx) {
   const us = getUsuarios();
   const u  = us[idx];
-  document.getElementById('edit-user-idx').value  = idx;
-  document.getElementById('edit-nome').value      = u.nome    || '';
-  document.getElementById('edit-usuario').value   = u.usuario || '';
-  document.getElementById('edit-cargo').value     = u.cargo   || '';
-  document.getElementById('edit-cress').value     = u.cress   || '';
-  document.getElementById('edit-nivel').value     = u.nivel   || 'plantao';
-  document.getElementById('edit-nova-senha').value = '';
-  document.getElementById('edit-conf-senha').value = '';
-  document.getElementById('edit-user-msg').innerHTML = '';
-  editUser_mudarAba('dados');
+  _editAssNovaBase64 = null;
+  _editAssRemover    = false;
+
+  document.getElementById('edit-user-idx').value      = idx;
+  document.getElementById('edit-nome').value          = u.nome    || '';
+  document.getElementById('edit-usuario').value       = u.usuario || '';
+  document.getElementById('edit-cargo').value         = u.cargo   || '';
+  document.getElementById('edit-cress').value         = u.cress   || '';
+  document.getElementById('edit-nivel').value         = u.nivel   || 'plantao';
+  document.getElementById('edit-nova-senha').value    = '';
+  document.getElementById('edit-conf-senha').value    = '';
+  document.getElementById('edit-user-msg').innerHTML  = '';
+  document.getElementById('edit-ass-input').value     = '';
+
+  // Mostrar assinatura existente
+  const assImg = u.assinatura || '';
+  _editUser_atualizarPreviewAss(assImg);
+
   abrirModal('modal-editar-usuario');
 }
 
-function editUser_mudarAba(aba) {
-  document.getElementById('edit-panel-dados').style.display  = aba === 'dados' ? '' : 'none';
-  document.getElementById('edit-panel-senha').style.display  = aba === 'senha' ? '' : 'none';
-  ['dados','senha'].forEach(a => {
-    const btn = document.getElementById(`edit-tab-${a}`);
-    btn.style.borderBottomColor = a === aba ? '#1F4E78' : 'transparent';
-    btn.style.color             = a === aba ? '#1F4E78' : '#888';
-    btn.style.fontWeight        = a === aba ? '600'     : 'normal';
-  });
+function _editUser_atualizarPreviewAss(src) {
+  const wrap = document.getElementById('edit-ass-preview-wrap');
+  const sem  = document.getElementById('edit-ass-sem');
+  if (src) {
+    document.getElementById('edit-ass-preview').src = src;
+    wrap.style.display = '';
+    sem.style.display  = 'none';
+  } else {
+    wrap.style.display = 'none';
+    sem.style.display  = '';
+  }
+}
+
+function editUser_previewAss(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _editAssNovaBase64 = e.target.result;
+    _editAssRemover    = false;
+    _editUser_atualizarPreviewAss(_editAssNovaBase64);
+  };
+  reader.readAsDataURL(file);
+}
+
+function editUser_removerAss() {
+  _editAssNovaBase64 = null;
+  _editAssRemover    = true;
+  document.getElementById('edit-ass-input').value = '';
+  _editUser_atualizarPreviewAss('');
 }
 
 async function salvarEdicaoUsuario() {
-  const idx    = parseInt(document.getElementById('edit-user-idx').value);
-  const msg    = document.getElementById('edit-user-msg');
-  const aba    = document.getElementById('edit-panel-senha').style.display !== 'none' ? 'senha' : 'dados';
-  const us     = getUsuarios();
-  const u      = us[idx];
+  const idx  = parseInt(document.getElementById('edit-user-idx').value);
+  const msg  = document.getElementById('edit-user-msg');
+  const us   = getUsuarios();
+  const u    = us[idx];
 
-  if (aba === 'dados') {
-    const nome    = document.getElementById('edit-nome').value.trim();
-    const usuario = document.getElementById('edit-usuario').value.trim();
-    const cargo   = document.getElementById('edit-cargo').value.trim();
-    const cress   = document.getElementById('edit-cress').value.trim();
-    const nivel   = document.getElementById('edit-nivel').value;
+  const nome    = document.getElementById('edit-nome').value.trim();
+  const usuario = document.getElementById('edit-usuario').value.trim();
+  const cargo   = document.getElementById('edit-cargo').value.trim();
+  const cress   = document.getElementById('edit-cress').value.trim();
+  const nivel   = document.getElementById('edit-nivel').value;
+  const nova    = document.getElementById('edit-nova-senha').value;
+  const conf    = document.getElementById('edit-conf-senha').value;
 
-    if (!nome || !usuario) {
-      msg.innerHTML = '<div class="sys-alert error">Nome e usuário são obrigatórios.</div>'; return;
-    }
-    // Verificar login duplicado (exceto o próprio)
-    if (us.some((x, i) => i !== idx && x.usuario === usuario)) {
-      msg.innerHTML = '<div class="sys-alert error">Esse login já está em uso por outro usuário.</div>'; return;
-    }
-    u.nome    = nome;
-    u.usuario = usuario;
-    u.cargo   = cargo;
-    u.cress   = cress;
-    u.nivel   = nivel;
-    salvarUsuarios(us);
-    // Atualizar sessão se for o próprio usuário logado
-    if (usuarioAtual && usuarioAtual.usuario === u.usuario) {
-      Object.assign(usuarioAtual, { nome, cargo, cress, nivel });
-    }
-    addLog(`Admin editou cadastro de ${nome} (${usuarioAtual.nome})`);
-    fecharModal('modal-editar-usuario');
-    renderizarUsers();
-    _mostrarToast(`✅ Cadastro de "${nome}" atualizado!`, 'sucesso');
+  // Validações básicas
+  if (!nome || !usuario) {
+    msg.innerHTML = '<div class="sys-alert error">Nome e usuário são obrigatórios.</div>'; return;
+  }
+  if (us.some((x, i) => i !== idx && x.usuario === usuario)) {
+    msg.innerHTML = '<div class="sys-alert error">Esse login já está em uso por outro usuário.</div>'; return;
+  }
 
-  } else {
-    const nova = document.getElementById('edit-nova-senha').value;
-    const conf = document.getElementById('edit-conf-senha').value;
-    if (!nova || !conf) {
-      msg.innerHTML = '<div class="sys-alert error">Preencha os dois campos de senha.</div>'; return;
-    }
+  // Validar senha (somente se preenchida)
+  if (nova || conf) {
     if (nova !== conf) {
       msg.innerHTML = '<div class="sys-alert error">As senhas não conferem.</div>'; return;
     }
     if (nova.length < 6) {
-      msg.innerHTML = '<div class="sys-alert error">Mínimo 6 caracteres.</div>'; return;
+      msg.innerHTML = '<div class="sys-alert error">Senha com mínimo 6 caracteres.</div>'; return;
     }
-    const hash = await hashSenha(nova);
-    u.senha = hash;
-    salvarUsuarios(us);
-    addLog(`Admin redefiniu senha de ${u.nome} (${usuarioAtual.nome})`);
-    fecharModal('modal-editar-usuario');
-    _mostrarToast(`🔑 Senha de "${u.nome}" redefinida com sucesso!`, 'sucesso');
+    u.senha = await hashSenha(nova);
+    addLog(`Admin redefiniu senha de ${nome} (${usuarioAtual.nome})`);
   }
+
+  // Dados
+  u.nome    = nome;
+  u.usuario = usuario;
+  u.cargo   = cargo;
+  u.cress   = cress;
+  u.nivel   = nivel;
+
+  // Assinatura
+  if (_editAssNovaBase64) {
+    u.assinatura = _editAssNovaBase64;
+  } else if (_editAssRemover) {
+    delete u.assinatura;
+  }
+
+  salvarUsuarios(us);
+
+  // Atualizar sessão se for o próprio usuário logado
+  if (usuarioAtual && usuarioAtual.usuario === usuario) {
+    Object.assign(usuarioAtual, { nome, cargo, cress, nivel,
+      assinatura: u.assinatura || null });
+  }
+
+  addLog(`Admin editou cadastro de ${nome} (${usuarioAtual.nome})`);
+  fecharModal('modal-editar-usuario');
+  renderizarUsers();
+  _mostrarToast(`✅ Cadastro de "${nome}" atualizado!`, 'sucesso');
 }
 
 /* ── ASSINATURA DO SERVIDOR ──────────────────────────────── */
