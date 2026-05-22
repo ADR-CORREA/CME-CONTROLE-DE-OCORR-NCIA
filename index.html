@@ -12675,15 +12675,15 @@ function rv_importarPlanilha(input) {
       return null;
     };
 
-    const cNome    = pick(['Nome']);
-    const cProc    = pick(['Processo','Numero do Processo']);
+    const cNome    = pick(['Nome do Monitorado','Nome']);
+    const cProc    = pick(['Processo']);
     const cCpf     = pick(['CPF']);
-    const cComp    = pick(['Competência','Competencia','Vara','Foro']);
+    const cComp    = pick(['Vara','Foro','Competencia','Competência']);
     const cComarca = pick(['Comarca']);
-    const cTipo    = pick(['Tipo']);
-    const cId      = pick(['ID']);
-    const cOcorreu = pick(['Ocorreu','Data']);
-    const cDur     = pick(['Duração','Duracao','Duracao da','Dura','Tempo','Duration']);
+    const cTipo    = pick(['Tipo Ocorr','Tipo de Ocorr','Tipo']);
+    const cId      = pick(['Id_ocorrencia','ID da Ocorr','ID']);
+    const cOcorreu = pick(['Data de In','Ocorreu','Data']);
+    const cDur     = pick(['Dura','Tempo','Duration']);
 
     if (!cNome || !cProc) {
       _mostrarToast('Colunas "Nome" e "Processo" não encontradas na planilha.', 'erro'); return;
@@ -12805,7 +12805,12 @@ function rv_montarWordDoc(grupo, infoAss, infoGer) {
   const hoje    = new Date();
   const dataExt = `Macapá, ${String(hoje.getDate()).padStart(2,'0')} de ${_RV_MESES[hoje.getMonth()]} de ${hoje.getFullYear()}.`;
 
-  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  // esc: escapa HTML + codifica não-ASCII como entidades → resolve encoding no Word
+  function esc(s) {
+    return String(s||'')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/[^\x00-\x7F]/g, c => `&#${c.charCodeAt(0)};`);
+  }
   function fmtCpf(c) {
     const d = String(c||'').replace(/\D/g,'').padStart(11,'0');
     return d.length === 11 ? `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}` : String(c||'');
@@ -12821,11 +12826,21 @@ function rv_montarWordDoc(grupo, infoAss, infoGer) {
     return d+h+m;
   }
   function fmtData(v) {
-    if (!v||v==='nan') return '';
-    const dias = ['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado','Domingo'];
-    const dt = new Date(String(v).trim().replace(/^(\d{2})\/(\d{2})\/(\d{4})/,'$3-$2-$1'));
+    if (!v || v==='nan') return '';
+    const dias = ['Segunda-feira','Ter&#231;a-feira','Quarta-feira','Quinta-feira','Sexta-feira','S&#225;bado','Domingo'];
+    let s = String(v).trim();
+    // dd/mm/yyyy → yyyy-mm-dd
+    s = s.replace(/^(\d{2})\/(\d{2})\/(\d{4})(.*)$/, '$3-$2-$1$4');
+    // espaço → T para parse ISO correto
+    s = s.replace(/^(\d{4}-\d{2}-\d{2}) /, '$1T');
+    const dt = new Date(s);
     if (isNaN(dt)) return v;
-    return `${dt.toLocaleDateString('pt-BR')} (${dias[dt.getDay()==0?6:dt.getDay()-1]}) ${dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`;
+    const dd = String(dt.getDate()).padStart(2,'0');
+    const mm = String(dt.getMonth()+1).padStart(2,'0');
+    const hh = String(dt.getHours()).padStart(2,'0');
+    const mi = String(dt.getMinutes()).padStart(2,'0');
+    const dow = dt.getDay(); // 0=Dom
+    return `${dd}/${mm}/${dt.getFullYear()} (${dias[dow===0?6:dow-1]}) ${hh}:${mi}`;
   }
 
   // ── dados do monitorado ──
