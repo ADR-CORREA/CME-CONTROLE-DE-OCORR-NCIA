@@ -284,6 +284,41 @@ input, select, textarea, button { font-family: var(--font-sans); }
 .admin-only { display: none; }
 .gerencia-only { display: none; }
 
+/* R2 FILE MANAGER */
+.r2-pasta-card {
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, box-shadow .2s;
+}
+.r2-pasta-card:hover {
+  border-color: #1F4E78;
+  box-shadow: 0 4px 14px rgba(31,78,120,.12);
+}
+.r2-mon-item {
+  padding: 9px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .88rem;
+  transition: background .15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.r2-mon-item:hover { background: #e9ecef; }
+.r2-mon-item.active { background: #1F4E78; color: #fff; font-weight: 600; }
+.r2-acao-icone {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: .88rem;
+  transition: background .15s;
+}
+
 /* MAIN CONTENT */
 .main {
   padding: 24px;
@@ -941,6 +976,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
     <div class="nav-tab gerencia-only" onclick="mudarAba('gerencia')">📋 Gerência <span id="ger-badge" style="display:none" class="notif-badge">0</span></div>
     <div class="nav-tab admin-only" onclick="mudarAba('admin')">🔧 Administração</div>
     <div class="nav-tab" onclick="mudarAba('psicossocial')">🧠 Psicossocial</div>
+    <div class="nav-tab" onclick="mudarAba('arquivos')">📁 Arquivos</div>
   </div>
 
   <!-- CONTEÚDO PRINCIPAL -->
@@ -2027,7 +2063,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
               </div>
               <div class="form-field">
                 <label>Senha inicial</label>
-                <input type="password" id="new-pass" placeholder="Mínimo 6 caracteres">
+                <input type="password" id="new-pass" placeholder="Mín. 8 caracteres, 1 maiúscula, 1 número">
               </div>
               <div class="form-field">
                 <label>Nível de acesso</label>
@@ -2065,6 +2101,25 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
                 <input type="file" id="restore-file" accept=".json">
               </div>
               <button class="btn-primary" onclick="restaurarDados()">Restaurar Backup</button>
+            </div>
+          </div>
+        </div>
+        <!-- Card: Alterar Minha Senha -->
+        <div class="admin-card">
+          <div class="admin-card-header">🔑 Alterar Minha Senha</div>
+          <div class="admin-card-body">
+            <div class="admin-form">
+              <div class="form-field"><label>Senha atual</label>
+                <input type="password" id="alt-senha-atual" placeholder="Senha atual" autocomplete="current-password">
+              </div>
+              <div class="form-field"><label>Nova senha</label>
+                <input type="password" id="alt-senha-nova" placeholder="Mínimo 8 caracteres, 1 maiúscula, 1 número" autocomplete="new-password">
+              </div>
+              <div class="form-field"><label>Confirmar nova senha</label>
+                <input type="password" id="alt-senha-conf" placeholder="Repita a nova senha" autocomplete="new-password">
+              </div>
+              <button class="btn-primary" onclick="alterarMinhaSenha()">Alterar Senha</button>
+              <div id="alt-senha-msg" class="sys-alert"></div>
             </div>
           </div>
         </div>
@@ -2723,6 +2778,192 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
       </div><!-- /psi-panel-arquivados -->
 
     </div><!-- /panel-psicossocial -->
+
+    <!-- ─── ARQUIVOS R2 ─── -->
+    <div class="tab-panel" id="panel-arquivos">
+      <div class="dash-header">
+        <div>
+          <div class="dash-title">📁 Gestão de Arquivos</div>
+          <div class="dash-update">Documentos por monitorado — armazenamento em nuvem (Cloudflare R2)</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-secondary" onclick="r2_abrirAuditoria()" title="Log de acessos">📋 Auditoria</button>
+          <button class="btn-secondary" onclick="r2_abrirConfig()" title="Configurar conexão">⚙️ Configurar</button>
+          <button class="btn-primary" onclick="r2_novoMonitorado()">+ Monitorado</button>
+        </div>
+      </div>
+
+      <!-- Aviso de configuração pendente -->
+      <div id="r2-aviso-config" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:16px;margin-bottom:16px;color:#856404">
+        <strong>⚠️ Cloudflare R2 não configurado.</strong>
+        Clique em <strong>⚙️ Configurar</strong> e informe a URL do Worker e o token de acesso.
+        Siga o guia de implantação em <code>Documents/cme/cloudflare-r2-worker/</code>.
+      </div>
+
+      <div id="r2-conteudo-principal" style="display:flex;gap:16px;min-height:420px">
+        <!-- Sidebar: lista de monitorados -->
+        <div style="width:270px;flex-shrink:0;background:#f8f9fa;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px">
+          <input id="r2-busca-mon" type="text" placeholder="🔍 Buscar monitorado…"
+                 oninput="r2_filtrarMonitorados(this.value)"
+                 style="border:1px solid #ddd;border-radius:6px;padding:7px 10px;font-size:.9rem;width:100%">
+          <div id="r2-lista-mon" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
+            <div style="color:#999;font-size:.85rem;text-align:center;padding:20px 0">
+              Carregando…
+            </div>
+          </div>
+        </div>
+
+        <!-- Área principal: navegador de arquivos -->
+        <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+          <!-- Breadcrumb -->
+          <div id="r2-breadcrumb" style="font-size:.88rem;color:#666;display:none">
+            <span style="cursor:pointer;color:#1F4E78" onclick="r2_selecionarMonitorado(r2_state.monitorado)">
+              📁 <span id="r2-bc-mon"></span>
+            </span>
+            <span id="r2-bc-pasta-wrap" style="display:none"> › <strong id="r2-bc-pasta"></strong></span>
+          </div>
+
+          <!-- Guia inicial (quando nenhum monitorado selecionado) -->
+          <div id="r2-guia-inicial" style="text-align:center;padding:60px 20px;color:#aaa">
+            <div style="font-size:3rem;margin-bottom:12px">📂</div>
+            <div style="font-size:1rem;font-weight:600;margin-bottom:6px">Selecione um monitorado</div>
+            <div style="font-size:.85rem">Clique em um nome na lista à esquerda para ver os documentos.</div>
+          </div>
+
+          <!-- Pastas do monitorado -->
+          <div id="r2-pastas-view" style="display:none">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="r2-pasta-card" onclick="r2_abrirPasta('Processo')">
+                <div style="font-size:2rem;margin-bottom:8px">🗂️</div>
+                <div style="font-weight:600;font-size:1rem">Processo</div>
+                <div id="r2-count-processo" style="font-size:.8rem;color:#888;margin-top:4px">Carregando…</div>
+              </div>
+              <div class="r2-pasta-card" onclick="r2_abrirPasta('Docs do monitorado')">
+                <div style="font-size:2rem;margin-bottom:8px">📄</div>
+                <div style="font-weight:600;font-size:1rem">Docs do monitorado</div>
+                <div id="r2-count-docs" style="font-size:.8rem;color:#888;margin-top:4px">Carregando…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lista de arquivos -->
+          <div id="r2-arquivos-view" style="display:none;flex-direction:column;gap:8px">
+            <!-- Toolbar upload -->
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="font-weight:600;font-size:.95rem" id="r2-pasta-titulo"></div>
+              <label style="cursor:pointer;background:#1F4E78;color:#fff;padding:7px 16px;border-radius:6px;font-size:.88rem;display:flex;align-items:center;gap:6px">
+                ⬆️ Enviar arquivo
+                <input type="file" multiple id="r2-input-file" style="display:none" onchange="r2_enviarArquivos(this)">
+              </label>
+            </div>
+
+            <!-- Progresso de upload -->
+            <div id="r2-progress-wrap" style="display:none;background:#e8f4fd;border:1px solid #b8daff;border-radius:6px;padding:10px 14px;font-size:.88rem">
+              <div id="r2-progress-text">Enviando…</div>
+              <div style="background:#c5e0f5;border-radius:4px;height:6px;margin-top:6px">
+                <div id="r2-progress-bar" style="background:#1F4E78;border-radius:4px;height:100%;width:0%;transition:width .3s"></div>
+              </div>
+            </div>
+
+            <!-- Tabela de arquivos -->
+            <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden">
+              <table style="width:100%;border-collapse:collapse;font-size:.88rem">
+                <thead>
+                  <tr style="background:#f5f5f5;font-weight:600;color:#555">
+                    <th style="padding:10px 14px;text-align:left">📄 Arquivo</th>
+                    <th style="padding:10px 8px;text-align:right">Tamanho</th>
+                    <th style="padding:10px 8px;text-align:left">Enviado por</th>
+                    <th style="padding:10px 8px;text-align:left">Data</th>
+                    <th style="padding:10px 8px;text-align:center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="r2-tabela-body">
+                  <tr><td colspan="5" style="padding:24px;text-align:center;color:#aaa">Nenhum arquivo nesta pasta.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /panel-arquivos -->
+
+    <!-- Modal Config R2 -->
+    <div id="r2-modal-config" class="modal-overlay" style="display:none">
+      <div class="modal-box" style="max-width:500px">
+        <div class="modal-header">
+          <div class="modal-title">⚙️ Configurar Cloudflare R2</div>
+          <button class="modal-close" onclick="r2_fecharConfig()">✕</button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+          <div>
+            <label class="form-label">URL do Worker Cloudflare</label>
+            <input id="r2-cfg-url" type="url" class="form-input"
+                   placeholder="https://cme-files-api.SEU-USUARIO.workers.dev">
+            <div style="font-size:.78rem;color:#888;margin-top:4px">
+              URL gerada após <code>wrangler deploy</code>
+            </div>
+          </div>
+          <div>
+            <label class="form-label">Token de Acesso (AUTH_TOKEN)</label>
+            <input id="r2-cfg-token" type="password" class="form-input"
+                   placeholder="token secreto definido no Worker">
+            <div style="font-size:.78rem;color:#888;margin-top:4px">
+              O mesmo valor configurado com <code>wrangler secret put AUTH_TOKEN</code>
+            </div>
+          </div>
+          <div style="background:#f0f8ff;border-radius:6px;padding:10px 14px;font-size:.82rem;color:#444;line-height:1.55">
+            <strong>📖 Guia rápido:</strong><br>
+            1. Crie conta em <strong>cloudflare.com</strong><br>
+            2. Instale Node.js → <code>npm install -g wrangler</code><br>
+            3. <code>wrangler login</code><br>
+            4. <code>wrangler r2 bucket create cme-arquivos</code><br>
+            5. <code>wrangler d1 create cme-audit</code> → copie o <em>database_id</em> para o wrangler.toml<br>
+            6. <code>wrangler d1 execute cme-audit --file=schema.sql</code><br>
+            7. <code>wrangler secret put AUTH_TOKEN</code> (escolha uma senha forte)<br>
+            8. <code>wrangler deploy</code> → copie a URL gerada aqui<br>
+            Os arquivos estão em <code>Documents/cme/cloudflare-r2-worker/</code>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="r2_fecharConfig()">Cancelar</button>
+          <button class="btn-primary" onclick="r2_salvarConfig()">💾 Salvar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Auditoria R2 -->
+    <div id="r2-modal-audit" class="modal-overlay" style="display:none">
+      <div class="modal-box" style="max-width:800px">
+        <div class="modal-header">
+          <div class="modal-title">📋 Auditoria de Arquivos</div>
+          <button class="modal-close" onclick="document.getElementById('r2-modal-audit').style.display='none'">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:flex;gap:10px;margin-bottom:12px">
+            <input id="r2-aud-busca" type="text" placeholder="Filtrar por monitorado ou usuário…"
+                   style="flex:1;border:1px solid #ddd;border-radius:6px;padding:7px 10px;font-size:.88rem">
+            <button class="btn-secondary" onclick="r2_carregarAuditoria()">🔄 Atualizar</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:.83rem">
+              <thead>
+                <tr style="background:#f5f5f5;font-weight:600;color:#555">
+                  <th style="padding:8px 12px;text-align:left">Ação</th>
+                  <th style="padding:8px 12px;text-align:left">Monitorado</th>
+                  <th style="padding:8px 12px;text-align:left">Pasta</th>
+                  <th style="padding:8px 12px;text-align:left">Arquivo</th>
+                  <th style="padding:8px 12px;text-align:left">Usuário</th>
+                  <th style="padding:8px 12px;text-align:left">Data/Hora</th>
+                </tr>
+              </thead>
+              <tbody id="r2-aud-body">
+                <tr><td colspan="6" style="padding:20px;text-align:center;color:#aaa">Carregando…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
 
   </div><!-- /main -->
 </div><!-- /app -->
@@ -4366,16 +4607,50 @@ function carregarStore(chave, padrao) {
 }
 
 /* USUÁRIOS PADRÃO */
+/* USUARIOS_PADRAO — senhas armazenadas como SHA-256(salt+senha). Nunca altere os hashes manualmente. */
+const _SHA_SALT = 'cme_iapen_2026_';
 const USUARIOS_PADRAO = [
-  { usuario: "admin", senha: btoa("Admin@480096"), nome: "Administrador", nivel: "admin" },
-  { usuario: "gerente", senha: btoa("gerente123"), nome: "Gerência CME", nivel: "gerencia" },
-  { usuario: "plantao", senha: btoa("plantao123"), nome: "Operador Plantão", nivel: "plantao" },
-  { usuario: "juridico", senha: btoa("juridico123"), nome: "Setor Jurídico", nivel: "juridico" },
-  { usuario: "comunicacao", senha: btoa("comunicacao123"), nome: "Comunicação Processual", nivel: "comunicacao" },
-  { usuario: "estoque", senha: btoa("estoque123"), nome: "Operador de Estoque", nivel: "estoque" },
-  { usuario: "triagem", senha: btoa("triagem123"), nome: "Operador de Triagem", nivel: "triagem" },
-  { usuario: "psicossocial", senha: btoa("psico123"), nome: "Equipe Psicossocial", nivel: "psicossocial" },
+  { usuario: "admin",        senha: "a6b893f39bec5621db142a2fe3d2aa18e6f28878c2caf81ce033c42e11e0ef95", nome: "Administrador",          nivel: "admin"        },
+  { usuario: "gerente",      senha: "4f903ad9e20314258f9d7e393be4db414a4d9c4a4b5ed7ee981f91dc094161c1", nome: "Gerência CME",          nivel: "gerencia"     },
+  { usuario: "plantao",      senha: "af44d039cba7d1c1dfe6c0303e96dee6e54456513696bf006a78f5fed6de1404", nome: "Operador Plantão",       nivel: "plantao"      },
+  { usuario: "juridico",     senha: "2539f098add2e50e3e70554fa794e4ee1fa4f7603e81153bbe07565699886669", nome: "Setor Jurídico",         nivel: "juridico"     },
+  { usuario: "comunicacao",  senha: "1dcb7d0f36d664fcff7fa95e7eed88233d49c6fab5b3e4d21ee29cae89d9f245", nome: "Comunicação Processual", nivel: "comunicacao"  },
+  { usuario: "estoque",      senha: "c1ecf13d8c8776446bf882278d1392e1a50193961283c88e886db23935b64455", nome: "Operador de Estoque",    nivel: "estoque"      },
+  { usuario: "triagem",      senha: "0d461c811a4d5a65189781531aae3dcba0273a5706aa4c4c327401aa381b3889", nome: "Operador de Triagem",    nivel: "triagem"      },
+  { usuario: "psicossocial", senha: "f0129df0f798ec86b76043b91e7b8f9c182b8965056f09a2f565401fe8ca7e35", nome: "Equipe Psicossocial",   nivel: "psicossocial" },
 ];
+
+/* ─── Utilitário de hash (SHA-256 + salt fixo via SubtleCrypto) ─── */
+async function hashSenha(senha) {
+  const data = new TextEncoder().encode(_SHA_SALT + senha);
+  const buf  = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+/* ─── Detecta senha no formato legado (btoa/base64) ─── */
+function _ehBase64Legado(s) {
+  return typeof s === 'string' && s.length < 64 && /^[A-Za-z0-9+/=]+$/.test(s);
+}
+
+/* ─── Rate limiting: máx 5 tentativas, bloqueio 15 min ─── */
+const _loginTentativas = {};
+function _loginBloqueado(u) {
+  const f = _loginTentativas[u];
+  if (!f || f.count < 5) return false;
+  const restam = 900000 - (Date.now() - f.ts); // 15 min
+  if (restam > 0) {
+    _mostrarToast(`🔒 Conta bloqueada. Aguarde ${Math.ceil(restam/60000)} min.`, 'erro');
+    return true;
+  }
+  delete _loginTentativas[u]; // bloqueio expirou
+  return false;
+}
+function _registrarFalha(u) {
+  if (!_loginTentativas[u]) _loginTentativas[u] = { count: 0, ts: 0 };
+  _loginTentativas[u].count++;
+  _loginTentativas[u].ts = Date.now();
+}
+function _limparFalhas(u) { delete _loginTentativas[u]; }
 
 function getUsuarios() {
   return carregarStore("usuarios", USUARIOS_PADRAO);
@@ -4440,23 +4715,51 @@ let filtroCrit = "";
 let filtroJur = "";
 
 /* ─── LOGIN / LOGOUT ─────────────────────────────────── */
-function fazerLogin() {
+async function fazerLogin() {
   const u = document.getElementById("input-user").value.trim();
   const p = document.getElementById("input-pass").value;
+  const errEl = document.getElementById("login-error");
+
+  if (!u || !p) { errEl.style.display = "block"; errEl.textContent = "Preencha usuário e senha."; return; }
+
+  // Rate limiting
+  if (_loginBloqueado(u)) return;
+
   const usuarios = getUsuarios();
-  const usuario = usuarios.find(x => x.usuario === u && x.senha === btoa(p));
+  const hash = await hashSenha(p);
+  let usuario = usuarios.find(x => x.usuario === u && x.senha === hash);
+
+  // Migração automática: senha ainda no formato legado (btoa)
   if (!usuario) {
-    document.getElementById("login-error").style.display = "block";
+    const leg = usuarios.find(x => x.usuario === u && _ehBase64Legado(x.senha) && x.senha === btoa(p));
+    if (leg) {
+      leg.senha = hash; // migra para SHA-256
+      salvarUsuarios(usuarios);
+      usuario = leg;
+    }
+  }
+
+  if (!usuario) {
+    _registrarFalha(u);
+    const f = _loginTentativas[u] || {};
+    const restam = 5 - (f.count || 0);
+    errEl.textContent = restam > 0
+      ? `Usuário ou senha incorretos. ${restam} tentativa(s) restante(s).`
+      : 'Conta bloqueada por 15 minutos.';
+    errEl.style.display = "block";
     return;
   }
+
+  _limparFalhas(u);
   usuarioAtual = usuario;
-  // Salvar sessão no localStorage para sobreviver ao F5
   localStorage.setItem('cme_sessao', JSON.stringify({
-    usuario: usuario.usuario,
-    nivel:   usuario.nivel,
-    nome:    usuario.nome
+    usuario:  usuario.usuario,
+    nivel:    usuario.nivel,
+    nome:     usuario.nome,
+    loginAt:  Date.now()
   }));
-  document.getElementById("login-error").style.display = "none";
+  errEl.style.display = "none";
+  errEl.textContent = "Usuário ou senha incorretos. Tente novamente.";
   addLog(`Login: ${usuario.nome} (${usuario.nivel})`);
   iniciarApp();
 }
@@ -4482,21 +4785,21 @@ function fazerLogout() {
 
 // ── Mapa de abas permitidas por nível ─────────────────────
 const TABS_POR_NIVEL = {
-  plantao:    ['dashboard', 'criticos', 'ocorrencias', 'links', 'modelos'],
-  comunicacao: ['comunicacao', 'links'],
-  relatorio:  ['relatorio', 'links'],
-  juridico:   ['criticos', 'ocorrencias', 'juridico', 'links', 'modelos'],
-  estoque:    ['estoque', 'links'],
-  triagem:       ['triagem', 'links'],
-  psicossocial:  ['psicossocial', 'links', 'modelos'],
+  plantao:    ['dashboard', 'criticos', 'ocorrencias', 'links', 'modelos', 'arquivos'],
+  comunicacao: ['comunicacao', 'links', 'arquivos'],
+  relatorio:  ['relatorio', 'links', 'arquivos'],
+  juridico:   ['criticos', 'ocorrencias', 'juridico', 'links', 'modelos', 'arquivos'],
+  estoque:    ['estoque', 'links', 'arquivos'],
+  triagem:       ['triagem', 'links', 'arquivos'],
+  psicossocial:  ['psicossocial', 'links', 'modelos', 'arquivos'],
   gerencia:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
-               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia'],
+               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia', 'arquivos'],
   admin:      ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
-               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia', 'admin'],
+               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia', 'admin', 'arquivos'],
 };
 
 const _TAB_MAP = { dashboard:0, criticos:1, ocorrencias:2, juridico:3, comunicacao:4,
-                   estoque:5, triagem:6, relatorio:7, links:8, modelos:9, gerencia:10, admin:11, psicossocial:12 };
+                   estoque:5, triagem:6, relatorio:7, links:8, modelos:9, gerencia:10, admin:11, psicossocial:12, arquivos:13 };
 
 function aplicarVisibilidadeTabs(nivel) {
   const permitidas = TABS_POR_NIVEL[nivel] || TABS_POR_NIVEL['plantao'];
@@ -4542,7 +4845,7 @@ function mudarAba(aba) {
   document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
   const tabs = document.querySelectorAll(".nav-tab");
-  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, comunicacao: 4, estoque: 5, triagem: 6, relatorio: 7, links: 8, modelos: 9, gerencia: 10, admin: 11 };
+  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, comunicacao: 4, estoque: 5, triagem: 6, relatorio: 7, links: 8, modelos: 9, gerencia: 10, admin: 11, psicossocial: 12, arquivos: 13 };
   if (tabs[map[aba]]) tabs[map[aba]].classList.add("active");
   const panel = document.getElementById("panel-" + aba);
   if (panel) panel.classList.add("active");
@@ -4559,6 +4862,7 @@ function mudarAba(aba) {
   if (aba === "links") renderizarLinks();
   if (aba === "modelos") renderizarModelos();
   if (aba === "admin") { renderizarUsers(); renderizarLogs(); }
+  if (aba === "arquivos") { r2_inicializarAba(); }
 }
 
 /* ─── ATUALIZAR TUDO ─────────────────────────────────── */
@@ -6241,14 +6545,52 @@ function criarUsuario() {
     msg.className = "sys-alert error"; msg.textContent = "Usuário já existe."; return;
   }
   us.push({ usuario: user, senha: btoa(pass), nome, nivel });
-  salvarUsuarios(us);
-  addLog(`Criou usuário ${nome} (${usuarioAtual.nome})`);
-  msg.className = "sys-alert success"; msg.textContent = `Usuário "${nome}" criado com sucesso!`;
-  document.getElementById("new-name").value = "";
-  document.getElementById("new-user").value = "";
-  document.getElementById("new-pass").value = "";
-  renderizarUsers();
-  setTimeout(() => { msg.className = "sys-alert"; }, 3000);
+  hashSenha(pass).then(hash => {
+    us.push({ usuario: user, senha: hash, nome, nivel });
+    salvarUsuarios(us);
+    addLog(`Criou usuário ${nome} (${usuarioAtual.nome})`);
+    msg.className = "sys-alert success"; msg.textContent = `Usuário "${nome}" criado com sucesso!`;
+    document.getElementById("new-name").value = "";
+    document.getElementById("new-user").value = "";
+    document.getElementById("new-pass").value = "";
+    renderizarUsers();
+    setTimeout(() => { msg.className = "sys-alert"; }, 3000);
+  });
+}
+
+function alterarMinhaSenha() {
+  const senhaAtual = (document.getElementById('alt-senha-atual')?.value || '').trim();
+  const senhaNova  = (document.getElementById('alt-senha-nova')?.value  || '').trim();
+  const senhaConf  = (document.getElementById('alt-senha-conf')?.value  || '').trim();
+  const msg        = document.getElementById('alt-senha-msg');
+  if (!senhaAtual || !senhaNova || !senhaConf) {
+    msg.className = "sys-alert error"; msg.textContent = "Preencha todos os campos."; return;
+  }
+  if (senhaNova !== senhaConf) {
+    msg.className = "sys-alert error"; msg.textContent = "Nova senha e confirmação não conferem."; return;
+  }
+  if (senhaNova.length < 8 || !/[A-Z]/.test(senhaNova) || !/[0-9]/.test(senhaNova)) {
+    msg.className = "sys-alert error"; msg.textContent = "Nova senha: mínimo 8 caracteres, 1 maiúscula e 1 número."; return;
+  }
+  hashSenha(senhaAtual).then(hashAtual => {
+    const usuarios = getUsuarios();
+    const eu = usuarios.find(u => u.usuario === usuarioAtual.usuario);
+    // Suporta comparação SHA-256 e legado btoa
+    const senhaOk = eu && (eu.senha === hashAtual || (_ehBase64Legado(eu.senha) && eu.senha === btoa(senhaAtual)));
+    if (!senhaOk) {
+      msg.className = "sys-alert error"; msg.textContent = "Senha atual incorreta."; return;
+    }
+    hashSenha(senhaNova).then(hashNova => {
+      eu.senha = hashNova;
+      salvarUsuarios(usuarios);
+      addLog(`Senha alterada: ${usuarioAtual.nome}`);
+      msg.className = "sys-alert success"; msg.textContent = "Senha alterada com sucesso!";
+      document.getElementById('alt-senha-atual').value = '';
+      document.getElementById('alt-senha-nova').value  = '';
+      document.getElementById('alt-senha-conf').value  = '';
+      setTimeout(() => { msg.className = "sys-alert"; }, 4000);
+    });
+  });
 }
 
 function renderizarLogs() {
@@ -10603,6 +10945,360 @@ ${bodyHtml}
   }
 })();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════
+     MÓDULO CLOUDFLARE R2 — GERENCIADOR DE ARQUIVOS
+═══════════════════════════════════════════════════════ -->
+<script>
+/* ── Estado global R2 ─────────────────────────────────────────── */
+const r2_state = {
+  url:        '',   // Worker URL
+  token:      '',   // AUTH_TOKEN
+  monitorado: '',   // monitorado selecionado (nome real)
+  pasta:      '',   // pasta atual
+  monitorados: [],  // cache da lista
+};
+
+/* ── Config: carregar / salvar ────────────────────────────────── */
+function r2_carregarConfig() {
+  try {
+    const cfg = JSON.parse(localStorage.getItem('cme_r2_config') || '{}');
+    r2_state.url   = cfg.url   || '';
+    r2_state.token = cfg.token || '';
+  } catch(e) { r2_state.url = ''; r2_state.token = ''; }
+}
+
+function r2_salvarConfig() {
+  const url   = (document.getElementById('r2-cfg-url')?.value   || '').trim();
+  const token = (document.getElementById('r2-cfg-token')?.value || '').trim();
+  if (!url || !token) { _mostrarToast('⚠️ Preencha URL e Token.', 'erro'); return; }
+  localStorage.setItem('cme_r2_config', JSON.stringify({ url, token }));
+  r2_state.url   = url;
+  r2_state.token = token;
+  r2_fecharConfig();
+  _mostrarToast('✅ Configuração salva!', 'sucesso');
+  r2_inicializarAba();
+}
+
+/* ── Modais config / auditoria ────────────────────────────────── */
+function r2_abrirConfig() {
+  r2_carregarConfig();
+  document.getElementById('r2-cfg-url').value   = r2_state.url;
+  document.getElementById('r2-cfg-token').value = r2_state.token;
+  document.getElementById('r2-modal-config').style.display = 'flex';
+}
+function r2_fecharConfig() {
+  document.getElementById('r2-modal-config').style.display = 'none';
+}
+
+/* ── API helper ───────────────────────────────────────────────── */
+async function r2_api(method, path, headers = {}, body = null) {
+  if (!r2_state.url || !r2_state.token) throw new Error('R2 não configurado.');
+  const base = r2_state.url.replace(/\/$/, '');
+  const res = await fetch(base + path, {
+    method,
+    headers: {
+      'Authorization': `Bearer ${r2_state.token}`,
+      'X-Usuario': usuarioAtual?.nome || 'desconhecido',
+      'X-Nivel':   usuarioAtual?.nivel || '',
+      ...headers,
+    },
+    body,
+  });
+  const ct = res.headers.get('Content-Type') || '';
+  if (ct.includes('application/json')) {
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+    return json;
+  }
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res;
+}
+
+/* ── Inicializar aba ──────────────────────────────────────────── */
+async function r2_inicializarAba() {
+  r2_carregarConfig();
+  const aviso = document.getElementById('r2-aviso-config');
+  if (!r2_state.url || !r2_state.token) {
+    aviso.style.display = 'block';
+    document.getElementById('r2-lista-mon').innerHTML =
+      '<div style="color:#aaa;font-size:.85rem;text-align:center;padding:20px 0">Configure a conexão.</div>';
+    return;
+  }
+  aviso.style.display = 'none';
+  await r2_carregarMonitorados();
+}
+
+/* ── Monitorados ──────────────────────────────────────────────── */
+async function r2_carregarMonitorados() {
+  const lista = document.getElementById('r2-lista-mon');
+  lista.innerHTML = '<div style="color:#aaa;font-size:.85rem;text-align:center;padding:16px">Carregando…</div>';
+  try {
+    const data = await r2_api('GET', '/monitorados');
+    r2_state.monitorados = data.monitorados || [];
+    r2_renderizarListaMon(r2_state.monitorados);
+  } catch(e) {
+    lista.innerHTML = `<div style="color:#dc3545;font-size:.82rem;padding:10px">${e.message}</div>`;
+  }
+}
+
+function r2_renderizarListaMon(lista) {
+  const el = document.getElementById('r2-lista-mon');
+  if (!lista.length) {
+    el.innerHTML = '<div style="color:#aaa;font-size:.83rem;text-align:center;padding:20px 0">Nenhum monitorado.<br>Clique em + Monitorado.</div>';
+    return;
+  }
+  el.innerHTML = lista.map(m =>
+    `<div class="r2-mon-item ${m.nome === r2_state.monitorado ? 'active' : ''}"
+          onclick="r2_selecionarMonitorado('${m.nome.replace(/'/g,"&#39;")}')"
+          title="${m.nome.replace(/"/g,'&quot;')}">
+       📁 ${m.nome}
+     </div>`
+  ).join('');
+}
+
+function r2_filtrarMonitorados(q) {
+  const f = q.toLowerCase();
+  const filtrados = r2_state.monitorados.filter(m => m.nome.toLowerCase().includes(f));
+  r2_renderizarListaMon(filtrados);
+}
+
+async function r2_novoMonitorado() {
+  const nome = prompt('Nome do monitorado:');
+  if (!nome || !nome.trim()) return;
+  const nomeTrimmed = nome.trim();
+  // Criar um arquivo marcador para que o "monitorado" apareça no R2
+  // Usamos um arquivo .keep invisível em cada pasta
+  try {
+    const headers = {
+      'X-Monitorado': nomeTrimmed,
+      'X-Pasta': 'Processo',
+      'X-Filename': '.keep',
+      'Content-Type': 'application/octet-stream',
+    };
+    await r2_api('POST', '/upload', headers, new Blob([]));
+    const headers2 = {
+      'X-Monitorado': nomeTrimmed,
+      'X-Pasta': 'Docs do monitorado',
+      'X-Filename': '.keep',
+      'Content-Type': 'application/octet-stream',
+    };
+    await r2_api('POST', '/upload', headers2, new Blob([]));
+    _mostrarToast(`✅ Monitorado "${nomeTrimmed}" criado!`, 'sucesso');
+    addLog(`R2: monitorado criado — ${nomeTrimmed}`);
+    await r2_carregarMonitorados();
+    await r2_selecionarMonitorado(nomeTrimmed);
+  } catch(e) {
+    _mostrarToast(`⚠️ Erro: ${e.message}`, 'erro');
+  }
+}
+
+/* ── Navegação ────────────────────────────────────────────────── */
+async function r2_selecionarMonitorado(nome) {
+  r2_state.monitorado = nome;
+  r2_state.pasta = '';
+  // Destacar na lista
+  document.querySelectorAll('.r2-mon-item').forEach(el => {
+    el.classList.toggle('active', el.textContent.trim().replace('📁 ','') === nome);
+  });
+  // Breadcrumb
+  document.getElementById('r2-bc-mon').textContent = nome;
+  document.getElementById('r2-bc-pasta-wrap').style.display = 'none';
+  document.getElementById('r2-breadcrumb').style.display = 'block';
+  // Mostrar pastas
+  document.getElementById('r2-guia-inicial').style.display  = 'none';
+  document.getElementById('r2-pastas-view').style.display   = 'grid';
+  document.getElementById('r2-arquivos-view').style.display = 'none';
+  // Carregar contagens
+  r2_atualizarContagens(nome);
+}
+
+async function r2_atualizarContagens(nome) {
+  const pastas = ['Processo', 'Docs do monitorado'];
+  const ids    = ['r2-count-processo', 'r2-count-docs'];
+  for (let i = 0; i < pastas.length; i++) {
+    try {
+      const q = new URLSearchParams({ monitorado: nome, pasta: pastas[i] });
+      const data = await r2_api('GET', `/list?${q}`);
+      const count = (data.arquivos || []).filter(f => !f.nome.endsWith('.keep')).length;
+      document.getElementById(ids[i]).textContent = `${count} arquivo(s)`;
+    } catch(e) {
+      document.getElementById(ids[i]).textContent = 'erro';
+    }
+  }
+}
+
+async function r2_abrirPasta(pasta) {
+  r2_state.pasta = pasta;
+  document.getElementById('r2-bc-pasta').textContent = pasta;
+  document.getElementById('r2-bc-pasta-wrap').style.display = 'inline';
+  document.getElementById('r2-pastas-view').style.display   = 'none';
+  document.getElementById('r2-arquivos-view').style.display = 'flex';
+  document.getElementById('r2-pasta-titulo').textContent    = pasta;
+  await r2_carregarArquivos();
+}
+
+/* ── Listar arquivos ──────────────────────────────────────────── */
+async function r2_carregarArquivos() {
+  const tbody = document.getElementById('r2-tabela-body');
+  tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#aaa">Carregando…</td></tr>';
+  try {
+    const q = new URLSearchParams({ monitorado: r2_state.monitorado, pasta: r2_state.pasta });
+    const data = await r2_api('GET', `/list?${q}`);
+    const arquivos = (data.arquivos || []).filter(f => !f.nome.endsWith('.keep'));
+    if (!arquivos.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:#aaa">Nenhum arquivo nesta pasta.</td></tr>';
+      return;
+    }
+    const nivelAdmin = ['admin', 'gerencia'].includes(usuarioAtual?.nivel);
+    tbody.innerHTML = arquivos.map(f => {
+      const tamanho = r2_formatarBytes(f.tamanho);
+      const data_env = f.enviado ? new Date(f.enviado).toLocaleString('pt-BR') : '—';
+      const escapedKey = f.key.replace(/"/g, '&quot;');
+      return `<tr style="border-top:1px solid #f0f0f0;transition:background .15s" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background=''">
+        <td style="padding:9px 14px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.nome}">
+          ${r2_iconeArquivo(f.nome)} ${f.nome}
+        </td>
+        <td style="padding:9px 8px;text-align:right;color:#777;white-space:nowrap">${tamanho}</td>
+        <td style="padding:9px 8px;color:#555;white-space:nowrap">${f.usuario || '—'}</td>
+        <td style="padding:9px 8px;color:#777;white-space:nowrap;font-size:.81rem">${data_env}</td>
+        <td style="padding:9px 8px;text-align:center;white-space:nowrap">
+          <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78"
+                  onclick="r2_baixarArquivo('${escapedKey}','${f.nome.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
+          ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828;margin-left:4px"
+                onclick="r2_confirmarDelete('${escapedKey}','${f.nome.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:20px;text-align:center;color:#dc3545">${e.message}</td></tr>`;
+  }
+}
+
+/* ── Upload ───────────────────────────────────────────────────── */
+async function r2_enviarArquivos(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  const wrap = document.getElementById('r2-progress-wrap');
+  const bar  = document.getElementById('r2-progress-bar');
+  const txt  = document.getElementById('r2-progress-text');
+  wrap.style.display = 'block';
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const pct  = Math.round(((i) / files.length) * 100);
+    bar.style.width = pct + '%';
+    txt.textContent = `Enviando (${i + 1}/${files.length}): ${file.name}`;
+    try {
+      await r2_api('POST', '/upload', {
+        'X-Monitorado': r2_state.monitorado,
+        'X-Pasta':      r2_state.pasta,
+        'X-Filename':   file.name,
+        'Content-Type': file.type || 'application/octet-stream',
+      }, file);
+    } catch(e) {
+      _mostrarToast(`⚠️ Erro ao enviar ${file.name}: ${e.message}`, 'erro');
+    }
+  }
+  bar.style.width = '100%';
+  txt.textContent = `✅ ${files.length} arquivo(s) enviado(s)!`;
+  setTimeout(() => { wrap.style.display = 'none'; bar.style.width = '0%'; }, 2500);
+  input.value = '';
+  addLog(`R2: ${files.length} arquivo(s) enviado(s) para ${r2_state.monitorado}/${r2_state.pasta}`);
+  await r2_carregarArquivos();
+  await r2_atualizarContagens(r2_state.monitorado);
+}
+
+/* ── Download ─────────────────────────────────────────────────── */
+async function r2_baixarArquivo(key, nome) {
+  try {
+    _mostrarToast('⬇️ Preparando download…', 'sucesso');
+    const res = await r2_api('GET', `/download?key=${encodeURIComponent(key)}`);
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = nome; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch(e) {
+    _mostrarToast(`⚠️ Erro ao baixar: ${e.message}`, 'erro');
+  }
+}
+
+/* ── Deletar ──────────────────────────────────────────────────── */
+function r2_confirmarDelete(key, nome) {
+  if (!confirm(`Excluir permanentemente o arquivo "${nome}"?\n\nEsta ação não pode ser desfeita.`)) return;
+  r2_deletarArquivo(key, nome);
+}
+async function r2_deletarArquivo(key, nome) {
+  try {
+    await r2_api('DELETE', `/delete?key=${encodeURIComponent(key)}`);
+    _mostrarToast(`🗑️ "${nome}" excluído.`, 'sucesso');
+    addLog(`R2: arquivo excluído — ${nome} (${r2_state.monitorado}/${r2_state.pasta})`);
+    await r2_carregarArquivos();
+    await r2_atualizarContagens(r2_state.monitorado);
+  } catch(e) {
+    _mostrarToast(`⚠️ ${e.message}`, 'erro');
+  }
+}
+
+/* ── Auditoria ────────────────────────────────────────────────── */
+async function r2_abrirAuditoria() {
+  document.getElementById('r2-modal-audit').style.display = 'flex';
+  await r2_carregarAuditoria();
+}
+async function r2_carregarAuditoria() {
+  const tbody  = document.getElementById('r2-aud-body');
+  const filtro = (document.getElementById('r2-aud-busca')?.value || '').trim().toLowerCase();
+  tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:#aaa">Carregando…</td></tr>';
+  try {
+    const data = await r2_api('GET', '/audit?limit=300');
+    let rows = data.audit || [];
+    if (filtro) {
+      rows = rows.filter(r =>
+        (r.monitorado || '').toLowerCase().includes(filtro) ||
+        (r.usuario    || '').toLowerCase().includes(filtro) ||
+        (r.filename   || '').toLowerCase().includes(filtro)
+      );
+    }
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:#aaa">Nenhum registro.</td></tr>';
+      return;
+    }
+    const acao_label = { upload:'⬆️ Upload', download:'⬇️ Download', delete:'🗑️ Exclusão' };
+    const acao_color = { upload:'#0d6efd', download:'#198754', delete:'#dc3545' };
+    tbody.innerHTML = rows.map(r => {
+      const dt = r.ts ? new Date(r.ts).toLocaleString('pt-BR') : '—';
+      return `<tr style="border-top:1px solid #f0f0f0">
+        <td style="padding:7px 12px;white-space:nowrap">
+          <span style="color:${acao_color[r.action]||'#555'};font-weight:600">${acao_label[r.action]||r.action}</span>
+        </td>
+        <td style="padding:7px 12px">${r.monitorado||'—'}</td>
+        <td style="padding:7px 12px">${r.pasta||'—'}</td>
+        <td style="padding:7px 12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.filename||''}">${r.filename||'—'}</td>
+        <td style="padding:7px 12px;white-space:nowrap">${r.usuario||'—'}</td>
+        <td style="padding:7px 12px;font-size:.8rem;color:#888;white-space:nowrap">${dt}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="6" style="padding:20px;text-align:center;color:#dc3545">${e.message}</td></tr>`;
+  }
+}
+
+/* ── Utilitários ──────────────────────────────────────────────── */
+function r2_formatarBytes(bytes) {
+  if (!bytes) return '0 B';
+  const k = 1024, sz = ['B','KB','MB','GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return (bytes / Math.pow(k, i)).toFixed(i ? 1 : 0) + ' ' + sz[i];
+}
+function r2_iconeArquivo(nome) {
+  const ext = (nome.split('.').pop() || '').toLowerCase();
+  const mapa = { pdf:'📕', doc:'📘', docx:'📘', xls:'📗', xlsx:'📗', ppt:'📙', pptx:'📙',
+                 jpg:'🖼️', jpeg:'🖼️', png:'🖼️', gif:'🖼️', mp4:'🎥', mp3:'🎵',
+                 zip:'🗜️', rar:'🗜️', txt:'📃', csv:'📊' };
+  return mapa[ext] || '📄';
+}
+</script>
+
 <script>
 (async function inicializarDB() {
   const SUPABASE_URL = "https://eesapyygdvjbgvohfxvg.supabase.co";
@@ -10640,12 +11336,21 @@ ${bodyHtml}
       _cache['usuarios'] = USUARIOS_PADRAO;
       seeds.push(window._db.from('store').insert({ key: 'cme_usuarios', value: USUARIOS_PADRAO }));
     } else {
-      // Garantir que a senha do admin está sempre atualizada
+      // Migração de senhas legado (btoa → SHA-256) e garantia do admin
       const usuarios = _cache['usuarios'] || [];
-      const adminUser = usuarios.find(u => u.usuario === 'admin');
-      const novaSenha = btoa('Admin@480096');
-      if (adminUser && adminUser.senha !== novaSenha) {
-        adminUser.senha = novaSenha;
+      let precisaSalvar = false;
+      for (const u of usuarios) {
+        if (_ehBase64Legado(u.senha)) {
+          // Senha ainda em btoa — não podemos converter sem a senha original.
+          // Força reset para hash padrão apenas se for o admin sem senha alterada.
+          if (u.usuario === 'admin' && u.senha === btoa('Admin@480096')) {
+            u.senha = "a6b893f39bec5621db142a2fe3d2aa18e6f28878c2caf81ce033c42e11e0ef95";
+            precisaSalvar = true;
+          }
+          // Outros usuários legado continuam funcionando via migração no login
+        }
+      }
+      if (precisaSalvar) {
         seeds.push(window._db.from('store').upsert({ key: 'cme_usuarios', value: usuarios }, { onConflict: 'key' }));
       }
     }
@@ -10741,12 +11446,16 @@ ${bodyHtml}
   if (sessaoSalva) {
     try {
       const s = JSON.parse(sessaoSalva);
-      const userSalvo = getUsuarios().find(u => u.usuario === s.usuario && u.nivel === s.nivel);
-      if (userSalvo) {
-        usuarioAtual = userSalvo;
-        overlay.style.display = 'none';
-        iniciarApp();
-        return; // Entra direto, sem mostrar login
+      const TIMEOUT_SESSAO = 8 * 60 * 60 * 1000; // 8 horas
+      const sessaoExpirada = s.loginAt && (Date.now() - s.loginAt) > TIMEOUT_SESSAO;
+      if (!sessaoExpirada) {
+        const userSalvo = getUsuarios().find(u => u.usuario === s.usuario && u.nivel === s.nivel);
+        if (userSalvo) {
+          usuarioAtual = userSalvo;
+          overlay.style.display = 'none';
+          iniciarApp();
+          return; // Entra direto, sem mostrar login
+        }
       }
     } catch(e) { /* sessão inválida */ }
     localStorage.removeItem('cme_sessao');
