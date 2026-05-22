@@ -12685,6 +12685,9 @@ function rv_importarPlanilha(input) {
     if (!cNome || !cProc) {
       _mostrarToast('Colunas "Nome" e "Processo" não encontradas na planilha.', 'erro'); return;
     }
+    if (!cDur) {
+      _mostrarToast('⚠️ Coluna Duração não detectada. Colunas da planilha: ' + cols.join(' | '), 'aviso');
+    }
 
     // Normalizar linhas
     rows = rows.map(r => ({
