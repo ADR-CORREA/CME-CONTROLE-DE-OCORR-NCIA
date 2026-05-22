@@ -12665,7 +12665,10 @@ function rv_importarPlanilha(input) {
     // Mapear colunas (igual ao Python pick_col)
     const cols = Object.keys(rows[0]);
     const pick = (candidatos) => {
-      const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+      const norm = s => s.toLowerCase()
+        .replace(/[àáâãä]/g,'a').replace(/[èéêë]/g,'e').replace(/[ìíîï]/g,'i')
+        .replace(/[òóôõö]/g,'o').replace(/[ùúûü]/g,'u').replace(/ç/g,'c')
+        .replace(/ñ/g,'n').replace(/\s+/g,' ').trim();
       for (const cand of candidatos)
         for (const col of cols)
           if (norm(col).includes(norm(cand))) return col;
@@ -12680,13 +12683,10 @@ function rv_importarPlanilha(input) {
     const cTipo    = pick(['Tipo']);
     const cId      = pick(['ID']);
     const cOcorreu = pick(['Ocorreu','Data']);
-    const cDur     = pick(['Duração','Duracao','Duracao da','Tempo','Duration']);
+    const cDur     = pick(['Duração','Duracao','Duracao da','Dura','Tempo','Duration']);
 
     if (!cNome || !cProc) {
       _mostrarToast('Colunas "Nome" e "Processo" não encontradas na planilha.', 'erro'); return;
-    }
-    if (!cDur) {
-      _mostrarToast('⚠️ Coluna Duração não detectada. Colunas da planilha: ' + cols.join(' | '), 'aviso');
     }
 
     // Normalizar linhas
