@@ -2331,6 +2331,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
       <div class="sub-tabs">
         <div class="sub-tab active" id="com-stab-ocorrencias" onclick="mudarSubAbaCom('ocorrencias')">📋 Ocorrências</div>
         <div class="sub-tab" id="com-stab-arquivados" onclick="mudarSubAbaCom('arquivados')">📁 Arquivados</div>
+        <div class="sub-tab" id="com-stab-oficios"    onclick="mudarSubAbaCom('oficios')">📄 Ofícios</div>
       </div>
 
       <!-- SUB-PANEL: OCORRÊNCIAS (conteúdo existente) -->
@@ -2391,6 +2392,101 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           </table>
         </div>
       </div>
+
+      <!-- SUB-PANEL: OFÍCIOS -->
+      <div class="sub-panel" id="com-panel-oficios">
+        <div style="max-width:920px;margin:0 auto;padding:18px 10px">
+          <div style="font-weight:700;font-size:1.05rem;color:#1F4E78;margin-bottom:18px">📄 Gerador de Ofícios — CME/IAPEN</div>
+
+          <!-- Comarca + Vara -->
+          <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-bottom:12px">
+            <div>
+              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Comarca</label>
+              <select id="com-of-comarca" onchange="com_atualizarVaras()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+                <option value="">Selecione a comarca...</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Vara</label>
+              <select id="com-of-vara" onchange="com_atualizarDestinatario()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+                <option value="">Selecione a vara...</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Destinatário -->
+          <div style="margin-bottom:12px">
+            <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Destinatário <span style="font-weight:400;color:#94a3b8">(editável)</span></label>
+            <input type="text" id="com-of-destinatario" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box" placeholder="Preenchido automaticamente ao selecionar comarca e vara">
+          </div>
+
+          <!-- Modelo -->
+          <div style="margin-bottom:12px">
+            <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Modelo de Ofício</label>
+            <select id="com-of-modelo" onchange="com_atualizarCampos()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+              <option value="">Selecione o modelo...</option>
+            </select>
+          </div>
+
+          <!-- Nº Ofício + Data -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div>
+              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Nº do Ofício</label>
+              <input type="text" id="com-of-numero" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box" placeholder="ex: 1092">
+            </div>
+            <div>
+              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Data do Ofício</label>
+              <input type="date" id="com-of-data" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
+            </div>
+          </div>
+
+          <!-- Nome + Processo -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div>
+              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Nome do Monitorado</label>
+              <input type="text" id="com-of-nome" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box" placeholder="NOME COMPLETO EM MAIÚSCULAS">
+            </div>
+            <div>
+              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Nº do Processo</label>
+              <input type="text" id="com-of-processo" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box" placeholder="ex: 5001811-77.2022.8.03.0001">
+            </div>
+          </div>
+
+          <!-- Saudação -->
+          <div style="margin-bottom:12px">
+            <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Saudação</label>
+            <select id="com-of-saudacao" style="padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+              <option>Senhor Juiz,</option>
+              <option>Senhora Juíza,</option>
+              <option>Senhor(a) Juiz(a),</option>
+              <option>Senhor,</option>
+              <option>Senhora,</option>
+            </select>
+          </div>
+
+          <!-- Campos dinâmicos do modelo -->
+          <div id="com-of-campos-dinamicos" style="margin-bottom:12px"></div>
+
+          <hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0">
+
+          <!-- Signatário + Decreto -->
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:18px">
+            <div>
+              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Signatário</label>
+              <input type="text" id="com-of-signatario" value="Everton Nunes Costa" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
+            </div>
+            <div>
+              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Decreto</label>
+              <input type="text" id="com-of-decreto" value="5953/2025-GEA" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
+            </div>
+          </div>
+
+          <button onclick="com_gerarOficio()" style="background:#1F4E78;color:#fff;padding:10px 28px;border:none;border-radius:7px;font-size:.95rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px">
+            📄 Gerar Ofício (.doc)
+          </button>
+        </div>
+      </div>
+
     </div>
 
     <!-- ─── ESTOQUE ─── -->
@@ -7956,11 +8052,12 @@ function exportarRelatorioExcel() {
 
 // Navegação sub-abas Comunicação
 function mudarSubAbaCom(aba) {
-  ['ocorrencias','arquivados'].forEach(a => {
+  ['ocorrencias','arquivados','oficios'].forEach(a => {
     document.getElementById('com-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('com-panel-' + a)?.classList.toggle('active', a === aba);
   });
   if (aba === 'arquivados') renderizarComArquivados();
+  if (aba === 'oficios')    com_init();
 }
 
 // Navegação sub-abas Relatório
@@ -13375,6 +13472,483 @@ ${docs}
 
 ${printBlock}
 </body></html>`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   GERADOR DE OFÍCIOS — COMUNICAÇÃO CME/IAPEN
+   ══════════════════════════════════════════════════════════════ */
+
+const COM_COMARCAS = [
+  { nome:'Calçoene',              varas:['Vara Única'] },
+  { nome:'Ferreira Gomes',        varas:['Vara Única'] },
+  { nome:'Laranjal do Jari',      varas:[
+    '1ª Vara de Competência Geral e Tribunal do Júri',
+    '2ª Vara de Competência Geral, Infância e Juventude',
+    '3ª Vara de Competência Geral',
+  ]},
+  { nome:'Macapá', varas:[
+    '1ª Vara de Execução Penal de Macapá',
+    'Juizado de Violência Doméstica e Familiar contra a Mulher - 1ª Vara',
+    'Juizado de Violência Doméstica e Familiar contra a Mulher - 2ª Vara',
+    'Juizado Especial Cível - 5ª Vara - Norte',
+    'Juizado Especial Cível - 6ª Vara - Sul',
+    'Juizado Especial Cível - 7ª Vara - UNIFAP',
+    'Juizado Especial Cível Central - 1ª Vara',
+    'Juizado Especial Cível Central - 2ª Vara',
+    'Juizado Especial Cível Central - 3ª Vara',
+    'Juizado Especial Cível Central - 4ª Vara',
+    'Juizado Especial da Fazenda Pública - 1ª Vara',
+    'Juizado Especial da Fazenda Pública - 2ª Vara',
+    'Juizado Especial da Fazenda Pública - 3ª Vara',
+    'Plantão Criminal da Comarca de Macapá',
+    'Vara Cível e de Fazenda Pública - 1ª Vara',
+    'Vara Cível e de Fazenda Pública - 2ª Vara',
+    'Vara Cível e de Fazenda Pública - 3ª Vara',
+    'Vara Cível e de Fazenda Pública - 4ª Vara',
+    'Vara Cível e de Fazenda Pública - 5ª Vara',
+    'Vara Cível e de Fazenda Pública - 6ª Vara',
+    'Vara Criminal - 1ª Vara',
+    'Vara Criminal - 2ª Vara',
+    'Vara Criminal - 3ª Vara - Criminal e de Auditoria Militar',
+    'Vara Criminal - 4ª Vara',
+    'Vara Criminal - 5ª Vara',
+    'Vara da Família, Órfãos e Sucessões - 1ª Vara',
+    'Vara da Família, Órfãos e Sucessões - 2ª Vara',
+    'Vara da Família, Órfãos e Sucessões - 3ª Vara',
+    'Vara da Família, Órfãos e Sucessões - 4ª Vara',
+    'Vara das Garantias - 1ª Vara',
+    'Vara das Garantias - 2ª Vara',
+    'Vara de Execuções Penais - 1ª Vara',
+    'Vara de Execuções Penais - 2ª Vara',
+    'Vara do Juizado da Infância e Juventude',
+    'Vara do Tribunal do Júri',
+    'Tribunal de Justiça',
+    'Vara do Juizado Especial Criminal',
+  ]},
+  { nome:'Mazagão',                varas:['Vara Única'] },
+  { nome:'Oiapoque',               varas:['1ª Vara de Oiapoque','2ª Vara de Oiapoque'] },
+  { nome:'Pedra Branca do Amapari',varas:['Vara Única'] },
+  { nome:'Porto Grande',           varas:['Vara Única'] },
+  { nome:'Santana', varas:[
+    '1ª Vara Criminal de Santana',
+    '2ª Vara Criminal de Santana',
+    'Juizado Especial Cível',
+    'Plantão Criminal da Comarca de Santana',
+    'Vara Cível e de Fazenda Pública - 1ª Vara',
+    'Vara Cível e de Fazenda Pública - 2ª Vara',
+    'Vara Cível e de Fazenda Pública - 3ª Vara',
+    'Vara Criminal e Tribunal do Júri - 1ª Vara',
+    'Vara Criminal e Tribunal do Júri - 2ª Vara',
+    'Vara da Infância e da Juventude',
+    'Vara do Juizado Especial e de Violência Doméstica e Familiar contra a Mulher',
+  ]},
+  { nome:'Tartarugalzinho', varas:['Vara Única'] },
+  { nome:'Vitória do Jari', varas:['Vara Única'] },
+  { nome:'Amapá',           varas:['Vara Única'] },
+  { nome:'Outros Estados',  varas:[
+    'Vara Criminal Estadual de Outro Estado',
+    'Vara Criminal Federal de Outro Estado',
+    'Vara de Execução Penal de Outro Estado',
+  ]},
+  { nome:'Vara Eleitoral', varas:[
+    '1ª Zona Eleitoral - Amapá, Calçoene e Pracuúba',
+    '2ª Zona Eleitoral - Macapá (Zona Sul)',
+    '4ª Zona Eleitoral - Oiapoque',
+    '5ª Zona Eleitoral - Mazagão',
+    '6ª Zona Eleitoral - Santana',
+    '7ª Zona Eleitoral - Laranjal do Jari e Vitória do Jari',
+    '8ª Zona Eleitoral - Tartarugalzinho',
+    '10ª Zona Eleitoral - Macapá (Zona Norte) - Itaubal e Cutias',
+    '11ª Zona Eleitoral - Serra do Navio e Pedra Branca do Amapari',
+    '12ª Zona Eleitoral - Porto Grande e Ferreira Gomes',
+    '14ª Zona Eleitoral - Macapá',
+  ]},
+  { nome:'Vara Federal', varas:[
+    '1ª Vara Cível Federal',
+    '2ª Vara Cível Federal',
+    '3ª Vara Federal - Juizado Especial Federal Cível',
+    '4ª Vara Federal - Criminal e Juizado Especial Federal Criminal Adjunto',
+    '5ª Vara Federal - Juizado Especial Federal Cível',
+    '6ª Vara Federal - Cível',
+    'Vara Única da Subseção Judiciária de Laranjal do Jari',
+    'Vara Única da Subseção Judiciária de Oiapoque',
+  ]},
+];
+
+/* ─── 20 Modelos de Ofício ──────────────────────────────────── */
+const COM_MODELOS = [
+  /* ── VINCULAÇÃO ───────────────────────────────────────────── */
+  { id:'vinc-tornozeleira', cat:'Vinculação', nome:'Vinculação — Tornozeleira Eletrônica',
+    assunto:'Vinculação ao Sistema de Monitoração Eletrônica',
+    campos:[
+      {id:'data_vinculacao', label:'Data da vinculação',          tipo:'date'},
+      {id:'doc_referencia',  label:'Documento de referência',      tipo:'text', placeholder:'ex: Alvará de Soltura nº 001/2026 / Decisão contida nos Autos'},
+      {id:'data_doc',        label:'Data do documento de referência', tipo:'date'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônico – CME vem informar que <b>${c.nome_monitorado}</b> foi vinculado(a) ao sistema de Monitoramento Eletrônico na data do dia ${c.data_vinculacao}, em cumprimento ao ${c.doc_referencia}, datado de ${c.data_doc}.`,
+      `Em anexo segue o Termo de Guarda e Responsabilidade e o expediente acima citado.`,
+    ]},
+  { id:'vinc-dpp', cat:'Vinculação', nome:'Vinculação — Botão do Pânico (DPP)',
+    assunto:'Vinculação no Sistema de Monitoração Eletrônica',
+    campos:[{id:'data_vinculacao', label:'Data da vinculação', tipo:'date'}],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME, informo que <b>${c.nome_monitorado}</b> foi vinculado(a) na Central de Monitoramento para uso do "Botão do Pânico", na data do dia ${c.data_vinculacao}, em cumprimento à Decisão contida nos Autos.`,
+      `Em anexo segue o Termo de Guarda e Responsabilidade e o expediente acima citado.`,
+    ]},
+  { id:'vinc-trab-externo', cat:'Vinculação', nome:'Vinculação — Trabalho Externo (VEP)',
+    assunto:'Vinculação no Sistema de Monitoração Eletrônica',
+    campos:[
+      {id:'data_vinculacao', label:'Data da vinculação', tipo:'date'},
+      {id:'proc_admin', label:'Nº do Processo Administrativo (UFAE/IAPEN)', tipo:'text', placeholder:'ex: 0019/2026'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônico – CME vem informar que <b>${c.nome_monitorado}</b> foi vinculado(a) no sistema de Monitoramento Eletrônico na data do dia ${c.data_vinculacao}, em cumprimento ao Processo Administrativo n° ${c.proc_admin} - UFAE/IAPEN - Autorização de saída para o trabalho externo.`,
+      `Em anexo segue o Termo de Guarda e Responsabilidade e o expediente acima citado.`,
+    ]},
+  { id:'vinc-desvincul-dpp', cat:'Vinculação', nome:'Vinculação e Desvinculação — Botão do Pânico (DPP)',
+    assunto:'Vinculação no Sistema de Monitoração Eletrônica – DPP Botão do Pânico',
+    campos:[{id:'data_vinculacao', label:'Data do recebimento do DPP', tipo:'date'}],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME, informo que <b>${c.nome_monitorado}</b> recebeu o Dispositivo de Proteção Preventiva - DPP, denominado "Botão do Pânico", desta Central de Monitoramento na data do dia ${c.data_vinculacao}, em cumprimento à Decisão contida nos Autos.`,
+      `Em anexo segue o Termo de Guarda e Responsabilidade e o expediente acima citado.`,
+    ]},
+  /* ── DESVINCULAÇÃO ────────────────────────────────────────── */
+  { id:'desvincul-decisao', cat:'Desvinculação', nome:'Desvinculação — Por Decisão Judicial',
+    assunto:'Desvinculação do Sistema de Monitoração Eletrônica',
+    campos:[
+      {id:'data_desvincul', label:'Data da desvinculação',   tipo:'date'},
+      {id:'data_decisao',   label:'Data da decisão judicial', tipo:'date'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME vem informar que <b>${c.nome_monitorado}</b> foi desvinculado(a) do sistema de Monitoramento Eletrônico na data do dia ${c.data_desvincul}, em cumprimento à Decisão contida nos Autos, datada de ${c.data_decisao}.`,
+      `Em anexo segue o Termo de Desvinculação e o expediente acima citado.`,
+    ]},
+  { id:'desvincul-entrada-iapen', cat:'Desvinculação', nome:'Desvinculação — Entrada no IAPEN (VEP)',
+    assunto:'Desvinculação no Sistema de Monitoração Eletrônica',
+    campos:[
+      {id:'data_desvincul', label:'Data da desvinculação',       tipo:'date'},
+      {id:'num_mandado',    label:'Nº do Mandado de Prisão',      tipo:'text'},
+      {id:'data_mandado',   label:'Data do Mandado de Prisão',    tipo:'date'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME vem informar que <b>${c.nome_monitorado}</b> foi desvinculado(a) do sistema de Monitoramento Eletrônico na data do dia ${c.data_desvincul}, por ter dado entrada no IAPEN, em cumprimento ao Mandado de Prisão n° ${c.num_mandado}, datado de ${c.data_mandado}.`,
+      `Em anexo segue o Relatório de Listagem de Eventos de Monitorados e o expediente acima citado.`,
+    ]},
+  { id:'desvincul-trab-externo', cat:'Desvinculação', nome:'Desvinculação — Revogação de Trabalho Externo (VEP)',
+    assunto:'Revogação do Trabalho Externo',
+    campos:[
+      {id:'data_desvincul', label:'Data da desvinculação', tipo:'date'},
+      {id:'data_revogacao', label:'Data da revogação',     tipo:'date'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônico – CME, vem informar que <b>${c.nome_monitorado}</b> foi desvinculado(a) do Sistema de Monitoramento Eletrônico na data do dia ${c.data_desvincul}, devido a Revogação da concessão de trabalho externo, datada de ${c.data_revogacao}.`,
+      `Em anexo segue o Relatório de Listagem de Eventos de Monitorados e o expediente acima citado.`,
+    ]},
+  { id:'desvincul-dpp', cat:'Desvinculação', nome:'Desvinculação — Botão do Pânico (DPP)',
+    assunto:'Desvinculação no Sistema de Monitoração Eletrônica - DPP',
+    campos:[
+      {id:'data_desvincul', label:'Data da desvinculação',    tipo:'date'},
+      {id:'data_decisao',   label:'Data da decisão judicial',  tipo:'date'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME vem informar que foi desvinculado(a) do Dispositivo de Proteção Preventiva "Botão do Pânico" <b>${c.nome_monitorado}</b>, na data do dia ${c.data_desvincul}, em cumprimento à Decisão contida nos Autos, datada de ${c.data_decisao}.`,
+      `Em anexo segue o Relatório de Utilização de Dispositivos, o Relatório de Listagem de Eventos de Monitorados e o expediente acima citado.`,
+    ]},
+  { id:'desvincul-aus-comun', cat:'Desvinculação', nome:'Desvinculação + Ausência de Comunicação + Ressarcimento',
+    assunto:'Informa ausência de comunicação, nova entrada e desvinculação',
+    campos:[
+      {id:'data_instalacao', label:'Data de instalação do dispositivo',          tipo:'date'},
+      {id:'data_sem_comun',  label:'Data de início da ausência de comunicação',  tipo:'date'},
+      {id:'data_sem_local',  label:'Data de início da ausência de localização',  tipo:'date'},
+      {id:'data_desvincul',  label:'Data da desvinculação',                      tipo:'date'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônica – CME, informa que <b>${c.nome_monitorado}</b> instalou dispositivo de monitoramento eletrônico em ${c.data_instalacao}.`,
+      `Após uma análise feita em seu cadastro, foi verificado que seu equipamento se encontrava sem comunicação desde o dia ${c.data_sem_comun} e sem localização desde ${c.data_sem_local}, e considerando que o requerido deu nova entrada neste Instituto, procedemos com a desvinculação no dia ${c.data_desvincul}, pois sua monitoração perdeu eficácia e seu cadastro ativo estava apenas gerando custos para o Estado.`,
+      `Desta forma, solicita que o monitorado seja intimado para realizar a devolução do dispositivo ou seu ressarcimento.`,
+    ]},
+  /* ── AUSÊNCIA DE COMUNICAÇÃO ──────────────────────────────── */
+  { id:'aus-comun-simples', cat:'Ausência de Comunicação', nome:'Ausência de Comunicação',
+    assunto:'Ausência de comunicação',
+    campos:[
+      {id:'data_sem_comun',   label:'Data de início da ausência de comunicação', tipo:'date'},
+      {id:'data_agendamento', label:'Data de agendamento de inspeção',            tipo:'date'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônico – CME, informa que o dispositivo utilizado por <b>${c.nome_monitorado}</b> encontra-se com <b>AUSÊNCIA DE COMUNICAÇÃO</b> e <b>LOCALIZAÇÃO</b> com esta central desde ${c.data_sem_comun}, ou seja, vinculado ao Sistema AKILES, porém sem efetividade quanto à monitoração, apenas gerando custos ao Estado.`,
+      `Ressalto que foi feito contato com o monitorado, solicitando o comparecimento nesta central para inspeção do dispositivo, agendado para o dia ${c.data_agendamento}, no entanto, este não compareceu, conforme listagem de eventos de monitorados, em anexo.`,
+    ]},
+  { id:'aus-comun-descump', cat:'Ausência de Comunicação', nome:'Ausência de Comunicação + Descumprimentos (VEP)',
+    assunto:'Ausência de Comunicação e Descumprimentos',
+    campos:[{id:'data_sem_comun', label:'Data de início da ausência de comunicação', tipo:'date'}],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônica – CME, encaminha Relatório de Listagem de Eventos de Monitorados, contendo <b>DESCUMPRIMENTOS</b>, por parte do monitorado <b>${c.nome_monitorado}</b>, para análise e providências. Ressalto que dentre os descumprimentos, há a ocorrência de alerta de integridade da pulseira do dispositivo, em que esta central tentou diverso contato com o monitorado, porém, todos sem êxito.`,
+      `Ademais, informo que o dispositivo utilizado por <b>${c.nome_monitorado}</b> encontra-se com <b>AUSÊNCIA DE COMUNICAÇÃO</b> e <b>LOCALIZAÇÃO</b> com esta central desde ${c.data_sem_comun}, ou seja, vinculado ao Sistema AKILES, porém sem efetividade quanto à monitoração, conforme mapa em anexo.`,
+    ]},
+  { id:'aus-comun-relatorio', cat:'Ausência de Comunicação', nome:'Relatório + Ausência de Comunicação',
+    assunto:'Relatório de Monitoramento Eletrônico',
+    campos:[
+      {id:'periodo_inicio', label:'Início do período do relatório', tipo:'date'},
+      {id:'periodo_fim',    label:'Fim do período do relatório',    tipo:'date'},
+      {id:'data_sem_comun', label:'Data de início da ausência de comunicação', tipo:'date'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônica – CME, encaminha o relatório de violações confirmadas, contendo registros de descumprimentos dos deveres e obrigações do monitorado <b>${c.nome_monitorado}</b>, referente ao período ${c.periodo_inicio} a ${c.periodo_fim}.`,
+      `Ressalta-se que, durante o período de monitoração acima mencionado, o dispositivo em uso pelo monitorado(a) <b>${c.nome_monitorado}</b>, está com alerta de integridade da pulseira, portanto com <b>AUSÊNCIA DE COMUNICAÇÃO</b> e <b>LOCALIZAÇÃO</b> desde a data ${c.data_sem_comun}, ou seja, vinculado ao Sistema AKILES, porém sem efetividade quanto à monitoração, apenas gerando custos ao Estado.`,
+    ]},
+  { id:'aus-comun-solicita-manif', cat:'Ausência de Comunicação', nome:'Ausência de Comunicação + Solicita Manifestação Judicial',
+    assunto:'Ausência de comunicação e localização',
+    campos:[{id:'data_sem_comun', label:'Data de início da ausência de comunicação', tipo:'date'}],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônica – CME, encaminha Relatório de Listagem de Eventos de Monitorados, contendo ocorrências de tentativa de contato com o monitorado <b>${c.nome_monitorado}</b>, tendo em vista a ocorrência de alerta de integridade da pulseira, para ciência e demais providências.`,
+      `Ademais, informa que o dispositivo utilizado por <b>${c.nome_monitorado}</b> encontra-se com <b>AUSÊNCIA DE COMUNICAÇÃO</b> e <b>LOCALIZAÇÃO</b> com esta central desde ${c.data_sem_comun}, ou seja, vinculado ao Sistema AKILES, porém sem efetividade quanto à monitoração, apenas gerando custos ao Estado.`,
+      `Pelo exposto, solicito a Vossa Excelência manifestação judicial quanto a manutenção ou revogação da medida cautelar, tendo em vista o período sem comunicação com essa central, bem como a ocorrência de Alerta de integridade da pulseira.`,
+    ]},
+  /* ── RELATÓRIO ────────────────────────────────────────────── */
+  { id:'relatorio-com-descump', cat:'Relatório', nome:'Relatório de Monitoração — COM Descumprimentos',
+    assunto:'Relatório de Monitoração Eletrônica',
+    campos:[
+      {id:'periodo_inicio', label:'Início do período', tipo:'date'},
+      {id:'periodo_fim',    label:'Fim do período',    tipo:'date'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, por meio da Central de Monitoramento Eletrônico – CME, encaminho o Relatório de Monitoração Eletrônica, <b>COM</b> registros de descumprimento dos deveres e obrigações por parte do(a) monitorado(a) <b>${c.nome_monitorado}</b>, referente ao período de ${c.periodo_inicio} a ${c.periodo_fim}.`,
+    ]},
+  { id:'relatorio-sem-descump', cat:'Relatório', nome:'Relatório de Monitoração — SEM Descumprimentos',
+    assunto:'Relatório de Monitoração Eletrônica',
+    campos:[
+      {id:'periodo_inicio', label:'Início do período', tipo:'date'},
+      {id:'periodo_fim',    label:'Fim do período',    tipo:'date'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos, neste ato representado pela Central de Monitoração Eletrônica – CME, encaminha o Relatório de Monitoramento de <b>${c.nome_monitorado}</b>, <b>SEM</b> registros de descumprimentos dos deveres e obrigações do monitorado, no período de ${c.periodo_inicio} a ${c.periodo_fim}.`,
+    ]},
+  /* ── INFORMATIVO ──────────────────────────────────────────── */
+  { id:'recusa', cat:'Informativo', nome:'Recusa de Tornozeleira Eletrônica',
+    assunto:'Termo de Recusa - Concessão de benefício de trabalho externo com monitoramento',
+    campos:[],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônica – CME, informo que <b>${c.nome_monitorado}</b> recusou o uso da tornozeleira eletrônica para a concessão do benefício do trabalho externo, conforme termo de recusa, em anexo.`,
+    ]},
+  { id:'solicita-manif-dpp', cat:'Informativo', nome:'Solicita Manifestação Judicial — DPP (Botão do Pânico)',
+    assunto:'Solicita manifestação judicial',
+    campos:[{id:'id_ocorrencia', label:'ID da ocorrência (registro)', tipo:'text', placeholder:'ex: 140232'}],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME, informo que a monitorada <b>${c.nome_monitorado}</b> continua fazendo uso do DPP (Botão do Pânico), conforme registro de ocorrência Id n° ${c.id_ocorrencia}, em anexo. Desta forma, solicito que seja realizada manifestação judicial acerca da manutenção da medida protetiva.`,
+    ]},
+  { id:'solicita-devolucao-dpp', cat:'Informativo', nome:'Solicita Devolução do DPP',
+    assunto:'Solicitação de devolução do dispositivo - DPP',
+    campos:[
+      {id:'id_ocorrencia', label:'ID do registro de tentativas de contato', tipo:'text', placeholder:'ex: 136579'},
+      {id:'data_sem_comun', label:'Data de início da ausência de comunicação', tipo:'date'},
+      {id:'data_desvincul', label:'Data da desvinculação',                     tipo:'date'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônica – CME, informo que a equipe multidisciplinar - psicossocial desta CME/IAPEN realizou tentativas de contato com a requerente <b>${c.nome_monitorado}</b>, todas sem êxito, conforme Id de registro ${c.id_ocorrencia}, para que a mesma fizesse a devolução do dispositivo, tendo em vista que o dispositivo se encontra com ausência de comunicação e localização, com essa central de monitoramento, desde a data de ${c.data_sem_comun}.`,
+      `Pelo exposto, informo que foi realizado a desvinculação do dispositivo em posse da requerente <b>${c.nome_monitorado}</b> e solicito a Vossa Excelência que a intime, para que faça a entrega do Dispositivo de Proteção Preventiva - DPP.`,
+    ]},
+  { id:'nao-compareceu', cat:'Informativo', nome:'Não Compareceu para Vinculação',
+    assunto:'Informa o não comparecimento',
+    campos:[],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônica – CME, em atenção a decisão contida nos autos, informo que até a presente data, <b>${c.nome_monitorado}</b> não compareceu nesta Central de monitoramento para colocação da Tornozeleira e, consequentemente, vinculação ao Sistema de Monitoração Eletrônica – CME/IAPEN.`,
+    ]},
+  { id:'nunca-vinculado', cat:'Informativo', nome:'Nunca Foi Vinculado — Impossibilidade',
+    assunto:'Informativo',
+    campos:[
+      {id:'nomes_vinc',      label:'Nome(s) vinculados/prorrogados (separar com " e " se múltiplos)', tipo:'text'},
+      {id:'motivo_impossib', label:'Motivo da impossibilidade de vinculação', tipo:'text', placeholder:'ex: não ter comparecido à esta Central para colocação da Tornozeleira Eletrônica'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônica – CME, informa que foi prorrogado a monitoração eletrônica de <b>${c.nomes_vinc}</b> em cumprimento à Decisão contida nos Autos.`,
+      `Na oportunidade, informo que não será possível prorrogar a monitoração de <b>${c.nome_monitorado}</b>, devido a ${c.motivo_impossib}, e consequentemente, vinculação ao Sistema.`,
+    ]},
+];
+
+/* ─── Helpers ────────────────────────────────────────────────── */
+function com_fmtData(s) {
+  if (!s) return '';
+  const [y,m,d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
+function com_fmtDataLonga(s) {
+  if (!s) return '';
+  const meses = ['janeiro','fevereiro','março','abril','maio','junho',
+                  'julho','agosto','setembro','outubro','novembro','dezembro'];
+  const [y,m,d] = s.split('-');
+  return `${parseInt(d)} de ${meses[parseInt(m)-1]} de ${y}`;
+}
+function com_gerarDestinatario(comarca, vara) {
+  if (!comarca || !vara) return '';
+  let prep = 'da';
+  const fw = vara.split(' ')[0];
+  if (['Juizado','Tribunal','Plantão'].includes(fw)) prep = 'do';
+  if (vara === 'Vara Única') return `Juiz de Direito da Vara Única da Comarca de ${comarca}`;
+  const vL  = vara.toLowerCase();
+  const semC = !vL.includes(comarca.toLowerCase().split(' ').pop()) &&
+               !vL.includes('judiciária') && !vL.includes('outro estado');
+  const base = `Juiz de Direito ${prep} ${vara}`;
+  if (semC && !['Vara Eleitoral','Vara Federal','Outros Estados'].includes(comarca))
+    return `${base} de ${comarca}`;
+  return base;
+}
+
+/* ─── Init ───────────────────────────────────────────────────── */
+function com_init() {
+  const selC = document.getElementById('com-of-comarca');
+  if (!selC || selC.options.length > 1) return;
+  COM_COMARCAS.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.nome; o.textContent = c.nome; selC.appendChild(o);
+  });
+  const selM = document.getElementById('com-of-modelo');
+  let cat = '';
+  COM_MODELOS.forEach(m => {
+    if (m.cat !== cat) {
+      const og = document.createElement('optgroup');
+      og.label = m.cat; selM.appendChild(og); cat = m.cat;
+    }
+    const o = document.createElement('option');
+    o.value = m.id; o.textContent = m.nome;
+    selM.lastElementChild.appendChild(o);
+  });
+  const hoje = new Date();
+  const dd   = String(hoje.getDate()).padStart(2,'0');
+  const mm   = String(hoje.getMonth()+1).padStart(2,'0');
+  document.getElementById('com-of-data').value = `${hoje.getFullYear()}-${mm}-${dd}`;
+}
+
+function com_atualizarVaras() {
+  const comarca = document.getElementById('com-of-comarca').value;
+  const selV    = document.getElementById('com-of-vara');
+  selV.innerHTML = '<option value="">Selecione a vara...</option>';
+  document.getElementById('com-of-destinatario').value = '';
+  if (!comarca) return;
+  const c = COM_COMARCAS.find(x => x.nome === comarca);
+  if (!c) return;
+  c.varas.forEach(v => {
+    const o = document.createElement('option'); o.value = v; o.textContent = v; selV.appendChild(o);
+  });
+}
+
+function com_atualizarDestinatario() {
+  const comarca = document.getElementById('com-of-comarca').value;
+  const vara    = document.getElementById('com-of-vara').value;
+  document.getElementById('com-of-destinatario').value = com_gerarDestinatario(comarca, vara);
+}
+
+function com_atualizarCampos() {
+  const m   = COM_MODELOS.find(x => x.id === document.getElementById('com-of-modelo').value);
+  const div = document.getElementById('com-of-campos-dinamicos');
+  if (!m || !m.campos.length) { div.innerHTML = ''; return; }
+  const cols = m.campos.length <= 2 ? '1fr '.repeat(m.campos.length).trim() : '1fr 1fr';
+  div.innerHTML = `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px">
+    <div style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Campos do Modelo</div>
+    <div style="display:grid;grid-template-columns:${cols};gap:10px">
+    ${m.campos.map(c=>`<div>
+      <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">${c.label}</label>
+      <input type="${c.tipo}" id="com-of-campo-${c.id}" ${c.placeholder?`placeholder="${c.placeholder}"`:''}
+        style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
+    </div>`).join('')}
+    </div></div>`;
+}
+
+/* ─── Gerador ────────────────────────────────────────────────── */
+function com_gerarOficio() {
+  const modeloId   = document.getElementById('com-of-modelo').value;
+  const dest       = document.getElementById('com-of-destinatario').value.trim();
+  const numero     = document.getElementById('com-of-numero').value.trim();
+  const dataOficio = document.getElementById('com-of-data').value;
+  const nomeMon    = document.getElementById('com-of-nome').value.trim();
+  const processo   = document.getElementById('com-of-processo').value.trim();
+  const saudacao   = document.getElementById('com-of-saudacao').value;
+  const signat     = document.getElementById('com-of-signatario').value.trim();
+  const decreto    = document.getElementById('com-of-decreto').value.trim();
+
+  if (!modeloId)  return _mostrarToast('⚠️ Selecione o modelo de ofício.','erro');
+  if (!dest)      return _mostrarToast('⚠️ Selecione comarca e vara.','erro');
+  if (!numero)    return _mostrarToast('⚠️ Informe o número do ofício.','erro');
+  if (!nomeMon)   return _mostrarToast('⚠️ Informe o nome do monitorado.','erro');
+  if (!processo)  return _mostrarToast('⚠️ Informe o número do processo.','erro');
+
+  const modelo = COM_MODELOS.find(m => m.id === modeloId);
+  if (!modelo) return;
+
+  // Coletar campos dinâmicos
+  const campos = { nome_monitorado: nomeMon };
+  modelo.campos.forEach(c => {
+    const el  = document.getElementById('com-of-campo-' + c.id);
+    let val   = el ? el.value.trim() : '';
+    if (c.tipo === 'date' && val) val = com_fmtData(val);
+    campos[c.id] = val;
+  });
+
+  const paragrafos = modelo.corpo(campos);
+
+  // Número e data formatados
+  const ano        = dataOficio ? dataOficio.split('-')[0] : String(new Date().getFullYear());
+  const numFmt     = `${numero}/${ano} - CME/IAPEN`;
+  const dataLonga  = dataOficio ? com_fmtDataLonga(dataOficio) : '';
+
+  // Escapes para HTML/Word
+  const esc = s => String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/[^\x00-\x7F]/g, c => `&#${c.charCodeAt(0)};`);
+
+  // Parágrafos: preservar <b>...</b> do modelo
+  const escP = s => {
+    const tks = s.split(/(<\/?b>)/g);
+    return tks.map(t => (t==='<b>'||t==='</b>') ? t : esc(t)).join('');
+  };
+
+  const paragsHtml = paragrafos
+    .map(p => `<p style="text-align:justify;margin:12pt 0;line-height:1.5">${escP(p)}</p>`)
+    .join('\n');
+
+  const doc = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
+  xmlns:w='urn:schemas-microsoft-com:office:word'>
+<head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
+<style>
+  @page { margin:2.5cm 3cm 3.5cm 3cm; }
+  body  { font-family:Arial,sans-serif; font-size:12pt; line-height:1.5; color:#000; }
+  p     { margin:8pt 0; }
+  .rod  { font-size:9pt; text-align:center; border-top:1pt solid #000; padding-top:6pt; margin-top:54pt; }
+</style></head>
+<body>
+<p style="text-align:right;margin-bottom:0"><b>Of&#237;cio n&#176; ${esc(numFmt)}.</b></p>
+<p style="text-align:right;margin-top:0">Macap&#225;/AP, ${esc(dataLonga)}.</p>
+
+<p style="margin-top:22pt">A Sua Excel&#234;ncia o (a) Senhor (a)<br>
+<b>${esc(dest)}.</b></p>
+
+<p><b>Assunto: ${esc(modelo.assunto)}.</b></p>
+<p>Processo n&#176;: ${esc(processo)}.</p>
+
+<p style="margin-top:16pt">${esc(saudacao)}</p>
+
+${paragsHtml}
+
+<p style="margin-top:10pt">Sem mais, esta CME encontra-se &#224; disposi&#231;&#227;o, podendo ser contatada no telefone constantes no rodap&#233;.</p>
+
+<p style="margin-top:10pt">Respeitosamente,</p>
+
+<p style="margin-top:54pt">${esc(signat)}<br>
+Gerente de Monitoramento Eletr&#244;nico &#8211; CME/ IAPEN<br>
+Decreto n&#176; ${esc(decreto)}</p>
+
+<div class="rod">CENTRAL DE MONITORAMENTO ELETR&#212;NICO - CME<br>
+Av. Machado de Assis, 372 &#8211; Centro &#8211; CEP: 68900-066, Macap&#225;-AP.<br>
+Telefone (096) 98415 2844 &nbsp;|&nbsp; E-mail: cme.iapen.ap@gmail.com</div>
+</body></html>`;
+
+  const blob    = new Blob([doc], {type:'application/msword;charset=utf-8'});
+  const url     = URL.createObjectURL(blob);
+  const a       = document.createElement('a');
+  const nomeArq = `Oficio_${numero}_${nomeMon.split(' ')[0]}.doc`;
+  a.href = url; a.download = nomeArq; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  _mostrarToast(`&#10004; Of&#237;cio gerado: ${nomeArq}`, 'sucesso');
 }
 
 // ── Limpar ─────────────────────────────────────────────────────
