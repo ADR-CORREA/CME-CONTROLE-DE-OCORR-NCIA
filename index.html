@@ -7040,7 +7040,19 @@ function renderizarUsers() {
     return;
   }
 
-  document.getElementById('user-list').innerHTML = lista.map(u => {
+  // Ordem de exibição das categorias
+  const ORDEM = ['admin','gerencia','juridico','relatorio','comunicacao','plantao','estoque','triagem','psicossocial'];
+
+  // Agrupar por nível
+  const grupos = {};
+  lista.forEach(u => {
+    const n = u.nivel || 'plantao';
+    if (!grupos[n]) grupos[n] = [];
+    grupos[n].push(u);
+  });
+
+  // Montar HTML por grupo
+  const _renderUser = u => {
     const i   = todos.indexOf(u);
     const cor = _NIVEL_COR[u.nivel] || '#64748b';
     const iniciais = u.nome.trim().split(' ').filter(Boolean)
@@ -7048,12 +7060,11 @@ function renderizarUsers() {
     const assTag = u.assinatura
       ? `<span style="background:#dcfce7;color:#15803d;border-radius:99px;padding:1px 8px;font-size:.67rem;font-weight:700">✍️ ASS</span>`
       : `<span style="background:#f1f5f9;color:#94a3b8;border-radius:99px;padding:1px 8px;font-size:.67rem">sem ass.</span>`;
-
     return `
-    <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid #f1f5f9;transition:background .12s"
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid #f1f5f9;transition:background .12s"
       onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
-      <div style="width:42px;height:42px;border-radius:50%;background:${cor};color:#fff;display:flex;
-        align-items:center;justify-content:center;font-weight:700;font-size:.88rem;flex-shrink:0;letter-spacing:-.5px">
+      <div style="width:40px;height:40px;border-radius:50%;background:${cor};color:#fff;display:flex;
+        align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;letter-spacing:-.5px">
         ${iniciais}
       </div>
       <div style="flex:1;min-width:0">
@@ -7061,27 +7072,46 @@ function renderizarUsers() {
         <div style="font-size:.73rem;color:#64748b;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
           @${u.usuario}${u.cargo ? ' &nbsp;·&nbsp; ' + u.cargo : ''}
         </div>
-        <div style="display:flex;align-items:center;gap:5px;margin-top:4px;flex-wrap:wrap">
-          <span style="background:${cor}18;color:${cor};border:1px solid ${cor}33;padding:1px 9px;
-            border-radius:99px;font-size:.67rem;font-weight:700;letter-spacing:.02em;white-space:nowrap">
-            ${_NIVEL_NOME[u.nivel]||u.nivel}
-          </span>
-          ${assTag}
-        </div>
+        <div style="margin-top:3px">${assTag}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
-        <button onclick="abrirModalEditarUsuario(${i})" title="Editar cadastro"
-          style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:7px;padding:5px 12px;
+        <button onclick="abrirModalEditarUsuario(${i})" title="Editar"
+          style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:7px;padding:4px 11px;
           cursor:pointer;font-size:.78rem;color:#1d4ed8;font-weight:600;white-space:nowrap">
           ✏️ Editar
         </button>
         ${u.usuario !== 'admin' ? `
-        <button onclick="removerUsuario(${i})" title="Remover usuário"
-          style="background:#FFF5F5;border:1px solid #FECACA;border-radius:7px;padding:5px 9px;
+        <button onclick="removerUsuario(${i})" title="Remover"
+          style="background:#FFF5F5;border:1px solid #FECACA;border-radius:7px;padding:4px 9px;
           cursor:pointer;font-size:.8rem;color:#dc2626;font-weight:700">✕</button>` : ''}
       </div>
     </div>`;
-  }).join('');
+  };
+
+  const _icone = { admin:'👑', gerencia:'🏢', juridico:'⚖️', relatorio:'📋',
+    comunicacao:'📡', plantao:'🛡️', estoque:'📦', triagem:'🔍', psicossocial:'🧠' };
+
+  document.getElementById('user-list').innerHTML = ORDEM
+    .filter(n => grupos[n]?.length)
+    .map(n => {
+      const cor = _NIVEL_COR[n] || '#64748b';
+      const qtd = grupos[n].length;
+      return `
+      <div>
+        <!-- cabeçalho do grupo -->
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;
+          background:${cor}10;border-bottom:2px solid ${cor}33;position:sticky;top:0;z-index:1">
+          <span style="font-size:.95rem">${_icone[n]||'👤'}</span>
+          <span style="font-weight:700;font-size:.8rem;color:${cor};text-transform:uppercase;letter-spacing:.07em">
+            ${_NIVEL_NOME[n]||n}
+          </span>
+          <span style="margin-left:auto;background:${cor};color:#fff;border-radius:99px;
+            padding:1px 9px;font-size:.7rem;font-weight:700">${qtd}</span>
+        </div>
+        <!-- usuários do grupo -->
+        ${grupos[n].map(_renderUser).join('')}
+      </div>`;
+    }).join('');
 }
 
 function alterarNivel(idx, novoNivel) {
