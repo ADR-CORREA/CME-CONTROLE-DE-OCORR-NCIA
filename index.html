@@ -3267,6 +3267,68 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
   </div>
 </div>
 
+<!-- MODAL: ASSINATURA DO SERVIDOR -->
+<div class="modal-overlay" id="modal-assinatura">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">✍️ Assinatura do Servidor</div>
+      <button class="modal-close" onclick="fecharModal('modal-assinatura')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="ass-servidor-nome" style="font-weight:600;color:#1F4E78;margin-bottom:12px;font-size:.95rem"></div>
+
+      <!-- Sub-abas: Desenhar / Upload -->
+      <div style="display:flex;gap:0;margin-bottom:12px;border-bottom:2px solid #e2e8f0">
+        <button id="ass-tab-draw" onclick="ass_mudarAba('draw')"
+          style="padding:7px 18px;border:none;background:none;cursor:pointer;font-size:.88rem;border-bottom:2px solid #1F4E78;margin-bottom:-2px;font-weight:600;color:#1F4E78">
+          ✏️ Desenhar
+        </button>
+        <button id="ass-tab-upload" onclick="ass_mudarAba('upload')"
+          style="padding:7px 18px;border:none;background:none;cursor:pointer;font-size:.88rem;color:#888">
+          📁 Upload de imagem
+        </button>
+      </div>
+
+      <!-- Painel: Desenhar -->
+      <div id="ass-panel-draw">
+        <p style="font-size:.82rem;color:#888;margin:0 0 8px 0">Desenhe sua assinatura abaixo com o mouse ou dedo:</p>
+        <canvas id="ass-canvas" width="460" height="160"
+          style="border:1px solid #ccc;border-radius:8px;background:#fff;cursor:crosshair;touch-action:none;width:100%;max-width:460px;display:block"></canvas>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn-secondary" style="font-size:.82rem" onclick="ass_limpar()">🗑️ Limpar</button>
+          <span style="font-size:.78rem;color:#aaa;align-self:center">Dica: use caneta óptica ou mouse para melhor resultado</span>
+        </div>
+      </div>
+
+      <!-- Painel: Upload -->
+      <div id="ass-panel-upload" style="display:none">
+        <p style="font-size:.82rem;color:#888;margin:0 0 8px 0">Faça upload de uma imagem de assinatura (PNG ou JPG com fundo branco ou transparente):</p>
+        <label class="btn-secondary" style="cursor:pointer;display:inline-block">
+          📎 Selecionar imagem
+          <input type="file" id="ass-file-input" accept="image/*" style="display:none" onchange="ass_carregarImagem(this)">
+        </label>
+      </div>
+
+      <!-- Preview -->
+      <div id="ass-preview-wrap" style="display:none;margin-top:14px;border-top:1px solid #eee;padding-top:12px">
+        <p style="font-size:.8rem;color:#888;margin:0 0 6px 0">Preview de como ficará no documento:</p>
+        <div style="text-align:center;border:1px dashed #ccc;border-radius:8px;padding:16px;background:#fafafa">
+          <img id="ass-preview-img" style="max-height:80px;max-width:300px;object-fit:contain;display:block;margin:0 auto 8px auto">
+          <div style="font-size:11pt;font-weight:bold" id="ass-preview-nome"></div>
+          <div style="font-size:.8rem;color:#555" id="ass-preview-cargo"></div>
+        </div>
+      </div>
+
+      <div id="ass-msg" style="margin-top:10px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-assinatura')">Cancelar</button>
+      <button class="btn-danger" id="ass-btn-remover" style="display:none" onclick="ass_remover()">🗑️ Remover assinatura</button>
+      <button class="btn-primary" onclick="ass_salvar()">💾 Salvar assinatura</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: OFC / VINCULAÇÃO — Adicionar / Editar -->
 <div class="modal-overlay" id="modal-ofc">
   <div class="modal-box" style="max-width:700px">
@@ -6735,6 +6797,9 @@ function renderizarUsers() {
           <option value="gerencia" ${u.nivel==='gerencia'?'selected':''}>Gerência</option>
           <option value="admin" ${u.nivel==='admin'?'selected':''}>Admin</option>
         </select>
+        <button class="btn-secondary" style="padding:3px 10px;font-size:.82rem;${u.assinatura?'color:#15803d;border-color:#16a34a':''}" onclick="abrirModalAssinatura(${i})" title="${u.assinatura?'Assinatura cadastrada — clique para alterar':'Cadastrar assinatura'}">
+          ${u.assinatura ? '✅ Assinatura' : '✍️ Assinatura'}
+        </button>
         ${u.usuario !== "admin" ? `<button class="btn-danger" onclick="removerUsuario(${i})">✕</button>` : ""}
       </div>
     </div>
@@ -6756,6 +6821,139 @@ function removerUsuario(idx) {
   us.splice(idx, 1);
   salvarUsuarios(us);
   renderizarUsers();
+}
+
+/* ── ASSINATURA DO SERVIDOR ──────────────────────────────── */
+let _assIdx = null;
+let _assDesenhando = false;
+let _assUltimoX = 0, _assUltimoY = 0;
+
+function abrirModalAssinatura(idx) {
+  _assIdx = idx;
+  const us = getUsuarios();
+  const u  = us[idx];
+  document.getElementById('ass-servidor-nome').textContent = `Servidor: ${u.nome} (${u.usuario})`;
+  document.getElementById('ass-preview-nome').textContent  = u.nome;
+  document.getElementById('ass-preview-cargo').textContent = u.cargo || '';
+  document.getElementById('ass-btn-remover').style.display = u.assinatura ? 'inline-flex' : 'none';
+  document.getElementById('ass-msg').innerHTML = '';
+  ass_mudarAba('draw');
+  ass_limpar();
+  // Se já tem assinatura, mostrar preview
+  if (u.assinatura) {
+    document.getElementById('ass-preview-img').src = u.assinatura;
+    document.getElementById('ass-preview-wrap').style.display = 'block';
+  } else {
+    document.getElementById('ass-preview-wrap').style.display = 'none';
+  }
+  abrirModal('modal-assinatura');
+  setTimeout(() => ass_iniciarCanvas(), 100);
+}
+
+function ass_mudarAba(aba) {
+  document.getElementById('ass-panel-draw').style.display   = aba === 'draw'   ? '' : 'none';
+  document.getElementById('ass-panel-upload').style.display = aba === 'upload' ? '' : 'none';
+  document.getElementById('ass-tab-draw').style.borderBottomColor   = aba === 'draw'   ? '#1F4E78' : 'transparent';
+  document.getElementById('ass-tab-draw').style.color               = aba === 'draw'   ? '#1F4E78' : '#888';
+  document.getElementById('ass-tab-draw').style.fontWeight          = aba === 'draw'   ? '600' : 'normal';
+  document.getElementById('ass-tab-upload').style.borderBottomColor = aba === 'upload' ? '#1F4E78' : 'transparent';
+  document.getElementById('ass-tab-upload').style.color             = aba === 'upload' ? '#1F4E78' : '#888';
+  document.getElementById('ass-tab-upload').style.fontWeight        = aba === 'upload' ? '600' : 'normal';
+}
+
+function ass_iniciarCanvas() {
+  const canvas = document.getElementById('ass-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+
+  function getPos(e) {
+    const r = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / r.width;
+    const scaleY = canvas.height / r.height;
+    const src = e.touches ? e.touches[0] : e;
+    return { x: (src.clientX - r.left) * scaleX, y: (src.clientY - r.top) * scaleY };
+  }
+  canvas.onmousedown  = canvas.ontouchstart = e => { e.preventDefault(); _assDesenhando = true; const p = getPos(e); _assUltimoX = p.x; _assUltimoY = p.y; };
+  canvas.onmousemove  = canvas.ontouchmove  = e => { e.preventDefault(); if (!_assDesenhando) return; const p = getPos(e); ctx.beginPath(); ctx.moveTo(_assUltimoX,_assUltimoY); ctx.lineTo(p.x,p.y); ctx.stroke(); _assUltimoX=p.x; _assUltimoY=p.y; ass_atualizarPreview(); };
+  canvas.onmouseup    = canvas.ontouchend   = () => { _assDesenhando = false; };
+  canvas.onmouseleave = () => { _assDesenhando = false; };
+}
+
+function ass_limpar() {
+  const canvas = document.getElementById('ass-canvas');
+  if (!canvas) return;
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  document.getElementById('ass-preview-wrap').style.display = 'none';
+}
+
+function ass_atualizarPreview() {
+  const canvas = document.getElementById('ass-canvas');
+  const dataUrl = canvas.toDataURL('image/png');
+  document.getElementById('ass-preview-img').src = dataUrl;
+  document.getElementById('ass-preview-wrap').style.display = 'block';
+}
+
+function ass_carregarImagem(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('ass-preview-img').src = e.target.result;
+    document.getElementById('ass-preview-wrap').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function ass_salvar() {
+  const aba = document.getElementById('ass-panel-draw').style.display !== 'none' ? 'draw' : 'upload';
+  let dataUrl;
+  if (aba === 'draw') {
+    const canvas = document.getElementById('ass-canvas');
+    // Verificar se o canvas tem conteúdo
+    const ctx = canvas.getContext('2d');
+    const px = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+    const temConteudo = px.some(v => v !== 0);
+    if (!temConteudo) {
+      document.getElementById('ass-msg').innerHTML = '<div class="sys-alert error">Desenhe a assinatura antes de salvar.</div>';
+      return;
+    }
+    dataUrl = canvas.toDataURL('image/png');
+  } else {
+    const img = document.getElementById('ass-preview-img').src;
+    if (!img || img === window.location.href) {
+      document.getElementById('ass-msg').innerHTML = '<div class="sys-alert error">Selecione uma imagem primeiro.</div>';
+      return;
+    }
+    dataUrl = img;
+  }
+  const us = getUsuarios();
+  us[_assIdx].assinatura = dataUrl;
+  salvarUsuarios(us);
+  // Atualizar usuário logado se for o mesmo
+  if (usuarioAtual && usuarioAtual.usuario === us[_assIdx].usuario) {
+    usuarioAtual.assinatura = dataUrl;
+  }
+  addLog(`Assinatura cadastrada: ${us[_assIdx].nome}`);
+  fecharModal('modal-assinatura');
+  renderizarUsers();
+  _mostrarToast('✅ Assinatura salva com sucesso!', 'sucesso');
+}
+
+function ass_remover() {
+  if (!confirm('Remover a assinatura deste servidor?')) return;
+  const us = getUsuarios();
+  delete us[_assIdx].assinatura;
+  salvarUsuarios(us);
+  if (usuarioAtual && usuarioAtual.usuario === us[_assIdx].usuario) {
+    delete usuarioAtual.assinatura;
+  }
+  fecharModal('modal-assinatura');
+  renderizarUsers();
+  _mostrarToast('Assinatura removida.', 'sucesso');
 }
 
 function criarUsuario() {
@@ -10444,7 +10642,11 @@ function baixarModeloPDF() {
     if (!l.trim())              { bodyHtml += '<div class="spacer"></div>\n'; continue; }
     if (l.startsWith('\u2022 '))  { bodyHtml += `<p class="bullet">${le}</p>\n`; continue; }
     if (l.startsWith('\u2610'))   { bodyHtml += `<p class="check">${le}</p>\n`;  continue; }
-    if (/^_{8,}/.test(l))      { bodyHtml += `<p class="linha-ass">${le}</p>\n`; continue; }
+    if (/^_{8,}/.test(l)) {
+      const assImg = usuarioAtual?.assinatura;
+      if (assImg) bodyHtml += `<div class="ass-img-wrap"><img src="${assImg}" class="ass-img"></div>\n`;
+      bodyHtml += `<p class="linha-ass">${le}</p>\n`; continue;
+    }
     if (/^(Servidor respons\u00e1vel|Respons\u00e1vel pelo registro|Policial Penal$|Plant\u00e3o:)/.test(l)) {
       bodyHtml += `<p class="ass-meta">${le}</p>\n`; continue;
     }
@@ -10488,7 +10690,9 @@ function baixarModeloPDF() {
   .spacer            { height: 9px; }
   .ass-meta          { margin: 2px 0; font-weight: bold; font-size: 10pt; }
   .ass-meta-italic   { margin: 2px 0; font-style: italic; font-size: 10pt; }
-  .linha-ass         { font-family: 'Courier New', monospace; letter-spacing: -1px; margin: 16px 0 2px 0; }
+  .linha-ass         { font-family: 'Courier New', monospace; letter-spacing: -1px; margin: 4px 0 2px 0; }
+  .ass-img-wrap      { margin-top: 24px; }
+  .ass-img           { max-height: 70px; max-width: 220px; object-fit: contain; display: block; }
   .data-extenso { margin-top: 30px; text-align: right; font-size: 10pt; }
   .rodape { margin-top: 36px; border-top: 1px solid #000; padding-top: 8px;
             text-align: center; font-size: 8pt; color: #444; }
@@ -11039,7 +11243,12 @@ function imprimirModeloMulti() {
     }
     if (l === 'É o relatório.') { bodyHtml += `<p class="e-relatorio">${le}</p>\n`; continue; }
     if (IS_CAMPO.test(l))       { bodyHtml += `<p class="campo-id">${le}</p>\n`; continue; }
-    if (IS_LINHA.test(l))       { bodyHtml += `<p class="linha-ass">${le}</p>\n`; continue; }
+    if (IS_LINHA.test(l)) {
+      // Inserir imagem de assinatura antes da linha, se disponível
+      const assImg = usuarioAtual?.assinatura;
+      if (assImg) bodyHtml += `<div class="ass-img-wrap"><img src="${assImg}" class="ass-img"></div>\n`;
+      bodyHtml += `<p class="linha-ass">${le}</p>\n`; continue;
+    }
     if (IS_ASS_CARGO.test(l))   { bodyHtml += `<p class="ass-cargo">${le}</p>\n`; continue; }
     if (IS_LOCAL_DATA.test(l))  { bodyHtml += `<p class="local-data">${le}</p>\n`; continue; }
     if (/^(Ao Excelentíssimo|Juízo da |Assunto:|Ref\.:)/.test(l)) {
@@ -11091,7 +11300,9 @@ function imprimirModeloMulti() {
   .e-relatorio   { margin: 10px 0 6px 0; font-style: italic; }
   .local-data    { margin: 20px 0 4px 0; text-align: right; font-size: 10pt; }
   .linha-ass     { font-family: 'Courier New', monospace; letter-spacing: -1px;
-                   margin: 16px 0 2px 0; }
+                   margin: 4px 0 2px 0; }
+  .ass-img-wrap  { margin-top: 24px; }
+  .ass-img       { max-height: 70px; max-width: 220px; object-fit: contain; display: block; }
   .linha-tit     { border-top: 1px solid #bbb; margin: 10px 0; }
   .ass-cargo     { margin: 2px 0; font-size: 10.5pt; font-weight: bold; }
   .spacer        { height: 9px; }
