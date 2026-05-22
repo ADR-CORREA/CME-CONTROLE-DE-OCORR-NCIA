@@ -12689,17 +12689,24 @@ function rv_importarPlanilha(input) {
       _mostrarToast('Colunas "Nome" e "Processo" não encontradas na planilha.', 'erro'); return;
     }
 
+    // Corrige encoding Latin-1 mal interpretado como UTF-8 (bug comum em exports Akiles)
+    // Ex: "ExclusÃ£o" → "Exclusão"
+    function fixEnc(s) {
+      const t = String(s||'').trim();
+      try { return decodeURIComponent(escape(t)); } catch(e) { return t; }
+    }
+
     // Normalizar linhas
     rows = rows.map(r => ({
-      nome:        (r[cNome]    || '').toString().trim(),
-      processo:    (r[cProc]    || '').toString().trim(),
-      cpf:         (r[cCpf]    || '').toString().trim(),
-      competencia: (r[cComp]   || '').toString().trim(),
-      comarca:     (r[cComarca]|| '').toString().trim(),
-      tipo:        (r[cTipo]   || '').toString().trim(),
-      idOc:        (r[cId]     || '').toString().trim(),
-      ocorreu:     (r[cOcorreu]|| '').toString().trim(),
-      duracao:     (r[cDur]    || '').toString().trim(),
+      nome:        fixEnc(r[cNome]),
+      processo:    fixEnc(r[cProc]),
+      cpf:         fixEnc(r[cCpf]),
+      competencia: fixEnc(r[cComp]),
+      comarca:     fixEnc(r[cComarca]),
+      tipo:        fixEnc(r[cTipo]),
+      idOc:        fixEnc(r[cId]),
+      ocorreu:     (r[cOcorreu] || '').toString().trim(),
+      duracao:     fixEnc(r[cDur]),
     })).filter(r => r.nome);
 
     // Agrupar por nome+processo
