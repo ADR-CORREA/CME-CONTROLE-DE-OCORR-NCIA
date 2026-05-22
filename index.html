@@ -1441,7 +1441,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
         <!-- Toolbar -->
         <div class="table-toolbar" style="flex-wrap:wrap;gap:8px">
-          <div style="font-weight:600;color:var(--az1);font-size:1rem">📋 Controle de OFC — Vinculações Pendentes</div>
+          <div style="font-weight:600;color:var(--az1);font-size:1rem">📋 Controle de OFC — Vinculações</div>
           <div class="table-actions" style="flex-wrap:wrap;gap:6px">
             <label class="btn-secondary" style="cursor:pointer;margin:0" title="Importar planilha DEMANDAS_CME.xlsx">
               📂 Importar Excel
@@ -1452,6 +1452,18 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
             <button class="btn-primary"   onclick="abrirModalOFC(null)">➕ Nova Demanda</button>
           </div>
         </div>
+
+        <!-- Sub-abas Ativos / Arquivados -->
+        <div class="sub-tabs" style="margin:10px 0 0 0;border-bottom:1px solid #e2e8f0">
+          <div class="sub-tab active" id="ofc-stab-ativos" onclick="mudarSubAbaOFC('ativos')" style="font-size:.88rem">📋 Ativos</div>
+          <div class="sub-tab" id="ofc-stab-arquivados" onclick="mudarSubAbaOFC('arquivados')" style="font-size:.88rem">
+            📁 Arquivados
+            <span id="ofc-arq-badge" class="notif-badge" style="display:none;background:#16a34a">0</span>
+          </div>
+        </div>
+
+        <!-- ── Painel Ativos ── -->
+        <div class="sub-panel active" id="ofc-panel-ativos">
 
         <!-- KPIs -->
         <div class="kpi-grid" style="margin:12px 0 8px 0;grid-template-columns:repeat(auto-fit,minmax(110px,1fr))">
@@ -1547,6 +1559,37 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
             <tbody id="tbody-ofc"></tbody>
           </table>
         </div>
+
+        </div><!-- /ofc-panel-ativos -->
+
+        <!-- ── Painel Arquivados (Concluídos) ── -->
+        <div class="sub-panel" id="ofc-panel-arquivados">
+          <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
+            <div style="font-weight:600;color:#15803d;font-size:.95rem">📁 Demandas Arquivadas (Concluídas)</div>
+            <div class="table-actions">
+              <input type="text" id="ofc-arq-busca" placeholder="🔍 Buscar..." oninput="renderizarOFCArquivados()" style="padding:5px 10px;border:1px solid #ddd;border-radius:6px;font-size:.85rem">
+            </div>
+          </div>
+          <div class="est-section-title" id="ofc-arq-count-label">Arquivados</div>
+          <div class="table-scroll">
+            <table class="data-table" style="font-size:.83rem">
+              <thead><tr>
+                <th>Nº</th>
+                <th>Nome</th>
+                <th>Ação Penal</th>
+                <th>Nº Processo</th>
+                <th>Vara de Origem</th>
+                <th>Fórum</th>
+                <th>Dt. Receb. OFC</th>
+                <th>Prazo Final</th>
+                <th>Enviado COM</th>
+                <th>Tratativa</th>
+                <th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-ofc-arquivados"></tbody>
+            </table>
+          </div>
+        </div><!-- /ofc-panel-arquivados -->
 
       </div><!-- /jur-panel-ofc -->
     </div><!-- /panel-juridico -->
@@ -5343,7 +5386,7 @@ function renderizarOFC() {
   const fForum  = document.getElementById('ofc-f-forum')?.value   || '';
   const fCom    = document.getElementById('ofc-f-com')?.value     || '';
 
-  let lista = (dados.registros || []);
+  let lista = (dados.registros || []).filter(r => r.status !== 'Concluído'); // Concluídos vão para Arquivados
   if (fBusca)  lista = lista.filter(r => r.nome.toLowerCase().includes(fBusca) || (r.numProcesso||'').toLowerCase().includes(fBusca));
   if (fStatus) lista = lista.filter(r => r.status === fStatus);
   if (fAcao)   lista = lista.filter(r => (r.acaoPenal||'').includes(fAcao));
@@ -5360,13 +5403,19 @@ function renderizarOFC() {
   // KPIs
   const all = dados.registros || [];
   const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const conclCount = all.filter(r => r.status === 'Concluído').length;
   document.getElementById('ofc-kpi-total').textContent  = all.length;
   document.getElementById('ofc-kpi-pend').textContent   = all.filter(r => r.status === 'Pendente').length;
   document.getElementById('ofc-kpi-vencido').textContent= all.filter(r => r.status === 'Pendente' && r.prazoFinal && new Date(r.prazoFinal+'T00:00:00') < hoje).length;
-  document.getElementById('ofc-kpi-conc').textContent   = all.filter(r => r.status === 'Concluído').length;
+  document.getElementById('ofc-kpi-conc').textContent   = conclCount;
   document.getElementById('ofc-kpi-mcp').textContent    = all.filter(r => r.forum === 'MCP').length;
   document.getElementById('ofc-kpi-stn').textContent    = all.filter(r => r.forum === 'STN').length;
   document.getElementById('ofc-kpi-porto').textContent  = all.filter(r => r.forum === 'PORTO GRA.').length;
+  // Badge arquivados
+  const badge = document.getElementById('ofc-arq-badge');
+  if (badge) { badge.textContent = conclCount; badge.style.display = conclCount ? 'inline-flex' : 'none'; }
+  // Atualizar tabela arquivados se visível
+  renderizarOFCArquivados();
 
   const countEl = document.getElementById('ofc-count-label');
   if (countEl) countEl.textContent = `${lista.length} demanda${lista.length !== 1 ? 's' : ''} encontrada${lista.length !== 1 ? 's' : ''}`;
@@ -5554,6 +5603,54 @@ function excluirOFC(id) {
   renderizarOFC();
   atualizarBadgeOFC();
   _mostrarToast('Demanda excluída.', 'sucesso');
+}
+
+// ── Sub-abas OFC (Ativos / Arquivados) ────────────────────
+function mudarSubAbaOFC(aba) {
+  ['ativos','arquivados'].forEach(a => {
+    document.getElementById(`ofc-stab-${a}`)?.classList.toggle('active', a === aba);
+    document.getElementById(`ofc-panel-${a}`)?.classList.toggle('active', a === aba);
+  });
+  if (aba === 'arquivados') renderizarOFCArquivados();
+}
+
+function renderizarOFCArquivados() {
+  const tbody = document.getElementById('tbody-ofc-arquivados');
+  if (!tbody) return;
+  const dados = getOFC();
+  const busca = (document.getElementById('ofc-arq-busca')?.value || '').toLowerCase().trim();
+  let lista = (dados.registros || []).filter(r => r.status === 'Concluído');
+  if (busca) lista = lista.filter(r => r.nome.toLowerCase().includes(busca) || (r.numProcesso||'').toLowerCase().includes(busca));
+  lista.sort((a,b) => (b.prazoFinal||'').localeCompare(a.prazoFinal||''));
+
+  const countEl = document.getElementById('ofc-arq-count-label');
+  if (countEl) countEl.textContent = `${lista.length} demanda${lista.length !== 1 ? 's' : ''} arquivada${lista.length !== 1 ? 's' : ''}`;
+
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:#888">Nenhuma demanda arquivada.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map((r, i) => {
+    const ek = (r.id || i).toString().replace(/"/g,'&quot;');
+    const comBadge = r.enviadoCOM && r.enviadoCOM !== 'Não'
+      ? `<span style="background:#dcfce7;color:#15803d;border-radius:4px;padding:1px 6px;font-size:.75rem">${r.enviadoCOM}</span>`
+      : `<span style="background:#fee2e2;color:#dc2626;border-radius:4px;padding:1px 6px;font-size:.75rem">Não</span>`;
+    return `<tr style="background:#f0fdf4">
+      <td>${r.id||'—'}</td>
+      <td style="font-weight:500">${r.nome||'—'}</td>
+      <td>${r.acaoPenal||'—'}</td>
+      <td style="font-size:.78rem">${r.numProcesso||'—'}</td>
+      <td>${r.varaOrigem||'—'}</td>
+      <td><span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 6px;font-size:.78rem">${r.forum||'—'}</span></td>
+      <td>${r.dtReceOFC||'—'}</td>
+      <td>${r.prazoFinal||'—'}</td>
+      <td>${comBadge}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.tratativa||'').replace(/"/g,'&quot;')}">${r.tratativa||'—'}</td>
+      <td>
+        <button class="btn-secondary" style="padding:2px 8px;font-size:.78rem" onclick="abrirModalOFC('${ek}')">✏️</button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 // ── Exportar Excel ────────────────────────────────────────
