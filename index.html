@@ -2183,107 +2183,140 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
     <!-- ─── ADMINISTRAÇÃO ─── -->
     <div class="tab-panel" id="panel-admin">
-      <!-- Layout: coluna esquerda larga (usuários) + coluna direita (configs) -->
-      <div style="display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start">
 
-        <!-- ── Coluna esquerda: Lista + Criar ── -->
-        <div style="display:flex;flex-direction:column;gap:20px">
-          <!-- Lista de usuários -->
-          <div class="admin-card">
-            <div class="admin-card-header">👥 Gerenciar Usuários</div>
-            <div class="admin-card-body">
-              <div id="user-list"></div>
-            </div>
-          </div>
+      <!-- KPIs -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px" id="admin-kpis">
+        <div style="background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e2e8f0;text-align:center">
+          <div style="font-size:1.6rem;font-weight:800;color:#1F4E78" id="kpi-total">0</div>
+          <div style="font-size:.72rem;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Total</div>
+        </div>
+        <div style="background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e2e8f0;text-align:center">
+          <div style="font-size:1.6rem;font-weight:800;color:#1F4E78" id="kpi-admin">0</div>
+          <div style="font-size:.72rem;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Admin</div>
+        </div>
+        <div style="background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e2e8f0;text-align:center">
+          <div style="font-size:1.6rem;font-weight:800;color:#7c3aed" id="kpi-gerencia">0</div>
+          <div style="font-size:.72rem;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Gerência</div>
+        </div>
+        <div style="background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e2e8f0;text-align:center">
+          <div style="font-size:1.6rem;font-weight:800;color:#15803d" id="kpi-plantao">0</div>
+          <div style="font-size:.72rem;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Plantão</div>
+        </div>
+        <div style="background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e2e8f0;text-align:center">
+          <div style="font-size:1.6rem;font-weight:800;color:#0369a1" id="kpi-outros">0</div>
+          <div style="font-size:.72rem;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Outros</div>
+        </div>
+      </div>
 
-          <!-- Criar novo usuário — abaixo da lista -->
-          <div class="admin-card">
-            <div class="admin-card-header">➕ Criar Novo Usuário</div>
-            <div class="admin-card-body">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                <div class="form-field">
-                  <label>Nome completo</label>
-                  <input type="text" id="new-name" placeholder="Nome do servidor">
-                </div>
-                <div class="form-field">
-                  <label>Usuário (login)</label>
-                  <input type="text" id="new-user" placeholder="usuario.sobrenome">
-                </div>
-                <div class="form-field">
-                  <label>Senha inicial</label>
-                  <input type="password" id="new-pass" placeholder="Mín. 8 caracteres, 1 maiúscula, 1 número">
-                </div>
-                <div class="form-field">
-                  <label>Nível de acesso</label>
-                  <select id="new-role">
-                    <option value="plantao">Operador / Plantão</option>
-                    <option value="comunicacao">Comunicação Processual</option>
-                    <option value="relatorio">Relatório</option>
-                    <option value="juridico">Jurídico</option>
-                    <option value="gerencia">Gerência</option>
-                    <option value="estoque">Estoque</option>
-                    <option value="triagem">Triagem</option>
-                    <option value="psicossocial">Psicossocial</option>
-                    <option value="admin">Administrador</option>
-                  </select>
-                </div>
-              </div>
-              <div id="admin-msg" style="margin-top:8px"></div>
-              <button class="btn-primary" onclick="criarUsuario()" style="margin-top:10px">➕ Criar Usuário</button>
-            </div>
+      <!-- Grid principal -->
+      <div style="display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start">
+
+        <!-- ── Coluna esquerda: lista de usuários ── -->
+        <div class="admin-card">
+          <div class="admin-card-header" style="display:flex;align-items:center;justify-content:space-between">
+            <span>👥 Servidores Cadastrados</span>
+            <span id="admin-user-count" style="font-size:.8rem;font-weight:400;opacity:.8"></span>
           </div>
+          <div style="padding:12px 16px;border-bottom:1px solid #e2e8f0">
+            <input type="text" id="admin-busca" placeholder="🔍  Buscar por nome, login ou cargo…"
+              oninput="renderizarUsers()"
+              style="width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:.85rem;outline:none;box-sizing:border-box">
+          </div>
+          <div id="user-list" style="max-height:65vh;overflow-y:auto"></div>
         </div>
 
-        <!-- ── Coluna direita: Configs, Senha, Log ── -->
-        <div style="display:flex;flex-direction:column;gap:20px">
+        <!-- ── Coluna direita ── -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+
+          <!-- Criar novo usuário -->
           <div class="admin-card">
-            <div class="admin-card-header">⚙️ Configurações do Sistema</div>
-            <div class="admin-card-body">
-              <div class="admin-form">
-                <div class="form-field">
-                  <label>Nome da Central</label>
-                  <input type="text" id="cfg-nome" value="CME / IAPEN-AP">
+            <div class="admin-card-header" style="background:linear-gradient(135deg,#1F4E78,#2d6da3)">
+              ➕ Novo Servidor
+            </div>
+            <div class="admin-card-body" style="padding:14px">
+              <div class="form-field" style="margin-bottom:8px">
+                <label style="font-size:.75rem">Nome completo</label>
+                <input type="text" id="new-name" placeholder="Nome do servidor" style="font-size:.83rem">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div class="form-field" style="margin-bottom:8px">
+                  <label style="font-size:.75rem">Login</label>
+                  <input type="text" id="new-user" placeholder="usuario.login" style="font-size:.83rem">
                 </div>
-                <div class="form-field">
-                  <label>Exportar todos os dados (backup)</label>
-                  <button class="btn-secondary" onclick="exportarBackup()" style="margin-top:4px">⬇ Baixar JSON de Backup</button>
+                <div class="form-field" style="margin-bottom:8px">
+                  <label style="font-size:.75rem">Senha inicial</label>
+                  <input type="password" id="new-pass" placeholder="Mín. 8 car." style="font-size:.83rem">
                 </div>
-                <div class="form-field">
-                  <label>Restaurar dados (JSON)</label>
-                  <input type="file" id="restore-file" accept=".json">
-                </div>
-                <button class="btn-primary" onclick="restaurarDados()">Restaurar Backup</button>
+              </div>
+              <div class="form-field" style="margin-bottom:8px">
+                <label style="font-size:.75rem">Cargo / Função</label>
+                <input type="text" id="new-cargo" placeholder="Ex: Policial Penal" style="font-size:.83rem">
+              </div>
+              <div class="form-field" style="margin-bottom:10px">
+                <label style="font-size:.75rem">Nível de acesso</label>
+                <select id="new-role" style="font-size:.83rem">
+                  <option value="plantao">Operador / Plantão</option>
+                  <option value="comunicacao">Comunicação Processual</option>
+                  <option value="relatorio">Relatório</option>
+                  <option value="juridico">Jurídico</option>
+                  <option value="gerencia">Gerência</option>
+                  <option value="estoque">Estoque</option>
+                  <option value="triagem">Triagem</option>
+                  <option value="psicossocial">Psicossocial</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+              <div id="admin-msg" style="margin-bottom:6px;font-size:.8rem"></div>
+              <button class="btn-primary" onclick="criarUsuario()" style="width:100%">➕ Criar Servidor</button>
+            </div>
+          </div>
+
+          <!-- Sistema -->
+          <div class="admin-card">
+            <div class="admin-card-header">⚙️ Sistema</div>
+            <div class="admin-card-body" style="padding:14px">
+              <div style="font-size:.75rem;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Backup de Dados</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+                <button class="btn-secondary" onclick="exportarBackup()" style="font-size:.8rem;padding:7px 10px">⬇ Exportar</button>
+                <label style="display:flex;align-items:center;justify-content:center;gap:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px;cursor:pointer;font-size:.8rem;color:#475569">
+                  📁 Importar
+                  <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restaurarDados()">
+                </label>
               </div>
             </div>
           </div>
 
+          <!-- Minha Senha -->
           <div class="admin-card">
-            <div class="admin-card-header">🔑 Alterar Minha Senha</div>
-            <div class="admin-card-body">
-              <div class="admin-form">
-                <div class="form-field"><label>Senha atual</label>
-                  <input type="password" id="alt-senha-atual" placeholder="Senha atual" autocomplete="current-password">
-                </div>
-                <div class="form-field"><label>Nova senha</label>
-                  <input type="password" id="alt-senha-nova" placeholder="Mínimo 8 caracteres, 1 maiúscula, 1 número" autocomplete="new-password">
-                </div>
-                <div class="form-field"><label>Confirmar nova senha</label>
-                  <input type="password" id="alt-senha-conf" placeholder="Repita a nova senha" autocomplete="new-password">
-                </div>
-                <button class="btn-primary" onclick="alterarMinhaSenha()">Alterar Senha</button>
-                <div id="alt-senha-msg" class="sys-alert"></div>
+            <div class="admin-card-header">🔑 Minha Senha</div>
+            <div class="admin-card-body" style="padding:14px">
+              <div class="form-field" style="margin-bottom:8px">
+                <label style="font-size:.75rem">Senha atual</label>
+                <input type="password" id="alt-senha-atual" placeholder="••••••••" autocomplete="current-password" style="font-size:.83rem">
               </div>
+              <div class="form-field" style="margin-bottom:8px">
+                <label style="font-size:.75rem">Nova senha</label>
+                <input type="password" id="alt-senha-nova" placeholder="Mín. 8 car., 1 maiúscula, 1 nº" autocomplete="new-password" style="font-size:.83rem">
+              </div>
+              <div class="form-field" style="margin-bottom:10px">
+                <label style="font-size:.75rem">Confirmar nova senha</label>
+                <input type="password" id="alt-senha-conf" placeholder="Repita a nova senha" autocomplete="new-password" style="font-size:.83rem">
+              </div>
+              <button class="btn-primary" onclick="alterarMinhaSenha()" style="width:100%">Alterar Senha</button>
+              <div id="alt-senha-msg" class="sys-alert" style="margin-top:8px"></div>
             </div>
           </div>
 
+          <!-- Log -->
           <div class="admin-card">
-            <div class="admin-card-header">📊 Log de Acessos (últimas entradas)</div>
-            <div class="admin-card-body" id="log-acessos" style="font-size:.78rem;font-family:var(--font-mono);color:var(--cz2);max-height:280px;overflow-y:auto">
+            <div class="admin-card-header">📊 Log de Acessos</div>
+            <div class="admin-card-body" id="log-acessos"
+              style="font-size:.75rem;font-family:var(--font-mono);color:var(--cz2);max-height:220px;overflow-y:auto;padding:12px 14px">
             </div>
           </div>
-        </div>
 
-      </div><!-- /grid admin -->
+        </div><!-- /col direita -->
+      </div><!-- /grid -->
     </div>
 
     <!-- ─── COMUNICAÇÃO ─── -->
@@ -6968,38 +7001,87 @@ function salvarJuridico() {
 }
 
 /* ─── ADMINISTRAÇÃO ──────────────────────────────────── */
+const _NIVEL_COR  = { admin:'#1F4E78', gerencia:'#7c3aed', juridico:'#b45309',
+  relatorio:'#0369a1', comunicacao:'#0f766e', plantao:'#15803d',
+  estoque:'#b91c1c', triagem:'#0891b2', psicossocial:'#db2777' };
+const _NIVEL_NOME = { admin:'Administrador', gerencia:'Gerência', juridico:'Jurídico',
+  relatorio:'Relatório', comunicacao:'Comunicação', plantao:'Plantão',
+  estoque:'Estoque', triagem:'Triagem', psicossocial:'Psicossocial' };
+
 function renderizarUsers() {
-  const usuarios = getUsuarios();
-  const nivelNome = { admin:"Administrador", gerencia:"Gerência", juridico:"Jurídico", relatorio:"Relatório",
-    comunicacao:"Comunicação", plantao:"Plantão" };
-  document.getElementById("user-list").innerHTML = usuarios.map((u, i) => `
-    <div class="user-row">
-      <div class="user-info">
-        <div class="user-avatar-sm">${u.nome.charAt(0)}</div>
-        <div>
-          <div class="user-name">${u.nome}</div>
-          <div class="user-role">${u.usuario} · ${nivelNome[u.nivel]||u.nivel}</div>
+  const todos  = getUsuarios();
+  const filtro = (document.getElementById('admin-busca')?.value || '').toLowerCase().trim();
+  const lista  = filtro
+    ? todos.filter(u =>
+        u.nome.toLowerCase().includes(filtro) ||
+        u.usuario.toLowerCase().includes(filtro) ||
+        (u.cargo||'').toLowerCase().includes(filtro) ||
+        (_NIVEL_NOME[u.nivel]||'').toLowerCase().includes(filtro))
+    : todos;
+
+  // KPIs
+  const counts = {};
+  todos.forEach(u => { counts[u.nivel] = (counts[u.nivel]||0) + 1; });
+  const _kpi = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  _kpi('kpi-total',    todos.length);
+  _kpi('kpi-admin',    counts.admin    || 0);
+  _kpi('kpi-gerencia', counts.gerencia || 0);
+  _kpi('kpi-plantao',  counts.plantao  || 0);
+  _kpi('kpi-outros',   todos.length - (counts.admin||0) - (counts.gerencia||0) - (counts.plantao||0));
+
+  const countEl = document.getElementById('admin-user-count');
+  if (countEl) countEl.textContent = filtro
+    ? `${lista.length} de ${todos.length} usuário(s)`
+    : `${todos.length} usuário(s)`;
+
+  if (!lista.length) {
+    document.getElementById('user-list').innerHTML =
+      `<div style="text-align:center;padding:32px;color:#94a3b8;font-size:.88rem">Nenhum usuário encontrado.</div>`;
+    return;
+  }
+
+  document.getElementById('user-list').innerHTML = lista.map(u => {
+    const i   = todos.indexOf(u);
+    const cor = _NIVEL_COR[u.nivel] || '#64748b';
+    const iniciais = u.nome.trim().split(' ').filter(Boolean)
+      .slice(0,2).map(p => p[0].toUpperCase()).join('');
+    const assTag = u.assinatura
+      ? `<span style="background:#dcfce7;color:#15803d;border-radius:99px;padding:1px 8px;font-size:.67rem;font-weight:700">✍️ ASS</span>`
+      : `<span style="background:#f1f5f9;color:#94a3b8;border-radius:99px;padding:1px 8px;font-size:.67rem">sem ass.</span>`;
+
+    return `
+    <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid #f1f5f9;transition:background .12s"
+      onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+      <div style="width:42px;height:42px;border-radius:50%;background:${cor};color:#fff;display:flex;
+        align-items:center;justify-content:center;font-weight:700;font-size:.88rem;flex-shrink:0;letter-spacing:-.5px">
+        ${iniciais}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:.88rem;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.nome}</div>
+        <div style="font-size:.73rem;color:#64748b;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          @${u.usuario}${u.cargo ? ' &nbsp;·&nbsp; ' + u.cargo : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;margin-top:4px;flex-wrap:wrap">
+          <span style="background:${cor}18;color:${cor};border:1px solid ${cor}33;padding:1px 9px;
+            border-radius:99px;font-size:.67rem;font-weight:700;letter-spacing:.02em;white-space:nowrap">
+            ${_NIVEL_NOME[u.nivel]||u.nivel}
+          </span>
+          ${assTag}
         </div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <select class="role-select" onchange="alterarNivel(${i}, this.value)">
-          <option value="plantao" ${u.nivel==='plantao'?'selected':''}>Plantão</option>
-          <option value="comunicacao" ${u.nivel==='comunicacao'?'selected':''}>Comunicação</option>
-          <option value="relatorio" ${u.nivel==='relatorio'?'selected':''}>Relatório</option>
-          <option value="juridico" ${u.nivel==='juridico'?'selected':''}>Jurídico</option>
-          <option value="gerencia" ${u.nivel==='gerencia'?'selected':''}>Gerência</option>
-          <option value="admin" ${u.nivel==='admin'?'selected':''}>Admin</option>
-        </select>
-        <button class="btn-secondary" style="padding:3px 10px;font-size:.82rem" onclick="abrirModalEditarUsuario(${i})" title="Editar cadastro">
+      <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
+        <button onclick="abrirModalEditarUsuario(${i})" title="Editar cadastro"
+          style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:7px;padding:5px 12px;
+          cursor:pointer;font-size:.78rem;color:#1d4ed8;font-weight:600;white-space:nowrap">
           ✏️ Editar
         </button>
-        <button class="btn-secondary" style="padding:3px 10px;font-size:.82rem;${u.assinatura?'color:#15803d;border-color:#16a34a':''}" onclick="abrirModalAssinatura(${i})" title="${u.assinatura?'Assinatura cadastrada — clique para alterar':'Cadastrar assinatura'}">
-          ${u.assinatura ? '✅ Assinatura' : '✍️ Assinatura'}
-        </button>
-        ${u.usuario !== "admin" ? `<button class="btn-danger" onclick="removerUsuario(${i})">✕</button>` : ""}
+        ${u.usuario !== 'admin' ? `
+        <button onclick="removerUsuario(${i})" title="Remover usuário"
+          style="background:#FFF5F5;border:1px solid #FECACA;border-radius:7px;padding:5px 9px;
+          cursor:pointer;font-size:.8rem;color:#dc2626;font-weight:700">✕</button>` : ''}
       </div>
-    </div>
-  `).join("");
+    </div>`;
+  }).join('');
 }
 
 function alterarNivel(idx, novoNivel) {
@@ -7275,30 +7357,31 @@ function ass_remover() {
 }
 
 function criarUsuario() {
-  const nome = document.getElementById("new-name").value.trim();
-  const user = document.getElementById("new-user").value.trim();
-  const pass = document.getElementById("new-pass").value;
+  const nome  = document.getElementById("new-name").value.trim();
+  const user  = document.getElementById("new-user").value.trim();
+  const pass  = document.getElementById("new-pass").value;
+  const cargo = (document.getElementById("new-cargo")?.value || '').trim();
   const nivel = document.getElementById("new-role").value;
-  const msg = document.getElementById("admin-msg");
+  const msg   = document.getElementById("admin-msg");
   if (!nome || !user || !pass) {
-    msg.className = "sys-alert error"; msg.textContent = "Preencha todos os campos."; return;
+    msg.className = "sys-alert error"; msg.textContent = "Preencha nome, login e senha."; return;
   }
   if (pass.length < 6) {
     msg.className = "sys-alert error"; msg.textContent = "Senha muito curta (mínimo 6 caracteres)."; return;
   }
   const us = getUsuarios();
   if (us.find(u => u.usuario === user)) {
-    msg.className = "sys-alert error"; msg.textContent = "Usuário já existe."; return;
+    msg.className = "sys-alert error"; msg.textContent = "Login já está em uso."; return;
   }
-  us.push({ usuario: user, senha: btoa(pass), nome, nivel });
   hashSenha(pass).then(hash => {
-    us.push({ usuario: user, senha: hash, nome, nivel });
+    us.push({ usuario: user, senha: hash, nome, cargo, nivel });
     salvarUsuarios(us);
     addLog(`Criou usuário ${nome} (${usuarioAtual.nome})`);
-    msg.className = "sys-alert success"; msg.textContent = `Usuário "${nome}" criado com sucesso!`;
-    document.getElementById("new-name").value = "";
-    document.getElementById("new-user").value = "";
-    document.getElementById("new-pass").value = "";
+    msg.className = "sys-alert success"; msg.textContent = `✅ "${nome}" criado com sucesso!`;
+    document.getElementById("new-name").value  = "";
+    document.getElementById("new-user").value  = "";
+    document.getElementById("new-pass").value  = "";
+    if (document.getElementById("new-cargo")) document.getElementById("new-cargo").value = "";
     renderizarUsers();
     setTimeout(() => { msg.className = "sys-alert"; }, 3000);
   });
