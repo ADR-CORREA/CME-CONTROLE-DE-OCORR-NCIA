@@ -2832,7 +2832,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
           <!-- Pastas do monitorado -->
           <div id="r2-pastas-view" style="display:none">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
               <div class="r2-pasta-card" onclick="r2_abrirPasta('Processo')">
                 <div style="font-size:2rem;margin-bottom:8px">🗂️</div>
                 <div style="font-weight:600;font-size:1rem">Processo</div>
@@ -2842,6 +2842,11 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
                 <div style="font-size:2rem;margin-bottom:8px">📄</div>
                 <div style="font-weight:600;font-size:1rem">Docs do monitorado</div>
                 <div id="r2-count-docs" style="font-size:.8rem;color:#888;margin-top:4px">Carregando…</div>
+              </div>
+              <div class="r2-pasta-card" onclick="r2_abrirPasta('Justificativa')">
+                <div style="font-size:2rem;margin-bottom:8px">📝</div>
+                <div style="font-weight:600;font-size:1rem">Justificativa</div>
+                <div id="r2-count-justificativa" style="font-size:.8rem;color:#888;margin-top:4px">Carregando…</div>
               </div>
             </div>
           </div>
@@ -11068,7 +11073,7 @@ function r2_renderizarListaMon(lista) {
 
 /* ── Excluir monitorado inteiro (admin) ───────────────────────── */
 function r2_confirmarDeleteMonitorado(nome) {
-  if (!confirm(`⚠️ ATENÇÃO!\n\nExcluir TODOS os arquivos do monitorado "${nome}"?\n\nEsta ação é IRREVERSÍVEL e apagará permanentemente todos os documentos das pastas Processo e Docs do monitorado.`)) return;
+  if (!confirm(`⚠️ ATENÇÃO!\n\nExcluir TODOS os arquivos do monitorado "${nome}"?\n\nEsta ação é IRREVERSÍVEL e apagará permanentemente todos os documentos das pastas Processo, Docs do monitorado e Justificativa.`)) return;
   r2_deletarMonitorado(nome);
 }
 
@@ -11120,6 +11125,13 @@ async function r2_novoMonitorado() {
       'Content-Type': 'application/octet-stream',
     };
     await r2_api('POST', '/upload', headers2, new Blob([]));
+    const headers3 = {
+      'X-Monitorado': nomeTrimmed,
+      'X-Pasta': 'Justificativa',
+      'X-Filename': '.keep',
+      'Content-Type': 'application/octet-stream',
+    };
+    await r2_api('POST', '/upload', headers3, new Blob([]));
     _mostrarToast(`✅ Monitorado "${nomeTrimmed}" criado!`, 'sucesso');
     addLog(`R2: monitorado criado — ${nomeTrimmed}`);
     await r2_carregarMonitorados();
@@ -11150,8 +11162,8 @@ async function r2_selecionarMonitorado(nome) {
 }
 
 async function r2_atualizarContagens(nome) {
-  const pastas = ['Processo', 'Docs do monitorado'];
-  const ids    = ['r2-count-processo', 'r2-count-docs'];
+  const pastas = ['Processo', 'Docs do monitorado', 'Justificativa'];
+  const ids    = ['r2-count-processo', 'r2-count-docs', 'r2-count-justificativa'];
   for (let i = 0; i < pastas.length; i++) {
     try {
       const q = new URLSearchParams({ monitorado: nome, pasta: pastas[i] });
