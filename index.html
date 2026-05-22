@@ -2169,11 +2169,126 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
       <!-- Sub-panel Comunicação -->
       <div id="mod-panel-comunicacao" style="display:none">
-        <div style="padding:32px;text-align:center;color:#888">
-          <div style="font-size:2.5rem;margin-bottom:12px">📡</div>
-          <div style="font-size:1rem;font-weight:600;color:#1F4E78;margin-bottom:6px">Modelos de Comunicação</div>
-          <div style="font-size:.88rem">Em breve — os modelos de ofícios e comunicações serão implementados aqui.</div>
+        <!-- Toolbar -->
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px">
+          <button class="btn-secondary" onclick="com_limparOficio()">🗑️ Limpar</button>
+          <button class="btn-secondary" onclick="com_copiarOficio()">📋 Copiar Texto</button>
+          <button class="btn-primary"   onclick="com_gerarOficio()">📄 Gerar .doc</button>
         </div>
+        <!-- Grid 1fr 1fr -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:4px">
+
+          <!-- Coluna Formulário -->
+          <div style="background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow)">
+            <div style="font-weight:700;color:var(--az1);font-size:.95rem;margin-bottom:16px;border-bottom:1px solid #e0e6ed;padding-bottom:8px">📡 Dados do Ofício</div>
+
+            <!-- Comarca + Vara -->
+            <div class="form-field">
+              <label>Comarca</label>
+              <select id="com-of-comarca" onchange="com_atualizarVaras();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+                <option value="">Selecione a comarca...</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Vara</label>
+              <select id="com-of-vara" onchange="com_atualizarDestinatario();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+                <option value="">Selecione a vara...</option>
+              </select>
+            </div>
+
+            <!-- Destinatário -->
+            <div class="form-field">
+              <label>Destinatário <span style="font-weight:400;color:#94a3b8">(editável)</span></label>
+              <input type="text" id="com-of-destinatario" oninput="com_atualizarPreview()"
+                style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
+                placeholder="Preenchido automaticamente ao selecionar comarca e vara">
+            </div>
+
+            <!-- Modelo -->
+            <div class="form-field">
+              <label>Modelo de Ofício</label>
+              <select id="com-of-modelo" onchange="com_atualizarCampos();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+                <option value="">Selecione o modelo...</option>
+              </select>
+            </div>
+
+            <!-- Nº Ofício + Data -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-field">
+                <label>Nº do Ofício</label>
+                <input type="text" id="com-of-numero" oninput="com_atualizarPreview()"
+                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
+                  placeholder="ex: 1092">
+              </div>
+              <div class="form-field">
+                <label>Data do Ofício</label>
+                <input type="date" id="com-of-data" oninput="com_atualizarPreview()"
+                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
+              </div>
+            </div>
+
+            <!-- Nome + Processo -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-field">
+                <label>Nome do Monitorado</label>
+                <input type="text" id="com-of-nome" oninput="com_atualizarPreview()"
+                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
+                  placeholder="NOME COMPLETO EM MAIÚSCULAS">
+              </div>
+              <div class="form-field">
+                <label>Nº do Processo</label>
+                <input type="text" id="com-of-processo" oninput="com_atualizarPreview()"
+                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
+                  placeholder="ex: 5001811-77.2022.8.03.0001">
+              </div>
+            </div>
+
+            <!-- Saudação -->
+            <div class="form-field">
+              <label>Saudação</label>
+              <select id="com-of-saudacao" onchange="com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+                <option>Senhor Juiz,</option>
+                <option>Senhora Juíza,</option>
+                <option>Senhor(a) Juiz(a),</option>
+                <option>Senhor,</option>
+                <option>Senhora,</option>
+              </select>
+            </div>
+
+            <!-- Campos dinâmicos do modelo -->
+            <div id="com-of-campos-dinamicos"></div>
+
+            <hr style="border:none;border-top:1px solid #e2e8f0;margin:14px 0">
+
+            <!-- Signatário + Decreto -->
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+              <div class="form-field">
+                <label>Signatário</label>
+                <input type="text" id="com-of-signatario" value="Everton Nunes Costa" oninput="com_atualizarPreview()"
+                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
+              </div>
+              <div class="form-field">
+                <label>Decreto</label>
+                <input type="text" id="com-of-decreto" value="5953/2025-GEA" oninput="com_atualizarPreview()"
+                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
+              </div>
+            </div>
+          </div><!-- /form col -->
+
+          <!-- Coluna Pré-visualização -->
+          <div style="background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column">
+            <div style="font-weight:700;color:var(--az1);font-size:.95rem;margin-bottom:16px;border-bottom:1px solid #e0e6ed;padding-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+              <span>📄 Pré-visualização (editável)</span>
+              <span id="com-char-count" style="font-size:.75rem;color:#888;font-weight:400">0 caracteres</span>
+            </div>
+            <textarea id="com-of-texto" rows="28"
+              style="flex:1;resize:vertical;font-family:var(--font-mono);font-size:.78rem;line-height:1.6;border:1px solid #e0e6ed;border-radius:6px;padding:12px;background:#f8faff;color:#1a1a2e;outline:none"
+              placeholder="Preencha os campos ao lado para visualizar o ofício..."
+              oninput="document.getElementById('com-char-count').textContent=this.value.length+' caracteres'"></textarea>
+            <div id="com-copy-msg" style="display:none;margin-top:8px;padding:8px 12px;background:#e8f5e9;border-radius:6px;color:#1a4226;font-size:.84rem;font-weight:600">✅ Texto copiado para a área de transferência!</div>
+          </div><!-- /preview col -->
+
+        </div><!-- /grid -->
       </div><!-- /mod-panel-comunicacao -->
 
       <!-- Sub-panel Jurídico -->
@@ -2331,7 +2446,6 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
       <div class="sub-tabs">
         <div class="sub-tab active" id="com-stab-ocorrencias" onclick="mudarSubAbaCom('ocorrencias')">📋 Ocorrências</div>
         <div class="sub-tab" id="com-stab-arquivados" onclick="mudarSubAbaCom('arquivados')">📁 Arquivados</div>
-        <div class="sub-tab" id="com-stab-oficios"    onclick="mudarSubAbaCom('oficios')">📄 Ofícios</div>
       </div>
 
       <!-- SUB-PANEL: OCORRÊNCIAS (conteúdo existente) -->
@@ -2393,99 +2507,6 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         </div>
       </div>
 
-      <!-- SUB-PANEL: OFÍCIOS -->
-      <div class="sub-panel" id="com-panel-oficios">
-        <div style="max-width:920px;margin:0 auto;padding:18px 10px">
-          <div style="font-weight:700;font-size:1.05rem;color:#1F4E78;margin-bottom:18px">📄 Gerador de Ofícios — CME/IAPEN</div>
-
-          <!-- Comarca + Vara -->
-          <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-bottom:12px">
-            <div>
-              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Comarca</label>
-              <select id="com-of-comarca" onchange="com_atualizarVaras()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
-                <option value="">Selecione a comarca...</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Vara</label>
-              <select id="com-of-vara" onchange="com_atualizarDestinatario()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
-                <option value="">Selecione a vara...</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Destinatário -->
-          <div style="margin-bottom:12px">
-            <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Destinatário <span style="font-weight:400;color:#94a3b8">(editável)</span></label>
-            <input type="text" id="com-of-destinatario" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box" placeholder="Preenchido automaticamente ao selecionar comarca e vara">
-          </div>
-
-          <!-- Modelo -->
-          <div style="margin-bottom:12px">
-            <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Modelo de Ofício</label>
-            <select id="com-of-modelo" onchange="com_atualizarCampos()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
-              <option value="">Selecione o modelo...</option>
-            </select>
-          </div>
-
-          <!-- Nº Ofício + Data -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-            <div>
-              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Nº do Ofício</label>
-              <input type="text" id="com-of-numero" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box" placeholder="ex: 1092">
-            </div>
-            <div>
-              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Data do Ofício</label>
-              <input type="date" id="com-of-data" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
-            </div>
-          </div>
-
-          <!-- Nome + Processo -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-            <div>
-              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Nome do Monitorado</label>
-              <input type="text" id="com-of-nome" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box" placeholder="NOME COMPLETO EM MAIÚSCULAS">
-            </div>
-            <div>
-              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Nº do Processo</label>
-              <input type="text" id="com-of-processo" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box" placeholder="ex: 5001811-77.2022.8.03.0001">
-            </div>
-          </div>
-
-          <!-- Saudação -->
-          <div style="margin-bottom:12px">
-            <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Saudação</label>
-            <select id="com-of-saudacao" style="padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
-              <option>Senhor Juiz,</option>
-              <option>Senhora Juíza,</option>
-              <option>Senhor(a) Juiz(a),</option>
-              <option>Senhor,</option>
-              <option>Senhora,</option>
-            </select>
-          </div>
-
-          <!-- Campos dinâmicos do modelo -->
-          <div id="com-of-campos-dinamicos" style="margin-bottom:12px"></div>
-
-          <hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0">
-
-          <!-- Signatário + Decreto -->
-          <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:18px">
-            <div>
-              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Signatário</label>
-              <input type="text" id="com-of-signatario" value="Everton Nunes Costa" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
-            </div>
-            <div>
-              <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Decreto</label>
-              <input type="text" id="com-of-decreto" value="5953/2025-GEA" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
-            </div>
-          </div>
-
-          <button onclick="com_gerarOficio()" style="background:#1F4E78;color:#fff;padding:10px 28px;border:none;border-radius:7px;font-size:.95rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px">
-            📄 Gerar Ofício (.doc)
-          </button>
-        </div>
-      </div>
 
     </div>
 
@@ -8052,12 +8073,11 @@ function exportarRelatorioExcel() {
 
 // Navegação sub-abas Comunicação
 function mudarSubAbaCom(aba) {
-  ['ocorrencias','arquivados','oficios'].forEach(a => {
+  ['ocorrencias','arquivados'].forEach(a => {
     document.getElementById('com-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('com-panel-' + a)?.classList.toggle('active', a === aba);
   });
   if (aba === 'arquivados') renderizarComArquivados();
-  if (aba === 'oficios')    com_init();
 }
 
 // Navegação sub-abas Relatório
@@ -11364,6 +11384,7 @@ function mudarSubAbaModelos(aba) {
     const panel = document.getElementById('mod-panel-' + a);
     if (panel) panel.style.display = a === aba ? 'block' : 'none';
   });
+  if (aba === 'comunicacao') com_init();
 }
 
 /* ═══════════════════ MODELOS — EQUIPE MULTIDISCIPLINAR ══════════════════ */
@@ -13849,6 +13870,7 @@ function com_atualizarCampos() {
     ${m.campos.map(c=>`<div>
       <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">${c.label}</label>
       <input type="${c.tipo}" id="com-of-campo-${c.id}" ${c.placeholder?`placeholder="${c.placeholder}"`:''}
+        oninput="com_atualizarPreview()" onchange="com_atualizarPreview()"
         style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
     </div>`).join('')}
     </div></div>`;
@@ -13949,6 +13971,105 @@ Telefone (096) 98415 2844 &nbsp;|&nbsp; E-mail: cme.iapen.ap@gmail.com</div>
   a.href = url; a.download = nomeArq; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
   _mostrarToast(`&#10004; Of&#237;cio gerado: ${nomeArq}`, 'sucesso');
+}
+
+/* ─── Preview / Limpar / Copiar ────────────────────────────── */
+function com_atualizarPreview() {
+  const modeloId   = document.getElementById('com-of-modelo')?.value;
+  const dest       = document.getElementById('com-of-destinatario')?.value.trim() || '';
+  const numero     = document.getElementById('com-of-numero')?.value.trim() || '';
+  const dataOficio = document.getElementById('com-of-data')?.value || '';
+  const nomeMon    = document.getElementById('com-of-nome')?.value.trim() || '';
+  const processo   = document.getElementById('com-of-processo')?.value.trim() || '';
+  const saudacao   = document.getElementById('com-of-saudacao')?.value || 'Senhor Juiz,';
+  const signat     = document.getElementById('com-of-signatario')?.value.trim() || '';
+  const decreto    = document.getElementById('com-of-decreto')?.value.trim() || '';
+
+  const modelo = COM_MODELOS.find(m => m.id === modeloId);
+  const ta     = document.getElementById('com-of-texto');
+  if (!ta) return;
+
+  if (!modeloId || !modelo) { ta.value = ''; document.getElementById('com-char-count').textContent = '0 caracteres'; return; }
+
+  const ano      = dataOficio ? dataOficio.split('-')[0] : String(new Date().getFullYear());
+  const numFmt   = numero ? `${numero}/${ano} - CME/IAPEN` : '____/'+ano+' - CME/IAPEN';
+  const dataLonga = dataOficio ? com_fmtDataLonga(dataOficio) : '____';
+
+  const campos = { nome_monitorado: nomeMon };
+  modelo.campos.forEach(c => {
+    const el = document.getElementById('com-of-campo-' + c.id);
+    let val  = el ? el.value.trim() : '';
+    if (c.tipo === 'date' && val) val = com_fmtData(val);
+    campos[c.id] = val;
+  });
+
+  const paragrafos = modelo.corpo(campos);
+  // Strip HTML tags for plain-text preview
+  const stripTags = s => s.replace(/<\/?b>/g,'');
+
+  const linhas = [
+    `Ofício nº ${numFmt}.`,
+    `Macapá/AP, ${dataLonga}.`,
+    '',
+    `A Sua Excelência o (a) Senhor (a)`,
+    dest ? `${dest}.` : '____.',
+    '',
+    `Assunto: ${modelo.assunto}.`,
+    `Processo nº: ${processo || '____'}.`,
+    '',
+    saudacao,
+    '',
+    ...paragrafos.map(stripTags),
+    '',
+    'Sem mais, esta CME encontra-se à disposição, podendo ser contatada no telefone constantes no rodapé.',
+    '',
+    'Respeitosamente,',
+    '',
+    '',
+    '',
+    signat,
+    'Gerente de Monitoramento Eletrônico – CME/ IAPEN',
+    `Decreto nº ${decreto}`,
+    '',
+    '─────────────────────────────────────────────',
+    'CENTRAL DE MONITORAMENTO ELETRÔNICO - CME',
+    'Av. Machado de Assis, 372 – Centro – CEP: 68900-066, Macapá-AP.',
+    'Telefone (096) 98415 2844  |  E-mail: cme.iapen.ap@gmail.com',
+  ];
+
+  ta.value = linhas.join('\n');
+  document.getElementById('com-char-count').textContent = ta.value.length + ' caracteres';
+}
+
+function com_limparOficio() {
+  ['com-of-comarca','com-of-vara','com-of-modelo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  ['com-of-destinatario','com-of-numero','com-of-nome','com-of-processo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('com-of-campos-dinamicos').innerHTML = '';
+  const ta = document.getElementById('com-of-texto');
+  if (ta) ta.value = '';
+  document.getElementById('com-char-count').textContent = '0 caracteres';
+  // reset data to today
+  const hoje = new Date();
+  const dd   = String(hoje.getDate()).padStart(2,'0');
+  const mm   = String(hoje.getMonth()+1).padStart(2,'0');
+  const dataEl = document.getElementById('com-of-data');
+  if (dataEl) dataEl.value = `${hoje.getFullYear()}-${mm}-${dd}`;
+}
+
+function com_copiarOficio() {
+  const ta = document.getElementById('com-of-texto');
+  if (!ta || !ta.value.trim()) return _mostrarToast('⚠️ Nenhum texto para copiar.', 'erro');
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const msg = document.getElementById('com-copy-msg');
+    if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 3000); }
+    _mostrarToast('✅ Texto copiado!', 'sucesso');
+  });
 }
 
 // ── Limpar ─────────────────────────────────────────────────────
