@@ -3666,6 +3666,27 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
   </div>
 </div>
 
+<!-- MODAL: VISUALIZADOR DE ARQUIVO R2 -->
+<div id="r2-modal-viewer" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;box-shadow:0 12px 48px rgba(0,0,0,.4);width:92vw;max-width:1100px;height:90vh;display:flex;flex-direction:column;overflow:hidden">
+    <!-- Cabeçalho -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e0e0e0;background:#f8faff;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <span id="r2-viewer-icone" style="font-size:1.4rem"></span>
+        <span id="r2-viewer-nome" style="font-weight:600;font-size:.95rem;color:#1a2e44;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:600px"></span>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button id="r2-viewer-btn-download" onclick="r2_viewer_download()" style="display:flex;align-items:center;gap:6px;background:#1F4E78;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:.88rem;font-weight:600;cursor:pointer">
+          ⬇️ Baixar
+        </button>
+        <button onclick="r2_fecharViewer()" style="background:#f1f3f5;border:none;border-radius:6px;padding:7px 14px;font-size:.88rem;cursor:pointer;color:#444">✕ Fechar</button>
+      </div>
+    </div>
+    <!-- Área de conteúdo -->
+    <div id="r2-viewer-corpo" style="flex:1;overflow:hidden;position:relative;background:#525659"></div>
+  </div>
+</div>
+
 <!-- MODAL: ASSINATURA DO SERVIDOR -->
 <div class="modal-overlay" id="modal-assinatura">
   <div class="modal-box" style="max-width:520px">
@@ -12173,8 +12194,10 @@ async function r2_deletarMonitorado(nome) {
 }
 
 function r2_filtrarMonitorados(q) {
-  const f = q.toLowerCase();
-  const filtrados = r2_state.monitorados.filter(m => m.nome.toLowerCase().includes(f));
+  // Normaliza: converte hífens → espaço, para "alexandre de" encontrar "alexandre-de-oliveira"
+  const norm = s => s.toLowerCase().replace(/-/g, ' ');
+  const f = norm(q);
+  const filtrados = r2_state.monitorados.filter(m => norm(m.nome).includes(f));
   r2_renderizarListaMon(filtrados);
 }
 
@@ -12579,6 +12602,7 @@ function r2_renderizarProcesso(arquivos) {
               <span style="color:#888;white-space:nowrap;font-size:.78rem">${r2_formatarBytes(f.tamanho)}</span>
               <span style="color:#999;white-space:nowrap;font-size:.78rem">${f.usuario||'—'}</span>
               <span style="color:#aaa;white-space:nowrap;font-size:.75rem">${dt}</span>
+              <button class="r2-acao-icone" style="background:#f0fdf4;color:#166534" onclick="r2_visualizarArquivo('${ek}','${nomeLimpo.replace(/'/g,"&#39;")}')" title="Visualizar">👁️</button>
               <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78" onclick="r2_baixarArquivo('${ek}','${nomeLimpo.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
               ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828" onclick="r2_confirmarDelete('${ek}','${nomeLimpo.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
             </div>`;
@@ -12603,6 +12627,7 @@ function r2_renderizarProcesso(arquivos) {
             <span style="color:#888;font-size:.78rem">${r2_formatarBytes(f.tamanho)}</span>
             <span style="color:#999;font-size:.78rem">${f.usuario||'—'}</span>
             <span style="color:#aaa;font-size:.75rem">${dt}</span>
+            <button class="r2-acao-icone" style="background:#f0fdf4;color:#166534" onclick="r2_visualizarArquivo('${ek}','${nomeShow.replace(/'/g,"&#39;")}')" title="Visualizar">👁️</button>
             <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78" onclick="r2_baixarArquivo('${ek}','${nomeShow.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
             ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828" onclick="r2_confirmarDelete('${ek}','${nomeShow.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
           </div>`;
@@ -12661,7 +12686,9 @@ function r2_linhaArquivo(f, nivelAdmin) {
     <td style="padding:9px 8px;color:#555;white-space:nowrap">${f.usuario || '—'}</td>
     <td style="padding:9px 8px;color:#777;white-space:nowrap;font-size:.81rem">${data_env}</td>
     <td style="padding:9px 8px;text-align:center;white-space:nowrap">
-      <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78"
+      <button class="r2-acao-icone" style="background:#f0fdf4;color:#166534"
+              onclick="r2_visualizarArquivo('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Visualizar">👁️</button>
+      <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78;margin-left:4px"
               onclick="r2_baixarArquivo('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
       ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828;margin-left:4px"
             onclick="r2_confirmarDelete('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
@@ -12732,6 +12759,89 @@ async function r2_baixarArquivo(key, nome) {
     _mostrarToast(`⚠️ Erro ao baixar: ${e.message}`, 'erro');
   }
 }
+
+/* ── Visualizador de arquivo ──────────────────────────────────── */
+let _r2ViewerState = { key: '', nome: '', blobUrl: '' };
+
+async function r2_visualizarArquivo(key, nome) {
+  const modal  = document.getElementById('r2-modal-viewer');
+  const corpo  = document.getElementById('r2-viewer-corpo');
+  const nomeEl = document.getElementById('r2-viewer-nome');
+  const iconeEl= document.getElementById('r2-viewer-icone');
+
+  // Mostrar modal com loading
+  modal.style.display = 'flex';
+  nomeEl.textContent  = nome;
+  iconeEl.textContent = r2_iconeArquivo(nome);
+  corpo.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ccc;font-size:1rem;flex-direction:column;gap:12px">
+    <div style="font-size:2rem">⏳</div><div>Carregando arquivo…</div></div>`;
+
+  // Salvar estado para o botão Baixar
+  _r2ViewerState = { key, nome, blobUrl: '' };
+
+  try {
+    const res  = await r2_api('GET', `/download?key=${encodeURIComponent(key)}`);
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    _r2ViewerState.blobUrl = url;
+
+    const ext = nome.split('.').pop().toLowerCase();
+
+    if (['pdf'].includes(ext)) {
+      corpo.innerHTML = `<iframe src="${url}" style="width:100%;height:100%;border:none"></iframe>`;
+    } else if (['png','jpg','jpeg','gif','bmp','webp','svg'].includes(ext)) {
+      corpo.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;padding:20px">
+        <img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.4)">
+      </div>`;
+    } else if (['mp4','webm','ogg'].includes(ext)) {
+      corpo.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;padding:20px">
+        <video src="${url}" controls style="max-width:100%;max-height:100%;border-radius:6px"></video>
+      </div>`;
+    } else if (['mp3','wav','ogg','m4a'].includes(ext)) {
+      corpo.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:16px">
+        <div style="font-size:3rem">🎵</div>
+        <audio src="${url}" controls style="width:340px"></audio>
+      </div>`;
+    } else if (['txt','csv','log','xml','json','md'].includes(ext)) {
+      const text = await blob.text();
+      corpo.innerHTML = `<div style="height:100%;overflow:auto;padding:20px">
+        <pre style="font-family:monospace;font-size:.85rem;color:#e0e0e0;white-space:pre-wrap;word-break:break-word;margin:0">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+      </div>`;
+    } else {
+      // Formato não suportado para visualização
+      corpo.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#ccc;gap:14px">
+        <div style="font-size:3rem">${r2_iconeArquivo(nome)}</div>
+        <div style="font-size:1rem;font-weight:600">${nome}</div>
+        <div style="font-size:.9rem;color:#aaa">Visualização não disponível para este formato</div>
+        <button onclick="r2_viewer_download()" style="background:#1F4E78;color:#fff;border:none;border-radius:7px;padding:10px 24px;font-size:.95rem;font-weight:600;cursor:pointer;margin-top:8px">⬇️ Baixar arquivo</button>
+      </div>`;
+    }
+  } catch(e) {
+    corpo.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#f87171;flex-direction:column;gap:10px">
+      <div style="font-size:2rem">❌</div><div>${e.message}</div></div>`;
+  }
+}
+
+function r2_viewer_download() {
+  const { blobUrl, nome } = _r2ViewerState;
+  if (!blobUrl) return;
+  const a = document.createElement('a');
+  a.href = blobUrl; a.download = nome; a.click();
+}
+
+function r2_fecharViewer() {
+  const modal = document.getElementById('r2-modal-viewer');
+  modal.style.display = 'none';
+  if (_r2ViewerState.blobUrl) URL.revokeObjectURL(_r2ViewerState.blobUrl);
+  _r2ViewerState = { key: '', nome: '', blobUrl: '' };
+  document.getElementById('r2-viewer-corpo').innerHTML = '';
+}
+
+// Fechar ao clicar fora
+document.addEventListener('click', e => {
+  const modal = document.getElementById('r2-modal-viewer');
+  if (modal && modal.style.display === 'flex' && e.target === modal) r2_fecharViewer();
+});
 
 /* ── Deletar ──────────────────────────────────────────────────── */
 function r2_confirmarDelete(key, nome) {
