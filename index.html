@@ -11279,23 +11279,23 @@ function baixarModeloPDF() {
     }
     if (l.startsWith('\u2022 '))  { bodyHtml += `<p class="bullet">${le}</p>\n`; continue; }
     if (l.startsWith('\u2610'))   { bodyHtml += `<p class="check">${le}</p>\n`;  continue; }
-    if (/^_{8,}/.test(l)) {
-      if (!_inAss) { bodyHtml += `<div class="ass-bloco">\n`; _inAss = true; }
-      const assImg = usuarioAtual?.assinatura;
-      if (assImg) {
-        bodyHtml += `<img src="${assImg}" class="ass-img">\n`;
-      } else {
-        bodyHtml += `<div class="ass-linha">________________________________</div>\n`;
+    if (/^_{8,}/.test(l)) { continue; } // underscores do textarea: ignorar, a imagem j\u00e1 \u00e9 injetada abaixo
+
+    const _ehLinhAss = /^(Servidor respons\u00e1vel|Respons\u00e1vel pelo registro|Policial Penal$|Plant\u00e3o:|Assinatura d)/.test(l);
+    if (_ehLinhAss) {
+      if (!_inAss) {
+        _inAss = true;
+        const assImg = usuarioAtual?.assinatura;
+        bodyHtml += `<div class="ass-bloco">\n`;
+        if (assImg) {
+          bodyHtml += `<img src="${assImg}" class="ass-img">\n`;
+        } else {
+          bodyHtml += `<div class="ass-linha">________________________________</div>\n`;
+        }
       }
+      const isItalic = /^Assinatura d/.test(l);
+      bodyHtml += `<p class="${isItalic ? 'ass-meta-italic' : 'ass-meta'}">${le}</p>\n`;
       continue;
-    }
-    if (/^(Servidor respons\u00e1vel|Respons\u00e1vel pelo registro|Policial Penal$|Plant\u00e3o:)/.test(l)) {
-      if (!_inAss) { bodyHtml += `<div class="ass-bloco">\n`; _inAss = true; }
-      bodyHtml += `<p class="ass-meta">${le}</p>\n`; continue;
-    }
-    if (/^Assinatura d/.test(l)) {
-      if (!_inAss) { bodyHtml += `<div class="ass-bloco">\n`; _inAss = true; }
-      bodyHtml += `<p class="ass-meta-italic">${le}</p>\n`; continue;
     }
     bodyHtml += `<p class="corpo">${le}</p>\n`;
   }
@@ -11335,10 +11335,11 @@ function baixarModeloPDF() {
   .bullet            { margin: 3px 0; font-weight: bold; }
   .check             { margin: 3px 0; }
   .spacer            { height: 9px; }
-  .ass-bloco         { margin-top: 48px; text-align: center; display: flex; flex-direction: column; align-items: center; }
-  .ass-img           { max-height: 72px; max-width: 220px; object-fit: contain; display: block; margin-bottom: 2px; }
-  .ass-linha         { font-family: 'Courier New', monospace; letter-spacing: 2px; margin: 2px 0 4px 0; color: #000; }
-  .ass-meta          { margin: 1px 0; font-weight: bold; font-size: 10.5pt; text-align: center; }
+  .ass-bloco         { margin-top: 56px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+  .ass-img           { max-height: 80px; max-width: 260px; width: auto; height: auto; object-fit: contain; display: block; margin-bottom: 0px; }
+  .ass-linha         { font-family: 'Courier New', monospace; letter-spacing: 2px; margin: 0 0 6px 0; color: #000; }
+  .ass-meta          { margin: 14px 0 1px 0; font-weight: bold; font-size: 10.5pt; text-align: center; }
+  .ass-meta          + .ass-meta { margin-top: 1px; }
   .ass-meta-italic   { margin: 1px 0; font-style: italic; font-size: 10pt; text-align: center; }
   .data-extenso { margin-top: 36px; text-align: right; font-size: 10pt; }
   .rodape { margin-top: 36px; border-top: 1px solid #000; padding-top: 8px;
@@ -12646,7 +12647,7 @@ function r2_renderizarProcesso(arquivos) {
           <!-- Arquivos desta categoria -->
           ${arqs.length ? arqs.map(f => {
             const ek = f.key.replace(/"/g,'&quot;');
-            const nomeLimpo = (f.nomeDecoded || f.nome).replace(/^\[.+?\]\s*/, '');
+            const nomeLimpo = f.nomeDisplay || f.nome;
             const dt = f.enviado ? new Date(f.enviado).toLocaleString('pt-BR') : '—';
             return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid #f0f0f0;font-size:.85rem">
               <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${nomeLimpo}">${r2_iconeArquivo(nomeLimpo)} ${nomeLimpo}</span>
@@ -12671,7 +12672,7 @@ function r2_renderizarProcesso(arquivos) {
         <div style="padding:10px 14px;background:#f8f9fa;font-weight:600;font-size:.9rem">📎 Outros documentos</div>
         ${outros.map(f => {
           const ek = f.key.replace(/"/g,'&quot;');
-          const nomeShow = (f.nomeDecoded || f.nome);
+          const nomeShow = f.nomeDisplay || f.nome;
           const dt = f.enviado ? new Date(f.enviado).toLocaleString('pt-BR') : '—';
           return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid #f0f0f0;font-size:.85rem">
             <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r2_iconeArquivo(nomeShow)} ${nomeShow}</span>
@@ -12702,13 +12703,15 @@ async function r2_enviarComCategoria(input, categoria) {
     const file = files[i];
     bar.style.width = Math.round((i / files.length) * 100) + '%';
     txt.textContent = `Enviando (${i+1}/${files.length}): ${file.name}`;
-    // Prefixar o nome com a categoria para agrupamento
-    const nomeComCat = `[${categoria}] ${file.name}`;
+    // Prefixar o nome com a categoria (ASCII id sem codificar os colchetes)
+    // Formato: [catId] filename — colchetes ficam como ASCII para sobreviver
+    // ao sanitizarNome do worker como _catId_ (Strategy B em getCategoria)
+    const nomeComCat = `[${categoria}] ${encodeURIComponent(file.name)}`;
     try {
       await r2_api('POST', '/upload', {
         'X-Monitorado': r2_state.monitorado,
         'X-Pasta':      r2_state.pasta,
-        'X-Filename':   encodeURIComponent(nomeComCat),
+        'X-Filename':   nomeComCat,
         'Content-Type': file.type || 'application/octet-stream',
       }, file);
     } catch(e) {
