@@ -11225,15 +11225,17 @@ function copiarModelo() {
 }
 
 function baixarModeloPDF() {
-  const assunto = document.getElementById('mod-assunto')?.value;
+  const assunto    = document.getElementById('mod-assunto')?.value;
   if (!assunto) { _mostrarToast('⚠️ Selecione um assunto primeiro.', 'erro'); return; }
   const ta = document.getElementById('mod-texto');
   if (!ta || !ta.value.trim()) { _mostrarToast('⚠️ Gere o texto antes de imprimir.', 'erro'); return; }
 
-  const servidor = document.getElementById('mod-servidor')?.value?.trim() || '';
-  const plantao  = document.getElementById('mod-plantao')?.value || '';
-  const dataRaw  = document.getElementById('mod-data')?.value || '';
-  const dataFmt  = dataRaw ? dataRaw.replace('T',' ').slice(0,16) : _agora_fmt();
+  const monitorado = document.getElementById('mod-monitorado')?.value?.trim() || '';
+  const servidor   = document.getElementById('mod-servidor')?.value?.trim() || '';
+  const cargo      = usuarioAtual?.cargo || 'Policial Penal';
+  const plantao    = document.getElementById('mod-plantao')?.value || '';
+  const dataRaw    = document.getElementById('mod-data')?.value || '';
+  const dataFmt    = dataRaw ? dataRaw.replace('T',' ').slice(0,16) : _agora_fmt();
 
   const cmeSrc   = window._CME_LOGO_B64   ? 'data:image/png;base64,' + window._CME_LOGO_B64   : '';
   const iapenSrc = window._IAPEN_LOGO_B64 ? 'data:image/png;base64,' + window._IAPEN_LOGO_B64 : '';
@@ -11268,22 +11270,36 @@ function baixarModeloPDF() {
 
   // Corpo HTML
   let bodyHtml = '';
+  let _inAss = false;
   for (const l of corpoLinhas) {
     const le = esc(l);
-    if (!l.trim())              { bodyHtml += '<div class="spacer"></div>\n'; continue; }
+    if (!l.trim()) {
+      if (_inAss) continue; // n\u00e3o adiciona espa\u00e7os dentro do bloco de assinatura
+      bodyHtml += '<div class="spacer"></div>\n'; continue;
+    }
     if (l.startsWith('\u2022 '))  { bodyHtml += `<p class="bullet">${le}</p>\n`; continue; }
     if (l.startsWith('\u2610'))   { bodyHtml += `<p class="check">${le}</p>\n`;  continue; }
     if (/^_{8,}/.test(l)) {
+      if (!_inAss) { bodyHtml += `<div class="ass-bloco">\n`; _inAss = true; }
       const assImg = usuarioAtual?.assinatura;
-      if (assImg) bodyHtml += `<div class="ass-img-wrap"><img src="${assImg}" class="ass-img"></div>\n`;
-      bodyHtml += `<p class="linha-ass">${le}</p>\n`; continue;
+      if (assImg) {
+        bodyHtml += `<img src="${assImg}" class="ass-img">\n`;
+      } else {
+        bodyHtml += `<div class="ass-linha">________________________________</div>\n`;
+      }
+      continue;
     }
     if (/^(Servidor respons\u00e1vel|Respons\u00e1vel pelo registro|Policial Penal$|Plant\u00e3o:)/.test(l)) {
+      if (!_inAss) { bodyHtml += `<div class="ass-bloco">\n`; _inAss = true; }
       bodyHtml += `<p class="ass-meta">${le}</p>\n`; continue;
     }
-    if (/^Assinatura d/.test(l)) { bodyHtml += `<p class="ass-meta-italic">${le}</p>\n`; continue; }
+    if (/^Assinatura d/.test(l)) {
+      if (!_inAss) { bodyHtml += `<div class="ass-bloco">\n`; _inAss = true; }
+      bodyHtml += `<p class="ass-meta-italic">${le}</p>\n`; continue;
+    }
     bodyHtml += `<p class="corpo">${le}</p>\n`;
   }
+  if (_inAss) bodyHtml += `</div>\n`; // fecha .ass-bloco
 
   const meses = ['janeiro','fevereiro','mar\u00e7o','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   const agora = new Date();
@@ -11293,7 +11309,7 @@ function baixarModeloPDF() {
   const docHtml = `<!DOCTYPE html>
 <html lang="pt-BR"><head>
 <meta charset="UTF-8">
-<title>CME \u2013 ${esc(assunto)}</title>
+<title>CME \u2013 ${esc(assunto)}${monitorado ? ' \u2013 ' + esc(monitorado.toUpperCase()) : ''}</title>
 <style>
   @page { margin: 2cm 2cm 2.8cm 2cm; size: A4 portrait; }
   *, *::before, *::after { box-sizing: border-box; }
@@ -11319,12 +11335,12 @@ function baixarModeloPDF() {
   .bullet            { margin: 3px 0; font-weight: bold; }
   .check             { margin: 3px 0; }
   .spacer            { height: 9px; }
-  .ass-meta          { margin: 2px 0; font-weight: bold; font-size: 10pt; }
-  .ass-meta-italic   { margin: 2px 0; font-style: italic; font-size: 10pt; }
-  .linha-ass         { font-family: 'Courier New', monospace; letter-spacing: -1px; margin: 4px 0 2px 0; }
-  .ass-img-wrap      { margin-top: 24px; }
-  .ass-img           { max-height: 70px; max-width: 220px; object-fit: contain; display: block; }
-  .data-extenso { margin-top: 30px; text-align: right; font-size: 10pt; }
+  .ass-bloco         { margin-top: 48px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+  .ass-img           { max-height: 72px; max-width: 220px; object-fit: contain; display: block; margin-bottom: 2px; }
+  .ass-linha         { font-family: 'Courier New', monospace; letter-spacing: 2px; margin: 2px 0 4px 0; color: #000; }
+  .ass-meta          { margin: 1px 0; font-weight: bold; font-size: 10.5pt; text-align: center; }
+  .ass-meta-italic   { margin: 1px 0; font-style: italic; font-size: 10pt; text-align: center; }
+  .data-extenso { margin-top: 36px; text-align: right; font-size: 10pt; }
   .rodape { margin-top: 36px; border-top: 1px solid #000; padding-top: 8px;
             text-align: center; font-size: 8pt; color: #444; }
   .rodape p { margin: 2px 0; }
@@ -12554,22 +12570,57 @@ function r2_renderizarProcesso(arquivos) {
   const tbody    = document.getElementById('r2-tabela-body');
   const nivelAdmin = usuarioAtual?.nivel === 'admin';
 
-  // Decodificar nomes (worker pode guardar o valor ainda URL-encoded)
-  function decodificarNome(s) {
-    try { return decodeURIComponent(s); } catch(e) { return s; }
+  // R2 list() não retorna customMetadata — o nome vem do segmento final da key:
+  // formato: {timestamp}_{sanitizarNome("[catId] filename")}
+  // onde sanitizarNome substitui [ ] por _ e % por _
+  // Resultado: {ts}__catId_ filename  ou  {ts}__5BcatId_5D_20filename
+  //
+  // Estratégia de detecção (por ordem de confiança):
+  //   A) customMetadata retornou e nome começa com [catId]
+  //   B) key segment: remove timestamp, checa _catId_ no início
+  //   C) key segment com encoding antigo: checa _5BcatId_5D
+  function getCategoria(nome) {
+    // Estratégia A: nome tem [catId] (customMetadata funcionou)
+    let m = nome.match(/^\[([a-z-]+)\]/);
+    if (m) {
+      const cat = R2_PROCESSO_CATEGORIAS.find(c => c.id === m[1]);
+      if (cat) return cat.nome;
+    }
+    // Estratégia B: key segment — remove timestamp e checa _catId_
+    const semTs = nome.replace(/^\d+_/, '');
+    m = semTs.match(/^_([a-z-]+)_/);
+    if (m) {
+      const cat = R2_PROCESSO_CATEGORIAS.find(c => c.id === m[1]);
+      if (cat) return cat.nome;
+    }
+    // Estratégia C: key segment com encoding antigo _5BcatId_5D
+    m = semTs.match(/^_5[Bb]([a-z-]+)_5[Dd]/);
+    if (m) {
+      const cat = R2_PROCESSO_CATEGORIAS.find(c => c.id === m[1]);
+      if (cat) return cat.nome;
+    }
+    return '__outros__';
   }
 
-  // Agrupar arquivos por categoria (prefixo [categoria] no nome)
-  function getCategoria(nome) {
-    const decoded = decodificarNome(nome);
-    const m = decoded.match(/^\[(.+?)\]\s*/);
-    return m ? m[1] : '__outros__';
+  // Nome limpo para exibição: remove timestamp e prefixo de categoria
+  function nomeLimpoDisplay(nome) {
+    // Remove timestamp + underscore do início
+    let s = nome.replace(/^\d+_/, '');
+    // Remove prefixo _catId_ ou _5BcatId_5D (com ou sem espaço depois)
+    s = s.replace(/^_[a-z-]+_\s*/, '');
+    s = s.replace(/^_5[Bb][a-z-]+_5[Dd]_20/, '');
+    // Remove prefixo [catId] se vier do customMetadata
+    s = s.replace(/^\[[a-z-]+\]\s*/, '');
+    // Converte _20 → espaço e outros _XX → char (encoding residual)
+    s = s.replace(/_([0-9A-Fa-f]{2})/g, (_, h) => { try { return decodeURIComponent('%'+h); } catch(e) { return '_'; } });
+    return s || nome;
   }
+
   const porCategoria = {};
   arquivos.forEach(f => {
     const cat = getCategoria(f.nome);
     if (!porCategoria[cat]) porCategoria[cat] = [];
-    porCategoria[cat].push({ ...f, nomeDecoded: decodificarNome(f.nome) });
+    porCategoria[cat].push({ ...f, nomeDisplay: nomeLimpoDisplay(f.nome) });
   });
 
   // Renderizar cada categoria predefinida
@@ -12589,7 +12640,7 @@ function r2_renderizarProcesso(arquivos) {
             </div>
             <label style="cursor:pointer;background:#1F4E78;color:#fff;padding:5px 12px;border-radius:5px;font-size:.82rem;white-space:nowrap;display:flex;align-items:center;gap:5px">
               📎 Anexar
-              <input type="file" id="${inputId}" style="display:none" onchange="r2_enviarComCategoria(this,'${cat.nome.replace(/'/g,"&#39;")}')">
+              <input type="file" id="${inputId}" style="display:none" onchange="r2_enviarComCategoria(this,'${cat.id}')">
             </label>
           </div>
           <!-- Arquivos desta categoria -->
