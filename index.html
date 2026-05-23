@@ -12239,14 +12239,31 @@ let _r2ImportData = null; // guarda os dados analisados entre etapas
 
 // Classifica a pasta com base no NOME DO ARQUIVO (remove acentos para comparar)
 function r2_mapearPastaPorNome(nomeArquivo) {
+  const { pasta } = r2_mapearCategoria(nomeArquivo);
+  return pasta;
+}
+
+// Retorna { pasta, catId } para uso no importador ZIP
+function r2_mapearCategoria(nomeArquivo) {
   const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   const n = norm(nomeArquivo || '');
 
-  if (n.includes('vinculac') || n.includes('vincul'))   return 'Processo';
-  if (n.includes('desvinculac') || n.includes('desvinc')) return 'Processo';
-  if (n.includes('justificativ'))                        return 'Justificativa';
+  const temDecisao    = n.includes('decisao') || n.includes('decision');
+  const temTermo      = n.includes('termo') || n.includes('term');
+  const temVinc       = n.includes('vinculac') || n.includes('vincul');
+  const temDesvinc    = n.includes('desvinculac') || n.includes('desvinc');
 
-  return 'Docs do monitorado'; // tudo que não identificar vai aqui
+  if (temDesvinc) {
+    const catId = temDecisao ? 'decisao-desvinculacao' : 'termo-desvinculacao';
+    return { pasta: 'Processo', catId };
+  }
+  if (temVinc) {
+    const catId = temDecisao ? 'decisao-vinculacao' : 'termo-vinculacao';
+    return { pasta: 'Processo', catId };
+  }
+  if (n.includes('justificativ')) return { pasta: 'Justificativa', catId: null };
+
+  return { pasta: 'Docs do monitorado', catId: null };
 }
 
 async function r2_importarZip(input) {
@@ -12291,10 +12308,10 @@ async function r2_importarZip(input) {
       if (!nomeArquivo || nomeArquivo === '.keep') return;
 
       // Classificar pela PALAVRA-CHAVE NO NOME DO ARQUIVO
-      const pasta = r2_mapearPastaPorNome(nomeArquivo);
+      const { pasta, catId } = r2_mapearCategoria(nomeArquivo);
 
       if (!mapa[nomeMonitorado]) mapa[nomeMonitorado] = [];
-      mapa[nomeMonitorado].push({ pasta, nomeArquivo, entry });
+      mapa[nomeMonitorado].push({ pasta, catId, nomeArquivo, entry });
     });
 
     const monitorados = Object.keys(mapa).sort();
@@ -12313,7 +12330,12 @@ async function r2_importarZip(input) {
     monitorados.forEach(m => {
       const arqs = mapa[m];
       const porPasta = {};
-      arqs.forEach(a => { porPasta[a.pasta] = (porPasta[a.pasta] || 0) + 1; });
+      arqs.forEach(a => {
+        const chave = a.catId
+          ? R2_PROCESSO_CATEGORIAS.find(c => c.id === a.catId)?.nome || a.catId
+          : a.pasta;
+        porPasta[chave] = (porPasta[chave] || 0) + 1;
+      });
       const resumoPasta = Object.entries(porPasta).map(([p,n]) => `${p}: ${n}`).join(' · ');
       html += `<div style="padding:4px 0;border-bottom:1px solid #e2e8f0">
         <strong>${m}</strong> &mdash; ${arqs.length} arquivo(s) &mdash; <span style="color:#64748b;font-size:.82rem">${resumoPasta}</span>
@@ -12359,7 +12381,7 @@ async function r2_confirmarImportacao() {
     addLog(`📁 <b>${nome}</b> — ${arqs.length} arquivo(s)`);
 
     for (let ai = 0; ai < arqs.length; ai++) {
-      const { pasta, nomeArquivo, entry } = arqs[ai];
+      const { pasta, catId, nomeArquivo, entry } = arqs[ai];
       subEl.textContent = `Enviando: ${nomeArquivo} → ${pasta}`;
 
       totalFeito++;
@@ -12368,14 +12390,19 @@ async function r2_confirmarImportacao() {
       try {
         const blob = await entry.async('blob');
         const tipo = blob.type || _r2GuessMime(nomeArquivo);
+        // Se for Processo com categoria, prefixar com [catId] para agrupamento correto
+        const xFilename = catId
+          ? `[${catId}] ${encodeURIComponent(nomeArquivo)}`
+          : encodeURIComponent(nomeArquivo);
         await r2_api('POST', '/upload', {
           'X-Monitorado': nome,
           'X-Pasta':      pasta,
-          'X-Filename':   encodeURIComponent(nomeArquivo),
+          'X-Filename':   xFilename,
           'Content-Type': tipo,
         }, blob);
         enviados++;
-        addLog(`&nbsp;&nbsp;✅ ${pasta}/${nomeArquivo}`);
+        const catLabel = catId ? ` (${catId})` : '';
+        addLog(`&nbsp;&nbsp;✅ ${pasta}${catLabel}/${nomeArquivo}`);
       } catch(e) {
         erros++;
         addLog(`&nbsp;&nbsp;❌ ${nomeArquivo}: ${e.message}`);
