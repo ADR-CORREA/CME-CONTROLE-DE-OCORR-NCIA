@@ -12188,14 +12188,16 @@ function r2_filtrarMonitorados(q) {
 
 let _r2ImportData = null; // guarda os dados analisados entre etapas
 
-function r2_mapearPasta(segmento) {
-  const s = (segmento || '').toLowerCase().trim();
-  if (s.includes('processo'))     return 'Processo';
-  if (s.includes('justificativa'))return 'Justificativa';
-  if (s.includes('juridico') || s.includes('jurídico')) return 'Processo';
-  if (s.includes('docs') || s.includes('documento') || s.includes('pessoal')) return 'Docs do monitorado';
-  if (s.includes('outros') || s.includes('other'))     return 'Outros documentos';
-  return 'Docs do monitorado'; // padrão para arquivos na raiz do monitorado
+// Classifica a pasta com base no NOME DO ARQUIVO (remove acentos para comparar)
+function r2_mapearPastaPorNome(nomeArquivo) {
+  const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const n = norm(nomeArquivo || '');
+
+  if (n.includes('vinculac') || n.includes('vincul'))   return 'Processo';
+  if (n.includes('desvinculac') || n.includes('desvinc')) return 'Processo';
+  if (n.includes('justificativ'))                        return 'Justificativa';
+
+  return 'Docs do monitorado'; // tudo que não identificar vai aqui
 }
 
 async function r2_importarZip(input) {
@@ -12228,25 +12230,19 @@ async function r2_importarZip(input) {
     zip.forEach((caminho, entry) => {
       if (entry.dir) return;
 
-      // Ignorar lixo do macOS e arquivos na raiz
+      // Ignorar lixo do macOS e arquivos ocultos
       const partes = caminho.split('/').filter(p => p && p !== '__MACOSX' && !p.startsWith('.'));
-      if (partes.length < 2) return; // arquivo na raiz do ZIP, sem monitorado
+      if (partes.length < 2) return; // arquivo na raiz do ZIP, sem pasta de monitorado
       if (partes.some(p => p.startsWith('.'))) return; // .DS_Store etc.
 
+      // Primeiro segmento = nome do monitorado (independente de subpastas)
       const nomeMonitorado = partes[0].trim().toUpperCase();
-      let pasta, nomeArquivo;
-
-      if (partes.length === 2) {
-        // NomeMonitorado/arquivo.pdf → pasta padrão
-        pasta        = 'Docs do monitorado';
-        nomeArquivo  = partes[1];
-      } else {
-        // NomeMonitorado/Subpasta/arquivo.pdf → mapear subpasta
-        pasta        = r2_mapearPasta(partes[1]);
-        nomeArquivo  = partes[partes.length - 1];
-      }
+      const nomeArquivo    = partes[partes.length - 1]; // sempre o último segmento
 
       if (!nomeArquivo || nomeArquivo === '.keep') return;
+
+      // Classificar pela PALAVRA-CHAVE NO NOME DO ARQUIVO
+      const pasta = r2_mapearPastaPorNome(nomeArquivo);
 
       if (!mapa[nomeMonitorado]) mapa[nomeMonitorado] = [];
       mapa[nomeMonitorado].push({ pasta, nomeArquivo, entry });
