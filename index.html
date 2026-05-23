@@ -11268,6 +11268,9 @@ function baixarModeloPDF() {
     metaHtml += `<div class="meta-linha">${esc(l)}</div>`;
   });
 
+  // Capturar assinatura ANTES do loop (garante acesso correto ao objeto)
+  const assImgCapturada = usuarioAtual?.assinatura || null;
+
   // Corpo HTML
   let bodyHtml = '';
   let _inAss = false;
@@ -11281,20 +11284,24 @@ function baixarModeloPDF() {
     if (l.startsWith('\u2610'))   { bodyHtml += `<p class="check">${le}</p>\n`;  continue; }
     if (/^_{8,}/.test(l)) { continue; } // underscores do textarea: ignorar, a imagem j\u00e1 \u00e9 injetada abaixo
 
-    const _ehLinhAss = /^(Servidor respons\u00e1vel|Respons\u00e1vel pelo registro|Policial Penal$|Plant\u00e3o:|Assinatura d)/.test(l);
+    const _ehLinhAss = /^(Servidor respons\u00e1vel|Respons\u00e1vel pelo registro|Policial Penal|Plant\u00e3o:|Assinatura d)/.test(l);
     if (_ehLinhAss) {
       if (!_inAss) {
         _inAss = true;
-        const assImg = usuarioAtual?.assinatura;
         bodyHtml += `<div class="ass-bloco">\n`;
-        if (assImg) {
-          bodyHtml += `<img src="${assImg}" class="ass-img">\n`;
+        if (assImgCapturada) {
+          bodyHtml += `<img src="${assImgCapturada}" class="ass-img">\n`;
         } else {
           bodyHtml += `<div class="ass-linha">________________________________</div>\n`;
         }
       }
+      // Remover o prefixo "Servidor respons\u00e1vel...: " \u2014 mostrar s\u00f3 o nome
+      let linhaMostrar = le;
+      if (/^Servidor respons\u00e1v|^Respons\u00e1vel pelo registro/.test(l)) {
+        linhaMostrar = le.replace(/^[^:]+:\s*/, '');
+      }
       const isItalic = /^Assinatura d/.test(l);
-      bodyHtml += `<p class="${isItalic ? 'ass-meta-italic' : 'ass-meta'}">${le}</p>\n`;
+      bodyHtml += `<p class="${isItalic ? 'ass-meta-italic' : 'ass-meta'}">${linhaMostrar}</p>\n`;
       continue;
     }
     bodyHtml += `<p class="corpo">${le}</p>\n`;
@@ -11397,10 +11404,12 @@ ${bodyHtml}
 <script>window.onload=function(){setTimeout(function(){window.print();},650);};<\/script>
 </body></html>`;
 
-  const win = window.open('', '_blank');
+  // Usar Blob URL em vez de document.write — garante que imagens base64 renderizem
+  const blob = new Blob([docHtml], { type: 'text/html;charset=utf-8' });
+  const blobUrl = URL.createObjectURL(blob);
+  const win = window.open(blobUrl, '_blank');
   if (!win) { _mostrarToast('⚠️ Popup bloqueado! Permita popups para este site.', 'erro'); return; }
-  win.document.write(docHtml);
-  win.document.close();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
   _mostrarToast('🖨️ Documento aberto! Escolha "Salvar como PDF" na impressora.', 'sucesso');
 }
 
