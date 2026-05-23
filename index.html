@@ -12531,16 +12531,22 @@ function r2_renderizarProcesso(arquivos) {
   const tbody    = document.getElementById('r2-tabela-body');
   const nivelAdmin = usuarioAtual?.nivel === 'admin';
 
+  // Decodificar nomes (worker pode guardar o valor ainda URL-encoded)
+  function decodificarNome(s) {
+    try { return decodeURIComponent(s); } catch(e) { return s; }
+  }
+
   // Agrupar arquivos por categoria (prefixo [categoria] no nome)
   function getCategoria(nome) {
-    const m = nome.match(/^\[(.+?)\]\s*/);
+    const decoded = decodificarNome(nome);
+    const m = decoded.match(/^\[(.+?)\]\s*/);
     return m ? m[1] : '__outros__';
   }
   const porCategoria = {};
   arquivos.forEach(f => {
     const cat = getCategoria(f.nome);
     if (!porCategoria[cat]) porCategoria[cat] = [];
-    porCategoria[cat].push(f);
+    porCategoria[cat].push({ ...f, nomeDecoded: decodificarNome(f.nome) });
   });
 
   // Renderizar cada categoria predefinida
@@ -12566,7 +12572,7 @@ function r2_renderizarProcesso(arquivos) {
           <!-- Arquivos desta categoria -->
           ${arqs.length ? arqs.map(f => {
             const ek = f.key.replace(/"/g,'&quot;');
-            const nomeLimpo = f.nome.replace(/^\[.+?\]\s*/, '');
+            const nomeLimpo = (f.nomeDecoded || f.nome).replace(/^\[.+?\]\s*/, '');
             const dt = f.enviado ? new Date(f.enviado).toLocaleString('pt-BR') : '—';
             return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid #f0f0f0;font-size:.85rem">
               <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${nomeLimpo}">${r2_iconeArquivo(nomeLimpo)} ${nomeLimpo}</span>
@@ -12590,14 +12596,15 @@ function r2_renderizarProcesso(arquivos) {
         <div style="padding:10px 14px;background:#f8f9fa;font-weight:600;font-size:.9rem">📎 Outros documentos</div>
         ${outros.map(f => {
           const ek = f.key.replace(/"/g,'&quot;');
+          const nomeShow = (f.nomeDecoded || f.nome);
           const dt = f.enviado ? new Date(f.enviado).toLocaleString('pt-BR') : '—';
           return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid #f0f0f0;font-size:.85rem">
-            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r2_iconeArquivo(f.nome)} ${f.nome}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r2_iconeArquivo(nomeShow)} ${nomeShow}</span>
             <span style="color:#888;font-size:.78rem">${r2_formatarBytes(f.tamanho)}</span>
             <span style="color:#999;font-size:.78rem">${f.usuario||'—'}</span>
             <span style="color:#aaa;font-size:.75rem">${dt}</span>
-            <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78" onclick="r2_baixarArquivo('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
-            ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828" onclick="r2_confirmarDelete('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
+            <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78" onclick="r2_baixarArquivo('${ek}','${nomeShow.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
+            ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828" onclick="r2_confirmarDelete('${ek}','${nomeShow.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
           </div>`;
         }).join('')}
       </div>
