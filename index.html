@@ -11891,11 +11891,14 @@ function imprimirModeloMulti() {
 
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+  const assImgCapturada = usuarioAtual?.assinatura || null;
+
   // ── Parser do textarea ────────────────────────────────────────────────────
   const linhas = ta.value.split('\n');
   let bodyHtml  = '';
   let skipInst  = true; // pula o bloco institucional embutido nos Termos
   let instCount = 0;
+  let _inAss    = false;
 
   const IS_TITULO = /^(RELATÓRIO SOCIAL|MPU —|OFÍCIO N[°º])/;
   const IS_CAMPO  = /^(Processo n[°º]|Classe:|Órgão Julgador:|Assunto:|Vítima:|Réu:|Requerente|Requerido|Nome da vítima:|Nome:|NOME:|Ação:|AÇÃO:|Agressor:|AGRESSOR:|NÚMERO DE PROCESSO:|CPF:|Vítima na condição)/;
@@ -11929,13 +11932,25 @@ function imprimirModeloMulti() {
     if (l === 'É o relatório.') { bodyHtml += `<p class="e-relatorio">${le}</p>\n`; continue; }
     if (IS_CAMPO.test(l))       { bodyHtml += `<p class="campo-id">${le}</p>\n`; continue; }
     if (IS_LINHA.test(l)) {
-      // Inserir imagem de assinatura antes da linha, se disponível
-      const assImg = usuarioAtual?.assinatura;
-      if (assImg) bodyHtml += `<div class="ass-img-wrap"><img src="${assImg}" class="ass-img"></div>\n`;
-      bodyHtml += `<p class="linha-ass">${le}</p>\n`; continue;
+      if (!_inAss) {
+        _inAss = true;
+        bodyHtml += `<div class="ass-bloco">\n`;
+        if (assImgCapturada) {
+          bodyHtml += `<img src="${assImgCapturada}" class="ass-img">\n`;
+        } else {
+          bodyHtml += `<div class="ass-linha">________________________________</div>\n`;
+        }
+      }
+      continue; // não renderiza a linha de underscores
     }
-    if (IS_ASS_CARGO.test(l))   { bodyHtml += `<p class="ass-cargo">${le}</p>\n`; continue; }
-    if (IS_LOCAL_DATA.test(l))  { bodyHtml += `<p class="local-data">${le}</p>\n`; continue; }
+    if (_inAss || IS_ASS_CARGO.test(l)) {
+      if (!_inAss) { _inAss = true; bodyHtml += `<div class="ass-bloco">\n`; }
+      bodyHtml += `<p class="ass-cargo">${le}</p>\n`; continue;
+    }
+    if (IS_LOCAL_DATA.test(l))  {
+      if (_inAss) { bodyHtml += `</div>\n`; _inAss = false; } // fecha bloco antes da data
+      bodyHtml += `<p class="local-data">${le}</p>\n`; continue;
+    }
     if (/^(Ao Excelentíssimo|Juízo da |Assunto:|Ref\.:)/.test(l)) {
       bodyHtml += `<p class="campo-id">${le}</p>\n`; continue;
     }
@@ -11948,6 +11963,8 @@ function imprimirModeloMulti() {
     bodyHtml += `<p class="corpo">${le}</p>\n`;
   }
 
+  if (_inAss) { bodyHtml += `</div>\n`; } // garante fechamento do bloco
+
   const agora = new Date();
   const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   const dataHoraLog = agora.toLocaleString('pt-BR');
@@ -11955,7 +11972,7 @@ function imprimirModeloMulti() {
   const docHtml = `<!DOCTYPE html>
 <html lang="pt-BR"><head>
 <meta charset="UTF-8">
-<title>${esc(tituloDoc)}</title>
+<title>CME – ${esc(tituloDoc)}${tecnico ? ' – ' + esc(tecnico.toUpperCase()) : ''}</title>
 <style>
   @page { margin: 2cm 2cm 2.8cm 2cm; size: A4 portrait; }
   *, *::before, *::after { box-sizing: border-box; }
@@ -11984,12 +12001,12 @@ function imprimirModeloMulti() {
   .corpo-esp     { margin: 8px 0; font-style: normal; }
   .e-relatorio   { margin: 10px 0 6px 0; font-style: italic; }
   .local-data    { margin: 20px 0 4px 0; text-align: right; font-size: 10pt; }
-  .linha-ass     { font-family: 'Courier New', monospace; letter-spacing: -1px;
-                   margin: 4px 0 2px 0; }
-  .ass-img-wrap  { margin-top: 24px; }
-  .ass-img       { max-height: 70px; max-width: 220px; object-fit: contain; display: block; }
+  .ass-bloco     { margin-top: 48px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+  .ass-img       { max-height: 80px; max-width: 260px; width: auto; height: auto; object-fit: contain; display: block; margin-bottom: 0; }
+  .ass-linha     { font-family: 'Courier New', monospace; letter-spacing: 2px; margin: 0 0 6px 0; color: #000; }
   .linha-tit     { border-top: 1px solid #bbb; margin: 10px 0; }
-  .ass-cargo     { margin: 2px 0; font-size: 10.5pt; font-weight: bold; }
+  .ass-cargo     { margin: 14px 0 1px 0; font-size: 10.5pt; font-weight: bold; text-align: center; }
+  .ass-cargo + .ass-cargo { margin-top: 1px; }
   .spacer        { height: 9px; }
 
   /* Identificação */
@@ -12049,11 +12066,11 @@ ${bodyHtml}
 <script>window.onload=function(){setTimeout(function(){window.print();},650);};<\/script>
 </body></html>`;
 
-  const janela = window.open('', '_blank');
+  const blob2 = new Blob([docHtml], { type: 'text/html;charset=utf-8' });
+  const blobUrl2 = URL.createObjectURL(blob2);
+  const janela = window.open(blobUrl2, '_blank');
   if (!janela) { _mostrarToast('⚠️ Popup bloqueado! Permita popups para este site.', 'erro'); return; }
-  janela.document.write(docHtml);
-  janela.document.close();
-  janela.focus();
+  setTimeout(() => URL.revokeObjectURL(blobUrl2), 30000);
   _mostrarToast('🖨️ Documento aberto! Escolha "Salvar como PDF" na impressora.', 'sucesso');
 }
 
@@ -14325,6 +14342,7 @@ function com_gerarOficio() {
   const saudacao   = document.getElementById('com-of-saudacao').value;
   const signat     = document.getElementById('com-of-signatario').value.trim();
   const decreto    = document.getElementById('com-of-decreto').value.trim();
+  const assImgCapturada = usuarioAtual?.assinatura || null;
 
   if (!modeloId)  return _mostrarToast('&#9888; Selecione o modelo de of&#237;cio.','erro');
   if (!dest)      return _mostrarToast('&#9888; Selecione comarca e vara.','erro');
@@ -14485,6 +14503,7 @@ ${paragsHtml}
 <table style="width:100%;margin-top:60pt">
   <tr>
     <td style="width:55%;text-align:center;vertical-align:bottom">
+      ${assImgCapturada ? `<p style="margin:0 0 0 0;text-align:center"><img src="${assImgCapturada}" style="max-height:60pt;max-width:180pt;object-fit:contain;display:block;margin:0 auto 0 auto"></p>` : ''}
       <p style="border-top:1pt solid #000;padding-top:6pt;font-size:12pt;font-weight:bold;margin:0">${esc(signat)}</p>
       <p style="font-size:11pt;margin:2pt 0 0 0">Gerente de Monitoramento Eletr&#244;nico &#8211; CME/IAPEN</p>
       <p style="font-size:10pt;color:#444;margin:2pt 0 0 0">Decreto n&#176; ${esc(decreto)}</p>
