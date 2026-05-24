@@ -925,7 +925,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
     </div>
     <div style="text-align:left;margin-bottom:14px">
       <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:5px">Nova senha</label>
-      <input id="pl-nova-senha" type="password" placeholder="Mínimo 6 caracteres"
+      <input id="pl-nova-senha" type="password" placeholder="Mín. 8 car., 1 maiúscula, 1 número, 1 especial"
         style="width:100%;box-sizing:border-box;padding:11px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:.95rem"
         onkeydown="if(event.key==='Enter')document.getElementById('pl-conf-senha').focus()">
     </div>
@@ -5269,7 +5269,74 @@ function carregarStore(chave, padrao) {
 
 /* USUÁRIOS PADRÃO */
 /* USUARIOS_PADRAO — senhas armazenadas como SHA-256(salt+senha). Nunca altere os hashes manualmente. */
-const _SHA_SALT = 'cme_iapen_2026_';
+const _SHA_SALT = 'cme_iapen_2026_'; // mantido apenas para migração de contas antigas
+
+/* ══ SEGURANÇA: PBKDF2 com salt aleatório por usuário ═══════════
+   Substitui SHA-256 simples. 200.000 iterações torna força bruta
+   ~200.000× mais lenta. Salt único por usuário elimina rainbow tables.
+   ════════════════════════════════════════════════════════════════ */
+function _bytesToHex(buf) {
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+function _hexToBytes(hex) {
+  const arr = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < arr.length; i++) arr[i] = parseInt(hex.slice(i*2, i*2+2), 16);
+  return arr;
+}
+
+async function hashSenhaPBKDF2(senha, saltHex) {
+  // saltHex: hex string de 32 chars (16 bytes). Se não informado, gera aleatório.
+  const salt = saltHex ? _hexToBytes(saltHex) : crypto.getRandomValues(new Uint8Array(16));
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(senha), 'PBKDF2', false, ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: 200000, hash: 'SHA-256' },
+    keyMaterial, 256
+  );
+  return { hash: _bytesToHex(bits), salt: _bytesToHex(salt) };
+}
+
+async function verificarSenhaUsuario(senhaDigitada, usuario) {
+  // Versão 3: PBKDF2 (novo padrão)
+  if (usuario.senhaVersao === 3 && usuario.senhaSalt) {
+    const { hash } = await hashSenhaPBKDF2(senhaDigitada, usuario.senhaSalt);
+    return hash === usuario.senha;
+  }
+  // Versão 2: SHA-256 com salt global (legado)
+  if (!usuario.senhaVersao || usuario.senhaVersao === 2) {
+    const data = new TextEncoder().encode(_SHA_SALT + senhaDigitada);
+    const buf  = await crypto.subtle.digest('SHA-256', data);
+    return _bytesToHex(buf) === usuario.senha;
+  }
+  // Versão 1: btoa (mais antigo, aceitar apenas para migração imediata)
+  if (usuario.senhaVersao === 1 || _ehBase64Legado(usuario.senha)) {
+    return btoa(senhaDigitada) === usuario.senha;
+  }
+  return false;
+}
+
+/* ══ SEGURANÇA: Sanitização XSS ═════════════════════════════════
+   Use esc() em TODOS os dados de usuário inseridos via innerHTML.
+   ════════════════════════════════════════════════════════════════ */
+function esc(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/* ══ SEGURANÇA: Validação de senha forte ════════════════════════ */
+function validarForcaSenha(senha) {
+  if (!senha || senha.length < 8)          return 'Mínimo 8 caracteres.';
+  if (!/[A-Z]/.test(senha))               return 'Precisa de pelo menos 1 letra maiúscula.';
+  if (!/[0-9]/.test(senha))               return 'Precisa de pelo menos 1 número.';
+  if (!/[^A-Za-z0-9]/.test(senha))        return 'Precisa de pelo menos 1 caractere especial (!@#$...).';
+  return null; // OK
+}
 
 /* ── Varas Processuais do Amapá ──────────────────────────── */
 const VARAS_PROCESSUAIS = [
@@ -5410,10 +5477,12 @@ const USUARIOS_PADRAO = [
 ];
 
 /* ─── Utilitário de hash (SHA-256 + salt fixo via SubtleCrypto) ─── */
+// hashSenha: mantido para compatibilidade com código existente (criar usuário)
 async function hashSenha(senha) {
-  const data = new TextEncoder().encode(_SHA_SALT + senha);
-  const buf  = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  // Agora gera PBKDF2. Retorna só o hash (salt fica separado).
+  // Chamadores que precisam do salt devem usar hashSenhaPBKDF2() diretamente.
+  const { hash } = await hashSenhaPBKDF2(senha);
+  return hash;
 }
 
 /* ─── Detecta senha no formato legado (btoa/base64) ─── */
@@ -5523,17 +5592,23 @@ async function fazerLogin() {
   }
 
   const usuarios = getUsuarios();
-  const hash = await hashSenha(p);
-  // Comparação case-insensitive no login
-  let usuario = usuarios.find(x => (x.usuario || '').toLowerCase() === u && x.senha === hash);
 
-  // Migração automática: senha ainda no formato legado (btoa)
-  if (!usuario) {
-    const leg = usuarios.find(x => (x.usuario || '').toLowerCase() === u && _ehBase64Legado(x.senha) && x.senha === btoa(p));
-    if (leg) {
-      leg.senha = hash; // migra para SHA-256
-      salvarUsuarios(usuarios);
-      usuario = leg;
+  // Encontrar usuário pelo login (case-insensitive)
+  const candidato = usuarios.find(x => (x.usuario || '').toLowerCase() === u);
+  let usuario = null;
+
+  if (candidato) {
+    const senhaOk = await verificarSenhaUsuario(p, candidato);
+    if (senhaOk) {
+      usuario = candidato;
+      // Auto-migração para PBKDF2 se ainda estiver em formato antigo
+      if (candidato.senhaVersao !== 3) {
+        const { hash: novoHash, salt: novoSalt } = await hashSenhaPBKDF2(p);
+        candidato.senha       = novoHash;
+        candidato.senhaSalt   = novoSalt;
+        candidato.senhaVersao = 3;
+        salvarUsuarios(usuarios);
+      }
     }
   }
 
@@ -5596,20 +5671,23 @@ async function definirPrimeiraSenha() {
     erro.style.display = 'block';
   };
 
-  if (!nova || !conf)       return mostrarErro('Preencha os dois campos.');
-  if (nova.length < 6)      return mostrarErro('A senha deve ter no mínimo 6 caracteres.');
-  if (nova !== conf)        return mostrarErro('As senhas não conferem.');
-  if (nova === _usuarioPrimeiroLogin.usuario)
-                            return mostrarErro('A senha não pode ser igual ao seu login.');
+  if (!nova || !conf)        return mostrarErro('Preencha os dois campos.');
+  const erroForca = validarForcaSenha(nova);
+  if (erroForca)             return mostrarErro(erroForca);
+  if (nova !== conf)         return mostrarErro('As senhas não conferem.');
+  if (nova.toLowerCase() === (_usuarioPrimeiroLogin.usuario || '').toLowerCase())
+                             return mostrarErro('A senha não pode ser igual ao seu login.');
 
   erro.style.display = 'none';
 
-  const hash     = await hashSenha(nova);
+  const { hash, salt } = await hashSenhaPBKDF2(nova);
   const usuarios = getUsuarios();
   const eu       = usuarios.find(u => (u.usuario||'').toLowerCase() === (_usuarioPrimeiroLogin.usuario||'').toLowerCase());
   if (!eu) return mostrarErro('Erro: usuário não encontrado.');
 
   eu.senha         = hash;
+  eu.senhaSalt     = salt;
+  eu.senhaVersao   = 3;
   eu.primeiroLogin = false;
   salvarUsuarios(usuarios);
 
@@ -7620,10 +7698,15 @@ async function salvarEdicaoUsuario() {
     if (nova !== conf) {
       msg.innerHTML = '<div class="sys-alert error">As senhas não conferem.</div>'; return;
     }
-    if (nova.length < 6) {
-      msg.innerHTML = '<div class="sys-alert error">Senha com mínimo 6 caracteres.</div>'; return;
+    const erroForca = validarForcaSenha(nova);
+    if (erroForca) {
+      msg.innerHTML = `<div class="sys-alert error">${esc(erroForca)}</div>`; return;
     }
-    u.senha = await hashSenha(nova);
+    const { hash, salt } = await hashSenhaPBKDF2(nova);
+    u.senha       = hash;
+    u.senhaSalt   = salt;
+    u.senhaVersao = 3;
+    u.primeiroLogin = false; // admin redefiniu — sem primeiro login
     addLog(`Admin redefiniu senha de ${nome} (${usuarioAtual.nome})`);
   }
 
@@ -7805,8 +7888,8 @@ function criarUsuario() {
   if (us.find(u => u.usuario === user)) {
     msg.className = "sys-alert error"; msg.textContent = "Login já está em uso."; return;
   }
-  hashSenha(pass).then(hash => {
-    us.push({ usuario: user.toLowerCase(), senha: hash, nome, cargo, nivel, primeiroLogin: true });
+  hashSenhaPBKDF2(pass).then(({ hash, salt }) => {
+    us.push({ usuario: user.toLowerCase(), senha: hash, senhaSalt: salt, senhaVersao: 3, nome, cargo, nivel, primeiroLogin: true });
     salvarUsuarios(us);
     addLog(`Criou usuário ${nome} (${usuarioAtual.nome})`);
     msg.className = "sys-alert success"; msg.textContent = `✅ "${nome}" criado! Ele definirá a própria senha no 1º acesso.`;
@@ -7829,39 +7912,43 @@ function resetarPrimeiroLogin(idx) {
   _mostrarToast(`🔑 ${us[idx].nome} terá que definir nova senha no próximo login.`, 'sucesso');
 }
 
-function alterarMinhaSenha() {
-  const senhaAtual = (document.getElementById('alt-senha-atual')?.value || '').trim();
-  const senhaNova  = (document.getElementById('alt-senha-nova')?.value  || '').trim();
-  const senhaConf  = (document.getElementById('alt-senha-conf')?.value  || '').trim();
+async function alterarMinhaSenha() {
+  const senhaAtual = (document.getElementById('alt-senha-atual')?.value || '');
+  const senhaNova  = (document.getElementById('alt-senha-nova')?.value  || '');
+  const senhaConf  = (document.getElementById('alt-senha-conf')?.value  || '');
   const msg        = document.getElementById('alt-senha-msg');
+
   if (!senhaAtual || !senhaNova || !senhaConf) {
     msg.className = "sys-alert error"; msg.textContent = "Preencha todos os campos."; return;
   }
   if (senhaNova !== senhaConf) {
     msg.className = "sys-alert error"; msg.textContent = "Nova senha e confirmação não conferem."; return;
   }
-  if (senhaNova.length < 8 || !/[A-Z]/.test(senhaNova) || !/[0-9]/.test(senhaNova)) {
-    msg.className = "sys-alert error"; msg.textContent = "Nova senha: mínimo 8 caracteres, 1 maiúscula e 1 número."; return;
+  const erroForca = validarForcaSenha(senhaNova);
+  if (erroForca) {
+    msg.className = "sys-alert error"; msg.textContent = erroForca; return;
   }
-  hashSenha(senhaAtual).then(hashAtual => {
-    const usuarios = getUsuarios();
-    const eu = usuarios.find(u => u.usuario === usuarioAtual.usuario);
-    // Suporta comparação SHA-256 e legado btoa
-    const senhaOk = eu && (eu.senha === hashAtual || (_ehBase64Legado(eu.senha) && eu.senha === btoa(senhaAtual)));
-    if (!senhaOk) {
-      msg.className = "sys-alert error"; msg.textContent = "Senha atual incorreta."; return;
-    }
-    hashSenha(senhaNova).then(hashNova => {
-      eu.senha = hashNova;
-      salvarUsuarios(usuarios);
-      addLog(`Senha alterada: ${usuarioAtual.nome}`);
-      msg.className = "sys-alert success"; msg.textContent = "Senha alterada com sucesso!";
-      document.getElementById('alt-senha-atual').value = '';
-      document.getElementById('alt-senha-nova').value  = '';
-      document.getElementById('alt-senha-conf').value  = '';
-      setTimeout(() => { msg.className = "sys-alert"; }, 4000);
-    });
-  });
+
+  const usuarios = getUsuarios();
+  const eu = usuarios.find(u => (u.usuario||'').toLowerCase() === (usuarioAtual.usuario||'').toLowerCase());
+  if (!eu) { msg.className = "sys-alert error"; msg.textContent = "Usuário não encontrado."; return; }
+
+  const senhaOk = await verificarSenhaUsuario(senhaAtual, eu);
+  if (!senhaOk) {
+    msg.className = "sys-alert error"; msg.textContent = "Senha atual incorreta."; return;
+  }
+
+  const { hash, salt } = await hashSenhaPBKDF2(senhaNova);
+  eu.senha       = hash;
+  eu.senhaSalt   = salt;
+  eu.senhaVersao = 3;
+  salvarUsuarios(usuarios);
+  addLog(`Senha alterada: ${usuarioAtual.nome}`);
+  msg.className = "sys-alert success"; msg.textContent = "✅ Senha alterada com sucesso!";
+  document.getElementById('alt-senha-atual').value = '';
+  document.getElementById('alt-senha-nova').value  = '';
+  document.getElementById('alt-senha-conf').value  = '';
+  setTimeout(() => { msg.className = "sys-alert"; }, 4000);
 }
 
 function renderizarLogs() {
