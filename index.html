@@ -5505,7 +5505,7 @@ let filtroJur = "";
 
 /* ─── LOGIN / LOGOUT ─────────────────────────────────── */
 async function fazerLogin() {
-  const u = document.getElementById("input-user").value.trim();
+  const u = document.getElementById("input-user").value.trim().toLowerCase();
   const p = document.getElementById("input-pass").value;
   const errEl = document.getElementById("login-error");
 
@@ -5514,13 +5514,22 @@ async function fazerLogin() {
   // Rate limiting
   if (_loginBloqueado(u)) return;
 
+  // Recarregar usuários do Supabase antes de validar (garante dados frescos pós-criação)
+  if (window._db) {
+    try {
+      const { data } = await window._db.from('store').select('value').eq('key', 'cme_usuarios').maybeSingle();
+      if (data?.value) _cache['usuarios'] = data.value;
+    } catch(e) { /* usa cache existente se falhar */ }
+  }
+
   const usuarios = getUsuarios();
   const hash = await hashSenha(p);
-  let usuario = usuarios.find(x => x.usuario === u && x.senha === hash);
+  // Comparação case-insensitive no login
+  let usuario = usuarios.find(x => (x.usuario || '').toLowerCase() === u && x.senha === hash);
 
   // Migração automática: senha ainda no formato legado (btoa)
   if (!usuario) {
-    const leg = usuarios.find(x => x.usuario === u && _ehBase64Legado(x.senha) && x.senha === btoa(p));
+    const leg = usuarios.find(x => (x.usuario || '').toLowerCase() === u && _ehBase64Legado(x.senha) && x.senha === btoa(p));
     if (leg) {
       leg.senha = hash; // migra para SHA-256
       salvarUsuarios(usuarios);
@@ -5597,7 +5606,7 @@ async function definirPrimeiraSenha() {
 
   const hash     = await hashSenha(nova);
   const usuarios = getUsuarios();
-  const eu       = usuarios.find(u => u.usuario === _usuarioPrimeiroLogin.usuario);
+  const eu       = usuarios.find(u => (u.usuario||'').toLowerCase() === (_usuarioPrimeiroLogin.usuario||'').toLowerCase());
   if (!eu) return mostrarErro('Erro: usuário não encontrado.');
 
   eu.senha         = hash;
@@ -7797,7 +7806,7 @@ function criarUsuario() {
     msg.className = "sys-alert error"; msg.textContent = "Login já está em uso."; return;
   }
   hashSenha(pass).then(hash => {
-    us.push({ usuario: user, senha: hash, nome, cargo, nivel, primeiroLogin: true });
+    us.push({ usuario: user.toLowerCase(), senha: hash, nome, cargo, nivel, primeiroLogin: true });
     salvarUsuarios(us);
     addLog(`Criou usuário ${nome} (${usuarioAtual.nome})`);
     msg.className = "sys-alert success"; msg.textContent = `✅ "${nome}" criado! Ele definirá a própria senha no 1º acesso.`;
