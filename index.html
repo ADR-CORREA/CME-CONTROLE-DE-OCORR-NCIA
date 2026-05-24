@@ -15363,7 +15363,8 @@ async function com_extrairComIA() {
   if (status) { status.style.display = 'block'; status.style.background = '#fef3c7'; status.style.color = '#92400e'; status.textContent = '🤖 A IA está lendo os documentos...'; }
 
   try {
-    if (!r2_state.url || !r2_state.token) throw new Error('Configure o R2 primeiro (aba Arquivos).');
+    // Garante que URL e token estão carregados mesmo sem visitar a aba Arquivos
+    if (!r2_state.url || !r2_state.token) r2_carregarConfig();
 
     const resp = await fetch(`${r2_state.url}/extrair-campos`, {
       method: 'POST',
