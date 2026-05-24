@@ -7550,18 +7550,18 @@ function renderizarUsers() {
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
         ${u.primeiroLogin ? '' : `
-        <button onclick="resetarPrimeiroLogin(${i})" title="Forçar redefinição de senha no próximo login"
+        <button onclick="resetarPrimeiroLogin('${u.usuario}')" title="Forçar redefinição de senha no próximo login"
           style="background:#fef9c3;border:1px solid #fcd34d;border-radius:7px;padding:4px 9px;
           cursor:pointer;font-size:.75rem;color:#713f12;font-weight:600;white-space:nowrap">
           🔑
         </button>`}
-        <button onclick="abrirModalEditarUsuario(${i})" title="Editar"
+        <button onclick="abrirModalEditarUsuario('${u.usuario}')" title="Editar"
           style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:7px;padding:4px 11px;
           cursor:pointer;font-size:.78rem;color:#1d4ed8;font-weight:600;white-space:nowrap">
           ✏️ Editar
         </button>
         ${u.usuario !== 'admin' ? `
-        <button onclick="removerUsuario(${i})" title="Remover"
+        <button onclick="removerUsuario('${u.usuario}')" title="Remover"
           style="background:#FFF5F5;border:1px solid #FECACA;border-radius:7px;padding:4px 9px;
           cursor:pointer;font-size:.8rem;color:#dc2626;font-weight:700">✕</button>` : ''}
       </div>
@@ -7602,9 +7602,11 @@ function alterarNivel(idx, novoNivel) {
   renderizarUsers();
 }
 
-function removerUsuario(idx) {
+function removerUsuario(loginId) {
   if (!confirm("Remover este usuário?")) return;
-  const us = getUsuarios();
+  const us  = getUsuarios();
+  const idx = us.findIndex(x => x.usuario === loginId);
+  if (idx === -1) { _mostrarToast('Usuário não encontrado.', 'erro'); return; }
   addLog(`Removeu usuário ${us[idx].nome} (${usuarioAtual.nome})`);
   us.splice(idx, 1);
   salvarUsuarios(us);
@@ -7615,13 +7617,23 @@ function removerUsuario(idx) {
 let _editAssNovaBase64 = null;   // nova assinatura carregada (ou null = sem mudança)
 let _editAssRemover    = false;  // flag: remover assinatura existente
 
-function abrirModalEditarUsuario(idx) {
+async function abrirModalEditarUsuario(loginId) {
+  // Sempre busca dados frescos do Supabase antes de abrir
+  if (window._db) {
+    try {
+      const { data } = await window._db.from('store').select('value').eq('key', 'cme_usuarios').maybeSingle();
+      if (data?.value) _cache['usuarios'] = data.value;
+    } catch(e) { /* usa cache existente se falhar */ }
+  }
+
   const us = getUsuarios();
-  const u  = us[idx];
+  const u  = us.find(x => x.usuario === loginId);
+  if (!u) { _mostrarToast('Usuário não encontrado. Tente novamente.', 'erro'); return; }
+
   _editAssNovaBase64 = null;
   _editAssRemover    = false;
 
-  document.getElementById('edit-user-idx').value      = idx;
+  document.getElementById('edit-user-idx').value      = loginId; // guarda login, não índice
   document.getElementById('edit-nome').value          = u.nome    || '';
   document.getElementById('edit-usuario').value       = u.usuario || '';
   document.getElementById('edit-cargo').value         = u.cargo   || '';
@@ -7672,10 +7684,15 @@ function editUser_removerAss() {
 }
 
 async function salvarEdicaoUsuario() {
-  const idx  = parseInt(document.getElementById('edit-user-idx').value);
-  const msg  = document.getElementById('edit-user-msg');
-  const us   = getUsuarios();
-  const u    = us[idx];
+  const msg     = document.getElementById('edit-user-msg');
+  const loginId = document.getElementById('edit-user-idx').value; // login do usuário em edição
+  try {
+  const us = getUsuarios();
+  const u  = us.find(x => x.usuario === loginId);
+  if (!u) {
+    msg.innerHTML = '<div class="sys-alert error">Usuário não encontrado. Feche e reabra o modal.</div>'; return;
+  }
+  const idx = us.indexOf(u);
 
   const nome    = document.getElementById('edit-nome').value.trim();
   const usuario = document.getElementById('edit-usuario').value.trim();
@@ -7736,6 +7753,10 @@ async function salvarEdicaoUsuario() {
   fecharModal('modal-editar-usuario');
   renderizarUsers();
   _mostrarToast(`✅ Cadastro de "${nome}" atualizado!`, 'sucesso');
+  } catch(e) {
+    console.error('[CME] Erro ao salvar edição de usuário:', e);
+    msg.innerHTML = `<div class="sys-alert error">Erro inesperado: ${esc(e.message)}</div>`;
+  }
 }
 
 /* ── ASSINATURA DO SERVIDOR ──────────────────────────────── */
@@ -7902,10 +7923,11 @@ function criarUsuario() {
   });
 }
 
-function resetarPrimeiroLogin(idx) {
+function resetarPrimeiroLogin(loginId) {
   if (!confirm('Forçar redefinição de senha deste usuário no próximo login?')) return;
-  const us = getUsuarios();
-  if (!us[idx]) return;
+  const us  = getUsuarios();
+  const idx = us.findIndex(x => x.usuario === loginId);
+  if (idx === -1) return;
   us[idx].primeiroLogin = true;
   salvarUsuarios(us);
   renderizarUsers();
