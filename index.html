@@ -15386,7 +15386,7 @@ async function com_buscarMonitorado(modoSugestao = false) {
   try {
     const resp = await fetch(
       `${r2_state.url}/monitorados?busca=${encodeURIComponent(termo)}&limite=20`,
-      { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': _usuario, 'X-Nivel': _nivel } }
+      { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
     );
     if (!resp.ok) throw new Error(await resp.text());
     const data = await resp.json();
@@ -15442,7 +15442,7 @@ async function com_selecionarMonitorado(nome) {
   try {
     const resp = await fetch(
       `${r2_state.url}/list?monitorado=${encodeURIComponent(nome)}`,
-      { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': _usuario, 'X-Nivel': _nivel } }
+      { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
     );
     if (!resp.ok) throw new Error(await resp.text());
     const data = await resp.json();
@@ -15523,7 +15523,7 @@ async function com_carregarEExtrair() {
     try {
       const resp = await fetch(
         `${r2_state.url}/download?key=${encodeURIComponent(key)}`,
-        { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': _usuario, 'X-Nivel': _nivel } }
+        { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
       );
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const blob = await resp.blob();
