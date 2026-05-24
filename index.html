@@ -2206,12 +2206,57 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
       <!-- Sub-panel Comunicação -->
       <div id="mod-panel-comunicacao" style="display:none">
+
+        <!-- ═══ SEÇÃO ANEXOS COM IA ══════════════════════════════ -->
+        <div style="background:#f0f7ff;border:1.5px dashed #93c5fd;border-radius:12px;padding:16px 18px;margin:14px 0 10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div style="font-weight:700;color:#1e40af;font-size:.93rem">
+              🤖 Leitura de Documentos com IA
+              <span style="font-weight:400;font-size:.75rem;color:#64748b;margin-left:8px">Anexe docs e a IA preenche o formulário automaticamente</span>
+            </div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              <button id="com-btn-extrair-ia" onclick="com_extrairComIA()"
+                style="background:#1d4ed8;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:.8rem;font-weight:700;cursor:pointer">
+                🤖 Extrair dados com IA
+              </button>
+              <button onclick="com_limparAnexos()"
+                style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:7px;padding:6px 10px;font-size:.8rem;font-weight:600;cursor:pointer">
+                🗑️ Limpar anexos
+              </button>
+            </div>
+          </div>
+
+          <!-- Drop Zone -->
+          <div id="com-drop-zone"
+            onclick="document.getElementById('com-anexos-input').click()"
+            style="border:2px dashed #93c5fd;border-radius:9px;padding:18px;text-align:center;cursor:pointer;background:#fff;margin-bottom:10px;transition:background .15s">
+            <div style="font-size:1.6rem">📎</div>
+            <div style="font-size:.83rem;color:#3b82f6;font-weight:600;margin-top:4px">Clique ou arraste arquivos aqui</div>
+            <div style="font-size:.73rem;color:#94a3b8;margin-top:2px">PDF, DOCX, TXT — a IA extrai o texto e preenche os campos</div>
+          </div>
+          <input type="file" id="com-anexos-input" multiple accept=".pdf,.docx,.txt,.doc"
+            style="display:none" onchange="com_processarArquivos([...this.files]);this.value=''">
+
+          <!-- Lista de anexos -->
+          <div id="com-anexos-lista">
+            <div style="color:#94a3b8;font-size:.8rem;text-align:center;padding:4px">Nenhum documento anexado.</div>
+          </div>
+
+          <!-- Status IA -->
+          <div id="com-ia-status" style="display:none;margin-top:8px;padding:8px 12px;border-radius:7px;font-size:.82rem;font-weight:600"></div>
+        </div>
+
         <!-- Toolbar -->
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px">
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin:4px 0 8px;flex-wrap:wrap">
           <button class="btn-secondary" onclick="com_limparOficio()">🗑️ Limpar</button>
           <button class="btn-secondary" onclick="com_copiarOficio()">📋 Copiar Texto</button>
           <button class="btn-primary"   onclick="com_gerarOficio()">📄 Gerar .doc</button>
+          <button id="com-btn-pdf-anexos" onclick="com_gerarPDFComAnexos()"
+            style="background:#059669;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">
+            📑 PDF com Anexos
+          </button>
         </div>
+
         <!-- Grid 1fr 1fr -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:4px">
 
@@ -14873,6 +14918,7 @@ function com_init() {
   const dd   = String(hoje.getDate()).padStart(2,'0');
   const mm   = String(hoje.getMonth()+1).padStart(2,'0');
   document.getElementById('com-of-data').value = `${hoje.getFullYear()}-${mm}-${dd}`;
+  com_setupDropZone(); // inicializa drag-and-drop de anexos
 }
 
 function com_atualizarVaras() {
@@ -15178,6 +15224,335 @@ function com_atualizarPreview() {
   ta.value = linhas.join('\n');
   document.getElementById('com-char-count').textContent = ta.value.length + ' caracteres';
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   MÓDULO ANEXOS IA — Leitura de documentos + preenchimento automático
+   ═══════════════════════════════════════════════════════════════ */
+
+let _comAnexos = []; // { id, file, nome, tipo, tamanho, texto, status }
+
+/* Carrega um script CDN de forma lazy (uma vez só) */
+function _carregarScriptSE(url, globalCheck) {
+  if (window[globalCheck]) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload  = resolve;
+    s.onerror = () => reject(new Error('Falha ao carregar script: ' + url));
+    document.head.appendChild(s);
+  });
+}
+
+/* Inicializa drop-zone (chamado por com_init) */
+function com_setupDropZone() {
+  const dz = document.getElementById('com-drop-zone');
+  if (!dz || dz._dzOk) return;
+  dz._dzOk = true;
+  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.style.background = '#dbeafe'; });
+  dz.addEventListener('dragleave', () => { dz.style.background = '#fff'; });
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.style.background = '#fff';
+    com_processarArquivos([...e.dataTransfer.files]);
+  });
+}
+
+/* Processa lista de File objects */
+async function com_processarArquivos(files) {
+  for (const file of files) {
+    const id   = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+    const tipo = file.name.split('.').pop().toLowerCase();
+    const anexo = { id, file, nome: file.name, tipo, tamanho: file.size, texto: '', status: 'lendo' };
+    _comAnexos.push(anexo);
+    com_renderizarAnexos();
+
+    try {
+      if (['txt', 'text', 'csv'].includes(tipo)) {
+        anexo.texto = await new Promise(r => {
+          const fr = new FileReader();
+          fr.onload = e => r(e.target.result);
+          fr.readAsText(file, 'utf-8');
+        });
+
+      } else if (tipo === 'docx' || tipo === 'doc') {
+        await _carregarScriptSE(
+          'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js', 'mammoth');
+        const buf = await file.arrayBuffer();
+        const res = await mammoth.extractRawText({ arrayBuffer: buf });
+        anexo.texto = res.value || '';
+
+      } else if (tipo === 'pdf') {
+        await _carregarScriptSE(
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'pdfjsLib');
+        if (window.pdfjsLib) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          const buf    = await file.arrayBuffer();
+          const pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+          const parts  = [];
+          for (let p = 1; p <= pdfDoc.numPages; p++) {
+            const page    = await pdfDoc.getPage(p);
+            const content = await page.getTextContent();
+            parts.push(content.items.map(i => i.str).join(' '));
+          }
+          anexo.texto = parts.join('\n');
+        }
+
+      } else {
+        anexo.texto = ''; // imagem/outro: vai como anexo visual apenas
+      }
+      anexo.status = 'ok';
+    } catch(e) {
+      anexo.status = 'erro';
+      console.error('[CME] Erro ao ler', file.name, e);
+    }
+    com_renderizarAnexos();
+  }
+}
+
+/* Renderiza a lista de arquivos anexados */
+function com_renderizarAnexos() {
+  const lista = document.getElementById('com-anexos-lista');
+  if (!lista) return;
+  if (!_comAnexos.length) {
+    lista.innerHTML = '<div style="color:#94a3b8;font-size:.8rem;text-align:center;padding:4px">Nenhum documento anexado.</div>';
+    return;
+  }
+  const icons = { pdf:'📕', docx:'📘', doc:'📘', txt:'📃', csv:'📊', png:'🖼️', jpg:'🖼️', jpeg:'🖼️' };
+  lista.innerHTML = _comAnexos.map(a => {
+    const icon  = icons[a.tipo] || '📄';
+    const badge = a.status === 'lendo' ? '⏳ lendo...' : a.status === 'erro' ? '❌ erro' :
+                  a.texto ? `✅ ${(a.texto.length/1000).toFixed(1)}k chars` : '✅ (binário)';
+    const kb    = (a.tamanho/1024).toFixed(1);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#fff;
+              border-radius:7px;border:1px solid #e2e8f0;margin-bottom:5px">
+      <span style="font-size:1.15rem">${icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:.8rem;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${a.nome}">${a.nome}</div>
+        <div style="font-size:.7rem;color:#64748b">${kb} KB &nbsp;·&nbsp; ${badge}</div>
+      </div>
+      <button onclick="_comRemoverAnexo('${a.id}')" title="Remover"
+        style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:1rem;padding:2px 6px;line-height:1">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function _comRemoverAnexo(id) {
+  _comAnexos = _comAnexos.filter(a => a.id !== id);
+  com_renderizarAnexos();
+}
+
+function com_limparAnexos() {
+  _comAnexos = [];
+  com_renderizarAnexos();
+}
+
+/* ── Extração com IA ─────────────────────────────────────────── */
+async function com_extrairComIA() {
+  if (!_comAnexos.length) { _mostrarToast('⚠️ Adicione documentos antes de extrair.', 'erro'); return; }
+  if (_comAnexos.some(a => a.status === 'lendo')) { _mostrarToast('⏳ Aguarde a leitura dos arquivos.', 'erro'); return; }
+
+  const comTexto = _comAnexos.filter(a => a.texto.trim());
+  if (!comTexto.length) { _mostrarToast('⚠️ Nenhum texto pôde ser extraído dos documentos.', 'erro'); return; }
+
+  const textoGeral = comTexto.map(a => `=== ${a.nome} ===\n${a.texto}`).join('\n\n---\n\n').slice(0, 9000);
+
+  const btn    = document.getElementById('com-btn-extrair-ia');
+  const status = document.getElementById('com-ia-status');
+  if (btn)    { btn.disabled = true; btn.textContent = '⏳ Analisando...'; }
+  if (status) { status.style.display = 'block'; status.style.background = '#fef3c7'; status.style.color = '#92400e'; status.textContent = '🤖 A IA está lendo os documentos...'; }
+
+  try {
+    if (!r2_state.url || !r2_state.token) throw new Error('Configure o R2 primeiro (aba Arquivos).');
+
+    const resp = await fetch(`${r2_state.url}/extrair-campos`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${r2_state.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texto: textoGeral }),
+    });
+    if (!resp.ok) throw new Error(`Erro HTTP ${resp.status}`);
+
+    const json = await resp.json();
+    if (json.error) throw new Error(json.error);
+
+    const d = json.dados || {};
+    let n = 0;
+
+    // Nome do monitorado
+    if (d.nome)    { document.getElementById('com-of-nome').value = d.nome.toUpperCase(); n++; }
+    // Número do processo
+    if (d.processo){ document.getElementById('com-of-processo').value = d.processo; n++; }
+    // Data
+    if (d.data)    { document.getElementById('com-of-data').value = d.data; n++; }
+
+    // Saudação
+    if (d.saudacao) {
+      const selS = document.getElementById('com-of-saudacao');
+      for (const opt of selS.options) {
+        if (opt.value.toLowerCase().includes((d.saudacao.split(' ')[1]||'').toLowerCase())) {
+          selS.value = opt.value; n++; break;
+        }
+      }
+    }
+
+    // Comarca
+    if (d.comarca) {
+      const selC = document.getElementById('com-of-comarca');
+      const alvo = d.comarca.toLowerCase();
+      for (const opt of selC.options) {
+        if (opt.value.toLowerCase().includes(alvo) || alvo.includes(opt.value.toLowerCase())) {
+          selC.value = opt.value; com_atualizarVaras(); n++; break;
+        }
+      }
+    }
+
+    // Vara (após comarca carregar)
+    if (d.vara) {
+      await new Promise(r => setTimeout(r, 80));
+      const selV = document.getElementById('com-of-vara');
+      const alvo = d.vara.toLowerCase();
+      for (const opt of selV.options) {
+        if (opt.text.toLowerCase().includes(alvo.split(' ')[0]) || alvo.includes(opt.text.toLowerCase())) {
+          selV.value = opt.value; com_atualizarDestinatario(); n++; break;
+        }
+      }
+    }
+
+    // Modelo
+    if (d.modelo) {
+      const selM = document.getElementById('com-of-modelo');
+      for (const opt of selM.options) {
+        if (opt.value === d.modelo || opt.text.toLowerCase().includes(d.modelo.replace('-',' '))) {
+          selM.value = opt.value; com_atualizarCampos(); n++; break;
+        }
+      }
+    }
+
+    com_atualizarPreview();
+
+    if (status) {
+      status.style.background = '#d1fae5'; status.style.color = '#065f46';
+      status.textContent = `✅ IA preencheu ${n} campo(s) automaticamente! Revise e ajuste se necessário.`;
+    }
+    _mostrarToast(`✅ ${n} campo(s) preenchidos pela IA!`, 'sucesso');
+
+  } catch(e) {
+    if (status) {
+      status.style.background = '#fee2e2'; status.style.color = '#991b1b';
+      status.textContent = '❌ Erro: ' + e.message;
+    }
+    _mostrarToast('❌ ' + e.message, 'erro');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 Extrair dados com IA'; }
+  }
+}
+
+/* ── Gerar PDF com Anexos ────────────────────────────────────── */
+async function com_gerarPDFComAnexos() {
+  const texto = document.getElementById('com-of-texto').value.trim();
+  if (!texto) { _mostrarToast('⚠️ Preencha e visualize o ofício primeiro.', 'erro'); return; }
+
+  const btn = document.getElementById('com-btn-pdf-anexos');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando PDF...'; }
+
+  try {
+    // ── Carregar jsPDF ──
+    await _carregarScriptSE('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'jspdf');
+    const { jsPDF } = window.jspdf;
+
+    // ── Criar PDF do ofício ──
+    const doc    = new jsPDF({ unit: 'mm', format: 'a4' });
+    const mL = 30, mR = 20, mT = 25, mB = 20;
+    const tw = 210 - mL - mR;
+    const pageH = 297;
+
+    doc.setFillColor(26, 58, 107);
+    doc.rect(mL, mT - 3, tw, 0.8, 'F');
+
+    // Cabeçalho
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(26, 58, 107);
+    doc.text('GOVERNO DO ESTADO DO AMAPÁ — IAPEN/AP — CME', 105, mT + 3, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(80, 80, 80);
+    doc.text('Instituto de Administração Penitenciária — Central de Monitoramento Eletrônico', 105, mT + 8, { align: 'center' });
+
+    doc.setFillColor(26, 58, 107);
+    doc.rect(mL, mT + 11, tw, 0.5, 'F');
+
+    // Corpo do texto
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10.5);
+    doc.setTextColor(0, 0, 0);
+    const linhas = doc.splitTextToSize(texto, tw);
+    let y = mT + 19;
+    for (const linha of linhas) {
+      if (y > pageH - mB - 5) { doc.addPage(); y = mT; }
+      doc.text(linha, mL, y);
+      y += 5.5;
+    }
+
+    // Rodapé
+    const totalPag = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPag; p++) {
+      doc.setPage(p);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(120);
+      doc.setFillColor(26, 58, 107);
+      doc.rect(mL, pageH - mB, tw, 0.3, 'F');
+      doc.text(`CME/IAPEN-AP  ·  Página ${p} de ${totalPag}`, 105, pageH - mB + 5, { align: 'center' });
+    }
+
+    let finalBytes = doc.output('arraybuffer');
+
+    // ── Mesclar anexos PDF ──
+    const pdfAnexos = _comAnexos.filter(a => a.tipo === 'pdf' && a.file);
+    if (pdfAnexos.length) {
+      await _carregarScriptSE(
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js', 'PDFLib');
+      const { PDFDocument } = window.PDFLib;
+
+      const merged = await PDFDocument.load(finalBytes);
+
+      for (const anexo of pdfAnexos) {
+        try {
+          const buf      = await anexo.file.arrayBuffer();
+          const ext      = await PDFDocument.load(buf);
+          const indices  = ext.getPageIndices();
+          const pages    = await merged.copyPages(ext, indices);
+          pages.forEach(p => merged.addPage(p));
+        } catch(e) { console.warn('Não foi possível incluir', anexo.nome, e.message); }
+      }
+      finalBytes = await merged.save();
+    }
+
+    // ── Download ──
+    const num  = document.getElementById('com-of-numero').value || 'oficio';
+    const nome = document.getElementById('com-of-nome').value.split(' ')[0].toLowerCase() || 'doc';
+    const blob = new Blob([finalBytes], { type: 'application/pdf' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = `oficio-${num}-${nome}.pdf`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+    const msg = pdfAnexos.length
+      ? `✅ PDF gerado: ofício + ${pdfAnexos.length} anexo(s)!`
+      : '✅ PDF gerado com sucesso!';
+    _mostrarToast(msg, 'sucesso');
+
+  } catch(e) {
+    console.error('[CME] Erro ao gerar PDF:', e);
+    _mostrarToast('❌ Erro ao gerar PDF: ' + e.message, 'erro');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📑 PDF com Anexos'; }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────── */
 
 function com_limparOficio() {
   ['com-of-comarca','com-of-vara','com-of-modelo'].forEach(id => {
