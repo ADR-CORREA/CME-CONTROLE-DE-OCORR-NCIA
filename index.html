@@ -1899,6 +1899,36 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
       <!-- Sub-panel Plantão -->
       <div id="mod-panel-plantao" style="display:block">
+        <!-- ═══ BUSCA DE DOCS COM IA — PLANTÃO ══════════════════ -->
+        <div style="background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin:14px 0 10px">
+          <div style="font-weight:700;color:#1e40af;font-size:.93rem;margin-bottom:12px">
+            🔍 Buscar Documentos do Monitorado
+            <span style="font-weight:400;font-size:.75rem;color:#64748b;margin-left:8px">Pesquise pelo nome, selecione os docs e a IA preenche o formulário</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <input id="pla-busca-input" type="text" placeholder="Digite o nome do monitorado..."
+              style="flex:1;padding:8px 12px;border:1px solid #93c5fd;border-radius:8px;font-size:.87rem;outline:none"
+              onkeydown="if(event.key==='Enter') _bmonPesquisar('pla')"
+              oninput="_bmonOnInput('pla', this.value)">
+            <button onclick="_bmonPesquisar('pla')"
+              style="background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap">
+              🔍 Buscar
+            </button>
+          </div>
+          <div id="pla-busca-sugestoes" style="display:none;background:#fff;border:1px solid #bfdbfe;border-radius:8px;margin-bottom:8px;max-height:160px;overflow-y:auto"></div>
+          <div id="pla-docs-painel" style="display:none">
+            <div id="pla-docs-monitorado-nome" style="font-weight:700;color:#1e3a5f;font-size:.88rem;margin-bottom:8px;padding:6px 10px;background:#dbeafe;border-radius:6px"></div>
+            <div id="pla-docs-lista" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;max-height:220px;overflow-y:auto;padding:6px 8px"></div>
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+              <button onclick="_bmonSelecionarTodos('pla', true)" style="background:#fff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:7px;padding:5px 11px;font-size:.78rem;font-weight:600;cursor:pointer">☑ Todos</button>
+              <button onclick="_bmonSelecionarTodos('pla', false)" style="background:#fff;color:#64748b;border:1px solid #e2e8f0;border-radius:7px;padding:5px 11px;font-size:.78rem;font-weight:600;cursor:pointer">☐ Nenhum</button>
+              <span id="pla-docs-sel-count" style="font-size:.78rem;color:#64748b"></span>
+              <div style="flex:1"></div>
+              <button onclick="_bmonCarregarEExtrair('pla')" style="background:#1d4ed8;color:#fff;border:none;border-radius:7px;padding:7px 15px;font-size:.82rem;font-weight:700;cursor:pointer">🤖 Carregar e Extrair com IA</button>
+            </div>
+          </div>
+          <div id="pla-ia-status" style="display:none;margin-top:8px;padding:8px 12px;border-radius:7px;font-size:.82rem;font-weight:600"></div>
+        </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px">
           <button class="btn-secondary" onclick="limparModelo()">🗑️ Limpar</button>
           <button class="btn-secondary" onclick="copiarModelo()">📋 Copiar Texto</button>
@@ -2035,6 +2065,36 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
       <!-- Sub-panel Equipe Multidisciplinar -->
       <div id="mod-panel-multi" style="display:none">
+        <!-- ═══ BUSCA DE DOCS COM IA — MULTI ════════════════════ -->
+        <div style="background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin:14px 0 10px">
+          <div style="font-weight:700;color:#1e40af;font-size:.93rem;margin-bottom:12px">
+            🔍 Buscar Documentos do Monitorado
+            <span style="font-weight:400;font-size:.75rem;color:#64748b;margin-left:8px">Pesquise pelo nome, selecione os docs e a IA preenche o formulário</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <input id="mul-busca-input" type="text" placeholder="Digite o nome do monitorado..."
+              style="flex:1;padding:8px 12px;border:1px solid #93c5fd;border-radius:8px;font-size:.87rem;outline:none"
+              onkeydown="if(event.key==='Enter') _bmonPesquisar('mul')"
+              oninput="_bmonOnInput('mul', this.value)">
+            <button onclick="_bmonPesquisar('mul')"
+              style="background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap">
+              🔍 Buscar
+            </button>
+          </div>
+          <div id="mul-busca-sugestoes" style="display:none;background:#fff;border:1px solid #bfdbfe;border-radius:8px;margin-bottom:8px;max-height:160px;overflow-y:auto"></div>
+          <div id="mul-docs-painel" style="display:none">
+            <div id="mul-docs-monitorado-nome" style="font-weight:700;color:#1e3a5f;font-size:.88rem;margin-bottom:8px;padding:6px 10px;background:#dbeafe;border-radius:6px"></div>
+            <div id="mul-docs-lista" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;max-height:220px;overflow-y:auto;padding:6px 8px"></div>
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+              <button onclick="_bmonSelecionarTodos('mul', true)" style="background:#fff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:7px;padding:5px 11px;font-size:.78rem;font-weight:600;cursor:pointer">☑ Todos</button>
+              <button onclick="_bmonSelecionarTodos('mul', false)" style="background:#fff;color:#64748b;border:1px solid #e2e8f0;border-radius:7px;padding:5px 11px;font-size:.78rem;font-weight:600;cursor:pointer">☐ Nenhum</button>
+              <span id="mul-docs-sel-count" style="font-size:.78rem;color:#64748b"></span>
+              <div style="flex:1"></div>
+              <button onclick="_bmonCarregarEExtrair('mul')" style="background:#1d4ed8;color:#fff;border:none;border-radius:7px;padding:7px 15px;font-size:.82rem;font-weight:700;cursor:pointer">🤖 Carregar e Extrair com IA</button>
+            </div>
+          </div>
+          <div id="mul-ia-status" style="display:none;margin-top:8px;padding:8px 12px;border-radius:7px;font-size:.82rem;font-weight:600"></div>
+        </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px">
           <button class="btn-secondary" onclick="limparModeloMulti()">🗑️ Limpar</button>
           <button class="btn-secondary" onclick="copiarModeloMulti()">📋 Copiar Texto</button>
@@ -2281,6 +2341,14 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <div style="background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow)">
             <div style="font-weight:700;color:var(--az1);font-size:.95rem;margin-bottom:16px;border-bottom:1px solid #e0e6ed;padding-bottom:8px">📡 Dados do Ofício</div>
 
+            <!-- Modelo -->
+            <div class="form-field">
+              <label>Modelo de Ofício</label>
+              <select id="com-of-modelo" onchange="com_atualizarCampos();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+                <option value="">Selecione o modelo...</option>
+              </select>
+            </div>
+
             <!-- Comarca + Vara -->
             <div class="form-field">
               <label>Comarca</label>
@@ -2301,14 +2369,6 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
               <input type="text" id="com-of-destinatario" oninput="com_atualizarPreview()"
                 style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
                 placeholder="Preenchido automaticamente ao selecionar comarca e vara">
-            </div>
-
-            <!-- Modelo -->
-            <div class="form-field">
-              <label>Modelo de Ofício</label>
-              <select id="com-of-modelo" onchange="com_atualizarCampos();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
-                <option value="">Selecione o modelo...</option>
-              </select>
             </div>
 
             <!-- Nº Ofício + Data -->
@@ -2392,11 +2452,178 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
       <!-- Sub-panel Jurídico -->
       <div id="mod-panel-juridico-mod" style="display:none">
-        <div style="padding:32px;text-align:center;color:#888">
-          <div style="font-size:2.5rem;margin-bottom:12px">⚖️</div>
-          <div style="font-size:1rem;font-weight:600;color:#1F4E78;margin-bottom:6px">Modelos Jurídicos</div>
-          <div style="font-size:.88rem">Em breve — os modelos de documentos do Jurídico serão implementados aqui.</div>
+
+        <!-- ═══ BUSCA DE DOCS COM IA — JURÍDICO ═════════════════ -->
+        <div style="background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin:14px 0 10px">
+          <div style="font-weight:700;color:#1e40af;font-size:.93rem;margin-bottom:12px">
+            🔍 Buscar Documentos do Monitorado
+            <span style="font-weight:400;font-size:.75rem;color:#64748b;margin-left:8px">Pesquise pelo nome, selecione os docs e a IA preenche o formulário</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <input id="jur-busca-input" type="text" placeholder="Digite o nome do monitorado..."
+              style="flex:1;padding:8px 12px;border:1px solid #93c5fd;border-radius:8px;font-size:.87rem;outline:none"
+              onkeydown="if(event.key==='Enter') _bmonPesquisar('jur')"
+              oninput="_bmonOnInput('jur', this.value)">
+            <button onclick="_bmonPesquisar('jur')"
+              style="background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap">
+              🔍 Buscar
+            </button>
+          </div>
+          <div id="jur-busca-sugestoes" style="display:none;background:#fff;border:1px solid #bfdbfe;border-radius:8px;margin-bottom:8px;max-height:160px;overflow-y:auto"></div>
+          <div id="jur-docs-painel" style="display:none">
+            <div id="jur-docs-monitorado-nome" style="font-weight:700;color:#1e3a5f;font-size:.88rem;margin-bottom:8px;padding:6px 10px;background:#dbeafe;border-radius:6px"></div>
+            <div id="jur-docs-lista" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;max-height:220px;overflow-y:auto;padding:6px 8px"></div>
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+              <button onclick="_bmonSelecionarTodos('jur', true)" style="background:#fff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:7px;padding:5px 11px;font-size:.78rem;font-weight:600;cursor:pointer">☑ Todos</button>
+              <button onclick="_bmonSelecionarTodos('jur', false)" style="background:#fff;color:#64748b;border:1px solid #e2e8f0;border-radius:7px;padding:5px 11px;font-size:.78rem;font-weight:600;cursor:pointer">☐ Nenhum</button>
+              <span id="jur-docs-sel-count" style="font-size:.78rem;color:#64748b"></span>
+              <div style="flex:1"></div>
+              <button onclick="_bmonCarregarEExtrair('jur')" style="background:#1d4ed8;color:#fff;border:none;border-radius:7px;padding:7px 15px;font-size:.82rem;font-weight:700;cursor:pointer">🤖 Carregar e Extrair com IA</button>
+            </div>
+          </div>
+          <div id="jur-ia-status" style="display:none;margin-top:8px;padding:8px 12px;border-radius:7px;font-size:.82rem;font-weight:600"></div>
         </div>
+
+        <!-- Toolbar -->
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin:4px 0 8px;flex-wrap:wrap">
+          <button class="btn-secondary" onclick="jur_limpar()">🗑️ Limpar</button>
+          <button class="btn-secondary" onclick="jur_copiar()">📋 Copiar Texto</button>
+          <button class="btn-primary"   onclick="jur_gerarDoc()">📄 Gerar .doc</button>
+        </div>
+
+        <!-- Grid 1fr 1fr -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:4px">
+
+          <!-- Coluna Formulário -->
+          <div style="background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow)">
+            <div style="font-weight:700;color:var(--az1);font-size:.95rem;margin-bottom:16px;border-bottom:1px solid #e0e6ed;padding-bottom:8px">⚖️ Dados do Documento</div>
+
+            <!-- Modelo Jurídico -->
+            <div class="form-field">
+              <label>Modelo Jurídico *</label>
+              <select id="jur-modelo" onchange="jur_atualizarCampos();jur_gerarTexto()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+                <option value="">Selecione o modelo...</option>
+                <optgroup label="── Representação ──">
+                  <option value="repr-prisao">Representação por Prisão Preventiva</option>
+                  <option value="repr-revogacao">Representação pela Revogação de Prisão Preventiva</option>
+                </optgroup>
+                <optgroup label="── Informativos ──">
+                  <option value="info-violacao">Informativo de Violação de Condições</option>
+                  <option value="info-cumprimento">Informativo de Cumprimento de Medidas</option>
+                  <option value="info-cessacao">Informativo de Cessação de Monitoramento</option>
+                </optgroup>
+                <optgroup label="── Ofícios ──">
+                  <option value="oficio-requisicao">Ofício de Requisição de Documentos</option>
+                  <option value="oficio-comunicacao">Ofício de Comunicação de Ocorrência</option>
+                </optgroup>
+                <optgroup label="── Relatórios ──">
+                  <option value="rel-tecnico">Relatório Técnico para o Juízo</option>
+                  <option value="rel-monitoramento">Relatório de Monitoramento Eletrônico</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <!-- Comarca + Vara -->
+            <div class="form-field">
+              <label>Comarca</label>
+              <select id="jur-comarca" onchange="jur_atualizarVaras();jur_gerarTexto()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+                <option value="">Selecione a comarca...</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Vara</label>
+              <select id="jur-vara" onchange="jur_atualizarDestinatario();jur_gerarTexto()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+                <option value="">Selecione a vara...</option>
+              </select>
+            </div>
+
+            <!-- Destinatário -->
+            <div class="form-field">
+              <label>Destinatário <span style="font-weight:400;color:#94a3b8">(editável)</span></label>
+              <input type="text" id="jur-destinatario" oninput="jur_gerarTexto()"
+                style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
+                placeholder="Preenchido automaticamente ao selecionar comarca e vara">
+            </div>
+
+            <!-- Nº Ofício + Data -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-field">
+                <label>Nº do Ofício</label>
+                <input type="text" id="jur-numero" oninput="jur_gerarTexto()"
+                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
+                  placeholder="ex: 1092">
+              </div>
+              <div class="form-field">
+                <label>Data</label>
+                <input type="date" id="jur-data" oninput="jur_gerarTexto()"
+                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
+              </div>
+            </div>
+
+            <!-- Nome + Processo -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-field">
+                <label>Nome do Monitorado</label>
+                <input type="text" id="jur-nome" oninput="jur_gerarTexto()"
+                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
+                  placeholder="NOME COMPLETO EM MAIÚSCULAS">
+              </div>
+              <div class="form-field">
+                <label>Nº do Processo</label>
+                <input type="text" id="jur-processo" oninput="jur_gerarTexto()"
+                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
+                  placeholder="ex: 5001811-77.2022.8.03.0001">
+              </div>
+            </div>
+
+            <!-- Saudação -->
+            <div class="form-field">
+              <label>Saudação</label>
+              <select id="jur-saudacao" onchange="jur_gerarTexto()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+                <option>Senhor Juiz,</option>
+                <option>Senhora Juíza,</option>
+                <option selected>Senhor(a) Juiz(a),</option>
+                <option>Senhor Promotor,</option>
+                <option>Senhora Promotora,</option>
+                <option>Senhor,</option>
+                <option>Senhora,</option>
+              </select>
+            </div>
+
+            <!-- Campos dinâmicos -->
+            <div id="jur-campos-dinamicos"></div>
+
+            <hr style="border:none;border-top:1px solid #e2e8f0;margin:14px 0">
+
+            <!-- Signatário + Decreto -->
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+              <div class="form-field">
+                <label>Signatário</label>
+                <input type="text" id="jur-signatario" value="Everton Nunes Costa" oninput="jur_gerarTexto()"
+                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
+              </div>
+              <div class="form-field">
+                <label>Decreto</label>
+                <input type="text" id="jur-decreto" value="5953/2025-GEA" oninput="jur_gerarTexto()"
+                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
+              </div>
+            </div>
+          </div><!-- /form col -->
+
+          <!-- Coluna Pré-visualização -->
+          <div style="background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column">
+            <div style="font-weight:700;color:var(--az1);font-size:.95rem;margin-bottom:16px;border-bottom:1px solid #e0e6ed;padding-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+              <span>📄 Texto Gerado (editável)</span>
+              <span id="jur-char-count" style="font-size:.75rem;color:#888;font-weight:400">0 caracteres</span>
+            </div>
+            <textarea id="jur-texto" rows="28"
+              style="flex:1;resize:vertical;font-family:var(--font-mono);font-size:.78rem;line-height:1.6;border:1px solid #e0e6ed;border-radius:6px;padding:12px;background:#f8faff;color:#1a1a2e;outline:none"
+              placeholder="Selecione um modelo e preencha os campos para gerar o texto..."
+              oninput="document.getElementById('jur-char-count').textContent=this.value.length+' caracteres'"></textarea>
+            <div id="jur-copy-msg" style="display:none;margin-top:8px;padding:8px 12px;background:#e8f5e9;border-radius:6px;color:#1a4226;font-size:.84rem;font-weight:600">✅ Texto copiado para a área de transferência!</div>
+          </div><!-- /preview col -->
+
+        </div><!-- /grid -->
       </div><!-- /mod-panel-juridico-mod -->
 
     </div>
@@ -11861,6 +12088,7 @@ function mudarSubAbaModelos(aba) {
     if (panel) panel.style.display = a === aba ? 'block' : 'none';
   });
   if (aba === 'comunicacao') com_init();
+  if (aba === 'juridico-mod') jur_init();
 }
 
 /* ═══════════════════ MODELOS — EQUIPE MULTIDISCIPLINAR ══════════════════ */
@@ -15364,6 +15592,386 @@ function com_limparAnexos() {
   com_renderizarAnexos();
 }
 
+/* ══════════════════════════════════════════════════════════════
+   _bmon — Busca genérica de documentos (Plantão / Multi / Jurídico)
+   Prefixos: 'pla' | 'mul' | 'jur'
+   ══════════════════════════════════════════════════════════════ */
+
+const _bmonState = {};
+function _bmonGetSt(pref) {
+  if (!_bmonState[pref]) _bmonState[pref] = { buscaTimer: null, docsCache: [] };
+  return _bmonState[pref];
+}
+
+function _bmonOnInput(pref, valor) {
+  const st = _bmonGetSt(pref);
+  clearTimeout(st.buscaTimer);
+  if (valor.trim().length < 2) {
+    const sug = document.getElementById(pref + '-busca-sugestoes');
+    if (sug) sug.style.display = 'none';
+    return;
+  }
+  st.buscaTimer = setTimeout(() => _bmonPesquisar(pref, true), 400);
+}
+
+async function _bmonPesquisar(pref, modoSugestao = false) {
+  if (!r2_state.url || !r2_state.token) await r2_carregarConfig();
+  const input = document.getElementById(pref + '-busca-input');
+  const termo = (input?.value || '').trim();
+  if (!termo) return;
+  const sugestoesEl = document.getElementById(pref + '-busca-sugestoes');
+
+  const renderItem = (m) =>
+    `<div onclick="_bmonSelecionarMon('${pref}','${m.nome.replace(/'/g,"\\'")}');document.getElementById('${pref}-busca-sugestoes').style.display='none'"
+      style="padding:8px 12px;cursor:pointer;font-size:.84rem;color:#1e293b;border-bottom:1px solid #f1f5f9;transition:background .12s"
+      onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
+      👤 ${m.nome}
+    </div>`;
+
+  try {
+    const resp = await fetch(
+      `${r2_state.url}/monitorados?busca=${encodeURIComponent(termo)}&limite=20`,
+      { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
+    );
+    if (!resp.ok) throw new Error(await resp.text());
+    const lista = (await resp.json()).monitorados || [];
+
+    if (modoSugestao) {
+      if (!lista.length) { sugestoesEl.style.display = 'none'; return; }
+      sugestoesEl.innerHTML = lista.map(renderItem).join('');
+      sugestoesEl.style.display = 'block';
+    } else {
+      sugestoesEl.style.display = 'none';
+      if (lista.length === 1) { if (input) input.value = lista[0].nome; await _bmonSelecionarMon(pref, lista[0].nome); }
+      else if (lista.length > 1) { sugestoesEl.innerHTML = lista.map(renderItem).join(''); sugestoesEl.style.display = 'block'; }
+      else _mostrarToast('⚠️ Nenhum monitorado encontrado.', 'erro');
+    }
+  } catch (e) { _mostrarToast('❌ Erro na busca: ' + e.message, 'erro'); }
+}
+
+async function _bmonSelecionarMon(pref, nome) {
+  if (!r2_state.url || !r2_state.token) await r2_carregarConfig();
+  const st      = _bmonGetSt(pref);
+  const input   = document.getElementById(pref + '-busca-input');
+  const painel  = document.getElementById(pref + '-docs-painel');
+  const nomeEl  = document.getElementById(pref + '-docs-monitorado-nome');
+  const listaEl = document.getElementById(pref + '-docs-lista');
+  if (input) input.value = nome;
+  nomeEl.textContent = '⏳ Carregando documentos...';
+  painel.style.display = 'block';
+  listaEl.innerHTML = '';
+  st.docsCache = [];
+
+  try {
+    const resp = await fetch(
+      `${r2_state.url}/list?monitorado=${encodeURIComponent(nome)}`,
+      { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
+    );
+    if (!resp.ok) throw new Error(await resp.text());
+    st.docsCache = (await resp.json()).arquivos || [];
+    nomeEl.textContent = `📁 ${nome}  (${st.docsCache.length} documento${st.docsCache.length !== 1 ? 's' : ''})`;
+
+    if (!st.docsCache.length) {
+      listaEl.innerHTML = '<div style="padding:10px;color:#94a3b8;font-size:.82rem;text-align:center">Nenhum documento encontrado.</div>';
+      _bmonAtualizarContador(pref); return;
+    }
+
+    const icons = { pdf:'📕', docx:'📘', doc:'📘', txt:'📃', csv:'📊', png:'🖼️', jpg:'🖼️', jpeg:'🖼️' };
+    const porPasta = {};
+    for (const arq of st.docsCache) { const p = arq.pasta || 'Outros'; if (!porPasta[p]) porPasta[p] = []; porPasta[p].push(arq); }
+
+    let html = '';
+    for (const [pasta, arqs] of Object.entries(porPasta)) {
+      html += `<div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;padding:6px 4px 3px;margin-top:4px">${pasta}</div>`;
+      for (const arq of arqs) {
+        const ext = (arq.nome || arq.key || '').split('.').pop().toLowerCase();
+        const icon = icons[ext] || '📄';
+        const kb = arq.tamanho ? (arq.tamanho / 1024).toFixed(0) + ' KB' : '';
+        html += `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-radius:6px;transition:background .12s"
+          onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
+          <input type="checkbox" class="${pref}-doc-check" data-key="${arq.key}" data-nome="${(arq.nome||'').replace(/"/g,'&quot;')}"
+            style="width:15px;height:15px;cursor:pointer;accent-color:#1d4ed8" onchange="_bmonAtualizarContador('${pref}')">
+          <span style="font-size:1rem">${icon}</span>
+          <span style="flex:1;font-size:.8rem;color:#1e293b">${arq.nome || arq.key.split('/').pop()}</span>
+          <span style="font-size:.72rem;color:#94a3b8">${kb}</span>
+        </label>`;
+      }
+    }
+    listaEl.innerHTML = html;
+    _bmonAtualizarContador(pref);
+  } catch (e) { nomeEl.textContent = '❌ Erro: ' + e.message; }
+}
+
+function _bmonAtualizarContador(pref) {
+  const checks = [...document.querySelectorAll('.' + pref + '-doc-check:checked')];
+  const el = document.getElementById(pref + '-docs-sel-count');
+  if (el) el.textContent = checks.length ? checks.length + ' selecionado(s)' : '';
+}
+
+function _bmonSelecionarTodos(pref, marcar) {
+  document.querySelectorAll('.' + pref + '-doc-check').forEach(c => c.checked = marcar);
+  _bmonAtualizarContador(pref);
+}
+
+async function _bmonExtrairTexto(file) {
+  const tipo = file.name.split('.').pop().toLowerCase();
+  try {
+    if (['txt','text','csv'].includes(tipo)) return await file.text();
+    if (tipo === 'docx' || tipo === 'doc') {
+      await _carregarScriptSE('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js', 'mammoth');
+      const res = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+      return res.value || '';
+    }
+    if (tipo === 'pdf') {
+      await _carregarScriptSE('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'pdfjsLib');
+      if (window.pdfjsLib) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const pdfDoc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+        const parts = [];
+        for (let p = 1; p <= pdfDoc.numPages; p++) {
+          const content = await (await pdfDoc.getPage(p)).getTextContent();
+          parts.push(content.items.map(i => i.str).join(' '));
+        }
+        return parts.join('\n');
+      }
+    }
+  } catch (e) { console.warn('[CME] Erro ao extrair texto', file.name, e); }
+  return '';
+}
+
+async function _bmonCarregarEExtrair(pref) {
+  const checks = [...document.querySelectorAll('.' + pref + '-doc-check:checked')];
+  if (!checks.length) { _mostrarToast('⚠️ Selecione pelo menos um documento.', 'erro'); return; }
+  if (!r2_state.url || !r2_state.token) await r2_carregarConfig();
+
+  const statusEl = document.getElementById(pref + '-ia-status');
+  const setStatus = (msg, ok = true) => {
+    if (!statusEl) return;
+    statusEl.style.display = 'block';
+    statusEl.style.background = ok ? '#eff6ff' : '#fef2f2';
+    statusEl.style.color = ok ? '#1e40af' : '#dc2626';
+    statusEl.textContent = msg;
+  };
+  setStatus('⏳ Baixando documentos do sistema...');
+
+  const textos = [];
+  for (const chk of checks) {
+    const key = chk.dataset.key, nome = chk.dataset.nome || key.split('/').pop();
+    try {
+      const resp = await fetch(`${r2_state.url}/download?key=${encodeURIComponent(key)}`,
+        { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const blob = await resp.blob();
+      const txt = await _bmonExtrairTexto(new File([blob], nome, { type: blob.type }));
+      if (txt) textos.push('=== ' + nome + ' ===\n' + txt);
+    } catch (e) { console.warn('[CME] Erro ao baixar', nome, e); }
+  }
+  if (!textos.length) { setStatus('❌ Não foi possível extrair texto dos documentos.', false); return; }
+
+  setStatus('🤖 Enviando para análise da IA...');
+  const textoGeral = textos.join('\n\n---\n\n').slice(0, 9000);
+  const comarcas = typeof COM_COMARCAS !== 'undefined' ? COM_COMARCAS.map(c => c.nome) : [];
+  const varas    = typeof COM_COMARCAS !== 'undefined' ? COM_COMARCAS.flatMap(c => c.varas) : [];
+
+  try {
+    const resp = await fetch(`${r2_state.url}/extrair-campos`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${r2_state.token}`, 'Content-Type': 'application/json',
+        'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' },
+      body: JSON.stringify({ texto: textoGeral, comarcas, varas }),
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    const { dados } = await resp.json();
+
+    let n = 0;
+    if      (pref === 'pla') n = _bmonPreencherPla(dados);
+    else if (pref === 'mul') n = _bmonPreencherMul(dados);
+    else if (pref === 'jur') n = await _bmonPreencherJur(dados);
+
+    setStatus('✅ IA preencheu ' + n + ' campo(s)!');
+    setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 4000);
+  } catch (e) { setStatus('❌ Erro na IA: ' + e.message, false); }
+}
+
+function _bmonPreencherPla(d) {
+  let n = 0;
+  const set = (id, val) => { if (val) { const el = document.getElementById(id); if (el) { el.value = val; n++; } } };
+  set('mod-monitorado', d.nome);
+  set('mod-processo', d.processo);
+  if (n) gerarModelo();
+  return n;
+}
+
+function _bmonPreencherMul(d) {
+  let n = 0;
+  const set = (id, val) => { if (val) { const el = document.getElementById(id); if (el) { el.value = val; n++; } } };
+  set('multi-processo', d.processo);
+  // Para multidisciplinar, o nome pode ser vítima ou réu — preenche vitima por padrão
+  set('multi-vitima', d.nome);
+  if (n) gerarModeloMulti();
+  return n;
+}
+
+async function _bmonPreencherJur(d) {
+  let n = 0;
+  const set = (id, val) => { if (val) { const el = document.getElementById(id); if (el) { el.value = val; n++; } } };
+  set('jur-nome', d.nome);
+  set('jur-processo', d.processo);
+  if (d.data) set('jur-data', d.data);
+  if (d.comarca || d.vara) {
+    n += await _comDefinirComarcaVara(d.comarca, d.vara, 'jur-comarca', 'jur-vara');
+  }
+  if (d.saudacao) {
+    const selS = document.getElementById('jur-saudacao');
+    const opt = _comMelhorOpcao(selS, d.saudacao, 5);
+    if (opt) { selS.value = opt.value; n++; }
+  }
+  if (n) jur_gerarTexto();
+  return n;
+}
+
+/* ══ Jurídico — funções de painel ═══════════════════════════════ */
+
+function jur_init() {
+  // Popula comarca
+  const selC = document.getElementById('jur-comarca');
+  if (!selC || selC.options.length > 1) return;
+  if (typeof COM_COMARCAS !== 'undefined') {
+    COM_COMARCAS.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.nome; opt.textContent = c.nome;
+      selC.appendChild(opt);
+    });
+  }
+  // Data padrão
+  const hoje = new Date();
+  const dd = String(hoje.getDate()).padStart(2,'0');
+  const mm = String(hoje.getMonth()+1).padStart(2,'0');
+  document.getElementById('jur-data').value = `${hoje.getFullYear()}-${mm}-${dd}`;
+}
+
+function jur_atualizarVaras() {
+  const comarca = document.getElementById('jur-comarca')?.value;
+  const selV    = document.getElementById('jur-vara');
+  if (!selV) return;
+  selV.innerHTML = '<option value="">Selecione a vara...</option>';
+  if (!comarca || typeof COM_COMARCAS === 'undefined') return;
+  const c = COM_COMARCAS.find(x => x.nome === comarca);
+  if (c) c.varas.forEach(v => { const o = document.createElement('option'); o.value = o.textContent = v; selV.appendChild(o); });
+  jur_atualizarDestinatario();
+}
+
+function jur_atualizarDestinatario() {
+  const comarca = document.getElementById('jur-comarca')?.value;
+  const vara    = document.getElementById('jur-vara')?.value;
+  const dest    = document.getElementById('jur-destinatario');
+  if (!dest) return;
+  if (comarca && vara) {
+    // Reutiliza a mesma lógica de destinatário da Comunicação
+    const destCom = document.getElementById('com-of-comarca');
+    const destVar = document.getElementById('com-of-vara');
+    const destDst = document.getElementById('com-of-destinatario');
+    if (destCom && destVar && destDst) {
+      const savedC = destCom.value, savedV = destVar.value;
+      destCom.value = comarca; destVar.value = vara;
+      com_atualizarDestinatario();
+      dest.value = destDst.value;
+      destCom.value = savedC; destVar.value = savedV;
+    }
+  }
+  jur_gerarTexto();
+}
+
+function jur_atualizarCampos() {
+  // Campos dinâmicos por modelo (expansão futura)
+  jur_gerarTexto();
+}
+
+function jur_gerarTexto() {
+  const modelo    = document.getElementById('jur-modelo')?.value;
+  const comarca   = document.getElementById('jur-comarca')?.value || '';
+  const vara      = document.getElementById('jur-vara')?.value || '';
+  const dest      = document.getElementById('jur-destinatario')?.value || (vara ? vara : 'MM. Juiz(a)');
+  const numero    = document.getElementById('jur-numero')?.value || '';
+  const dataVal   = document.getElementById('jur-data')?.value || '';
+  const nome      = document.getElementById('jur-nome')?.value || '';
+  const processo  = document.getElementById('jur-processo')?.value || '';
+  const saudacao  = document.getElementById('jur-saudacao')?.value || 'Senhor(a) Juiz(a),';
+  const signat    = document.getElementById('jur-signatario')?.value || '';
+  const decreto   = document.getElementById('jur-decreto')?.value || '';
+
+  if (!modelo) { document.getElementById('jur-texto').value = ''; return; }
+
+  const fmtData = (v) => {
+    if (!v) return '____ de __________ de ______';
+    const [y,m,d] = v.split('-');
+    const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    return `${parseInt(d)} de ${meses[parseInt(m)-1]} de ${y}`;
+  };
+
+  const modelos = {
+    'repr-prisao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nA Central de Monitoramento Eletrônico — CME/IAPEN-AP, no exercício de suas atribuições legais, vem respeitosamente a V. Exa. REPRESENTAR pela DECRETAÇÃO DE PRISÃO PREVENTIVA do monitorado ${nome || '(NOME DO MONITORADO)'}, processo nº ${processo || '(Nº DO PROCESSO)'}.\n\nOs fatos que ensejam a presente representação encontram-se devidamente documentados nos relatórios técnicos em anexo, demonstrando descumprimento reiterado das condições impostas na decisão que autorizou o monitoramento eletrônico.\n\nDiante do exposto, requer seja apreciada a presente representação, com a decretação da prisão preventiva do monitorado, em razão da necessidade de garantia da ordem pública e da aplicação da lei penal.\n\nAtenciosamente,\n\n${signat}\nCoordenador da CME/IAPEN-AP\nDecreto nº ${decreto}`,
+
+    'repr-revogacao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nA Central de Monitoramento Eletrônico — CME/IAPEN-AP vem, respeitosamente, REPRESENTAR pela REVOGAÇÃO DA PRISÃO PREVENTIVA do monitorado ${nome || '(NOME DO MONITORADO)'}, processo nº ${processo || '(Nº DO PROCESSO)'}.\n\nO monitorado tem demonstrado pleno cumprimento das condições impostas, sem registro de violações ou alertas relevantes no sistema de monitoramento eletrônico.\n\nAtenciosamente,\n\n${signat}\nCoordenador da CME/IAPEN-AP\nDecreto nº ${decreto}`,
+
+    'info-violacao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nComunicamos a V. Exa. que o monitorado ${nome || '(NOME DO MONITORADO)'}, vinculado ao processo nº ${processo || '(Nº DO PROCESSO)'}, apresentou VIOLAÇÃO DAS CONDIÇÕES DE MONITORAMENTO ELETRÔNICO, conforme relatório técnico em anexo.\n\nAs ocorrências registradas no sistema estão devidamente documentadas e à disposição de V. Exa. para as providências que entender cabíveis.\n\nAtenciosamente,\n\n${signat}\nCoordenador da CME/IAPEN-AP\nDecreto nº ${decreto}`,
+
+    'info-cumprimento': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nInformamos a V. Exa. que o monitorado ${nome || '(NOME DO MONITORADO)'}, vinculado ao processo nº ${processo || '(Nº DO PROCESSO)'}, encontra-se em regular CUMPRIMENTO DAS MEDIDAS CAUTELARES de monitoração eletrônica, sem registro de violações ou intercorrências relevantes no período.\n\nAtenciosamente,\n\n${signat}\nCoordenador da CME/IAPEN-AP\nDecreto nº ${decreto}`,
+
+    'info-cessacao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nComunicamos a V. Exa. a CESSAÇÃO DO MONITORAMENTO ELETRÔNICO do monitorado ${nome || '(NOME DO MONITORADO)'}, vinculado ao processo nº ${processo || '(Nº DO PROCESSO)'}.\n\nO encerramento ocorreu nos termos da decisão judicial e/ou esgotamento do prazo determinado, sendo o equipamento de monitoramento devidamente recolhido.\n\nAtenciosamente,\n\n${signat}\nCoordenador da CME/IAPEN-AP\nDecreto nº ${decreto}`,
+
+    'oficio-requisicao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nA Central de Monitoramento Eletrônico — CME/IAPEN-AP solicita, respeitosamente, a V. Exa. o envio dos documentos pertinentes ao monitorado ${nome || '(NOME DO MONITORADO)'}, processo nº ${processo || '(Nº DO PROCESSO)'}, necessários para regularização e continuidade do monitoramento eletrônico.\n\nAtenciosamente,\n\n${signat}\nCoordenador da CME/IAPEN-AP\nDecreto nº ${decreto}`,
+
+    'oficio-comunicacao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nComunicamos a V. Exa. a ocorrência registrada no sistema de monitoramento eletrônico referente ao monitorado ${nome || '(NOME DO MONITORADO)'}, processo nº ${processo || '(Nº DO PROCESSO)'}.\n\nInformações detalhadas encontram-se no relatório técnico em anexo.\n\nAtenciosamente,\n\n${signat}\nCoordenador da CME/IAPEN-AP\nDecreto nº ${decreto}`,
+
+    'rel-tecnico': `RELATÓRIO TÉCNICO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\nAssunto: Relatório Técnico — Monitoramento Eletrônico\nProcesso nº: ${processo || '(Nº DO PROCESSO)'}\nMonitorado: ${nome || '(NOME DO MONITORADO)'}\n\n1. IDENTIFICAÇÃO\nNome: ${nome || '(NOME DO MONITORADO)'}\nProcesso: ${processo || '(Nº DO PROCESSO)'}\n\n2. HISTÓRICO DO MONITORAMENTO\n(Descreva o histórico do monitoramento aqui)\n\n3. SITUAÇÃO ATUAL\n(Descreva a situação atual do monitorado)\n\n4. CONCLUSÃO\n(Conclusão técnica)\n\n${signat}\nCoordenador da CME/IAPEN-AP\nDecreto nº ${decreto}`,
+
+    'rel-monitoramento': `RELATÓRIO DE MONITORAMENTO ELETRÔNICO\nNº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nMonitorado: ${nome || '(NOME DO MONITORADO)'}\nProcesso nº: ${processo || '(Nº DO PROCESSO)'}\nComarca: ${comarca || '(COMARCA)'}\nVara: ${vara || '(VARA)'}\n\nPERÍODO DE REFERÊNCIA: ____/____/____ a ____/____/____\n\n1. DADOS DO MONITORAMENTO\n- Equipamento: Tornozeleira Eletrônica\n- Status: Ativo\n- Zona de Inclusão: (endereço)\n\n2. OCORRÊNCIAS REGISTRADAS\n(Liste as ocorrências ou informe que não houve)\n\n3. AVALIAÇÃO TÉCNICA\n(Avaliação técnica do período)\n\n${signat}\nCoordenador da CME/IAPEN-AP\nDecreto nº ${decreto}`,
+  };
+
+  const txt = modelos[modelo] || '';
+  const textarea = document.getElementById('jur-texto');
+  if (textarea) {
+    textarea.value = txt;
+    const cc = document.getElementById('jur-char-count');
+    if (cc) cc.textContent = txt.length + ' caracteres';
+  }
+}
+
+function jur_limpar() {
+  ['jur-modelo','jur-comarca','jur-vara','jur-numero','jur-nome','jur-processo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('jur-destinatario').value = '';
+  document.getElementById('jur-texto').value = '';
+  const hoje = new Date();
+  const dd = String(hoje.getDate()).padStart(2,'0');
+  const mm = String(hoje.getMonth()+1).padStart(2,'0');
+  document.getElementById('jur-data').value = `${hoje.getFullYear()}-${mm}-${dd}`;
+  jur_atualizarVaras();
+}
+
+async function jur_copiar() {
+  const txt = document.getElementById('jur-texto')?.value;
+  if (!txt) { _mostrarToast('⚠️ Nenhum texto para copiar.', 'erro'); return; }
+  await navigator.clipboard.writeText(txt);
+  const msg = document.getElementById('jur-copy-msg');
+  if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 2000); }
+}
+
+function jur_gerarDoc() {
+  const txt = document.getElementById('jur-texto')?.value;
+  if (!txt) { _mostrarToast('⚠️ Nenhum texto para gerar.', 'erro'); return; }
+  const blob = new Blob([txt], { type: 'application/msword' });
+  const nome = document.getElementById('jur-nome')?.value || 'juridico';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Juridico_${nome.replace(/\s+/g,'-')}.doc`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 /* ── Busca de Documentos do Monitorado ──────────────────────── */
 let _comDocsCache     = [];   // arquivos listados do monitorado atual
 let _comBuscaTimer    = null; // debounce para autocomplete
@@ -15591,10 +16199,10 @@ function _comMelhorOpcao(select, alvo, minScore = 10) {
   return melhor;
 }
 
-async function _comDefinirComarcaVara(comarcaAI, varaAI) {
+async function _comDefinirComarcaVara(comarcaAI, varaAI, comarcaElId = 'com-of-comarca', varaElId = 'com-of-vara') {
   let n = 0;
-  const selC = document.getElementById('com-of-comarca');
-  const selV = document.getElementById('com-of-vara');
+  const selC = document.getElementById(comarcaElId);
+  const selV = document.getElementById(varaElId);
   if (!selC || !selV) return n;
 
   // 1. Tenta encontrar comarca por match exato ou fuzzy
@@ -15603,14 +16211,14 @@ async function _comDefinirComarcaVara(comarcaAI, varaAI) {
     for (const opt of selC.options) {
       if (!opt.value) continue;
       if (_comNorm(opt.value) === _comNorm(comarcaAI)) {
-        selC.value = opt.value; if (typeof com_atualizarVaras === 'function') com_atualizarVaras();
+        selC.value = opt.value; if (comarcaElId === 'com-of-comarca' && typeof com_atualizarVaras === 'function') com_atualizarVaras(); else if (comarcaElId === 'jur-comarca') jur_atualizarVaras();
         n++; comarcaEncontrada = opt.value; break;
       }
     }
     if (!comarcaEncontrada) {
       const opt = _comMelhorOpcao(selC, comarcaAI, 30);
       if (opt) {
-        selC.value = opt.value; if (typeof com_atualizarVaras === 'function') com_atualizarVaras();
+        selC.value = opt.value; if (comarcaElId === 'com-of-comarca' && typeof com_atualizarVaras === 'function') com_atualizarVaras(); else if (comarcaElId === 'jur-comarca') jur_atualizarVaras();
         n++; comarcaEncontrada = opt.value;
       }
     }
@@ -15627,7 +16235,7 @@ async function _comDefinirComarcaVara(comarcaAI, varaAI) {
     }
     if (melhorComarca) {
       selC.value = melhorComarca;
-      if (typeof com_atualizarVaras === 'function') com_atualizarVaras();
+      if (comarcaElId === 'com-of-comarca' && typeof com_atualizarVaras === 'function') com_atualizarVaras(); else if (comarcaElId === 'jur-comarca') jur_atualizarVaras();
       n++; comarcaEncontrada = melhorComarca;
       await new Promise(r => setTimeout(r, 150));
       if (melhorVara && selV.querySelector(`option[value="${CSS.escape(melhorVara)}"]`)) {
@@ -15637,7 +16245,7 @@ async function _comDefinirComarcaVara(comarcaAI, varaAI) {
         const optV = _comMelhorOpcao(selV, varaAI, 10);
         if (optV) selV.value = optV.value;
       }
-      if (selV.value) { if (typeof com_atualizarDestinatario === 'function') com_atualizarDestinatario(); n++; }
+      if (selV.value) { if (comarcaElId === 'com-of-comarca' && typeof com_atualizarDestinatario === 'function') com_atualizarDestinatario(); else if (comarcaElId === 'jur-comarca') jur_atualizarDestinatario(); n++; }
       return n;
     }
   }
@@ -15648,7 +16256,7 @@ async function _comDefinirComarcaVara(comarcaAI, varaAI) {
     const opt = _comMelhorOpcao(selV, varaAI, 10);
     if (opt) {
       selV.value = opt.value;
-      if (typeof com_atualizarDestinatario === 'function') com_atualizarDestinatario();
+      if (comarcaElId === 'com-of-comarca' && typeof com_atualizarDestinatario === 'function') com_atualizarDestinatario(); else if (comarcaElId === 'jur-comarca') jur_atualizarDestinatario();
       n++;
     }
   }
