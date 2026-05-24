@@ -3162,6 +3162,16 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
               Carregando…
             </div>
           </div>
+          <!-- Paginação -->
+          <div id="r2-paginacao" style="display:none;align-items:center;justify-content:space-between;gap:4px;padding-top:6px;border-top:1px solid #e0e0e0">
+            <button onclick="r2_mudarPagina(-1)" id="r2-pg-prev"
+              style="border:1px solid #ddd;background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.8rem">◀</button>
+            <span id="r2-pg-info" style="font-size:.78rem;color:#666;text-align:center;flex:1"></span>
+            <button onclick="r2_mudarPagina(1)" id="r2-pg-next"
+              style="border:1px solid #ddd;background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.8rem">▶</button>
+          </div>
+          <div style="display:none">
+          </div>
         </div>
 
         <!-- Área principal: navegador de arquivos -->
@@ -12099,7 +12109,11 @@ const r2_state = {
   token:      '',   // AUTH_TOKEN
   monitorado: '',   // monitorado selecionado (nome real)
   pasta:      '',   // pasta atual
-  monitorados: [],  // cache da lista
+  monitorados: [],  // cache da lista (página atual)
+  pagina:      1,   // página atual de monitorados
+  totalPaginas: 1,  // total de páginas
+  totalMon:    0,   // total de monitorados
+  buscaMon:   '',   // filtro de busca atual
 };
 
 /* ── Config: carregar / salvar ────────────────────────────────── */
@@ -12176,13 +12190,23 @@ async function r2_inicializarAba() {
 }
 
 /* ── Monitorados ──────────────────────────────────────────────── */
-async function r2_carregarMonitorados() {
+async function r2_carregarMonitorados(pagina) {
+  if (pagina !== undefined) r2_state.pagina = pagina;
   const lista = document.getElementById('r2-lista-mon');
   lista.innerHTML = '<div style="color:#aaa;font-size:.85rem;text-align:center;padding:16px">Carregando…</div>';
   try {
-    const data = await r2_api('GET', '/monitorados');
-    r2_state.monitorados = data.monitorados || [];
+    const qs = new URLSearchParams({
+      pagina: r2_state.pagina,
+      limite: 50,
+      ...(r2_state.buscaMon ? { busca: r2_state.buscaMon } : {})
+    });
+    const data = await r2_api('GET', `/monitorados?${qs}`);
+    r2_state.monitorados  = data.monitorados   || [];
+    r2_state.totalPaginas = data.total_paginas || 1;
+    r2_state.totalMon     = data.total         || 0;
+    r2_state.pagina       = data.pagina        || 1;
     r2_renderizarListaMon(r2_state.monitorados);
+    r2_atualizarPaginacao();
   } catch(e) {
     lista.innerHTML = `<div style="color:#dc3545;font-size:.82rem;padding:10px">${e.message}</div>`;
   }
@@ -12240,11 +12264,32 @@ async function r2_deletarMonitorado(nome) {
 }
 
 function r2_filtrarMonitorados(q) {
-  // Normaliza: converte hífens → espaço, para "alexandre de" encontrar "alexandre-de-oliveira"
-  const norm = s => s.toLowerCase().replace(/-/g, ' ');
-  const f = norm(q);
-  const filtrados = r2_state.monitorados.filter(m => norm(m.nome).includes(f));
-  r2_renderizarListaMon(filtrados);
+  r2_state.buscaMon = q.trim();
+  r2_state.pagina   = 1;
+  clearTimeout(r2_filtrarMonitorados._t);
+  r2_filtrarMonitorados._t = setTimeout(() => r2_carregarMonitorados(), 350);
+}
+
+function r2_mudarPagina(delta) {
+  const nova = r2_state.pagina + delta;
+  if (nova < 1 || nova > r2_state.totalPaginas) return;
+  r2_carregarMonitorados(nova);
+}
+
+function r2_atualizarPaginacao() {
+  const pg   = document.getElementById('r2-paginacao');
+  const info = document.getElementById('r2-pg-info');
+  const prev = document.getElementById('r2-pg-prev');
+  const next = document.getElementById('r2-pg-next');
+  if (!pg) return;
+  if (r2_state.totalPaginas <= 1 && !r2_state.buscaMon) {
+    pg.style.display = 'none';
+    return;
+  }
+  pg.style.display = 'flex';
+  info.textContent = `${r2_state.pagina} / ${r2_state.totalPaginas}  (${r2_state.totalMon})`;
+  prev.disabled = r2_state.pagina <= 1;
+  next.disabled = r2_state.pagina >= r2_state.totalPaginas;
 }
 
 /* ══════════════════════════════════════════════════════════
