@@ -2342,29 +2342,8 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
     <!-- ─── ADMINISTRAÇÃO ─── -->
     <div class="tab-panel" id="panel-admin">
 
-      <!-- KPIs -->
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px" id="admin-kpis">
-        <div style="background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e2e8f0;text-align:center">
-          <div style="font-size:1.6rem;font-weight:800;color:#1F4E78" id="kpi-total">0</div>
-          <div style="font-size:.72rem;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Total</div>
-        </div>
-        <div style="background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e2e8f0;text-align:center">
-          <div style="font-size:1.6rem;font-weight:800;color:#1F4E78" id="kpi-admin">0</div>
-          <div style="font-size:.72rem;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Admin</div>
-        </div>
-        <div style="background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e2e8f0;text-align:center">
-          <div style="font-size:1.6rem;font-weight:800;color:#7c3aed" id="kpi-gerencia">0</div>
-          <div style="font-size:.72rem;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Gerência</div>
-        </div>
-        <div style="background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e2e8f0;text-align:center">
-          <div style="font-size:1.6rem;font-weight:800;color:#15803d" id="kpi-plantao">0</div>
-          <div style="font-size:.72rem;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Plantão</div>
-        </div>
-        <div style="background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e2e8f0;text-align:center">
-          <div style="font-size:1.6rem;font-weight:800;color:#0369a1" id="kpi-outros">0</div>
-          <div style="font-size:.72rem;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Outros</div>
-        </div>
-      </div>
+      <!-- KPIs (gerados dinamicamente por renderizarUsers) -->
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px" id="admin-kpis"></div>
 
       <!-- Grid principal -->
       <div style="display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start">
@@ -7490,15 +7469,36 @@ function renderizarUsers() {
         (_NIVEL_NOME[u.nivel]||'').toLowerCase().includes(filtro))
     : todos;
 
-  // KPIs
+  // KPIs — gerados dinamicamente para mostrar todos os níveis com usuários
   const counts = {};
-  todos.forEach(u => { counts[u.nivel] = (counts[u.nivel]||0) + 1; });
-  const _kpi = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  _kpi('kpi-total',    todos.length);
-  _kpi('kpi-admin',    counts.admin    || 0);
-  _kpi('kpi-gerencia', counts.gerencia || 0);
-  _kpi('kpi-plantao',  counts.plantao  || 0);
-  _kpi('kpi-outros',   todos.length - (counts.admin||0) - (counts.gerencia||0) - (counts.plantao||0));
+  todos.forEach(u => { counts[u.nivel || 'plantao'] = (counts[u.nivel || 'plantao']||0) + 1; });
+
+  const ORDEM_KPI = ['admin','gerencia','juridico','relatorio','comunicacao','plantao','estoque','triagem','psicossocial'];
+  const kpiBox = document.getElementById('admin-kpis');
+  if (kpiBox) {
+    const cardTotal = `
+      <div style="background:#fff;border-radius:10px;padding:12px 18px;border:1px solid #e2e8f0;
+        text-align:center;min-width:90px;flex:1">
+        <div style="font-size:1.55rem;font-weight:800;color:#1F4E78">${todos.length}</div>
+        <div style="font-size:.68rem;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.06em">Total</div>
+      </div>`;
+
+    const cardsNiveis = ORDEM_KPI
+      .filter(n => counts[n])
+      .map(n => {
+        const cor   = _NIVEL_COR[n]  || '#64748b';
+        const nome  = _NIVEL_NOME[n] || n;
+        const qtd   = counts[n];
+        return `
+          <div style="background:#fff;border-radius:10px;padding:12px 18px;border:1px solid #e2e8f0;
+            border-top:3px solid ${cor};text-align:center;min-width:90px;flex:1">
+            <div style="font-size:1.55rem;font-weight:800;color:${cor}">${qtd}</div>
+            <div style="font-size:.68rem;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.06em">${nome}</div>
+          </div>`;
+      }).join('');
+
+    kpiBox.innerHTML = cardTotal + cardsNiveis;
+  }
 
   const countEl = document.getElementById('admin-user-count');
   if (countEl) countEl.textContent = filtro
