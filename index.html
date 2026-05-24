@@ -2207,39 +2207,56 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
       <!-- Sub-panel Comunicação -->
       <div id="mod-panel-comunicacao" style="display:none">
 
-        <!-- ═══ SEÇÃO ANEXOS COM IA ══════════════════════════════ -->
-        <div style="background:#f0f7ff;border:1.5px dashed #93c5fd;border-radius:12px;padding:16px 18px;margin:14px 0 10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-            <div style="font-weight:700;color:#1e40af;font-size:.93rem">
-              🤖 Leitura de Documentos com IA
-              <span style="font-weight:400;font-size:.75rem;color:#64748b;margin-left:8px">Anexe docs e a IA preenche o formulário automaticamente</span>
-            </div>
-            <div style="display:flex;gap:7px;flex-wrap:wrap">
-              <button id="com-btn-extrair-ia" onclick="com_extrairComIA()"
-                style="background:#1d4ed8;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:.8rem;font-weight:700;cursor:pointer">
-                🤖 Extrair dados com IA
+        <!-- ═══ SEÇÃO BUSCA DE DOCS DO MONITORADO ═══════════════ -->
+        <div style="background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin:14px 0 10px">
+
+          <!-- Cabeçalho -->
+          <div style="font-weight:700;color:#1e40af;font-size:.93rem;margin-bottom:12px">
+            🔍 Buscar Documentos do Monitorado
+            <span style="font-weight:400;font-size:.75rem;color:#64748b;margin-left:8px">Pesquise pelo nome, selecione os docs e a IA preenche o formulário</span>
+          </div>
+
+          <!-- Linha de busca -->
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <input id="com-busca-input" type="text" placeholder="Digite o nome do monitorado..."
+              style="flex:1;padding:8px 12px;border:1px solid #93c5fd;border-radius:8px;font-size:.87rem;outline:none"
+              onkeydown="if(event.key==='Enter') com_buscarMonitorado()"
+              oninput="com_onBuscaInput(this.value)">
+            <button onclick="com_buscarMonitorado()"
+              style="background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap">
+              🔍 Buscar
+            </button>
+          </div>
+
+          <!-- Sugestões autocomplete -->
+          <div id="com-busca-sugestoes" style="display:none;background:#fff;border:1px solid #bfdbfe;border-radius:8px;margin-bottom:8px;max-height:160px;overflow-y:auto"></div>
+
+          <!-- Lista de arquivos do monitorado selecionado -->
+          <div id="com-docs-painel" style="display:none">
+            <div id="com-docs-monitorado-nome" style="font-weight:700;color:#1e3a5f;font-size:.88rem;margin-bottom:8px;padding:6px 10px;background:#dbeafe;border-radius:6px"></div>
+            <div id="com-docs-lista" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;max-height:220px;overflow-y:auto;padding:6px 8px"></div>
+            <!-- Ações -->
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+              <button id="com-btn-selecionar-todos" onclick="com_selecionarTodosDocs(true)"
+                style="background:#fff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:7px;padding:5px 11px;font-size:.78rem;font-weight:600;cursor:pointer">
+                ☑ Todos
               </button>
-              <button onclick="com_limparAnexos()"
-                style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:7px;padding:6px 10px;font-size:.8rem;font-weight:600;cursor:pointer">
-                🗑️ Limpar anexos
+              <button onclick="com_selecionarTodosDocs(false)"
+                style="background:#fff;color:#64748b;border:1px solid #e2e8f0;border-radius:7px;padding:5px 11px;font-size:.78rem;font-weight:600;cursor:pointer">
+                ☐ Nenhum
+              </button>
+              <span id="com-docs-sel-count" style="font-size:.78rem;color:#64748b"></span>
+              <div style="flex:1"></div>
+              <button id="com-btn-extrair-ia" onclick="com_carregarEExtrair()"
+                style="background:#1d4ed8;color:#fff;border:none;border-radius:7px;padding:7px 15px;font-size:.82rem;font-weight:700;cursor:pointer">
+                🤖 Carregar e Extrair com IA
               </button>
             </div>
           </div>
 
-          <!-- Drop Zone -->
-          <div id="com-drop-zone"
-            onclick="document.getElementById('com-anexos-input').click()"
-            style="border:2px dashed #93c5fd;border-radius:9px;padding:18px;text-align:center;cursor:pointer;background:#fff;margin-bottom:10px;transition:background .15s">
-            <div style="font-size:1.6rem">📎</div>
-            <div style="font-size:.83rem;color:#3b82f6;font-weight:600;margin-top:4px">Clique ou arraste arquivos aqui</div>
-            <div style="font-size:.73rem;color:#94a3b8;margin-top:2px">PDF, DOCX, TXT — a IA extrai o texto e preenche os campos</div>
-          </div>
-          <input type="file" id="com-anexos-input" multiple accept=".pdf,.docx,.txt,.doc"
-            style="display:none" onchange="com_processarArquivos([...this.files]);this.value=''">
-
-          <!-- Lista de anexos -->
-          <div id="com-anexos-lista">
-            <div style="color:#94a3b8;font-size:.8rem;text-align:center;padding:4px">Nenhum documento anexado.</div>
+          <!-- Docs carregados (anexos prontos) -->
+          <div id="com-anexos-lista" style="margin-top:8px">
+            <div style="color:#94a3b8;font-size:.8rem;text-align:center;padding:4px">Nenhum documento carregado.</div>
           </div>
 
           <!-- Status IA -->
@@ -15315,7 +15332,7 @@ function com_renderizarAnexos() {
   const lista = document.getElementById('com-anexos-lista');
   if (!lista) return;
   if (!_comAnexos.length) {
-    lista.innerHTML = '<div style="color:#94a3b8;font-size:.8rem;text-align:center;padding:4px">Nenhum documento anexado.</div>';
+    lista.innerHTML = '<div style="color:#94a3b8;font-size:.8rem;text-align:center;padding:4px">Nenhum documento carregado.</div>';
     return;
   }
   const icons = { pdf:'📕', docx:'📘', doc:'📘', txt:'📃', csv:'📊', png:'🖼️', jpg:'🖼️', jpeg:'🖼️' };
@@ -15345,6 +15362,199 @@ function _comRemoverAnexo(id) {
 function com_limparAnexos() {
   _comAnexos = [];
   com_renderizarAnexos();
+}
+
+/* ── Busca de Documentos do Monitorado ──────────────────────── */
+let _comDocsCache     = [];   // arquivos listados do monitorado atual
+let _comBuscaTimer    = null; // debounce para autocomplete
+
+async function com_onBuscaInput(valor) {
+  clearTimeout(_comBuscaTimer);
+  const v = valor.trim();
+  if (v.length < 2) { document.getElementById('com-busca-sugestoes').style.display = 'none'; return; }
+  _comBuscaTimer = setTimeout(() => com_buscarMonitorado(true), 400);
+}
+
+async function com_buscarMonitorado(modoSugestao = false) {
+  if (!r2_state.url || !r2_state.token) await r2_carregarConfig();
+  const input = document.getElementById('com-busca-input');
+  const termo = (input?.value || '').trim();
+  if (!termo) return;
+
+  const sugestoesEl = document.getElementById('com-busca-sugestoes');
+
+  try {
+    const resp = await fetch(
+      `${r2_state.url}/monitorados?busca=${encodeURIComponent(termo)}&limite=20`,
+      { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': _usuario, 'X-Nivel': _nivel } }
+    );
+    if (!resp.ok) throw new Error(await resp.text());
+    const data = await resp.json();
+    const lista = data.monitorados || [];
+
+    if (modoSugestao) {
+      // Modo autocomplete — mostra dropdown
+      if (!lista.length) { sugestoesEl.style.display = 'none'; return; }
+      sugestoesEl.innerHTML = lista.map(m =>
+        `<div onclick="com_selecionarMonitorado('${m.nome.replace(/'/g,"\\'")}');document.getElementById('com-busca-sugestoes').style.display='none'"
+          style="padding:8px 12px;cursor:pointer;font-size:.84rem;color:#1e293b;border-bottom:1px solid #f1f5f9;transition:background .12s"
+          onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
+          👤 ${m.nome}
+        </div>`
+      ).join('');
+      sugestoesEl.style.display = 'block';
+    } else {
+      // Busca manual — se único resultado, seleciona direto; se múltiplos, mostra dropdown
+      sugestoesEl.style.display = 'none';
+      if (lista.length === 1) {
+        input.value = lista[0].nome;
+        await com_selecionarMonitorado(lista[0].nome);
+      } else if (lista.length > 1) {
+        sugestoesEl.innerHTML = lista.map(m =>
+          `<div onclick="com_selecionarMonitorado('${m.nome.replace(/'/g,"\\'")}');document.getElementById('com-busca-sugestoes').style.display='none'"
+            style="padding:8px 12px;cursor:pointer;font-size:.84rem;color:#1e293b;border-bottom:1px solid #f1f5f9;transition:background .12s"
+            onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
+            👤 ${m.nome}
+          </div>`
+        ).join('');
+        sugestoesEl.style.display = 'block';
+      } else {
+        _mostrarToast('⚠️ Nenhum monitorado encontrado com esse nome.', 'erro');
+      }
+    }
+  } catch (e) {
+    _mostrarToast(`❌ Erro na busca: ${e.message}`, 'erro');
+  }
+}
+
+async function com_selecionarMonitorado(nome) {
+  if (!r2_state.url || !r2_state.token) await r2_carregarConfig();
+  const painel   = document.getElementById('com-docs-painel');
+  const nomeEl   = document.getElementById('com-docs-monitorado-nome');
+  const listaEl  = document.getElementById('com-docs-lista');
+
+  nomeEl.textContent = '⏳ Carregando documentos...';
+  painel.style.display = 'block';
+  listaEl.innerHTML = '';
+  _comDocsCache = [];
+
+  // Busca arquivos em todas as pastas (sem filtro de pasta)
+  try {
+    const resp = await fetch(
+      `${r2_state.url}/list?monitorado=${encodeURIComponent(nome)}`,
+      { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': _usuario, 'X-Nivel': _nivel } }
+    );
+    if (!resp.ok) throw new Error(await resp.text());
+    const data = await resp.json();
+    _comDocsCache = data.arquivos || [];
+
+    nomeEl.textContent = `📁 ${nome}  (${_comDocsCache.length} documento${_comDocsCache.length !== 1 ? 's' : ''})`;
+
+    if (!_comDocsCache.length) {
+      listaEl.innerHTML = '<div style="padding:10px;color:#94a3b8;font-size:.82rem;text-align:center">Nenhum documento encontrado.</div>';
+      com_atualizarContadorDocs();
+      return;
+    }
+
+    // Agrupa por pasta
+    const porPasta = {};
+    for (const arq of _comDocsCache) {
+      const p = arq.pasta || 'Outros';
+      if (!porPasta[p]) porPasta[p] = [];
+      porPasta[p].push(arq);
+    }
+
+    const icons = { pdf:'📕', docx:'📘', doc:'📘', txt:'📃', csv:'📊', png:'🖼️', jpg:'🖼️', jpeg:'🖼️' };
+    let html = '';
+    for (const [pasta, arqs] of Object.entries(porPasta)) {
+      html += `<div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;padding:6px 4px 3px;margin-top:4px">${pasta}</div>`;
+      for (const arq of arqs) {
+        const ext  = (arq.nome || arq.key || '').split('.').pop().toLowerCase();
+        const icon = icons[ext] || '📄';
+        const kb   = arq.tamanho ? (arq.tamanho / 1024).toFixed(0) + ' KB' : '';
+        const key  = arq.key.replace(/'/g, "\\'");
+        html += `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-radius:6px;
+                   transition:background .12s" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
+          <input type="checkbox" class="com-doc-check" data-key="${arq.key}" data-nome="${(arq.nome||'').replace(/"/g,'&quot;')}"
+            style="width:15px;height:15px;cursor:pointer;accent-color:#1d4ed8" onchange="com_atualizarContadorDocs()">
+          <span style="font-size:1rem">${icon}</span>
+          <span style="flex:1;font-size:.8rem;color:#1e293b">${arq.nome || arq.key.split('/').pop()}</span>
+          <span style="font-size:.72rem;color:#94a3b8">${kb}</span>
+        </label>`;
+      }
+    }
+    listaEl.innerHTML = html;
+    com_atualizarContadorDocs();
+  } catch (e) {
+    nomeEl.textContent = `❌ Erro ao carregar: ${e.message}`;
+  }
+}
+
+function com_atualizarContadorDocs() {
+  const checks = [...document.querySelectorAll('.com-doc-check:checked')];
+  const el = document.getElementById('com-docs-sel-count');
+  if (el) el.textContent = checks.length ? `${checks.length} selecionado(s)` : '';
+}
+
+function com_selecionarTodosDocs(marcar) {
+  document.querySelectorAll('.com-doc-check').forEach(c => c.checked = marcar);
+  com_atualizarContadorDocs();
+}
+
+async function com_carregarEExtrair() {
+  const checks = [...document.querySelectorAll('.com-doc-check:checked')];
+  if (!checks.length) { _mostrarToast('⚠️ Selecione pelo menos um documento.', 'erro'); return; }
+  if (!r2_state.url || !r2_state.token) await r2_carregarConfig();
+
+  const btn = document.getElementById('com-btn-extrair-ia');
+  const status = document.getElementById('com-ia-status');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Baixando docs...'; }
+  if (status) { status.style.display = 'block'; status.style.background = '#eff6ff'; status.style.color = '#1e40af'; status.textContent = '⏳ Baixando documentos do sistema...'; }
+
+  // Limpa anexos anteriores
+  _comAnexos = [];
+  com_renderizarAnexos();
+
+  // Baixa cada arquivo selecionado e processa como se fosse upload manual
+  const erros = [];
+  for (const chk of checks) {
+    const key  = chk.dataset.key;
+    const nome = chk.dataset.nome || key.split('/').pop();
+    try {
+      const resp = await fetch(
+        `${r2_state.url}/download?key=${encodeURIComponent(key)}`,
+        { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': _usuario, 'X-Nivel': _nivel } }
+      );
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const file = new File([blob], nome, { type: blob.type || 'application/octet-stream' });
+      // Usa o mesmo pipeline de leitura já existente
+      await com_processarUmArquivo(file);
+    } catch (e) {
+      erros.push(nome);
+    }
+  }
+
+  if (erros.length) {
+    _mostrarToast(`⚠️ ${erros.length} arquivo(s) não puderam ser baixados.`, 'erro');
+  }
+
+  // Aguarda leitura de todos
+  const MAX_WAIT = 30000;
+  const start = Date.now();
+  while (_comAnexos.some(a => a.status === 'lendo') && Date.now() - start < MAX_WAIT) {
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  if (btn) { btn.textContent = '🤖 Carregar e Extrair com IA'; btn.disabled = false; }
+
+  // Dispara extração com IA
+  await com_extrairComIA();
+}
+
+/* Processa um único File object — delega ao pipeline existente */
+async function com_processarUmArquivo(file) {
+  await com_processarArquivos([file]);
 }
 
 /* ── Helpers de matching comarca/vara ───────────────────────── */
@@ -15448,7 +15658,7 @@ async function _comDefinirComarcaVara(comarcaAI, varaAI) {
 
 /* ── Extração com IA ─────────────────────────────────────────── */
 async function com_extrairComIA() {
-  if (!_comAnexos.length) { _mostrarToast('⚠️ Adicione documentos antes de extrair.', 'erro'); return; }
+  if (!_comAnexos.length) { _mostrarToast('⚠️ Selecione documentos antes de extrair.', 'erro'); return; }
   if (_comAnexos.some(a => a.status === 'lendo')) { _mostrarToast('⏳ Aguarde a leitura dos arquivos.', 'erro'); return; }
 
   const comTexto = _comAnexos.filter(a => a.texto.trim());
