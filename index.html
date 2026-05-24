@@ -6214,12 +6214,19 @@ function gerarComunicacaoDeOcorrencia(idx) {
   const oc  = ocs[idx];
   if (!oc) return _mostrarToast('⚠️ Ocorrência não encontrada.', 'erro');
 
+  // Verificar se usuário tem acesso à sub-aba Comunicação
+  const nivelAtual = usuarioAtual?.nivel || '';
+  const temAcessoCom = ['comunicacao', 'admin', 'gerencia'].includes(nivelAtual);
+  if (!temAcessoCom) {
+    return _mostrarToast('⛔ Acesso restrito ao setor de Comunicação.', 'erro');
+  }
+
   // 1. Determinar qual modelo usar com base no tipo da ocorrência
   const tipoLow = (oc.tipo || '').toLowerCase();
-  let modeloId = 'oc-prazo-vencido'; // padrão: ausência de contato
-  if (tipoLow.includes('zona') || tipoLow.includes('exclusão') || tipoLow.includes('exclusao')) {
-    modeloId = 'oc-violacao-zona';
-  }
+  // Violações de zona (exclusão e inclusão) e DPP acionado → modelo de ações do operador
+  const ehViolacaoZona = tipoLow.includes('exclus') || tipoLow.includes('inclus')
+    || tipoLow.includes('dpp acionado') || tipoLow.includes('aproximação dpp') || tipoLow.includes('aproximacao dpp');
+  let modeloId = ehViolacaoZona ? 'oc-violacao-zona' : 'oc-prazo-vencido';
 
   // 2. Navegar para Modelos → Comunicação
   mudarAba('modelos');
@@ -15202,8 +15209,8 @@ const COM_MODELOS = [
       ...(c.descricao_situacao ? [`${c.descricao_situacao}`] : []),
       `Considerando o esgotamento das tentativas de contato e o vencimento do prazo do POP sem resolução, encaminha-se o presente relatório para as providências cabíveis junto ao Juízo competente.`,
     ]},
-  { id:'oc-violacao-zona', cat:'Ocorrência', nome:'Violação de Zona de Exclusão — Ações do Operador',
-    assunto:'Violação de Zona de Exclusão — Relatório de Ações Realizadas',
+  { id:'oc-violacao-zona', cat:'Ocorrência', nome:'Violação de Zona / DPP — Ações do Operador',
+    assunto:'Relatório de Ações do Operador — Ocorrência de Monitoramento',
     campos:[
       {id:'tipo_violacao', label:'Tipo de violação detectada', tipo:'text',
         placeholder:'ex: Zona de Exclusão (permanência), Zona de Exclusão (entrada)'},
@@ -15213,12 +15220,12 @@ const COM_MODELOS = [
         placeholder:'Resultado das ações: monitorado retornou, CIODES acionado, prisão efetuada, etc.'},
     ],
     corpo:c=>[
-      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônico – CME, informa que o sistema de monitoramento detectou ocorrência de <b>${c.tipo_violacao || 'Violação de Zona de Exclusão'}</b> envolvendo o(a) monitorado(a) <b>${c.nome_monitorado}</b>, gerando alerta nesta central.`,
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônico – CME, informa que o sistema de monitoramento gerou alerta de <b>${c.tipo_violacao || 'ocorrência'}</b> envolvendo o(a) monitorado(a) <b>${c.nome_monitorado}</b>, exigindo intervenção imediata do operador de plantão.`,
       `Diante da ocorrência, o operador responsável de plantão adotou as seguintes providências:`,
       ...(c.acoes_realizadas
         ? c.acoes_realizadas.split('\n').filter(l=>l.trim()).map(l=>`<b>•</b> ${l.trim()}`)
         : ['<i>(sem descrição de ações registrada)</i>']),
-      ...(c.obs_finais ? [`<b>Observações finais:</b> ${c.obs_finais}`] : []),
+      ...(c.obs_finais ? c.obs_finais.split('\n').filter(l=>l.trim()).map((l,i) => i===0 ? `<b>Observações finais:</b> ${l.trim()}` : l.trim()) : []),
       `Encaminha-se o presente relatório para ciência e demais providências que Vossa Excelência entender necessárias.`,
     ]},
 ];
@@ -15309,7 +15316,8 @@ function com_atualizarCampos() {
   const m   = COM_MODELOS.find(x => x.id === document.getElementById('com-of-modelo').value);
   const div = document.getElementById('com-of-campos-dinamicos');
   if (!m || !m.campos.length) { div.innerHTML = ''; return; }
-  const cols = m.campos.length <= 2 ? '1fr '.repeat(m.campos.length).trim() : '1fr 1fr';
+  const temTextarea = m.campos.some(c => c.tipo === 'textarea');
+  const cols = temTextarea ? '1fr' : (m.campos.length <= 2 ? '1fr '.repeat(m.campos.length).trim() : '1fr 1fr');
   div.innerHTML = `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px">
     <div style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Campos do Modelo</div>
     <div style="display:grid;grid-template-columns:${cols};gap:10px">
@@ -15370,9 +15378,10 @@ function com_gerarOficio() {
     .replace(/[^\x00-\x7F]/g, c => `&#${c.charCodeAt(0)};`);
 
   // Parágrafos: preservar tags <b>, <i> do modelo
+  // ATENÇÃO: usar grupo não-capturante (?:b|i) para evitar stray chars no split
   const escP = s => {
-    const tks = s.split(/(<\/?(b|i)>)/g);
-    return tks.map(t => (/^<\/?(b|i)>$/.test(t)) ? t : esc(t)).join('');
+    const tks = s.split(/(<\/?(?:b|i)>)/g);
+    return tks.map(t => (/^<\/?(?:b|i)>$/.test(t)) ? t : esc(t)).join('');
   };
 
   const paragsHtml = paragrafos
