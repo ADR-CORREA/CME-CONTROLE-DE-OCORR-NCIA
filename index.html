@@ -2425,17 +2425,15 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
               <input type="text" id="com-of-signatario" placeholder="Nome do signatário" oninput="com_atualizarPreview()"
                 style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
             </div>
-            <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
-              <div class="form-field">
-                <label>Cargo</label>
-                <input type="text" id="com-of-cargo" placeholder="Cargo do signatário" oninput="com_atualizarPreview()"
-                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
-              </div>
-              <div class="form-field">
-                <label>Decreto</label>
-                <input type="text" id="com-of-decreto" value="5953/2025-GEA" oninput="com_atualizarPreview()"
-                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
-              </div>
+            <div class="form-field">
+              <label>Cargo</label>
+              <input type="text" id="com-of-cargo" placeholder="Cargo do signatário" oninput="com_atualizarPreview()"
+                style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
+            </div>
+            <div class="form-field" id="com-of-decreto-wrap" style="display:none">
+              <label>Decreto de Nomeação</label>
+              <input type="text" id="com-of-decreto" value="5953/2025-GEA" oninput="com_atualizarPreview()"
+                style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
             </div>
           </div><!-- /form col -->
 
@@ -2606,17 +2604,15 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
               <input type="text" id="jur-signatario" placeholder="Nome do signatário" oninput="jur_gerarTexto()"
                 style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
             </div>
-            <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
-              <div class="form-field">
-                <label>Cargo</label>
-                <input type="text" id="jur-cargo" placeholder="Cargo do signatário" oninput="jur_gerarTexto()"
-                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
-              </div>
-              <div class="form-field">
-                <label>Decreto</label>
-                <input type="text" id="jur-decreto" value="5953/2025-GEA" oninput="jur_gerarTexto()"
-                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
-              </div>
+            <div class="form-field">
+              <label>Cargo</label>
+              <input type="text" id="jur-cargo" placeholder="Cargo do signatário" oninput="jur_gerarTexto()"
+                style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
+            </div>
+            <div class="form-field" id="jur-decreto-wrap" style="display:none">
+              <label>Decreto de Nomeação</label>
+              <input type="text" id="jur-decreto" value="5953/2025-GEA" oninput="jur_gerarTexto()"
+                style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
             </div>
           </div><!-- /form col -->
 
@@ -15178,6 +15174,10 @@ function com_init() {
   const cargoEl  = document.getElementById('com-of-cargo');
   if (signatEl && !signatEl.value && usuarioAtual?.nome)  signatEl.value = usuarioAtual.nome;
   if (cargoEl  && !cargoEl.value  && usuarioAtual?.cargo) cargoEl.value  = usuarioAtual.cargo;
+  // Decreto: visível só para gerência e admin
+  const temDecreto = ['gerencia', 'admin'].includes(usuarioAtual?.nivel);
+  const decWrap = document.getElementById('com-of-decreto-wrap');
+  if (decWrap) decWrap.style.display = temDecreto ? '' : 'none';
   com_setupDropZone(); // inicializa drag-and-drop de anexos
 }
 
@@ -15393,7 +15393,7 @@ ${paragsHtml}
       ${assImgCapturada ? `<p style="margin:0 0 0 0;text-align:center"><img src="${assImgCapturada}" style="max-height:60pt;max-width:180pt;object-fit:contain;display:block;margin:0 auto 0 auto"></p>` : ''}
       <p style="border-top:1pt solid #000;padding-top:6pt;font-size:12pt;font-weight:bold;margin:0">${esc(signat)}</p>
       <p style="font-size:11pt;margin:2pt 0 0 0">${esc(cargo)}</p>
-      <p style="font-size:10pt;color:#444;margin:2pt 0 0 0">Decreto n&#176; ${esc(decreto)}</p>
+      ${decreto ? `<p style="font-size:10pt;color:#444;margin:2pt 0 0 0">Decreto n&#176; ${esc(decreto)}</p>` : ''}
     </td>
     <td style="width:45%"></td>
   </tr>
@@ -15475,7 +15475,7 @@ function com_atualizarPreview() {
     '',
     signat,
     cargo,
-    `Decreto nº ${decreto}`,
+    ...(decreto ? [`Decreto nº ${decreto}`] : []),
     '',
     '─────────────────────────────────────────────',
     'CENTRAL DE MONITORAMENTO ELETRÔNICO - CME',
@@ -15870,6 +15870,10 @@ function jur_init() {
   const cargoEl  = document.getElementById('jur-cargo');
   if (signatEl && !signatEl.value && usuarioAtual?.nome)  signatEl.value = usuarioAtual.nome;
   if (cargoEl  && !cargoEl.value  && usuarioAtual?.cargo) cargoEl.value  = usuarioAtual.cargo;
+  // Decreto: visível só para gerência e admin
+  const temDecreto = ['gerencia', 'admin'].includes(usuarioAtual?.nivel);
+  const decWrap = document.getElementById('jur-decreto-wrap');
+  if (decWrap) decWrap.style.display = temDecreto ? '' : 'none';
 }
 
 function jur_atualizarVaras() {
@@ -15933,23 +15937,23 @@ function jur_gerarTexto() {
   };
 
   const modelos = {
-    'repr-prisao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nA Central de Monitoramento Eletrônico — CME/IAPEN-AP, no exercício de suas atribuições legais, vem respeitosamente a V. Exa. REPRESENTAR pela DECRETAÇÃO DE PRISÃO PREVENTIVA do monitorado ${nome || '(NOME DO MONITORADO)'}, processo nº ${processo || '(Nº DO PROCESSO)'}.\n\nOs fatos que ensejam a presente representação encontram-se devidamente documentados nos relatórios técnicos em anexo, demonstrando descumprimento reiterado das condições impostas na decisão que autorizou o monitoramento eletrônico.\n\nDiante do exposto, requer seja apreciada a presente representação, com a decretação da prisão preventiva do monitorado, em razão da necessidade de garantia da ordem pública e da aplicação da lei penal.\n\nAtenciosamente,\n\n${signat}\n${cargo}\nDecreto nº ${decreto}`,
+    'repr-prisao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nA Central de Monitoramento Eletrônico — CME/IAPEN-AP, no exercício de suas atribuições legais, vem respeitosamente a V. Exa. REPRESENTAR pela DECRETAÇÃO DE PRISÃO PREVENTIVA do monitorado ${nome || '(NOME DO MONITORADO)'}, processo nº ${processo || '(Nº DO PROCESSO)'}.\n\nOs fatos que ensejam a presente representação encontram-se devidamente documentados nos relatórios técnicos em anexo, demonstrando descumprimento reiterado das condições impostas na decisão que autorizou o monitoramento eletrônico.\n\nDiante do exposto, requer seja apreciada a presente representação, com a decretação da prisão preventiva do monitorado, em razão da necessidade de garantia da ordem pública e da aplicação da lei penal.\n\nAtenciosamente,\n\n${signat}\n${cargo}${decreto ? '\nDecreto nº ' + decreto : ''}`,
 
-    'repr-revogacao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nA Central de Monitoramento Eletrônico — CME/IAPEN-AP vem, respeitosamente, REPRESENTAR pela REVOGAÇÃO DA PRISÃO PREVENTIVA do monitorado ${nome || '(NOME DO MONITORADO)'}, processo nº ${processo || '(Nº DO PROCESSO)'}.\n\nO monitorado tem demonstrado pleno cumprimento das condições impostas, sem registro de violações ou alertas relevantes no sistema de monitoramento eletrônico.\n\nAtenciosamente,\n\n${signat}\n${cargo}\nDecreto nº ${decreto}`,
+    'repr-revogacao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nA Central de Monitoramento Eletrônico — CME/IAPEN-AP vem, respeitosamente, REPRESENTAR pela REVOGAÇÃO DA PRISÃO PREVENTIVA do monitorado ${nome || '(NOME DO MONITORADO)'}, processo nº ${processo || '(Nº DO PROCESSO)'}.\n\nO monitorado tem demonstrado pleno cumprimento das condições impostas, sem registro de violações ou alertas relevantes no sistema de monitoramento eletrônico.\n\nAtenciosamente,\n\n${signat}\n${cargo}${decreto ? '\nDecreto nº ' + decreto : ''}`,
 
-    'info-violacao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nComunicamos a V. Exa. que o monitorado ${nome || '(NOME DO MONITORADO)'}, vinculado ao processo nº ${processo || '(Nº DO PROCESSO)'}, apresentou VIOLAÇÃO DAS CONDIÇÕES DE MONITORAMENTO ELETRÔNICO, conforme relatório técnico em anexo.\n\nAs ocorrências registradas no sistema estão devidamente documentadas e à disposição de V. Exa. para as providências que entender cabíveis.\n\nAtenciosamente,\n\n${signat}\n${cargo}\nDecreto nº ${decreto}`,
+    'info-violacao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nComunicamos a V. Exa. que o monitorado ${nome || '(NOME DO MONITORADO)'}, vinculado ao processo nº ${processo || '(Nº DO PROCESSO)'}, apresentou VIOLAÇÃO DAS CONDIÇÕES DE MONITORAMENTO ELETRÔNICO, conforme relatório técnico em anexo.\n\nAs ocorrências registradas no sistema estão devidamente documentadas e à disposição de V. Exa. para as providências que entender cabíveis.\n\nAtenciosamente,\n\n${signat}\n${cargo}${decreto ? '\nDecreto nº ' + decreto : ''}`,
 
-    'info-cumprimento': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nInformamos a V. Exa. que o monitorado ${nome || '(NOME DO MONITORADO)'}, vinculado ao processo nº ${processo || '(Nº DO PROCESSO)'}, encontra-se em regular CUMPRIMENTO DAS MEDIDAS CAUTELARES de monitoração eletrônica, sem registro de violações ou intercorrências relevantes no período.\n\nAtenciosamente,\n\n${signat}\n${cargo}\nDecreto nº ${decreto}`,
+    'info-cumprimento': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nInformamos a V. Exa. que o monitorado ${nome || '(NOME DO MONITORADO)'}, vinculado ao processo nº ${processo || '(Nº DO PROCESSO)'}, encontra-se em regular CUMPRIMENTO DAS MEDIDAS CAUTELARES de monitoração eletrônica, sem registro de violações ou intercorrências relevantes no período.\n\nAtenciosamente,\n\n${signat}\n${cargo}${decreto ? '\nDecreto nº ' + decreto : ''}`,
 
-    'info-cessacao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nComunicamos a V. Exa. a CESSAÇÃO DO MONITORAMENTO ELETRÔNICO do monitorado ${nome || '(NOME DO MONITORADO)'}, vinculado ao processo nº ${processo || '(Nº DO PROCESSO)'}.\n\nO encerramento ocorreu nos termos da decisão judicial e/ou esgotamento do prazo determinado, sendo o equipamento de monitoramento devidamente recolhido.\n\nAtenciosamente,\n\n${signat}\n${cargo}\nDecreto nº ${decreto}`,
+    'info-cessacao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nComunicamos a V. Exa. a CESSAÇÃO DO MONITORAMENTO ELETRÔNICO do monitorado ${nome || '(NOME DO MONITORADO)'}, vinculado ao processo nº ${processo || '(Nº DO PROCESSO)'}.\n\nO encerramento ocorreu nos termos da decisão judicial e/ou esgotamento do prazo determinado, sendo o equipamento de monitoramento devidamente recolhido.\n\nAtenciosamente,\n\n${signat}\n${cargo}${decreto ? '\nDecreto nº ' + decreto : ''}`,
 
-    'oficio-requisicao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nA Central de Monitoramento Eletrônico — CME/IAPEN-AP solicita, respeitosamente, a V. Exa. o envio dos documentos pertinentes ao monitorado ${nome || '(NOME DO MONITORADO)'}, processo nº ${processo || '(Nº DO PROCESSO)'}, necessários para regularização e continuidade do monitoramento eletrônico.\n\nAtenciosamente,\n\n${signat}\n${cargo}\nDecreto nº ${decreto}`,
+    'oficio-requisicao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nA Central de Monitoramento Eletrônico — CME/IAPEN-AP solicita, respeitosamente, a V. Exa. o envio dos documentos pertinentes ao monitorado ${nome || '(NOME DO MONITORADO)'}, processo nº ${processo || '(Nº DO PROCESSO)'}, necessários para regularização e continuidade do monitoramento eletrônico.\n\nAtenciosamente,\n\n${signat}\n${cargo}${decreto ? '\nDecreto nº ' + decreto : ''}`,
 
-    'oficio-comunicacao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nComunicamos a V. Exa. a ocorrência registrada no sistema de monitoramento eletrônico referente ao monitorado ${nome || '(NOME DO MONITORADO)'}, processo nº ${processo || '(Nº DO PROCESSO)'}.\n\nInformações detalhadas encontram-se no relatório técnico em anexo.\n\nAtenciosamente,\n\n${signat}\n${cargo}\nDecreto nº ${decreto}`,
+    'oficio-comunicacao': `OFÍCIO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\n${saudacao}\n\nComunicamos a V. Exa. a ocorrência registrada no sistema de monitoramento eletrônico referente ao monitorado ${nome || '(NOME DO MONITORADO)'}, processo nº ${processo || '(Nº DO PROCESSO)'}.\n\nInformações detalhadas encontram-se no relatório técnico em anexo.\n\nAtenciosamente,\n\n${signat}\n${cargo}${decreto ? '\nDecreto nº ' + decreto : ''}`,
 
-    'rel-tecnico': `RELATÓRIO TÉCNICO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\nAssunto: Relatório Técnico — Monitoramento Eletrônico\nProcesso nº: ${processo || '(Nº DO PROCESSO)'}\nMonitorado: ${nome || '(NOME DO MONITORADO)'}\n\n1. IDENTIFICAÇÃO\nNome: ${nome || '(NOME DO MONITORADO)'}\nProcesso: ${processo || '(Nº DO PROCESSO)'}\n\n2. HISTÓRICO DO MONITORAMENTO\n(Descreva o histórico do monitoramento aqui)\n\n3. SITUAÇÃO ATUAL\n(Descreva a situação atual do monitorado)\n\n4. CONCLUSÃO\n(Conclusão técnica)\n\n${signat}\n${cargo}\nDecreto nº ${decreto}`,
+    'rel-tecnico': `RELATÓRIO TÉCNICO Nº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nAo ${dest}\n${vara}\n${comarca ? comarca + ' — AP' : ''}\n\nAssunto: Relatório Técnico — Monitoramento Eletrônico\nProcesso nº: ${processo || '(Nº DO PROCESSO)'}\nMonitorado: ${nome || '(NOME DO MONITORADO)'}\n\n1. IDENTIFICAÇÃO\nNome: ${nome || '(NOME DO MONITORADO)'}\nProcesso: ${processo || '(Nº DO PROCESSO)'}\n\n2. HISTÓRICO DO MONITORAMENTO\n(Descreva o histórico do monitoramento aqui)\n\n3. SITUAÇÃO ATUAL\n(Descreva a situação atual do monitorado)\n\n4. CONCLUSÃO\n(Conclusão técnica)\n\n${signat}\n${cargo}${decreto ? '\nDecreto nº ' + decreto : ''}`,
 
-    'rel-monitoramento': `RELATÓRIO DE MONITORAMENTO ELETRÔNICO\nNº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nMonitorado: ${nome || '(NOME DO MONITORADO)'}\nProcesso nº: ${processo || '(Nº DO PROCESSO)'}\nComarca: ${comarca || '(COMARCA)'}\nVara: ${vara || '(VARA)'}\n\nPERÍODO DE REFERÊNCIA: ____/____/____ a ____/____/____\n\n1. DADOS DO MONITORAMENTO\n- Equipamento: Tornozeleira Eletrônica\n- Status: Ativo\n- Zona de Inclusão: (endereço)\n\n2. OCORRÊNCIAS REGISTRADAS\n(Liste as ocorrências ou informe que não houve)\n\n3. AVALIAÇÃO TÉCNICA\n(Avaliação técnica do período)\n\n${signat}\n${cargo}\nDecreto nº ${decreto}`,
+    'rel-monitoramento': `RELATÓRIO DE MONITORAMENTO ELETRÔNICO\nNº ${numero || '____'}/CME/IAPEN-AP\nMacapá/AP, ${fmtData(dataVal)}\n\nMonitorado: ${nome || '(NOME DO MONITORADO)'}\nProcesso nº: ${processo || '(Nº DO PROCESSO)'}\nComarca: ${comarca || '(COMARCA)'}\nVara: ${vara || '(VARA)'}\n\nPERÍODO DE REFERÊNCIA: ____/____/____ a ____/____/____\n\n1. DADOS DO MONITORAMENTO\n- Equipamento: Tornozeleira Eletrônica\n- Status: Ativo\n- Zona de Inclusão: (endereço)\n\n2. OCORRÊNCIAS REGISTRADAS\n(Liste as ocorrências ou informe que não houve)\n\n3. AVALIAÇÃO TÉCNICA\n(Avaliação técnica do período)\n\n${signat}\n${cargo}${decreto ? '\nDecreto nº ' + decreto : ''}`,
   };
 
   const txt = modelos[modelo] || '';
