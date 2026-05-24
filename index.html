@@ -3100,6 +3100,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <button class="btn-secondary" onclick="r2_abrirAuditoria()" title="Log de acessos">📋 Auditoria</button>
+          <button class="btn-secondary" onclick="r2_abrirPainelRisco()" title="Painel de risco geral">📊 Painel</button>
           <button class="btn-secondary" onclick="r2_abrirConfig()" title="Configurar conexão">⚙️ Configurar</button>
           <label class="btn-secondary" style="cursor:pointer;display:flex;align-items:center;gap:6px" title="Importar pasta ZIP do Google Drive">
             📦 Importar Drive
@@ -3177,11 +3178,23 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         <!-- Área principal: navegador de arquivos -->
         <div style="flex:1;display:flex;flex-direction:column;gap:12px">
           <!-- Breadcrumb -->
-          <div id="r2-breadcrumb" style="font-size:.88rem;color:#666;display:none">
-            <span style="cursor:pointer;color:#1F4E78" onclick="r2_selecionarMonitorado(r2_state.monitorado)">
-              📁 <span id="r2-bc-mon"></span>
-            </span>
-            <span id="r2-bc-pasta-wrap" style="display:none"> › <strong id="r2-bc-pasta"></strong></span>
+          <div id="r2-breadcrumb" style="display:none;align-items:center;justify-content:space-between;gap:8px">
+            <div style="font-size:.88rem;color:#666;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <span style="cursor:pointer;color:#1F4E78" onclick="r2_selecionarMonitorado(r2_state.monitorado)">
+                📁 <span id="r2-bc-mon"></span>
+              </span>
+              <span id="r2-bc-pasta-wrap" style="display:none"> › <strong id="r2-bc-pasta"></strong></span>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0">
+              <button onclick="r2_abrirFicha()" title="Ficha do monitorado"
+                style="background:#e8f4fd;color:#1F4E78;border:1px solid #b8daff;border-radius:6px;padding:5px 11px;cursor:pointer;font-size:.82rem;font-weight:600">
+                📋 Ficha
+              </button>
+              <button onclick="r2_baixarRelatorio()" title="Baixar relatório em texto"
+                style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:6px;padding:5px 11px;cursor:pointer;font-size:.82rem;font-weight:600">
+                📄 Relatório
+              </button>
+            </div>
           </div>
 
           <!-- Guia inicial (quando nenhum monitorado selecionado) -->
@@ -3208,6 +3221,78 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
                 <div style="font-size:2rem;margin-bottom:8px">📝</div>
                 <div style="font-weight:600;font-size:1rem">Justificativa</div>
                 <div id="r2-count-justificativa" style="font-size:.8rem;color:#888;margin-top:4px">Carregando…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ FICHA DO MONITORADO ══ -->
+          <div id="r2-ficha-panel" style="display:none;flex-direction:column;gap:14px">
+            <!-- Header da ficha -->
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-weight:700;font-size:1rem;color:#1F4E78">📋 Ficha do Monitorado</div>
+              <button onclick="document.getElementById('r2-ficha-panel').style.display='none';document.getElementById('r2-pastas-view').style.display='grid'"
+                style="background:#f0f0f0;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.82rem">✖ Fechar</button>
+            </div>
+            <!-- Cards de status -->
+            <div id="r2-ficha-cards" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px"></div>
+            <!-- IA narrativa -->
+            <div id="r2-ficha-ai" style="display:none;background:linear-gradient(135deg,#f0f7ff,#e8f4fd);border:1px solid #b8daff;border-radius:10px;padding:14px 16px">
+              <div style="font-size:.78rem;font-weight:700;color:#1F4E78;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+                🤖 ANÁLISE DE IA
+              </div>
+              <div id="r2-ficha-ai-texto" style="font-size:.87rem;color:#374151;line-height:1.6"></div>
+            </div>
+            <!-- Alertas -->
+            <div id="r2-ficha-alertas" style="display:none;flex-direction:column;gap:6px">
+              <div style="font-weight:600;font-size:.88rem;color:#7c2d12;margin-bottom:2px">⚠️ Alertas</div>
+              <div id="r2-ficha-alertas-lista"></div>
+            </div>
+            <!-- Documentos faltantes -->
+            <div id="r2-ficha-faltantes" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:12px 14px">
+              <div style="font-weight:600;font-size:.85rem;color:#9a3412;margin-bottom:6px">📋 Documentos recomendados faltantes</div>
+              <div id="r2-ficha-faltantes-lista"></div>
+            </div>
+            <!-- Timeline -->
+            <div id="r2-ficha-timeline" style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:14px">
+              <div style="font-weight:600;font-size:.88rem;color:#374151;margin-bottom:10px">🕒 Linha do Tempo (últimas ações)</div>
+              <div id="r2-ficha-timeline-lista" style="display:flex;flex-direction:column;gap:6px"></div>
+            </div>
+          </div>
+
+          <!-- ══ PAINEL DE RISCO ══ -->
+          <div id="r2-painel-risco" style="display:none;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-weight:700;font-size:1rem;color:#1F4E78">📊 Painel de Risco</div>
+              <button onclick="document.getElementById('r2-painel-risco').style.display='none';document.getElementById('r2-guia-inicial').style.display='block'"
+                style="background:#f0f0f0;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.82rem">✖ Fechar</button>
+            </div>
+            <div id="r2-risco-cards" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:14px">
+                <div style="font-weight:600;font-size:.85rem;color:#166534;margin-bottom:8px">✅ Ativos (últimos 30 dias)</div>
+                <div id="r2-risco-ativos" style="font-size:.82rem;color:#374151;display:flex;flex-direction:column;gap:4px"></div>
+              </div>
+              <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:14px">
+                <div style="font-weight:600;font-size:.85rem;color:#9a3412;margin-bottom:8px">⚠️ Sem atividade recente</div>
+                <div id="r2-risco-inativos" style="font-size:.82rem;color:#374151;display:flex;flex-direction:column;gap:4px"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal de renomear arquivo -->
+          <div id="r2-modal-rename" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+            <div style="background:#fff;border-radius:12px;padding:28px 32px;min-width:380px;max-width:500px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+              <div style="font-weight:700;font-size:1rem;margin-bottom:16px;color:#1F4E78">✏️ Renomear Arquivo</div>
+              <div style="font-size:.82rem;color:#666;margin-bottom:8px">Nome atual:</div>
+              <div id="r2-rename-atual" style="font-size:.87rem;color:#374151;background:#f5f5f5;padding:8px 12px;border-radius:6px;margin-bottom:14px;word-break:break-all"></div>
+              <label style="font-size:.82rem;font-weight:600;color:#374151;display:block;margin-bottom:6px">Novo nome:</label>
+              <input id="r2-rename-input" type="text" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid #cbd5e1;border-radius:7px;font-size:.92rem;margin-bottom:18px"
+                onkeydown="if(event.key==='Enter')r2_confirmarRename()">
+              <div style="display:flex;gap:10px;justify-content:flex-end">
+                <button onclick="document.getElementById('r2-modal-rename').style.display='none'"
+                  style="background:#f0f0f0;border:none;border-radius:7px;padding:8px 18px;cursor:pointer;font-size:.9rem">Cancelar</button>
+                <button onclick="r2_confirmarRename()"
+                  style="background:#1F4E78;color:#fff;border:none;border-radius:7px;padding:8px 20px;cursor:pointer;font-size:.9rem;font-weight:600">Salvar</button>
               </div>
             </div>
           </div>
@@ -12293,6 +12378,205 @@ function r2_atualizarPaginacao() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   RENOMEAR ARQUIVO
+   ══════════════════════════════════════════════════════════ */
+let _r2RenameKey = '';
+
+function r2_abrirRename(key, nomeAtual) {
+  _r2RenameKey = key;
+  document.getElementById('r2-rename-atual').textContent = nomeAtual;
+  document.getElementById('r2-rename-input').value = nomeAtual;
+  const modal = document.getElementById('r2-modal-rename');
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('r2-rename-input').select(), 80);
+}
+
+async function r2_confirmarRename() {
+  const novoNome = document.getElementById('r2-rename-input').value.trim();
+  if (!novoNome) { _mostrarToast('⚠️ Informe o novo nome.', 'erro'); return; }
+  document.getElementById('r2-modal-rename').style.display = 'none';
+  _mostrarToast('✏️ Renomeando…', 'sucesso');
+  try {
+    await r2_api('POST', '/rename', { 'Content-Type': 'application/json' },
+      JSON.stringify({ key: _r2RenameKey, novoNome }));
+    _mostrarToast(`✅ Arquivo renomeado para "${novoNome}"`, 'sucesso');
+    addLog(`R2: renomeado "${_r2RenameKey}" → "${novoNome}"`);
+    await r2_carregarArquivos();
+  } catch(e) {
+    _mostrarToast(`⚠️ Erro: ${e.message}`, 'erro');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   FICHA DO MONITORADO
+   ══════════════════════════════════════════════════════════ */
+async function r2_abrirFicha() {
+  // Ocultar outras views
+  document.getElementById('r2-guia-inicial').style.display    = 'none';
+  document.getElementById('r2-pastas-view').style.display     = 'none';
+  document.getElementById('r2-arquivos-view').style.display   = 'none';
+  document.getElementById('r2-painel-risco').style.display    = 'none';
+  const painel = document.getElementById('r2-ficha-panel');
+  painel.style.display = 'flex';
+
+  // Mostrar loading nos cards
+  document.getElementById('r2-ficha-cards').innerHTML =
+    '<div style="grid-column:1/-1;text-align:center;color:#aaa;padding:30px">⏳ Carregando ficha…</div>';
+  document.getElementById('r2-ficha-ai').style.display       = 'none';
+  document.getElementById('r2-ficha-alertas').style.display  = 'none';
+  document.getElementById('r2-ficha-faltantes').style.display = 'none';
+  document.getElementById('r2-ficha-timeline-lista').innerHTML = '<div style="color:#aaa;font-size:.82rem">Carregando…</div>';
+
+  try {
+    const qs = new URLSearchParams({ monitorado: r2_state.monitorado });
+    const [ficha, alertasData] = await Promise.all([
+      r2_api('GET', `/ficha?${qs}`),
+      r2_api('GET', `/alertas?${qs}`).catch(() => ({ alertas: [] })),
+    ]);
+
+    // Cards de status
+    const mbSize = (ficha.totalBytes / 1024 / 1024).toFixed(2);
+    const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('pt-BR') : '—';
+    document.getElementById('r2-ficha-cards').innerHTML = `
+      <div style="background:${ficha.cor}18;border:2px solid ${ficha.cor};border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:2rem">${ficha.icone}</div>
+        <div style="font-weight:700;color:${ficha.cor};font-size:1rem;margin-top:4px">${ficha.situacao}</div>
+        <div style="font-size:.78rem;color:#666;margin-top:2px">Situação</div>
+      </div>
+      <div style="background:#f8faff;border:1px solid #e0e8ff;border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:1.8rem;font-weight:700;color:#1F4E78">${ficha.totalArquivos}</div>
+        <div style="font-size:.78rem;color:#666;margin-top:4px">Documentos — ${mbSize} MB</div>
+        <div style="font-size:.75rem;color:#888;margin-top:6px">
+          ${Object.entries(ficha.porPasta || {}).map(([p,n]) => `${p}: <b>${n}</b>`).join(' • ')}
+        </div>
+      </div>
+      <div style="background:#f8faff;border:1px solid #e0e8ff;border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:.78rem;color:#666;margin-bottom:6px">Período</div>
+        <div style="font-size:.85rem;color:#374151"><b>Início:</b> ${fmtDate(ficha.primeiroEnvio)}</div>
+        <div style="font-size:.85rem;color:#374151;margin-top:4px"><b>Último:</b> ${fmtDate(ficha.ultimoEnvio)}</div>
+      </div>`;
+
+    // IA narrativa
+    if (ficha.aiNarrativa) {
+      document.getElementById('r2-ficha-ai').style.display = 'block';
+      document.getElementById('r2-ficha-ai-texto').textContent = ficha.aiNarrativa;
+    }
+
+    // Alertas
+    const alertas = alertasData.alertas || [];
+    if (alertas.length) {
+      document.getElementById('r2-ficha-alertas').style.display = 'flex';
+      const cores = { critica:'#fdecea', alta:'#fff7ed', media:'#fef9c3' };
+      const bords = { critica:'#f87171', alta:'#fb923c', media:'#fcd34d' };
+      document.getElementById('r2-ficha-alertas-lista').innerHTML = alertas.map(a =>
+        `<div style="background:${cores[a.prioridade]||'#f5f5f5'};border-left:4px solid ${bords[a.prioridade]||'#ccc'};border-radius:0 6px 6px 0;padding:8px 12px;font-size:.83rem;color:#374151;margin-bottom:4px">
+          ${a.tipo === 'prazo' ? '⏰' : a.tipo === 'vencido' ? '🚨' : a.tipo === 'faltante' ? '📋' : '⚠️'} ${a.msg}
+        </div>`).join('');
+    }
+
+    // Documentos faltantes
+    if (ficha.faltantes?.length) {
+      document.getElementById('r2-ficha-faltantes').style.display = 'block';
+      document.getElementById('r2-ficha-faltantes-lista').innerHTML =
+        ficha.faltantes.map(f => `<div style="font-size:.83rem;color:#9a3412;padding:3px 0">⚠ ${f}</div>`).join('');
+    }
+
+    // Timeline
+    const eventos = ficha.eventos || [];
+    const iconsAcao = { upload:'⬆️', download:'⬇️', delete:'🗑️', rename:'✏️', 'delete-monitorado':'⚠️' };
+    document.getElementById('r2-ficha-timeline-lista').innerHTML = eventos.length
+      ? eventos.map(e => `
+          <div style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #f0f0f0">
+            <div style="font-size:1rem;flex-shrink:0">${iconsAcao[e.action] || '📌'}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:.82rem;font-weight:600;color:#374151">${(e.action||'').toUpperCase()} — <span style="font-weight:400;color:#555">${e.filename||''}</span></div>
+              <div style="font-size:.76rem;color:#888">${fmtDate(e.ts)} · ${e.usuario||'—'} · ${e.pasta||''}</div>
+            </div>
+          </div>`).join('')
+      : '<div style="color:#aaa;font-size:.82rem">Nenhuma ação registrada.</div>';
+
+  } catch(e) {
+    document.getElementById('r2-ficha-cards').innerHTML =
+      `<div style="grid-column:1/-1;color:#dc3545;padding:20px">${e.message}</div>`;
+  }
+}
+
+/* ── Baixar relatório ─────────────────────────────────────────── */
+async function r2_baixarRelatorio() {
+  _mostrarToast('📄 Gerando relatório…', 'sucesso');
+  try {
+    const qs  = new URLSearchParams({ monitorado: r2_state.monitorado });
+    const res = await fetch(`${r2_state.url}/relatorio?${qs}`, {
+      headers: { Authorization: `Bearer ${r2_state.token}` },
+    });
+    if (!res.ok) throw new Error(`Erro ${res.status}`);
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `relatorio-${r2_state.monitorado.replace(/\s+/g,'-').toLowerCase()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    _mostrarToast('✅ Relatório baixado!', 'sucesso');
+  } catch(e) {
+    _mostrarToast(`⚠️ Erro: ${e.message}`, 'erro');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   PAINEL DE RISCO
+   ══════════════════════════════════════════════════════════ */
+async function r2_abrirPainelRisco() {
+  document.getElementById('r2-guia-inicial').style.display  = 'none';
+  document.getElementById('r2-pastas-view').style.display   = 'none';
+  document.getElementById('r2-arquivos-view').style.display = 'none';
+  document.getElementById('r2-ficha-panel').style.display   = 'none';
+  document.getElementById('r2-breadcrumb').style.display    = 'none';
+  const painel = document.getElementById('r2-painel-risco');
+  painel.style.display = 'flex';
+
+  document.getElementById('r2-risco-cards').innerHTML =
+    '<div style="grid-column:1/-1;text-align:center;color:#aaa;padding:24px">⏳ Carregando…</div>';
+
+  try {
+    const data = await r2_api('GET', '/painel-risco');
+    const p    = data.painel || {};
+
+    const corCard = (bg, brd, ic, val, rot) =>
+      `<div style="background:${bg};border:2px solid ${brd};border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:2rem">${ic}</div>
+        <div style="font-size:1.8rem;font-weight:700;color:#1F4E78;margin:4px 0">${val}</div>
+        <div style="font-size:.78rem;color:#666">${rot}</div>
+       </div>`;
+
+    document.getElementById('r2-risco-cards').innerHTML =
+      corCard('#f0fdf4','#86efac','✅', p.regular||0, 'Ativos (últimos 30 dias)') +
+      corCard('#fff7ed','#fdba74','⚠️', p.pendente||0, 'Sem atividade recente') +
+      corCard('#fef2f2','#fca5a5','🚨', p.critico||0, 'Sem registro algum');
+
+    const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('pt-BR') : '—';
+
+    document.getElementById('r2-risco-ativos').innerHTML =
+      (data.ultimosAtivos||[]).map(r =>
+        `<div style="padding:4px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;color:#1F4E78"
+              onclick="r2_selecionarMonitorado('${r.monitorado.replace(/'/g,"&#39;")}')" title="Abrir monitorado">
+           📁 ${r.monitorado} <span style="color:#888;font-size:.75rem">(${fmtDate(r.ultimaAtividade)})</span>
+         </div>`).join('') || '<div style="color:#aaa">—</div>';
+
+    document.getElementById('r2-risco-inativos').innerHTML =
+      (data.semAtividadeRecente||[]).map(r =>
+        `<div style="padding:4px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;color:#9a3412"
+              onclick="r2_selecionarMonitorado('${r.monitorado.replace(/'/g,"&#39;")}')" title="Abrir monitorado">
+           📁 ${r.monitorado} <span style="color:#888;font-size:.75rem">(${fmtDate(r.ultimaAtividade)})</span>
+         </div>`).join('') || '<div style="color:#aaa">—</div>';
+
+  } catch(e) {
+    document.getElementById('r2-risco-cards').innerHTML =
+      `<div style="grid-column:1/-1;color:#dc3545;padding:16px">${e.message}</div>`;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
    IMPORTAÇÃO DO GOOGLE DRIVE (ZIP)
    Estrutura esperada no ZIP:
      NomeMonitorado/arquivo.pdf          → pasta "Docs do monitorado"
@@ -12558,11 +12842,13 @@ async function r2_selecionarMonitorado(nome) {
   // Breadcrumb
   document.getElementById('r2-bc-mon').textContent = nome;
   document.getElementById('r2-bc-pasta-wrap').style.display = 'none';
-  document.getElementById('r2-breadcrumb').style.display = 'block';
-  // Mostrar pastas
+  document.getElementById('r2-breadcrumb').style.display = 'flex';
+  // Mostrar pastas (ocultar outros painéis)
   document.getElementById('r2-guia-inicial').style.display  = 'none';
   document.getElementById('r2-pastas-view').style.display   = 'grid';
   document.getElementById('r2-arquivos-view').style.display = 'none';
+  document.getElementById('r2-ficha-panel').style.display   = 'none';
+  document.getElementById('r2-painel-risco').style.display  = 'none';
   // Carregar contagens
   r2_atualizarContagens(nome);
 }
@@ -12845,6 +13131,8 @@ function r2_linhaArquivo(f, nivelAdmin) {
               onclick="r2_visualizarArquivo('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Visualizar">👁️</button>
       <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78;margin-left:4px"
               onclick="r2_baixarArquivo('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
+      <button class="r2-acao-icone" style="background:#fef9c3;color:#713f12;margin-left:4px"
+              onclick="r2_abrirRename('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Renomear">✏️</button>
       ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828;margin-left:4px"
             onclick="r2_confirmarDelete('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
     </td>
@@ -12874,11 +13162,22 @@ async function r2_enviarArquivos(input) {
   const bar  = document.getElementById('r2-progress-bar');
   const txt  = document.getElementById('r2-progress-text');
   wrap.style.display = 'block';
+  let enviados = 0, pulados = 0;
   for (let i = 0; i < files.length; i++) {
     const file     = files[i];
     const nomeEnv  = prefixoData ? `${prefixoData}${file.name}` : file.name;
-    const pct      = Math.round(((i) / files.length) * 100);
+    const pct      = Math.round((i / files.length) * 100);
     bar.style.width = pct + '%';
+    txt.textContent = `Verificando (${i + 1}/${files.length}): ${file.name}`;
+    // Verificar duplicata antes de enviar
+    try {
+      const qs = new URLSearchParams({ monitorado: r2_state.monitorado, pasta: r2_state.pasta, filename: nomeEnv });
+      const dup = await r2_api('GET', `/check-duplicate?${qs}`);
+      if (dup.duplicata) {
+        const resp = confirm(`⚠️ Duplicata detectada!\n\n"${nomeEnv}" já foi enviado em ${dup.arquivo?.enviado ? new Date(dup.arquivo.enviado).toLocaleDateString('pt-BR') : '?'} por ${dup.arquivo?.usuario || '?'}.\n\nEnviar mesmo assim?`);
+        if (!resp) { pulados++; continue; }
+      }
+    } catch(e) { /* ignora erro na verificação, continua upload */ }
     txt.textContent = `Enviando (${i + 1}/${files.length}): ${file.name}`;
     try {
       await r2_api('POST', '/upload', {
@@ -12887,12 +13186,13 @@ async function r2_enviarArquivos(input) {
         'X-Filename':   encodeURIComponent(nomeEnv),
         'Content-Type': file.type || 'application/octet-stream',
       }, file);
+      enviados++;
     } catch(e) {
       _mostrarToast(`⚠️ Erro ao enviar ${file.name}: ${e.message}`, 'erro');
     }
   }
   bar.style.width = '100%';
-  txt.textContent = `✅ ${files.length} arquivo(s) enviado(s)!`;
+  txt.textContent = `✅ ${enviados} enviado(s)${pulados ? `, ${pulados} ignorado(s) (duplicata)` : ''}!`;
   setTimeout(() => { wrap.style.display = 'none'; bar.style.width = '0%'; }, 2500);
   input.value = '';
   addLog(`R2: ${files.length} arquivo(s) enviado(s) para ${r2_state.monitorado}/${r2_state.pasta}`);
