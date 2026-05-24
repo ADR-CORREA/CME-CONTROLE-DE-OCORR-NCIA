@@ -914,6 +914,42 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 <!-- ═══════════════════════════════════════════════════════
      TELA DE LOGIN
 ═══════════════════════════════════════════════════════ -->
+<!-- ══ TELA: PRIMEIRO LOGIN — DEFINIR SENHA ══ -->
+<div id="primeiro-login-screen" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#0d1b2a 0%,#1F4E78 100%);align-items:center;justify-content:center;z-index:99999">
+  <div style="background:#fff;border-radius:16px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center">
+    <div style="font-size:2.5rem;margin-bottom:8px">🔐</div>
+    <div style="font-size:1.15rem;font-weight:700;color:#1F4E78;margin-bottom:6px">Bem-vindo, <span id="primeiro-login-nome"></span>!</div>
+    <div style="font-size:.87rem;color:#555;margin-bottom:24px;line-height:1.5">
+      Este é seu primeiro acesso.<br>
+      Escolha uma senha pessoal para continuar.
+    </div>
+    <div style="text-align:left;margin-bottom:14px">
+      <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:5px">Nova senha</label>
+      <input id="pl-nova-senha" type="password" placeholder="Mínimo 6 caracteres"
+        style="width:100%;box-sizing:border-box;padding:11px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:.95rem"
+        onkeydown="if(event.key==='Enter')document.getElementById('pl-conf-senha').focus()">
+    </div>
+    <div style="text-align:left;margin-bottom:20px">
+      <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:5px">Confirmar senha</label>
+      <input id="pl-conf-senha" type="password" placeholder="Repita a senha"
+        style="width:100%;box-sizing:border-box;padding:11px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:.95rem"
+        onkeydown="if(event.key==='Enter')definirPrimeiraSenha()">
+    </div>
+    <div id="pl-erro" style="display:none;background:#fdecea;border:1px solid #f87171;border-radius:8px;padding:9px 12px;font-size:.83rem;color:#c62828;margin-bottom:14px;text-align:left"></div>
+    <button onclick="definirPrimeiraSenha()"
+      style="width:100%;background:#1F4E78;color:#fff;border:none;border-radius:8px;padding:13px;font-size:1rem;font-weight:700;cursor:pointer;transition:background .2s"
+      onmouseover="this.style.background='#163d5e'" onmouseout="this.style.background='#1F4E78'">
+      ✅ Definir senha e entrar
+    </button>
+    <div style="margin-top:14px">
+      <button onclick="document.getElementById('primeiro-login-screen').style.display='none';document.getElementById('login-screen').style.display='block'"
+        style="background:none;border:none;color:#888;font-size:.82rem;cursor:pointer;text-decoration:underline">
+        Voltar ao login
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="login-screen" style="display:none">
   <div class="login-box">
     <div class="login-logo">
@@ -5504,6 +5540,22 @@ async function fazerLogin() {
   }
 
   _limparFalhas(u);
+  errEl.style.display = "none";
+  errEl.textContent = "Usuário ou senha incorretos. Tente novamente.";
+
+  // Primeiro login — obrigar troca de senha
+  if (usuario.primeiroLogin) {
+    _usuarioPrimeiroLogin = usuario;
+    document.getElementById('primeiro-login-nome').textContent = usuario.nome;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('primeiro-login-screen').style.display = 'flex';
+    document.getElementById('pl-nova-senha').value = '';
+    document.getElementById('pl-conf-senha').value = '';
+    document.getElementById('pl-erro').style.display = 'none';
+    setTimeout(() => document.getElementById('pl-nova-senha').focus(), 100);
+    return;
+  }
+
   usuarioAtual = usuario;
   localStorage.setItem('cme_sessao', JSON.stringify({
     usuario:  usuario.usuario,
@@ -5511,8 +5563,6 @@ async function fazerLogin() {
     nome:     usuario.nome,
     loginAt:  Date.now()
   }));
-  errEl.style.display = "none";
-  errEl.textContent = "Usuário ou senha incorretos. Tente novamente.";
   addLog(`Login: ${usuario.nome} (${usuario.nivel})`);
   iniciarApp();
 }
@@ -5523,6 +5573,51 @@ document.getElementById("input-pass").addEventListener("keydown", e => {
 document.getElementById("input-user").addEventListener("keydown", e => {
   if (e.key === "Enter") document.getElementById("input-pass").focus();
 });
+
+/* ── Primeiro login: definir senha ────────────────────────────── */
+let _usuarioPrimeiroLogin = null;
+
+async function definirPrimeiraSenha() {
+  const nova  = document.getElementById('pl-nova-senha').value;
+  const conf  = document.getElementById('pl-conf-senha').value;
+  const erro  = document.getElementById('pl-erro');
+
+  const mostrarErro = msg => {
+    erro.textContent = msg;
+    erro.style.display = 'block';
+  };
+
+  if (!nova || !conf)       return mostrarErro('Preencha os dois campos.');
+  if (nova.length < 6)      return mostrarErro('A senha deve ter no mínimo 6 caracteres.');
+  if (nova !== conf)        return mostrarErro('As senhas não conferem.');
+  if (nova === _usuarioPrimeiroLogin.usuario)
+                            return mostrarErro('A senha não pode ser igual ao seu login.');
+
+  erro.style.display = 'none';
+
+  const hash     = await hashSenha(nova);
+  const usuarios = getUsuarios();
+  const eu       = usuarios.find(u => u.usuario === _usuarioPrimeiroLogin.usuario);
+  if (!eu) return mostrarErro('Erro: usuário não encontrado.');
+
+  eu.senha         = hash;
+  eu.primeiroLogin = false;
+  salvarUsuarios(usuarios);
+
+  // Fazer login normalmente
+  usuarioAtual = eu;
+  localStorage.setItem('cme_sessao', JSON.stringify({
+    usuario: eu.usuario,
+    nivel:   eu.nivel,
+    nome:    eu.nome,
+    loginAt: Date.now()
+  }));
+  addLog(`Primeiro login — senha definida: ${eu.nome}`);
+
+  document.getElementById('primeiro-login-screen').style.display = 'none';
+  _usuarioPrimeiroLogin = null;
+  iniciarApp();
+}
 
 function fazerLogout() {
   addLog(`Logout: ${usuarioAtual.nome}`);
@@ -7349,6 +7444,9 @@ function renderizarUsers() {
     const assTag = u.assinatura
       ? `<span style="background:#dcfce7;color:#15803d;border-radius:99px;padding:1px 8px;font-size:.67rem;font-weight:700">✍️ ASS</span>`
       : `<span style="background:#f1f5f9;color:#94a3b8;border-radius:99px;padding:1px 8px;font-size:.67rem">sem ass.</span>`;
+    const plTag = u.primeiroLogin
+      ? `<span style="background:#fef9c3;color:#713f12;border-radius:99px;padding:1px 8px;font-size:.67rem;font-weight:700;margin-left:4px">🔑 aguardando 1º login</span>`
+      : '';
     return `
     <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid #f1f5f9;transition:background .12s"
       onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
@@ -7361,9 +7459,15 @@ function renderizarUsers() {
         <div style="font-size:.73rem;color:#64748b;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
           @${u.usuario}${u.cargo ? ' &nbsp;·&nbsp; ' + u.cargo : ''}
         </div>
-        <div style="margin-top:3px">${assTag}</div>
+        <div style="margin-top:3px">${assTag}${plTag}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
+        ${u.primeiroLogin ? '' : `
+        <button onclick="resetarPrimeiroLogin(${i})" title="Forçar redefinição de senha no próximo login"
+          style="background:#fef9c3;border:1px solid #fcd34d;border-radius:7px;padding:4px 9px;
+          cursor:pointer;font-size:.75rem;color:#713f12;font-weight:600;white-space:nowrap">
+          🔑
+        </button>`}
         <button onclick="abrirModalEditarUsuario(${i})" title="Editar"
           style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:7px;padding:4px 11px;
           cursor:pointer;font-size:.78rem;color:#1d4ed8;font-weight:600;white-space:nowrap">
@@ -7693,10 +7797,10 @@ function criarUsuario() {
     msg.className = "sys-alert error"; msg.textContent = "Login já está em uso."; return;
   }
   hashSenha(pass).then(hash => {
-    us.push({ usuario: user, senha: hash, nome, cargo, nivel });
+    us.push({ usuario: user, senha: hash, nome, cargo, nivel, primeiroLogin: true });
     salvarUsuarios(us);
     addLog(`Criou usuário ${nome} (${usuarioAtual.nome})`);
-    msg.className = "sys-alert success"; msg.textContent = `✅ "${nome}" criado com sucesso!`;
+    msg.className = "sys-alert success"; msg.textContent = `✅ "${nome}" criado! Ele definirá a própria senha no 1º acesso.`;
     document.getElementById("new-name").value  = "";
     document.getElementById("new-user").value  = "";
     document.getElementById("new-pass").value  = "";
@@ -7704,6 +7808,16 @@ function criarUsuario() {
     renderizarUsers();
     setTimeout(() => { msg.className = "sys-alert"; }, 3000);
   });
+}
+
+function resetarPrimeiroLogin(idx) {
+  if (!confirm('Forçar redefinição de senha deste usuário no próximo login?')) return;
+  const us = getUsuarios();
+  if (!us[idx]) return;
+  us[idx].primeiroLogin = true;
+  salvarUsuarios(us);
+  renderizarUsers();
+  _mostrarToast(`🔑 ${us[idx].nome} terá que definir nova senha no próximo login.`, 'sucesso');
 }
 
 function alterarMinhaSenha() {
