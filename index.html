@@ -15347,6 +15347,105 @@ function com_limparAnexos() {
   com_renderizarAnexos();
 }
 
+/* ── Helpers de matching comarca/vara ───────────────────────── */
+function _comNorm(s) {
+  return String(s).toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function _comScore(texto, alvo) {
+  if (!alvo) return 0;
+  const t = _comNorm(texto), a = _comNorm(alvo);
+  if (t === a) return 200;
+  if (t.includes(a) || a.includes(t)) return 100;
+  const stop = new Set(['de','da','do','das','dos','e','a','o','em','no','na','com','para','por']);
+  const palavras = a.split(' ').filter(w => w.length >= 3 && !stop.has(w));
+  let score = 0;
+  for (const p of palavras) { if (t.includes(p)) score += (p.length >= 6 ? 20 : 10); }
+  const ordT = (t.match(/\d+/g) || []).map(Number);
+  const ordA = (a.match(/\d+/g) || []).map(Number);
+  if (ordA.length && ordT.length) {
+    score += ordA.some(x => ordT.includes(x)) ? 40 : -30;
+  }
+  return score;
+}
+
+function _comMelhorOpcao(select, alvo, minScore = 10) {
+  let melhor = null, melhorScore = minScore;
+  for (const opt of select.options) {
+    if (!opt.value) continue;
+    const s = _comScore(opt.text || opt.value, alvo);
+    if (s > melhorScore) { melhorScore = s; melhor = opt; }
+  }
+  return melhor;
+}
+
+async function _comDefinirComarcaVara(comarcaAI, varaAI) {
+  let n = 0;
+  const selC = document.getElementById('com-of-comarca');
+  const selV = document.getElementById('com-of-vara');
+  if (!selC || !selV) return n;
+
+  // 1. Tenta encontrar comarca por match exato ou fuzzy
+  let comarcaEncontrada = null;
+  if (comarcaAI) {
+    for (const opt of selC.options) {
+      if (!opt.value) continue;
+      if (_comNorm(opt.value) === _comNorm(comarcaAI)) {
+        selC.value = opt.value; if (typeof com_atualizarVaras === 'function') com_atualizarVaras();
+        n++; comarcaEncontrada = opt.value; break;
+      }
+    }
+    if (!comarcaEncontrada) {
+      const opt = _comMelhorOpcao(selC, comarcaAI, 30);
+      if (opt) {
+        selC.value = opt.value; if (typeof com_atualizarVaras === 'function') com_atualizarVaras();
+        n++; comarcaEncontrada = opt.value;
+      }
+    }
+  }
+
+  // 2. Se não achou comarca pela IA, infere pela vara (busca em todas as comarcas)
+  if (!comarcaEncontrada && varaAI && typeof COM_COMARCAS !== 'undefined') {
+    let melhorScore = 15, melhorComarca = null, melhorVara = null;
+    for (const c of COM_COMARCAS) {
+      for (const v of c.varas) {
+        const s = _comScore(v, varaAI);
+        if (s > melhorScore) { melhorScore = s; melhorComarca = c.nome; melhorVara = v; }
+      }
+    }
+    if (melhorComarca) {
+      selC.value = melhorComarca;
+      if (typeof com_atualizarVaras === 'function') com_atualizarVaras();
+      n++; comarcaEncontrada = melhorComarca;
+      await new Promise(r => setTimeout(r, 150));
+      if (melhorVara && selV.querySelector(`option[value="${CSS.escape(melhorVara)}"]`)) {
+        selV.value = melhorVara;
+      } else {
+        // tenta fuzzy no select já populado
+        const optV = _comMelhorOpcao(selV, varaAI, 10);
+        if (optV) selV.value = optV.value;
+      }
+      if (selV.value) { if (typeof com_atualizarDestinatario === 'function') com_atualizarDestinatario(); n++; }
+      return n;
+    }
+  }
+
+  // 3. Com comarca definida, fuzzy match da vara no select já populado
+  if (comarcaEncontrada && varaAI) {
+    await new Promise(r => setTimeout(r, 150));
+    const opt = _comMelhorOpcao(selV, varaAI, 10);
+    if (opt) {
+      selV.value = opt.value;
+      if (typeof com_atualizarDestinatario === 'function') com_atualizarDestinatario();
+      n++;
+    }
+  }
+
+  return n;
+}
+
 /* ── Extração com IA ─────────────────────────────────────────── */
 async function com_extrairComIA() {
   if (!_comAnexos.length) { _mostrarToast('⚠️ Adicione documentos antes de extrair.', 'erro'); return; }
@@ -15382,38 +15481,6 @@ async function com_extrairComIA() {
     const d = json.dados || {};
     let n = 0;
 
-    // ── Função de score para fuzzy matching ──────────────────────
-    function _comScore(texto, alvo) {
-      if (!alvo) return 0;
-      const norm = s => String(s).toLowerCase()
-        .normalize('NFD').replace(/[̀-ͯ]/g, '')
-        .replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
-      const t = norm(texto), a = norm(alvo);
-      if (t === a) return 200;
-      if (t.includes(a) || a.includes(t)) return 100;
-      const stop = new Set(['de','da','do','das','dos','e','a','o','em','no','na','com','para','por','vara','juizado','comarca']);
-      const palavras = a.split(' ').filter(w => w.length >= 3 && !stop.has(w));
-      let score = 0;
-      for (const p of palavras) { if (t.includes(p)) score += (p.length >= 6 ? 20 : 10); }
-      // Ordinal matching (1ª=1, 2ª=2...) — muito importante para varas
-      const ordT = (t.match(/\d+/g) || []).map(Number);
-      const ordA = (a.match(/\d+/g) || []).map(Number);
-      if (ordA.length && ordT.length) {
-        score += ordA.some(x => ordT.includes(x)) ? 40 : -30;
-      }
-      return score;
-    }
-
-    function _melhorOpcao(select, alvo, minScore = 10) {
-      let melhor = null, melhorScore = minScore;
-      for (const opt of select.options) {
-        if (!opt.value) continue;
-        const s = _comScore(opt.text || opt.value, alvo);
-        if (s > melhorScore) { melhorScore = s; melhor = opt; }
-      }
-      return melhor;
-    }
-
     // Nome do monitorado
     if (d.nome)    { document.getElementById('com-of-nome').value = d.nome.toUpperCase(); n++; }
     // Número do processo
@@ -15424,34 +15491,13 @@ async function com_extrairComIA() {
     // Saudação
     if (d.saudacao) {
       const selS = document.getElementById('com-of-saudacao');
-      const opt  = _melhorOpcao(selS, d.saudacao, 5);
+      const opt  = _comMelhorOpcao(selS, d.saudacao, 5);
       if (opt) { selS.value = opt.value; n++; }
     }
 
-    // Comarca — IA já retorna nome exato da lista; fallback com score
-    if (d.comarca) {
-      const selC = document.getElementById('com-of-comarca');
-      // Tenta match exato primeiro
-      let encontrou = false;
-      for (const opt of selC.options) {
-        if (opt.value.toLowerCase() === d.comarca.toLowerCase()) {
-          selC.value = opt.value; com_atualizarVaras(); n++; encontrou = true; break;
-        }
-      }
-      // Fallback: score
-      if (!encontrou) {
-        const opt = _melhorOpcao(selC, d.comarca, 30);
-        if (opt) { selC.value = opt.value; com_atualizarVaras(); n++; encontrou = true; }
-      }
-
-      // Vara — após comarca atualizar opções
-      if (encontrou && d.vara) {
-        await new Promise(r => setTimeout(r, 120));
-        const selV = document.getElementById('com-of-vara');
-        const opt  = _melhorOpcao(selV, d.vara, 10);
-        if (opt) { selV.value = opt.value; com_atualizarDestinatario(); n++; }
-      }
-    }
+    // Comarca + Vara — busca inteligente
+    const comarcaOk = await _comDefinirComarcaVara(d.comarca, d.vara);
+    n += comarcaOk;
 
     // Modelo
     if (d.modelo) {
@@ -15461,7 +15507,7 @@ async function com_extrairComIA() {
         if (opt.value === d.modelo) { selM.value = opt.value; com_atualizarCampos(); n++; found = true; break; }
       }
       if (!found) {
-        const opt = _melhorOpcao(selM, d.modelo, 10);
+        const opt = _comMelhorOpcao(selM, d.modelo, 10);
         if (opt) { selM.value = opt.value; com_atualizarCampos(); n++; }
       }
     }
