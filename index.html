@@ -6198,12 +6198,81 @@ function renderizarCriticos() {
       <td style="white-space:nowrap">
         <button class="btn-sm btn-outline" onclick="verOcorrenciaIdx(${findIdx(oc.id)})" title="Visualizar">👁</button>
         <button class="btn-edit" onclick="editarOcorrencia(${findIdx(oc.id)})" style="margin-left:4px">Editar</button>
+        <button class="btn-sm" onclick="gerarComunicacaoDeOcorrencia(${findIdx(oc.id)})"
+          title="Gerar documento de comunicação com dados desta ocorrência"
+          style="margin-left:4px;background:var(--az2);color:#fff;border:none;border-radius:5px;padding:3px 7px;cursor:pointer;font-size:.78rem">📄 COM</button>
       </td>
     </tr>`;
   }).join("");
 }
 
 function filtrarCriticos(v) { filtroCrit = v; renderizarCriticos(); }
+
+/* ─── GERAR COMUNICAÇÃO A PARTIR DE OCORRÊNCIA ───────── */
+function gerarComunicacaoDeOcorrencia(idx) {
+  const ocs = getOcorrencias();
+  const oc  = ocs[idx];
+  if (!oc) return _mostrarToast('⚠️ Ocorrência não encontrada.', 'erro');
+
+  // 1. Determinar qual modelo usar com base no tipo da ocorrência
+  const tipoLow = (oc.tipo || '').toLowerCase();
+  let modeloId = 'oc-prazo-vencido'; // padrão: ausência de contato
+  if (tipoLow.includes('zona') || tipoLow.includes('exclusão') || tipoLow.includes('exclusao')) {
+    modeloId = 'oc-violacao-zona';
+  }
+
+  // 2. Navegar para Modelos → Comunicação
+  mudarAba('modelos');
+  mudarSubAbaModelos('comunicacao'); // chama com_init() internamente
+
+  // 3. Preencher os campos após a inicialização (síncrona)
+  setTimeout(() => {
+    // Dados básicos
+    const nomeMon = document.getElementById('com-of-nome');
+    const processo = document.getElementById('com-of-processo');
+    if (nomeMon) nomeMon.value = oc.monitorado || '';
+    if (processo) processo.value = oc.prodocNum || '';
+
+    // Selecionar o modelo
+    const selModelo = document.getElementById('com-of-modelo');
+    if (selModelo) {
+      selModelo.value = modeloId;
+      com_atualizarCampos(); // renderiza os campos dinâmicos
+    }
+
+    // 4. Preencher os campos dinâmicos após renderização
+    setTimeout(() => {
+      if (modeloId === 'oc-prazo-vencido') {
+        // Formatar histórico de tentativas de contato
+        const contatosRaw = (oc.contatos || '').split(',').map(s => s.trim()).filter(Boolean);
+        const historicoFmt = contatosRaw.length
+          ? contatosRaw.join('\n')
+          : '';
+        const descricaoOc = [oc.descricao, oc.obs].filter(Boolean).join('\n');
+
+        const campoHist = document.getElementById('com-of-campo-historico_contatos');
+        const campoDesc = document.getElementById('com-of-campo-descricao_situacao');
+        if (campoHist) campoHist.value = historicoFmt;
+        if (campoDesc) campoDesc.value = descricaoOc;
+
+      } else if (modeloId === 'oc-violacao-zona') {
+        const campoTipo  = document.getElementById('com-of-campo-tipo_violacao');
+        const campoAcoes = document.getElementById('com-of-campo-acoes_realizadas');
+        const campoObs   = document.getElementById('com-of-campo-obs_finais');
+        if (campoTipo)  campoTipo.value  = oc.tipo || '';
+        if (campoAcoes) campoAcoes.value = oc.descricao || '';
+        if (campoObs)   campoObs.value   = oc.obs || '';
+      }
+
+      // Atualizar preview
+      com_atualizarPreview();
+
+      // Scroll para o topo do painel de comunicação
+      document.getElementById('mod-panel-comunicacao')?.scrollTo?.({ top: 0, behavior: 'smooth' });
+      _mostrarToast('📄 Comunicação pré-preenchida com dados da ocorrência!', 'sucesso');
+    }, 80);
+  }, 120);
+}
 
 /* ─── OCORRÊNCIAS ────────────────────────────────────── */
 function renderizarOcorrencias() {
@@ -15116,6 +15185,42 @@ const COM_MODELOS = [
       `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônica – CME, informa que foi prorrogado a monitoração eletrônica de <b>${c.nomes_vinc}</b> em cumprimento à Decisão contida nos Autos.`,
       `Na oportunidade, informo que não será possível prorrogar a monitoração de <b>${c.nome_monitorado}</b>, devido a ${c.motivo_impossib}, e consequentemente, vinculação ao Sistema.`,
     ]},
+  /* ── OCORRÊNCIA (gerados automaticamente) ────────────────── */
+  { id:'oc-prazo-vencido', cat:'Ocorrência', nome:'Prazo Vencido — Ausência de Contato com Monitorado',
+    assunto:'Ausência de Contato — Prazo do POP Vencido',
+    campos:[
+      {id:'historico_contatos', label:'Histórico de tentativas de contato', tipo:'textarea',
+        placeholder:'ex:\n01/05 08h — Tentativa de contato sem êxito (Agt. Fulano)\n02/05 14h — Tentativa de contato sem êxito (Agt. Ciclano)'},
+      {id:'descricao_situacao', label:'Descrição complementar da situação', tipo:'textarea',
+        placeholder:'Descreva a situação: tipo de alerta, medida protetiva, demais contextos...'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônico – CME, informa que operadores de plantão desta central realizaram sucessivas tentativas de contato com o(a) monitorado(a) <b>${c.nome_monitorado}</b>, todas sem êxito, dentro do prazo estabelecido pelo Procedimento Operacional Padrão – POP, conforme registro a seguir:`,
+      ...(c.historico_contatos
+        ? c.historico_contatos.split('\n').filter(l=>l.trim()).map(l=>`<b>•</b> ${l.trim()}`)
+        : ['<i>(sem histórico de tentativas registrado)</i>']),
+      ...(c.descricao_situacao ? [`${c.descricao_situacao}`] : []),
+      `Considerando o esgotamento das tentativas de contato e o vencimento do prazo do POP sem resolução, encaminha-se o presente relatório para as providências cabíveis junto ao Juízo competente.`,
+    ]},
+  { id:'oc-violacao-zona', cat:'Ocorrência', nome:'Violação de Zona de Exclusão — Ações do Operador',
+    assunto:'Violação de Zona de Exclusão — Relatório de Ações Realizadas',
+    campos:[
+      {id:'tipo_violacao', label:'Tipo de violação detectada', tipo:'text',
+        placeholder:'ex: Zona de Exclusão (permanência), Zona de Exclusão (entrada)'},
+      {id:'acoes_realizadas', label:'Ações realizadas pelo operador', tipo:'textarea',
+        placeholder:'Descreva todas as ações tomadas: contatos, acionamentos, CIODES, etc.'},
+      {id:'obs_finais', label:'Observações finais / Resolução', tipo:'textarea',
+        placeholder:'Resultado das ações: monitorado retornou, CIODES acionado, prisão efetuada, etc.'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônico – CME, informa que o sistema de monitoramento detectou ocorrência de <b>${c.tipo_violacao || 'Violação de Zona de Exclusão'}</b> envolvendo o(a) monitorado(a) <b>${c.nome_monitorado}</b>, gerando alerta nesta central.`,
+      `Diante da ocorrência, o operador responsável de plantão adotou as seguintes providências:`,
+      ...(c.acoes_realizadas
+        ? c.acoes_realizadas.split('\n').filter(l=>l.trim()).map(l=>`<b>•</b> ${l.trim()}`)
+        : ['<i>(sem descrição de ações registrada)</i>']),
+      ...(c.obs_finais ? [`<b>Observações finais:</b> ${c.obs_finais}`] : []),
+      `Encaminha-se o presente relatório para ciência e demais providências que Vossa Excelência entender necessárias.`,
+    ]},
 ];
 
 /* ─── Helpers ────────────────────────────────────────────────── */
@@ -15208,12 +15313,15 @@ function com_atualizarCampos() {
   div.innerHTML = `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px">
     <div style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Campos do Modelo</div>
     <div style="display:grid;grid-template-columns:${cols};gap:10px">
-    ${m.campos.map(c=>`<div>
-      <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">${c.label}</label>
-      <input type="${c.tipo}" id="com-of-campo-${c.id}" ${c.placeholder?`placeholder="${c.placeholder}"`:''}
-        oninput="com_atualizarPreview()" onchange="com_atualizarPreview()"
-        style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
-    </div>`).join('')}
+    ${m.campos.map(c=>{
+      const ph = c.placeholder ? `placeholder="${c.placeholder}"` : '';
+      const baseStyle = 'width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box;font-family:var(--font-sans)';
+      const el = c.tipo === 'textarea'
+        ? `<textarea id="com-of-campo-${c.id}" rows="4" ${ph} oninput="com_atualizarPreview()" style="${baseStyle};resize:vertical"></textarea>`
+        : `<input type="${c.tipo}" id="com-of-campo-${c.id}" ${ph} oninput="com_atualizarPreview()" onchange="com_atualizarPreview()" style="${baseStyle}">`;
+      const isWide = c.tipo === 'textarea';
+      return `<div${isWide ? ' style="grid-column:1/-1"' : ''}><label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">${c.label}</label>${el}</div>`;
+    }).join('')}
     </div></div>`;
 }
 
@@ -15261,10 +15369,10 @@ function com_gerarOficio() {
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/[^\x00-\x7F]/g, c => `&#${c.charCodeAt(0)};`);
 
-  // Parágrafos: preservar <b>...</b> do modelo
+  // Parágrafos: preservar tags <b>, <i> do modelo
   const escP = s => {
-    const tks = s.split(/(<\/?b>)/g);
-    return tks.map(t => (t==='<b>'||t==='</b>') ? t : esc(t)).join('');
+    const tks = s.split(/(<\/?(b|i)>)/g);
+    return tks.map(t => (/^<\/?(b|i)>$/.test(t)) ? t : esc(t)).join('');
   };
 
   const paragsHtml = paragrafos
@@ -15451,7 +15559,7 @@ function com_atualizarPreview() {
 
   const paragrafos = modelo.corpo(campos);
   // Strip HTML tags for plain-text preview
-  const stripTags = s => s.replace(/<\/?b>/g,'');
+  const stripTags = s => s.replace(/<\/?(b|i)>/g,'');
 
   const linhas = [
     `Ofício nº ${numFmt}.`,
