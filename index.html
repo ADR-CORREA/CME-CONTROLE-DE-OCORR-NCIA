@@ -12104,11 +12104,14 @@ const r2_state = {
 
 /* ── Config: carregar / salvar ────────────────────────────────── */
 function r2_carregarConfig() {
+  // Valores padrão já configurados — todos os usuários conectam automaticamente
+  const DEFAULT_URL   = 'https://cme-files-api.adr-correa30.workers.dev';
+  const DEFAULT_TOKEN = 'F@ca480096';
   try {
     const cfg = JSON.parse(localStorage.getItem('cme_r2_config') || '{}');
-    r2_state.url   = cfg.url   || '';
-    r2_state.token = cfg.token || '';
-  } catch(e) { r2_state.url = ''; r2_state.token = ''; }
+    r2_state.url   = cfg.url   || DEFAULT_URL;
+    r2_state.token = cfg.token || DEFAULT_TOKEN;
+  } catch(e) { r2_state.url = DEFAULT_URL; r2_state.token = DEFAULT_TOKEN; }
 }
 
 function r2_salvarConfig() {
