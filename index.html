@@ -15597,24 +15597,12 @@ function com_gerarOficio() {
     .map(p => `<p style="text-align:justify;margin:10pt 0;line-height:1.5;font-size:12pt">${escP(p)}</p>`)
     .join('\n');
 
-  // Logo: tenta capturar do topbar via canvas; se falhar, usa src direto
-  function com_getLogoDataUrl() {
-    const img = document.getElementById('topbar-logo');
-    if (!img || !img.src || img.src === window.location.href) return '';
-    try {
-      const c = document.createElement('canvas');
-      c.width  = img.naturalWidth  || 90;
-      c.height = img.naturalHeight || 90;
-      c.getContext('2d').drawImage(img, 0, 0);
-      return c.toDataURL('image/png');
-    } catch(e) {
-      return img.src; // usa URL direta se CORS bloquear canvas
-    }
-  }
-  const logoSrc = com_getLogoDataUrl();
-  const logoCell = logoSrc
-    ? `<img src="${logoSrc}" width="75" height="75" style="display:block;margin:auto">`
-    : `<div style="width:75pt;height:75pt;border:1pt solid #ccc;display:flex;align-items:center;justify-content:center;font-size:7pt;color:#999;text-align:center">CME/<br>IAPEN</div>`;
+  // Logos a partir das variáveis globais B64 (mesma abordagem do gerador de Plantão)
+  const cmeSrc   = window._CME_LOGO_B64   ? 'data:image/png;base64,' + window._CME_LOGO_B64   : '';
+  const iapenSrc = window._IAPEN_LOGO_B64 ? 'data:image/png;base64,' + window._IAPEN_LOGO_B64 : '';
+  const _logoPlaceholder = `<div style="width:75pt;height:75pt;border:1pt solid #ccc;display:flex;align-items:center;justify-content:center;font-size:7pt;color:#999;text-align:center">CME/<br>IAPEN</div>`;
+  const cmeCellHtml   = cmeSrc   ? `<img src="${cmeSrc}"   width="75" height="75" style="display:block;margin:auto">` : _logoPlaceholder;
+  const iapenCellHtml = iapenSrc ? `<img src="${iapenSrc}" width="75" height="75" style="display:block;margin:auto">` : _logoPlaceholder;
 
   const doc = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
   xmlns:w='urn:schemas-microsoft-com:office:word'
@@ -15657,7 +15645,7 @@ function com_gerarOficio() {
 <table style="width:100%;border-collapse:collapse;margin-bottom:4pt">
   <tr>
     <td style="width:85pt;text-align:center;vertical-align:middle;padding:0 8pt 0 0">
-      ${logoCell}
+      ${cmeCellHtml}
     </td>
     <td style="text-align:center;vertical-align:middle;padding:4pt 0">
       <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;text-transform:uppercase;letter-spacing:.5pt;margin:0;color:#1a3a6b">Governo do Estado do Amap&#225;</p>
@@ -15666,7 +15654,7 @@ function com_gerarOficio() {
       <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;margin:1pt 0;color:#000">Central de Monitoramento Eletr&#244;nico &#8211; CME</p>
     </td>
     <td style="width:85pt;text-align:center;vertical-align:middle;padding:0 0 0 8pt">
-      ${logoCell}
+      ${iapenCellHtml}
     </td>
   </tr>
 </table>
@@ -16314,15 +16302,134 @@ async function jur_copiar() {
 }
 
 function jur_gerarDoc() {
-  const txt = document.getElementById('jur-texto')?.value;
+  const txt      = (document.getElementById('jur-texto')?.value || '').trim();
   if (!txt) { _mostrarToast('⚠️ Nenhum texto para gerar.', 'erro'); return; }
-  const blob = new Blob([txt], { type: 'application/msword' });
-  const nome = document.getElementById('jur-nome')?.value || 'juridico';
+
+  const numero   = (document.getElementById('jur-numero')?.value || '').trim();
+  const dataVal  = document.getElementById('jur-data')?.value || '';
+  const nomeMon  = (document.getElementById('jur-nome')?.value || '').trim();
+  const processo = (document.getElementById('jur-processo')?.value || '').trim();
+  const dest     = (document.getElementById('jur-destinatario')?.value || '').trim();
+  const signat   = (document.getElementById('jur-signatario')?.value || '').trim();
+  const cargo    = (document.getElementById('jur-cargo')?.value || '').trim() || 'Coordenador(a) da CME/IAPEN-AP';
+  const decreto  = (document.getElementById('jur-decreto')?.value || '').trim();
+  const assImg   = usuarioAtual?.assinatura || null;
+
+  const esc = s => String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/[^\x00-\x7F]/g, c => `&#${c.charCodeAt(0)};`);
+
+  // Logos B64
+  const cmeSrc   = window._CME_LOGO_B64   ? 'data:image/png;base64,' + window._CME_LOGO_B64   : '';
+  const iapenSrc = window._IAPEN_LOGO_B64 ? 'data:image/png;base64,' + window._IAPEN_LOGO_B64 : '';
+  const _ph = `<div style="width:75pt;height:75pt;border:1pt solid #ccc;display:flex;align-items:center;justify-content:center;font-size:7pt;color:#999;text-align:center">CME/<br>IAPEN</div>`;
+  const cmeCell   = cmeSrc   ? `<img src="${cmeSrc}"   width="75" height="75" style="display:block;margin:auto">` : _ph;
+  const iapenCell = iapenSrc ? `<img src="${iapenSrc}" width="75" height="75" style="display:block;margin:auto">` : _ph;
+
+  // Data longa
+  const meses = ['janeiro','fevereiro','mar&#231;o','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  let dataLonga = '';
+  if (dataVal) {
+    const [y,m,d] = dataVal.split('-');
+    dataLonga = `${parseInt(d)} de ${meses[parseInt(m)-1]} de ${y}`;
+  }
+  const ano    = dataVal ? dataVal.split('-')[0] : String(new Date().getFullYear());
+  const numFmt = numero ? `${numero}/${ano} - CME/IAPEN` : '';
+
+  // Corpo: transforma linhas do textarea em parágrafos HTML
+  const paragsHtml = txt.split('\n').map(l => {
+    if (!l.trim()) return `<p style="margin:4pt 0">&nbsp;</p>`;
+    return `<p style="text-align:justify;margin:8pt 0;line-height:1.5;font-size:12pt">${esc(l)}</p>`;
+  }).join('\n');
+
+  const doc = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
+  xmlns:w='urn:schemas-microsoft-com:office:word'
+  xmlns:v='urn:schemas-microsoft-com:vml'>
+<head>
+<meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
+<style>
+  @page { margin: 2.5cm 3cm 3cm 3cm; }
+  body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.5; color: #000; }
+  p { margin: 0; padding: 0; }
+  table { border-collapse: collapse; width: 100%; }
+  td { vertical-align: middle; }
+  .rodape {
+    font-family: Arial, sans-serif; font-size: 8.5pt; text-align: center; color: #333;
+    border-top: 1pt solid #1a3a6b; padding-top: 6pt; margin-top: 60pt;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ CABEÇALHO ══════════════════════════════════════════════ -->
+<table style="width:100%;border-collapse:collapse;margin-bottom:4pt">
+  <tr>
+    <td style="width:85pt;text-align:center;vertical-align:middle;padding:0 8pt 0 0">${cmeCell}</td>
+    <td style="text-align:center;vertical-align:middle;padding:4pt 0">
+      <p style="font-size:9pt;font-weight:bold;text-transform:uppercase;letter-spacing:.5pt;margin:0;color:#1a3a6b">Governo do Estado do Amap&#225;</p>
+      <p style="font-size:8.5pt;margin:1pt 0;color:#333">Secretaria de Estado da Justi&#231;a e Seguran&#231;a P&#250;blica &#8211; SEJUSP</p>
+      <p style="font-size:10pt;font-weight:bold;text-transform:uppercase;margin:2pt 0;color:#1a3a6b">Instituto de Administra&#231;&#227;o Penitenci&#225;ria &#8211; IAPEN/AP</p>
+      <p style="font-size:9pt;font-weight:bold;margin:1pt 0;color:#000">Central de Monitoramento Eletr&#244;nico &#8211; CME</p>
+    </td>
+    <td style="width:85pt;text-align:center;vertical-align:middle;padding:0 0 0 8pt">${iapenCell}</td>
+  </tr>
+</table>
+
+<!-- Linha dupla separadora -->
+<table style="width:100%;border-collapse:collapse;margin:4pt 0 16pt 0">
+  <tr><td style="height:3pt;background:#1a3a6b;font-size:0">&nbsp;</td></tr>
+  <tr><td style="height:2pt">&nbsp;</td></tr>
+  <tr><td style="height:1pt;background:#1a3a6b;font-size:0">&nbsp;</td></tr>
+</table>
+
+<!-- ══ IDENTIFICAÇÃO ═══════════════════════════════════════════ -->
+${numFmt ? `<p style="text-align:right;font-size:12pt;font-weight:bold;margin:0 0 2pt 0">Of&#237;cio n&#176; <b>${esc(numFmt)}</b></p>` : ''}
+${dataLonga ? `<p style="text-align:right;font-size:12pt;margin:0 0 20pt 0">Macap&#225;/AP, ${dataLonga}.</p>` : '<p style="margin:0 0 20pt 0">&nbsp;</p>'}
+
+<!-- ══ DESTINATÁRIO ══════════════════════════════════════════════ -->
+${dest ? `<p style="font-size:12pt;margin:0 0 2pt 0">A Sua Excel&#234;ncia o (a) Senhor (a)</p>
+<p style="font-size:12pt;font-weight:bold;margin:0 0 14pt 0">${esc(dest)}.</p>` : ''}
+
+<!-- ══ REFERÊNCIA ════════════════════════════════════════════════ -->
+${processo ? `<p style="font-size:12pt;margin:0 0 18pt 0"><b>Processo n&#176;:</b> ${esc(processo)}.</p>` : ''}
+
+<!-- ══ CORPO ═════════════════════════════════════════════════════ -->
+${paragsHtml}
+
+<!-- ══ ENCERRAMENTO ══════════════════════════════════════════════ -->
+<p style="font-size:12pt;margin:14pt 0 4pt 0">Respeitosamente,</p>
+
+<!-- ══ ASSINATURA ════════════════════════════════════════════════ -->
+<table style="width:100%;margin-top:60pt">
+  <tr>
+    <td style="width:55%;text-align:center;vertical-align:bottom">
+      ${assImg ? `<p style="margin:0;text-align:center"><img src="${assImg}" style="max-height:60pt;max-width:180pt;object-fit:contain;display:block;margin:0 auto"></p>` : ''}
+      <p style="border-top:1pt solid #000;padding-top:6pt;font-size:12pt;font-weight:bold;margin:0">${esc(signat)}</p>
+      <p style="font-size:11pt;margin:2pt 0 0 0">${esc(cargo)}</p>
+      ${decreto ? `<p style="font-size:10pt;color:#444;margin:2pt 0 0 0">Decreto n&#176; ${esc(decreto)}</p>` : ''}
+    </td>
+    <td style="width:45%"></td>
+  </tr>
+</table>
+
+<!-- ══ RODAPÉ ════════════════════════════════════════════════════ -->
+<div class="rodape">
+  <b>CENTRAL DE MONITORAMENTO ELETR&#212;NICO &#8211; CME / IAPEN-AP</b><br>
+  Av. Machado de Assis, 372 &#8211; Centro &#8211; CEP: 68900-066, Macap&#225;-AP<br>
+  &#128222;&nbsp;(096) 98415-2844&nbsp;&nbsp;|&nbsp;&nbsp;&#9993;&nbsp;cme.iapen.ap@gmail.com
+</div>
+
+</body>
+</html>`;
+
+  const nomeArq = `Juridico_${numero ? numero + '_' : ''}${nomeMon.replace(/\s+/g,'_').substring(0,20) || 'doc'}.doc`;
+  const blob = new Blob(['﻿' + doc], { type: 'application/msword;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `Juridico_${nome.replace(/\s+/g,'-')}.doc`;
+  a.download = nomeArq;
   a.click();
-  URL.revokeObjectURL(a.href);
+  setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+  _mostrarToast('📄 Documento jur&#237;dico gerado com sucesso!', 'sucesso');
 }
 
 /* ── Busca de Documentos do Monitorado ──────────────────────── */
