@@ -13116,7 +13116,7 @@ function r2_renderizarListaMon(lista) {
     el.innerHTML = '<div style="color:#aaa;font-size:.83rem;text-align:center;padding:20px 0">Nenhum monitorado.<br>Clique em + Monitorado.</div>';
     return;
   }
-  const isAdmin = usuarioAtual?.nivel === 'admin';
+  const isAdmin = true; // todos os servidores podem excluir pastas de monitorados
   el.innerHTML = lista.map(m => {
     const nomeEsc = m.nome.replace(/'/g,"&#39;").replace(/"/g,'&quot;');
     return `<div style="display:flex;align-items:center;gap:4px">
