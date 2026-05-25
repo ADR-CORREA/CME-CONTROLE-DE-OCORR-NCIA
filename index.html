@@ -2749,7 +2749,82 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
         </div><!-- /col direita -->
       </div><!-- /grid -->
-    </div>
+
+      <!-- ═══ AUDITORIA COMPLETA (admin) ═══════════════════════════ -->
+      <div style="margin-top:20px">
+        <div class="admin-card">
+          <div class="admin-card-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <span>🔍 Auditoria Completa</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button id="admin-audit-tab-sis" onclick="admin_mudarTabAudit('sistema')"
+                style="background:#1F4E78;color:#fff;border:none;border-radius:6px;padding:5px 13px;font-size:.8rem;font-weight:600;cursor:pointer">
+                📊 Log do Sistema
+              </button>
+              <button id="admin-audit-tab-arq" onclick="admin_mudarTabAudit('arquivos')"
+                style="background:#e8f0fb;color:#1F4E78;border:1px solid #bcd4ee;border-radius:6px;padding:5px 13px;font-size:.8rem;font-weight:600;cursor:pointer">
+                📁 Arquivos R2
+              </button>
+              <button onclick="admin_recarregarAudit()" title="Atualizar"
+                style="background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:.82rem;cursor:pointer">🔄</button>
+            </div>
+          </div>
+
+          <!-- Log do Sistema -->
+          <div id="admin-audit-sis-panel" style="padding:14px">
+            <div id="admin-audit-sis-lista"
+              style="font-size:.78rem;font-family:var(--font-mono);color:var(--cz2);max-height:340px;overflow-y:auto;line-height:1.6">
+            </div>
+          </div>
+
+          <!-- Arquivos R2 -->
+          <div id="admin-audit-arq-panel" style="display:none;padding:14px">
+            <!-- Filtros -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+              <input id="admin-arq-busca" type="text" placeholder="🔍 Monitorado, usuário ou arquivo…"
+                oninput="admin_carregarAuditArquivos()"
+                style="flex:1;min-width:180px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:.83rem;outline:none">
+              <select id="admin-arq-acao" onchange="admin_carregarAuditArquivos()"
+                style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:.83rem">
+                <option value="">Todas as ações</option>
+                <option value="upload">⬆️ Upload</option>
+                <option value="download">⬇️ Download</option>
+                <option value="delete">🗑️ Exclusão de Arquivo</option>
+                <option value="rename">✏️ Renomear</option>
+                <option value="delete-monitorado">🗑️🗑️ Excluir Monitorado</option>
+              </select>
+              <input id="admin-arq-data" type="date" onchange="admin_carregarAuditArquivos()"
+                style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:.83rem">
+              <button onclick="admin_exportarAuditCSV()"
+                style="background:#f8fafc;color:#475569;border:1px solid #e2e8f0;border-radius:6px;padding:6px 12px;font-size:.8rem;cursor:pointer">
+                📥 Exportar CSV
+              </button>
+            </div>
+            <!-- Tabela -->
+            <div style="overflow-x:auto;max-height:380px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px">
+              <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+                <thead style="position:sticky;top:0;z-index:1">
+                  <tr style="background:#f1f5f9;border-bottom:2px solid #e2e8f0">
+                    <th style="padding:8px 10px;text-align:left;white-space:nowrap">Ação</th>
+                    <th style="padding:8px 10px;text-align:left">Monitorado</th>
+                    <th style="padding:8px 10px;text-align:left">Pasta</th>
+                    <th style="padding:8px 10px;text-align:left">Arquivo</th>
+                    <th style="padding:8px 10px;text-align:left">Servidor</th>
+                    <th style="padding:8px 10px;text-align:left">Nível</th>
+                    <th style="padding:8px 10px;text-align:left;white-space:nowrap">Data / Hora</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-arq-tbody">
+                  <tr><td colspan="7" style="padding:20px;text-align:center;color:#aaa">Clique em "Arquivos R2" para carregar.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="admin-arq-count" style="font-size:.75rem;color:#888;margin-top:6px;text-align:right"></div>
+          </div>
+
+        </div>
+      </div><!-- /auditoria completa -->
+
+    </div><!-- /panel-admin -->
 
     <!-- ─── COMUNICAÇÃO ─── -->
     <div class="tab-panel" id="panel-comunicacao">
@@ -6070,7 +6145,7 @@ function mudarAba(aba) {
   if (aba === "gerencia") { marcarGerVisto(); renderizarGerencia(); }
   if (aba === "links") renderizarLinks();
   if (aba === "modelos") renderizarModelos();
-  if (aba === "admin") { renderizarUsers(); renderizarLogs(); }
+  if (aba === "admin") { renderizarUsers(); renderizarLogs(); _adminAuditCache = null; admin_mudarTabAudit('sistema'); }
   if (aba === "arquivos") { r2_inicializarAba(); }
 }
 
@@ -8352,6 +8427,140 @@ function renderizarLogs() {
     const d = new Date(l.ts).toLocaleString("pt-BR");
     return `<div style="padding:4px 0;border-bottom:1px solid var(--cz4)">[${d}] ${l.msg}</div>`;
   }).join("") : "<div style='color:var(--cz2)'>Nenhum log ainda.</div>";
+  // Também atualiza o painel de auditoria completa, se visível
+  admin_popularLogSistema();
+}
+
+/* ══ AUDITORIA COMPLETA — Admin ════════════════════════════════ */
+let _adminAuditTab = 'sistema';
+let _adminAuditCache = null; // cache dos dados R2 para filtros rápidos
+
+function admin_mudarTabAudit(tab) {
+  _adminAuditTab = tab;
+  const siPanel = document.getElementById('admin-audit-sis-panel');
+  const arPanel = document.getElementById('admin-audit-arq-panel');
+  const siTab   = document.getElementById('admin-audit-tab-sis');
+  const arTab   = document.getElementById('admin-audit-tab-arq');
+  if (!siPanel) return;
+  siPanel.style.display = tab === 'sistema'  ? '' : 'none';
+  arPanel.style.display = tab === 'arquivos' ? '' : 'none';
+  siTab.style.background = tab === 'sistema'  ? '#1F4E78' : '#e8f0fb';
+  siTab.style.color      = tab === 'sistema'  ? '#fff'    : '#1F4E78';
+  siTab.style.border     = tab === 'sistema'  ? 'none'    : '1px solid #bcd4ee';
+  arTab.style.background = tab === 'arquivos' ? '#1F4E78' : '#e8f0fb';
+  arTab.style.color      = tab === 'arquivos' ? '#fff'    : '#1F4E78';
+  arTab.style.border     = tab === 'arquivos' ? 'none'    : '1px solid #bcd4ee';
+  if (tab === 'arquivos') admin_carregarAuditArquivos();
+  else admin_popularLogSistema();
+}
+
+function admin_popularLogSistema() {
+  const el = document.getElementById('admin-audit-sis-lista');
+  if (!el) return;
+  const logs = getLogs();
+  if (!logs.length) {
+    el.innerHTML = '<div style="color:#aaa;text-align:center;padding:16px">Nenhum log registrado.</div>';
+    return;
+  }
+  el.innerHTML = logs.map(l => {
+    const d = l.ts ? new Date(l.ts).toLocaleString('pt-BR') : '';
+    return `<div style="display:flex;gap:12px;padding:3px 0;border-bottom:1px solid #f5f5f5">
+      <span style="color:#94a3b8;white-space:nowrap;min-width:140px">${d}</span>
+      <span>${l.msg}</span>
+    </div>`;
+  }).join('');
+}
+
+async function admin_carregarAuditArquivos() {
+  const tbody = document.getElementById('admin-arq-tbody');
+  const count = document.getElementById('admin-arq-count');
+  if (!tbody) return;
+
+  const busca = (document.getElementById('admin-arq-busca')?.value || '').trim().toLowerCase();
+  const acao  = (document.getElementById('admin-arq-acao')?.value  || '');
+  const data  = (document.getElementById('admin-arq-data')?.value  || '');
+
+  // Se não tem cache ainda, buscar do servidor
+  if (!_adminAuditCache) {
+    tbody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:#aaa">Carregando…</td></tr>';
+    try {
+      const res = await r2_api('GET', '/audit?limit=500');
+      _adminAuditCache = res.audit || [];
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="7" style="padding:20px;text-align:center;color:#dc3545">Erro: ${e.message}</td></tr>`;
+      return;
+    }
+  }
+
+  // Filtros client-side (rápido, sem nova requisição)
+  let rows = _adminAuditCache;
+  if (busca) rows = rows.filter(r =>
+    (r.monitorado||'').toLowerCase().includes(busca) ||
+    (r.usuario   ||'').toLowerCase().includes(busca) ||
+    (r.filename  ||'').toLowerCase().includes(busca)
+  );
+  if (acao) rows = rows.filter(r => r.action === acao);
+  if (data) rows = rows.filter(r => (r.ts||'').startsWith(data));
+
+  if (count) count.textContent = `${rows.length} registro(s)`;
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:#aaa">Nenhum registro encontrado.</td></tr>';
+    return;
+  }
+
+  const acao_label = {
+    upload:             '⬆️ Upload',
+    download:           '⬇️ Download',
+    delete:             '🗑️ Exclusão',
+    rename:             '✏️ Renomear',
+    'delete-monitorado':'🗑️🗑️ Excluir Mon.',
+  };
+  const acao_color = {
+    upload:             '#0d6efd',
+    download:           '#198754',
+    delete:             '#dc3545',
+    rename:             '#9d4edd',
+    'delete-monitorado':'#991b1b',
+  };
+
+  tbody.innerHTML = rows.map(r => {
+    const dt  = r.ts ? new Date(r.ts).toLocaleString('pt-BR') : '—';
+    const cor = acao_color[r.action] || '#555';
+    return `<tr style="border-top:1px solid #f0f0f0" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background=''">
+      <td style="padding:6px 10px;white-space:nowrap">
+        <span style="color:${cor};font-weight:600">${acao_label[r.action]||r.action}</span>
+      </td>
+      <td style="padding:6px 10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.monitorado||''}">${r.monitorado||'—'}</td>
+      <td style="padding:6px 10px;white-space:nowrap;color:#64748b">${r.pasta||'—'}</td>
+      <td style="padding:6px 10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.filename||''}">${r.filename||'—'}</td>
+      <td style="padding:6px 10px;white-space:nowrap;font-weight:600">${r.usuario||'—'}</td>
+      <td style="padding:6px 10px;white-space:nowrap;font-size:.75rem;color:#64748b">${r.nivel||'—'}</td>
+      <td style="padding:6px 10px;font-size:.78rem;color:#888;white-space:nowrap">${dt}</td>
+    </tr>`;
+  }).join('');
+}
+
+function admin_recarregarAudit() {
+  _adminAuditCache = null; // força nova busca no servidor
+  if (_adminAuditTab === 'arquivos') admin_carregarAuditArquivos();
+  else admin_popularLogSistema();
+}
+
+function admin_exportarAuditCSV() {
+  const rows = _adminAuditCache || [];
+  if (!rows.length) return _mostrarToast('Nenhum dado para exportar.', 'erro');
+  const cab  = ['Ação','Monitorado','Pasta','Arquivo','Servidor','Nível','Data'];
+  const linhas = rows.map(r => [
+    r.action||'', r.monitorado||'', r.pasta||'', r.filename||'',
+    r.usuario||'', r.nivel||'',
+    r.ts ? new Date(r.ts).toLocaleString('pt-BR') : ''
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(';'));
+  const csv  = '﻿' + [cab.join(';'), ...linhas].join('\n');
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `auditoria_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
 }
 
 /* ─── BACKUP / RESTORE ───────────────────────────────── */
