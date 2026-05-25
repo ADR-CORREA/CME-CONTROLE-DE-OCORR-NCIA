@@ -12237,11 +12237,13 @@ function baixarModeloPDF() {
   .cab-texto .t-sec   { font-size: 8pt; margin: 1px 0; }
   .cab-texto .t-iapen { font-size: 8pt; margin: 1px 0; }
   .cab-texto .t-cme   { font-size: 11.5pt; font-weight: bold; margin-top: 5px; }
-  .div-main  { border: none; border-top: 2.5px solid #000; margin: 8px 0 16px 0; }
+  .div-main  { border: none; margin: 8px 0 16px 0; }
+  .div-main-bar1 { height: 3px; background: #1a3a6b; margin: 8px 0 1px 0; }
+  .div-main-bar2 { height: 1px; background: #1a3a6b; margin: 0 0 16px 0; }
   .div-light { border: none; border-top: 1px solid #bbb; margin: 12px 0; }
   .titulo-assunto { font-size: 13pt; font-weight: bold; text-align: center;
                     text-transform: uppercase; letter-spacing: .4px; margin: 0 0 10px 0; }
-  .meta-bloco  { border-left: 3px solid #000; background: #f7f7f7;
+  .meta-bloco  { border-left: 3px solid #1a3a6b; background: #f7f7f7;
                  padding: 7px 14px; margin-bottom: 14px; font-size: 10pt; }
   .meta-linha  { margin: 2px 0; }
   .meta-cargo  { font-style: italic; color: #444; display: block; margin-top: 2px; }
@@ -12274,14 +12276,15 @@ function baixarModeloPDF() {
   <div class="cab-col cab-logo">${cmeSrc ? `<img src="${cmeSrc}" alt="CME">` : ''}</div>
   <div class="cab-col cab-texto">
     <div class="t-gov">GOVERNO DO ESTADO DO AMAP\u00c1</div>
-    <div class="t-sec">SECRETARIA DE ESTADO DE JUSTI\u00c7A E SEGURAN\u00c7A P\u00dablica</div>
-    <div class="t-iapen">INSTITUTO DE ADMINISTRA\u00c7\u00c3O PENITENCI\u00c1RIA DO AMAP\u00c1</div>
-    <div class="t-cme">CENTRAL DE MONITORAMENTO ELETR\u00d4NICO \u2014 CME</div>
+    <div class="t-sec">Secretaria de Estado da Justi\u00e7a e Seguran\u00e7a P\u00fablica \u2013 SEJUSP</div>
+    <div class="t-iapen">Instituto de Administra\u00e7\u00e3o Penitenci\u00e1ria \u2013 IAPEN/AP</div>
+    <div class="t-cme">Central de Monitoramento Eletr\u00f4nico \u2013 CME</div>
   </div>
   <div class="cab-col cab-logo">${iapenSrc ? `<img src="${iapenSrc}" alt="IAPEN">` : ''}</div>
 </div>
 
-<hr class="div-main">
+<div class="div-main-bar1"></div>
+<div class="div-main-bar2"></div>
 
 <div>
   <h2 class="titulo-assunto">${esc(assuntoTexto || assunto)}</h2>
@@ -12898,7 +12901,8 @@ function imprimirModeloMulti() {
   .t-cme   { font-size: 11.5pt; font-weight: bold; margin-top: 5px; }
 
   /* Divisórias */
-  .div-main  { border: none; border-top: 2.5px solid #000; margin: 8px 0 20px 0; }
+  .div-main-bar1 { height: 3px; background: #1a3a6b; margin: 8px 0 1px 0; }
+  .div-main-bar2 { height: 1px; background: #1a3a6b; margin: 0 0 20px 0; }
   .div-light { border: none; border-top: 1px solid #bbb; margin: 14px 0; }
 
   /* Conteúdo */
@@ -12918,11 +12922,11 @@ function imprimirModeloMulti() {
   .spacer        { height: 9px; }
 
   /* Identificação */
-  .id-bloco { border-left: 3px solid #000; background: #f7f7f7;
+  .id-bloco { border-left: 3px solid #1a3a6b; background: #f7f7f7;
               padding: 7px 14px; margin: 10px 0 16px 0; font-size: 10.5pt; }
 
   /* Rodapé */
-  .rodape { margin-top: 36px; border-top: 1px solid #000; padding-top: 8px;
+  .rodape { margin-top: 36px; border-top: 1px solid #1a3a6b; padding-top: 8px;
             text-align: center; font-size: 8pt; color: #444; }
   .rodape p { margin: 2px 0; }
 
@@ -12943,14 +12947,15 @@ function imprimirModeloMulti() {
   <div class="cab-col cab-logo">${cmeSrc ? `<img src="${cmeSrc}" alt="CME">` : ''}</div>
   <div class="cab-col cab-texto">
     <div class="t-gov">GOVERNO DO ESTADO DO AMAPÁ</div>
-    <div class="t-sec">SECRETARIA DE ESTADO DE JUSTIÇA E SEGURANÇA PÚBLICA</div>
-    <div class="t-iapen">INSTITUTO DE ADMINISTRAÇÃO PENITENCIÁRIA DO AMAPÁ</div>
-    <div class="t-cme">CENTRAL DE MONITORAMENTO ELETRÔNICO — CME</div>
+    <div class="t-sec">Secretaria de Estado da Justiça e Segurança Pública – SEJUSP</div>
+    <div class="t-iapen">Instituto de Administração Penitenciária – IAPEN/AP</div>
+    <div class="t-cme">Central de Monitoramento Eletrônico – CME</div>
   </div>
   <div class="cab-col cab-logo">${iapenSrc ? `<img src="${iapenSrc}" alt="IAPEN">` : ''}</div>
 </div>
 
-<hr class="div-main">
+<div class="div-main-bar1"></div>
+<div class="div-main-bar2"></div>
 
 <!-- CONTEÚDO -->
 ${bodyHtml}
@@ -16818,54 +16823,147 @@ async function com_gerarPDFComAnexos() {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando PDF...'; }
 
   try {
-    // ── Carregar jsPDF ──
     await _carregarScriptSE('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'jspdf');
     const { jsPDF } = window.jspdf;
 
-    // ── Criar PDF do ofício ──
-    const doc    = new jsPDF({ unit: 'mm', format: 'a4' });
-    const mL = 30, mR = 20, mT = 25, mB = 20;
-    const tw = 210 - mL - mR;
+    const doc   = new jsPDF({ unit: 'mm', format: 'a4' });
+    const mL = 30, mR = 20, mT = 18, mB = 28;
+    const tw = 210 - mL - mR;       // 160 mm
+    const cx = mL + tw / 2;         // centro X
     const pageH = 297;
+    let y = mT;
 
-    doc.setFillColor(26, 58, 107);
-    doc.rect(mL, mT - 3, tw, 0.8, 'F');
+    // ── Coletar dados do formulário ──────────────────────────────
+    const numero   = (document.getElementById('com-of-numero')?.value   || '').trim();
+    const dataVal  = document.getElementById('com-of-data')?.value      || '';
+    const nomeMon  = (document.getElementById('com-of-nome')?.value     || '').trim();
+    const processo = (document.getElementById('com-of-processo')?.value || '').trim();
+    const dest     = (document.getElementById('com-of-destinatario')?.value || '').trim();
+    const saudacao = (document.getElementById('com-of-saudacao')?.value || '').trim();
+    const signat   = (document.getElementById('com-of-signatario')?.value || '').trim();
+    const cargo    = (document.getElementById('com-of-cargo')?.value    || '').trim() || 'Coordenador(a) da CME/IAPEN-AP';
+    const decreto  = (document.getElementById('com-of-decreto')?.value  || '').trim();
+    const assImg   = usuarioAtual?.assinatura || null;
 
-    // Cabeçalho
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(26, 58, 107);
-    doc.text('GOVERNO DO ESTADO DO AMAPÁ — IAPEN/AP — CME', 105, mT + 3, { align: 'center' });
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(80, 80, 80);
-    doc.text('Instituto de Administração Penitenciária — Central de Monitoramento Eletrônico', 105, mT + 8, { align: 'center' });
+    const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    let dataLonga = '';
+    if (dataVal) {
+      const [yr, mo, dy] = dataVal.split('-');
+      dataLonga = `${parseInt(dy)} de ${meses[parseInt(mo)-1]} de ${yr}`;
+    }
+    const ano    = dataVal ? dataVal.split('-')[0] : String(new Date().getFullYear());
+    const numFmt = numero ? `${numero}/${ano} – CME/IAPEN` : '';
 
-    doc.setFillColor(26, 58, 107);
-    doc.rect(mL, mT + 11, tw, 0.5, 'F');
-
-    // Corpo do texto
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10.5);
-    doc.setTextColor(0, 0, 0);
-    const linhas = doc.splitTextToSize(texto, tw);
-    let y = mT + 19;
-    for (const linha of linhas) {
-      if (y > pageH - mB - 5) { doc.addPage(); y = mT; }
-      doc.text(linha, mL, y);
-      y += 5.5;
+    // ── Logos ────────────────────────────────────────────────────
+    const logoW = 22, logoH = 22;
+    if (window._CME_LOGO_B64) {
+      try { doc.addImage('data:image/png;base64,' + window._CME_LOGO_B64,   'PNG', mL,            y, logoW, logoH); } catch(e) {}
+    }
+    if (window._IAPEN_LOGO_B64) {
+      try { doc.addImage('data:image/png;base64,' + window._IAPEN_LOGO_B64, 'PNG', 210 - mR - logoW, y, logoW, logoH); } catch(e) {}
     }
 
-    // Rodapé
+    // ── Texto institucional (centralizado) ───────────────────────
+    doc.setFont('helvetica', 'bold');   doc.setFontSize(8.5); doc.setTextColor(26, 58, 107);
+    doc.text('GOVERNO DO ESTADO DO AMAPÁ', cx, y + 5,  { align: 'center' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(60, 60, 60);
+    doc.text('Secretaria de Estado da Justiça e Segurança Pública – SEJUSP', cx, y + 10, { align: 'center' });
+    doc.setFont('helvetica', 'bold');   doc.setFontSize(8.5); doc.setTextColor(26, 58, 107);
+    doc.text('Instituto de Administração Penitenciária – IAPEN/AP',          cx, y + 15, { align: 'center' });
+    doc.setFont('helvetica', 'bold');   doc.setFontSize(8.5); doc.setTextColor(0, 0, 0);
+    doc.text('Central de Monitoramento Eletrônico – CME',                    cx, y + 20, { align: 'center' });
+    y += logoH + 3;
+
+    // ── Separador duplo azul ─────────────────────────────────────
+    doc.setFillColor(26, 58, 107);
+    doc.rect(mL, y,       tw, 0.9, 'F');
+    doc.rect(mL, y + 1.8, tw, 0.3, 'F');
+    y += 7;
+
+    // ── Número e data (alinhados à direita) ─────────────────────
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0);
+    if (numFmt)    { doc.text(`Ofício nº ${numFmt}`,            210 - mR, y, { align: 'right' }); y += 5.5; }
+    if (dataLonga) { doc.setFont('helvetica', 'normal');
+                     doc.text(`Macapá/AP, ${dataLonga}.`, 210 - mR, y, { align: 'right' }); y += 8; }
+
+    // ── Destinatário ─────────────────────────────────────────────
+    if (dest) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
+      doc.text('A Sua Excelência o (a) Senhor (a)', mL, y); y += 5;
+      doc.setFont('helvetica', 'bold');
+      doc.text(dest + '.', mL, y); y += 9;
+    }
+
+    // ── Assunto / Processo ───────────────────────────────────────
+    const modeloId = document.getElementById('com-of-modelo')?.value || '';
+    const modelo   = COM_MODELOS.find(m => m.id === modeloId);
+    if (modelo?.assunto) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0);
+      doc.text(`Assunto: `, mL, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(modelo.assunto + '.', mL + doc.getTextWidth('Assunto: '), y); y += 5;
+    }
+    if (processo) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+      doc.text('Processo nº: ', mL, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(processo + '.', mL + doc.getTextWidth('Processo nº: '), y); y += 8;
+    }
+
+    // ── Saudação ─────────────────────────────────────────────────
+    if (saudacao) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
+      doc.text(saudacao, mL, y); y += 8;
+    }
+
+    // ── Corpo (texto do textarea, linha a linha) ─────────────────
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
+    const linhasCorpo = texto.split('\n');
+    for (const l of linhasCorpo) {
+      if (!l.trim()) { y += 4; continue; }
+      const wrapped = doc.splitTextToSize(l.trim(), tw);
+      for (const wl of wrapped) {
+        if (y > pageH - mB - 6) { doc.addPage(); y = mT; }
+        doc.text(wl, mL, y); y += 5.5;
+      }
+    }
+
+    // ── Encerramento ─────────────────────────────────────────────
+    y += 4;
+    if (y > pageH - mB - 30) { doc.addPage(); y = mT; }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+    doc.text('Sem mais, esta CME encontra-se à disposição.', mL, y); y += 5;
+    doc.text('Respeitosamente,', mL, y); y += 20;
+
+    // ── Assinatura ───────────────────────────────────────────────
+    if (y > pageH - mB - 35) { doc.addPage(); y = mT; }
+    const assX = mL, assW = tw * 0.55, assC = assX + assW / 2;
+    if (assImg) {
+      try {
+        const imgW = 55, imgH = 18;
+        doc.addImage(assImg, 'PNG', assC - imgW / 2, y, imgW, imgH);
+        y += imgH + 1;
+      } catch(e) {}
+    }
+    doc.setDrawColor(0); doc.setLineWidth(0.3);
+    doc.line(assX, y, assX + assW, y); y += 4;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+    doc.text(signat, assC, y, { align: 'center' }); y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+    doc.text(cargo, assC, y, { align: 'center' }); y += 4;
+    if (decreto) { doc.setFontSize(9); doc.setTextColor(80); doc.text(`Decreto nº ${decreto}`, assC, y, { align: 'center' }); }
+
+    // ── Rodapé em todas as páginas ───────────────────────────────
     const totalPag = doc.internal.getNumberOfPages();
     for (let p = 1; p <= totalPag; p++) {
       doc.setPage(p);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.setTextColor(120);
       doc.setFillColor(26, 58, 107);
-      doc.rect(mL, pageH - mB, tw, 0.3, 'F');
-      doc.text(`CME/IAPEN-AP  ·  Página ${p} de ${totalPag}`, 105, pageH - mB + 5, { align: 'center' });
+      doc.rect(mL, pageH - mB + 2, tw, 0.3, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(50);
+      doc.text('CENTRAL DE MONITORAMENTO ELETRÔNICO – CME / IAPEN-AP', cx, pageH - mB + 7, { align: 'center' });
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(100);
+      doc.text('Av. Machado de Assis, 372 – Centro – CEP: 68900-066, Macapá-AP  |  (096) 98415-2844  |  cme.iapen.ap@gmail.com', cx, pageH - mB + 11, { align: 'center' });
+      if (totalPag > 1) { doc.text(`Página ${p} de ${totalPag}`, 210 - mR, pageH - mB + 7, { align: 'right' }); }
     }
 
     let finalBytes = doc.output('arraybuffer');
