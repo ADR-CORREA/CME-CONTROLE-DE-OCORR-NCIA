@@ -13550,7 +13550,7 @@ async function r2_carregarArquivos() {
       tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:#aaa">Nenhum arquivo nesta pasta.</td></tr>';
       return;
     }
-    const nivelAdmin = usuarioAtual?.nivel === 'admin';
+    const nivelAdmin = true; // todos os servidores podem excluir
     tbody.innerHTML = arquivos.map(f => r2_linhaArquivo(f, nivelAdmin)).join('');
   } catch(e) {
     tbody.innerHTML = `<tr><td colspan="5" style="padding:20px;text-align:center;color:#dc3545">${e.message}</td></tr>`;
@@ -13560,7 +13560,7 @@ async function r2_carregarArquivos() {
 /* ── Vista estruturada — pasta Processo ───────────────────────── */
 function r2_renderizarProcesso(arquivos) {
   const tbody    = document.getElementById('r2-tabela-body');
-  const nivelAdmin = usuarioAtual?.nivel === 'admin';
+  const nivelAdmin = true; // todos os servidores podem excluir arquivos do processo
 
   // R2 list() não retorna customMetadata — o nome vem do segmento final da key:
   // formato: {timestamp}_{sanitizarNome("[catId] filename")}
@@ -13632,7 +13632,7 @@ function r2_renderizarProcesso(arquivos) {
             </div>
             <label style="cursor:pointer;background:#1F4E78;color:#fff;padding:5px 12px;border-radius:5px;font-size:.82rem;white-space:nowrap;display:flex;align-items:center;gap:5px">
               📎 Anexar
-              <input type="file" id="${inputId}" style="display:none" onchange="r2_enviarComCategoria(this,'${cat.id}')">
+              <input type="file" id="${inputId}" multiple style="display:none" onchange="r2_enviarComCategoria(this,'${cat.id}')">
             </label>
           </div>
           <!-- Arquivos desta categoria -->
