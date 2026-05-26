@@ -2344,7 +2344,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
             <!-- Modelo -->
             <div class="form-field">
               <label>Modelo de Ofício</label>
-              <select id="com-of-modelo" onchange="com_atualizarCampos();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+              <select id="com-of-modelo" onchange="_comTextoBloqueado=false;com_atualizarCampos();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
                 <option value="">Selecione o modelo...</option>
               </select>
             </div>
@@ -2439,14 +2439,27 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
           <!-- Coluna Pré-visualização -->
           <div style="background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column">
-            <div style="font-weight:700;color:var(--az1);font-size:.95rem;margin-bottom:16px;border-bottom:1px solid #e0e6ed;padding-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:700;color:var(--az1);font-size:.95rem;margin-bottom:10px;border-bottom:1px solid #e0e6ed;padding-bottom:8px;display:flex;justify-content:space-between;align-items:center">
               <span>📄 Pré-visualização (editável)</span>
               <span id="com-char-count" style="font-size:.75rem;color:#888;font-weight:400">0 caracteres</span>
             </div>
+            <!-- Indicador de edição manual -->
+            <div id="com-texto-editado-badge" style="display:none;align-items:center;gap:8px;
+              padding:6px 10px;background:#fef9c3;border:1px solid #fde047;border-radius:7px;
+              margin-bottom:8px;font-size:.78rem;color:#854d0e;flex-shrink:0">
+              <span>✏️ Texto editado manualmente — campos do formulário não sobrescrevem.</span>
+              <button onclick="_comRestaurarTextoModelo()"
+                style="background:#854d0e;color:#fff;border:none;border-radius:5px;padding:3px 10px;
+                       font-size:.75rem;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0">
+                🔄 Restaurar do modelo
+              </button>
+            </div>
             <textarea id="com-of-texto" rows="28"
-              style="flex:1;resize:vertical;font-family:var(--font-mono);font-size:.78rem;line-height:1.6;border:1px solid #e0e6ed;border-radius:6px;padding:12px;background:#f8faff;color:#1a1a2e;outline:none"
-              placeholder="Preencha os campos ao lado para visualizar o ofício..."
-              oninput="document.getElementById('com-char-count').textContent=this.value.length+' caracteres'"></textarea>
+              style="flex:1;resize:vertical;font-family:var(--font-mono);font-size:.78rem;line-height:1.6;
+                     border:1px solid #e0e6ed;border-radius:6px;padding:12px;background:#f8faff;
+                     color:#1a1a2e;outline:none"
+              placeholder="Selecione o modelo ao lado para visualizar e editar o ofício..."
+              oninput="_comOnTextoInput(this)"></textarea>
             <div id="com-copy-msg" style="display:none;margin-top:8px;padding:8px 12px;background:#e8f5e9;border-radius:6px;color:#1a4226;font-size:.84rem;font-weight:600">✅ Texto copiado para a área de transferência!</div>
           </div><!-- /preview col -->
 
@@ -15738,6 +15751,22 @@ ${paragsHtml}
 }
 
 /* ─── Preview / Limpar / Copiar ────────────────────────────── */
+let _comTextoBloqueado = false; // true quando usuário editou o textarea manualmente
+
+function _comOnTextoInput(ta) {
+  document.getElementById('com-char-count').textContent = ta.value.length + ' caracteres';
+  _comTextoBloqueado = true;
+  const badge = document.getElementById('com-texto-editado-badge');
+  if (badge) badge.style.display = 'flex';
+}
+
+function _comRestaurarTextoModelo() {
+  _comTextoBloqueado = false;
+  const badge = document.getElementById('com-texto-editado-badge');
+  if (badge) badge.style.display = 'none';
+  com_atualizarPreview();
+}
+
 function com_atualizarPreview() {
   const modeloId   = document.getElementById('com-of-modelo')?.value;
   const dest       = document.getElementById('com-of-destinatario')?.value.trim() || '';
@@ -15754,7 +15783,20 @@ function com_atualizarPreview() {
   const ta     = document.getElementById('com-of-texto');
   if (!ta) return;
 
-  if (!modeloId || !modelo) { ta.value = ''; document.getElementById('com-char-count').textContent = '0 caracteres'; return; }
+  if (!modeloId || !modelo) {
+    _comTextoBloqueado = false;
+    ta.value = '';
+    const badge = document.getElementById('com-texto-editado-badge');
+    if (badge) badge.style.display = 'none';
+    document.getElementById('com-char-count').textContent = '0 caracteres';
+    return;
+  }
+
+  // Se o usuário editou o texto manualmente, não sobrescrever (exceto troca de modelo)
+  if (_comTextoBloqueado) {
+    document.getElementById('com-char-count').textContent = ta.value.length + ' caracteres';
+    return;
+  }
 
   const ano      = dataOficio ? dataOficio.split('-')[0] : String(new Date().getFullYear());
   const numFmt   = numero ? `${numero}/${ano} - CME/IAPEN` : '____/'+ano+' - CME/IAPEN';
@@ -17237,6 +17279,9 @@ function _prevGenConfirmar() {
 /* ─────────────────────────────────────────────────────────────── */
 
 function com_limparOficio() {
+  _comTextoBloqueado = false;
+  const badge = document.getElementById('com-texto-editado-badge');
+  if (badge) badge.style.display = 'none';
   ['com-of-comarca','com-of-vara','com-of-modelo'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
