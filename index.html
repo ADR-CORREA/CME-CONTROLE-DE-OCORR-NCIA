@@ -16561,14 +16561,22 @@ async function com_selecionarMonitorado(nome) {
         const icon = icons[ext] || '📄';
         const kb   = arq.tamanho ? (arq.tamanho / 1024).toFixed(0) + ' KB' : '';
         const key  = arq.key.replace(/'/g, "\\'");
-        html += `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-radius:6px;
+        const safeKeyPreview = arq.key.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        const safeNomePreview = (arq.nome||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;
                    transition:background .12s" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
-          <input type="checkbox" class="com-doc-check" data-key="${arq.key}" data-nome="${(arq.nome||'').replace(/"/g,'&quot;')}"
-            style="width:15px;height:15px;cursor:pointer;accent-color:#1d4ed8" onchange="com_atualizarContadorDocs()">
-          <span style="font-size:1rem">${icon}</span>
-          <span style="flex:1;font-size:.8rem;color:#1e293b">${arq.nome || arq.key.split('/').pop()}</span>
-          <span style="font-size:.72rem;color:#94a3b8">${kb}</span>
-        </label>`;
+          <label style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer">
+            <input type="checkbox" class="com-doc-check" data-key="${arq.key}" data-nome="${(arq.nome||'').replace(/"/g,'&quot;')}"
+              style="width:15px;height:15px;cursor:pointer;accent-color:#1d4ed8;flex-shrink:0" onchange="com_atualizarContadorDocs()">
+            <span style="font-size:1rem;flex-shrink:0">${icon}</span>
+            <span style="flex:1;font-size:.8rem;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+              title="${(arq.nome||'').replace(/"/g,'&quot;')}">${arq.nome || arq.key.split('/').pop()}</span>
+          </label>
+          <button onclick="com_previewDocR2('${safeKeyPreview}','${safeNomePreview}')" title="Visualizar documento"
+            style="background:none;border:1px solid #cbd5e1;border-radius:5px;cursor:pointer;color:#1d4ed8;
+                   font-size:.72rem;padding:2px 7px;line-height:1.5;flex-shrink:0;white-space:nowrap">👁️ Ver</button>
+          <span style="font-size:.72rem;color:#94a3b8;flex-shrink:0">${kb}</span>
+        </div>`;
       }
     }
     listaEl.innerHTML = html;
@@ -16587,6 +16595,27 @@ function com_atualizarContadorDocs() {
 function com_selecionarTodosDocs(marcar) {
   document.querySelectorAll('.com-doc-check').forEach(c => c.checked = marcar);
   com_atualizarContadorDocs();
+}
+
+/* Abre/baixa um arquivo do R2 para visualizar em nova aba */
+async function com_previewDocR2(key, nome) {
+  if (!r2_state.url || !r2_state.token) await r2_carregarConfig();
+  _mostrarToast('⏳ Abrindo arquivo...', 'info');
+  try {
+    const resp = await fetch(
+      `${r2_state.url}/download?key=${encodeURIComponent(key)}`,
+      { headers: { 'Authorization': `Bearer ${r2_state.token}`,
+                   'X-Usuario': usuarioAtual?.nome || 'desconhecido',
+                   'X-Nivel':   usuarioAtual?.nivel || '' } }
+    );
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch(e) {
+    _mostrarToast(`❌ Não foi possível abrir: ${e.message}`, 'erro');
+  }
 }
 
 async function com_carregarEExtrair() {
@@ -16830,10 +16859,21 @@ async function com_extrairComIA() {
 }
 
 /* ── Gerar PDF com Anexos ────────────────────────────────────── */
+/* ── Roteador: abre seletor de páginas se houver PDFs, senão gera direto ── */
 async function com_gerarPDFComAnexos() {
   const texto = document.getElementById('com-of-texto').value.trim();
   if (!texto) { _mostrarToast('⚠️ Preencha e visualize o ofício primeiro.', 'erro'); return; }
 
+  const pdfAnexos = _comAnexos.filter(a => a.tipo === 'pdf' && a.file);
+  if (pdfAnexos.length) {
+    await com_abrirPrevGenModal();   // ilovepdf-style: seleciona páginas, depois gera
+  } else {
+    await _comGerarPDFExec();        // sem PDFs: gera direto
+  }
+}
+
+/* ── Geração efetiva do PDF (chamado após seleção de páginas) ── */
+async function _comGerarPDFExec() {
   const btn = document.getElementById('com-btn-pdf-anexos');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando PDF...'; }
 
@@ -17033,6 +17073,171 @@ async function com_gerarPDFComAnexos() {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   SELETOR DE PÁGINAS (ilovepdf-style) — abre antes de gerar PDF
+   ══════════════════════════════════════════════════════════════════ */
+
+let _prevGenSel = {}; // { anexoId: Set<number> } — seleções por PDF
+
+async function com_abrirPrevGenModal() {
+  const pdfAnexos = _comAnexos.filter(a => a.tipo === 'pdf' && a.file);
+  if (!pdfAnexos.length) { await _comGerarPDFExec(); return; }
+
+  _prevGenSel = {};
+  const modal   = document.getElementById('com-prevgen-modal');
+  const content = document.getElementById('com-prevgen-content');
+  content.innerHTML = `<div style="text-align:center;padding:50px;color:#64748b;font-size:.9rem">⏳ Carregando páginas dos PDFs...</div>`;
+  modal.style.display = 'flex';
+
+  // Carrega PDF.js se necessário
+  if (!window.pdfjsLib) {
+    await _carregarScriptSE('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'pdfjsLib');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
+  content.innerHTML = '';
+
+  for (const [idx, anexo] of pdfAnexos.entries()) {
+    const section = document.createElement('div');
+    section.style.cssText = `margin-bottom:24px;${idx < pdfAnexos.length-1 ? 'padding-bottom:20px;border-bottom:2px dashed #e2e8f0' : ''}`;
+    content.appendChild(section);
+
+    // Cabeçalho da seção
+    section.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <span style="font-size:1.1rem">📕</span>
+        <span style="font-weight:700;font-size:.88rem;color:#1e293b;flex:1;min-width:0;
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${anexo.nome}">${anexo.nome}</span>
+        <span id="pg-count-${anexo.id}" style="font-size:.78rem;color:#64748b;white-space:nowrap"></span>
+        <button onclick="com_prevgenSelectAll('${anexo.id}',true)"
+          style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:6px;
+                 padding:4px 11px;font-size:.76rem;font-weight:600;cursor:pointer">☑ Todas</button>
+        <button onclick="com_prevgenSelectAll('${anexo.id}',false)"
+          style="background:#fff;color:#64748b;border:1px solid #e2e8f0;border-radius:6px;
+                 padding:4px 11px;font-size:.76rem;font-weight:600;cursor:pointer">☐ Nenhuma</button>
+      </div>
+      <div id="pg-grid-${anexo.id}"
+        style="display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:10px">
+        <div style="grid-column:1/-1;padding:20px;text-align:center;color:#94a3b8;font-size:.8rem">⏳ Carregando thumbnails...</div>
+      </div>`;
+
+    // Renderizar thumbnails de forma assíncrona
+    (async () => {
+      try {
+        const buf    = await anexo.file.arrayBuffer();
+        const pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+        const total  = pdfDoc.numPages;
+        anexo._totalPages = total;
+
+        // Inicializar seleção (preserva escolha anterior se já foi organizado)
+        _prevGenSel[anexo.id] = anexo.selectedPages
+          ? new Set(anexo.selectedPages)
+          : new Set(Array.from({length: total}, (_, i) => i + 1));
+
+        const grid = document.getElementById(`pg-grid-${anexo.id}`);
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        for (let n = 1; n <= total; n++) {
+          const sel = _prevGenSel[anexo.id].has(n);
+          const card = document.createElement('div');
+          card.className = 'prevgen-pg-card';
+          card.dataset.aid  = anexo.id;
+          card.dataset.page = n;
+          card.style.cssText = `position:relative;border-radius:8px;overflow:hidden;cursor:pointer;
+            border:2.5px solid ${sel ? '#1d4ed8' : '#e2e8f0'};
+            box-shadow:${sel ? '0 0 0 2px #bfdbfe' : 'none'};
+            transition:border .12s,box-shadow .12s;background:#f8fafc`;
+          card.innerHTML = `
+            <canvas style="display:block;width:100%;height:auto"></canvas>
+            <div class="pg-badge" style="position:absolute;top:5px;left:5px;width:22px;height:22px;border-radius:5px;
+              display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;
+              background:${sel ? '#1d4ed8' : 'rgba(0,0,0,.2)'};color:#fff;transition:background .12s">
+              ${sel ? '✓' : ''}
+            </div>
+            <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.5);
+              color:#fff;font-size:.67rem;text-align:center;padding:3px 0;letter-spacing:.02em">
+              Pág. ${n}
+            </div>`;
+          card.addEventListener('click', () => _prevGenToggle(card));
+          grid.appendChild(card);
+
+          // Thumbnail
+          const page     = await pdfDoc.getPage(n);
+          const viewport = page.getViewport({ scale: 0.32 });
+          const canvas   = card.querySelector('canvas');
+          canvas.width   = viewport.width;
+          canvas.height  = viewport.height;
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+        }
+        _prevGenAtualizarContador(anexo.id);
+      } catch(e) {
+        const g = document.getElementById(`pg-grid-${anexo.id}`);
+        if (g) g.innerHTML = `<div style="grid-column:1/-1;padding:12px;color:#dc2626;font-size:.8rem">❌ Erro: ${e.message}</div>`;
+      }
+    })();
+  }
+}
+
+function _prevGenToggle(card) {
+  const id = card.dataset.aid;
+  const n  = parseInt(card.dataset.page);
+  const sel = _prevGenSel[id];
+  if (!sel) return;
+
+  const adding = !sel.has(n);
+  if (adding) sel.add(n); else sel.delete(n);
+
+  card.style.border     = `2.5px solid ${adding ? '#1d4ed8' : '#e2e8f0'}`;
+  card.style.boxShadow  = adding ? '0 0 0 2px #bfdbfe' : 'none';
+  const badge = card.querySelector('.pg-badge');
+  badge.style.background = adding ? '#1d4ed8' : 'rgba(0,0,0,.2)';
+  badge.textContent = adding ? '✓' : '';
+  _prevGenAtualizarContador(id);
+}
+
+function com_prevgenSelectAll(id, marcar) {
+  const sel   = _prevGenSel[id];
+  const anexo = _comAnexos.find(a => a.id === id);
+  if (!sel || !anexo) return;
+  if (marcar) { for (let i = 1; i <= (anexo._totalPages||0); i++) sel.add(i); }
+  else        { sel.clear(); }
+  document.querySelectorAll(`.prevgen-pg-card[data-aid="${id}"]`).forEach(card => {
+    const ok = sel.has(parseInt(card.dataset.page));
+    card.style.border    = `2.5px solid ${ok ? '#1d4ed8' : '#e2e8f0'}`;
+    card.style.boxShadow = ok ? '0 0 0 2px #bfdbfe' : 'none';
+    const b = card.querySelector('.pg-badge');
+    b.style.background = ok ? '#1d4ed8' : 'rgba(0,0,0,.2)';
+    b.textContent = ok ? '✓' : '';
+  });
+  _prevGenAtualizarContador(id);
+}
+
+function _prevGenAtualizarContador(id) {
+  const sel   = _prevGenSel[id];
+  const anexo = _comAnexos.find(a => a.id === id);
+  const el    = document.getElementById(`pg-count-${id}`);
+  if (!sel || !el) return;
+  const total = anexo?._totalPages || 0;
+  const marcados = sel.size;
+  el.textContent = `${marcados} de ${total} pág. selecionada${marcados !== 1 ? 's' : ''}`;
+  el.style.color      = marcados < total ? '#1d4ed8' : '#64748b';
+  el.style.fontWeight = marcados < total ? '700' : '400';
+}
+
+function _prevGenConfirmar() {
+  // Salva seleções nos anexos
+  for (const [id, sel] of Object.entries(_prevGenSel)) {
+    const anexo = _comAnexos.find(a => a.id === id);
+    if (!anexo) continue;
+    const total = anexo._totalPages;
+    anexo.selectedPages = (total && sel.size === total) ? null : [...sel].sort((a,b) => a-b);
+  }
+  com_renderizarAnexos();
+  document.getElementById('com-prevgen-modal').style.display = 'none';
+  _comGerarPDFExec();  // gera o PDF com as páginas configuradas
+}
+
 /* ─────────────────────────────────────────────────────────────── */
 
 function com_limparOficio() {
@@ -17210,6 +17415,49 @@ function com_pdfOrgFechar() {
 </script>
 
 <!-- ══ MODAL ORGANIZADOR DE PDF ═══════════════════════════════════ -->
+<!-- ══ Modal: Seletor de páginas ilovepdf-style (pré-geração) ══ -->
+<div id="com-prevgen-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.68);z-index:9997;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:14px;width:min(96vw,940px);max-height:93vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 25px 65px rgba(0,0,0,.4)">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 22px;border-bottom:1px solid #e2e8f0;flex-shrink:0;background:#f8fafc">
+      <div style="width:40px;height:40px;background:#dbeafe;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">📑</div>
+      <div style="flex:1">
+        <div style="font-weight:800;font-size:1rem;color:#1e293b">Selecionar páginas dos anexos</div>
+        <div style="font-size:.78rem;color:#64748b;margin-top:1px">Clique nas páginas que deseja incluir no PDF final. Páginas marcadas (☑) serão incluídas.</div>
+      </div>
+      <button onclick="document.getElementById('com-prevgen-modal').style.display='none'"
+        style="background:none;border:none;cursor:pointer;font-size:1.5rem;color:#94a3b8;line-height:1;padding:4px 8px;flex-shrink:0">✕</button>
+    </div>
+
+    <!-- Dica visual -->
+    <div style="padding:10px 22px;background:#eff6ff;border-bottom:1px solid #bfdbfe;font-size:.78rem;color:#1d4ed8;flex-shrink:0">
+      💡 <strong>Dica:</strong> Clique em uma página para selecionar/desmarcar. Use <strong>☑ Todas</strong> ou <strong>☐ Nenhuma</strong> por seção. Somente páginas marcadas serão incluídas no PDF gerado.
+    </div>
+
+    <!-- Conteúdo (scrollável) -->
+    <div id="com-prevgen-content" style="flex:1;overflow-y:auto;padding:20px 22px"></div>
+
+    <!-- Footer -->
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 22px;border-top:1px solid #e2e8f0;flex-shrink:0;background:#f8fafc">
+      <button onclick="document.getElementById('com-prevgen-modal').style.display='none'"
+        style="background:#fff;color:#64748b;border:1px solid #e2e8f0;border-radius:8px;padding:8px 20px;font-size:.85rem;font-weight:600;cursor:pointer">
+        Cancelar
+      </button>
+      <button onclick="_comGerarPDFExec();document.getElementById('com-prevgen-modal').style.display='none'"
+        style="background:#64748b;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:.83rem;font-weight:600;cursor:pointer"
+        title="Gerar PDF usando todas as páginas de todos os anexos">
+        ⏭️ Pular (todas as páginas)
+      </button>
+      <button onclick="_prevGenConfirmar()"
+        style="background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:8px 22px;font-size:.88rem;font-weight:700;cursor:pointer">
+        ✅ Gerar PDF com seleção
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal: Organizar um PDF específico (via botão 📋 na lista) ══ -->
 <div id="com-pdforg-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9998;align-items:center;justify-content:center;padding:16px">
   <div style="background:#fff;border-radius:14px;width:min(96vw,960px);max-height:94vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35)">
 
