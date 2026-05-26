@@ -17139,12 +17139,16 @@ async function com_abrirPrevGenModal() {
               background:${sel ? '#1d4ed8' : 'rgba(0,0,0,.2)'};color:#fff;transition:background .12s">
               ${sel ? '✓' : ''}
             </div>
+            <div style="position:absolute;top:4px;right:5px;color:rgba(255,255,255,.85);font-size:.85rem;
+              cursor:grab;z-index:2;text-shadow:0 1px 3px rgba(0,0,0,.7);user-select:none;line-height:1"
+              title="Arraste para reordenar">⠿</div>
             <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.5);
               color:#fff;font-size:.67rem;text-align:center;padding:3px 0;letter-spacing:.02em">
               Pág. ${n}
             </div>`;
           card.addEventListener('click', () => _prevGenToggle(card));
           grid.appendChild(card);
+          _pgDragInit(card); // drag-and-drop de reordenação
 
           // Thumbnail
           const page     = await pdfDoc.getPage(n);
@@ -17210,16 +17214,23 @@ function _prevGenAtualizarContador(id) {
 }
 
 function _prevGenConfirmar() {
-  // Salva seleções nos anexos
+  // Lê cards na ordem atual do DOM por PDF (respeita reordenação por drag)
   for (const [id, sel] of Object.entries(_prevGenSel)) {
     const anexo = _comAnexos.find(a => a.id === id);
     if (!anexo) continue;
-    const total = anexo._totalPages;
-    anexo.selectedPages = (total && sel.size === total) ? null : [...sel].sort((a,b) => a-b);
+    const cards = [...document.querySelectorAll(`.prevgen-pg-card[data-aid="${id}"]`)];
+    const total = anexo._totalPages || cards.length;
+    // Páginas selecionadas na nova ordem (DOM order)
+    const orderedSel = cards
+      .filter(c => sel.has(parseInt(c.dataset.page)))
+      .map(c => parseInt(c.dataset.page));
+    // null só se todas em ordem original (sem reordenação, sem remoção)
+    const isOriginalOrder = orderedSel.length === total && orderedSel.every((p, i) => p === i + 1);
+    anexo.selectedPages = isOriginalOrder ? null : orderedSel;
   }
   com_renderizarAnexos();
   document.getElementById('com-prevgen-modal').style.display = 'none';
-  _comGerarPDFExec();  // gera o PDF com as páginas configuradas
+  _comGerarPDFExec();
 }
 
 /* ─────────────────────────────────────────────────────────────── */
@@ -17325,12 +17336,15 @@ async function com_abrirOrganizador(id) {
         <input type="checkbox" class="pdforg-cb" data-page="${n}" ${checked ? 'checked' : ''}
           style="width:16px;height:16px;accent-color:#1d4ed8;cursor:pointer">
       </label>
+      <div style="position:absolute;top:4px;right:5px;color:rgba(255,255,255,.85);font-size:.85rem;
+        cursor:grab;z-index:2;text-shadow:0 1px 3px rgba(0,0,0,.7);user-select:none;line-height:1"
+        title="Arraste para reordenar">⠿</div>
       <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.45);
         color:#fff;font-size:.68rem;text-align:center;padding:3px 0;letter-spacing:.02em">
         Página ${n}
       </div>`;
 
-    // Clique no card = toggle checkbox
+    // Clique no card = toggle checkbox (não aciona drag)
     card.addEventListener('click', e => {
       if (e.target.type === 'checkbox') return;
       const cb = card.querySelector('.pdforg-cb');
@@ -17344,6 +17358,7 @@ async function com_abrirOrganizador(id) {
     });
 
     grid.appendChild(card);
+    _pgDragInit(card); // drag-and-drop de reordenação
 
     // Renderizar thumbnail
     const page     = await pdfDoc.getPage(n);
@@ -17378,23 +17393,82 @@ function com_pdfOrgSelectAll(marcar) {
 }
 
 function com_pdfOrgConfirmar() {
-  const marcados = [...document.querySelectorAll('#com-pdforg-grid .pdforg-cb:checked')]
-    .map(cb => parseInt(cb.dataset.page));
-  const total = document.querySelectorAll('#com-pdforg-grid .pdforg-cb').length;
+  // Lê os cards na ordem atual do DOM (respeita reordenação por drag)
+  const allCards = [...document.querySelectorAll('#com-pdforg-grid [data-page]')];
+  const total    = allCards.length;
+  const marcados = allCards
+    .filter(c => c.querySelector('.pdforg-cb')?.checked)
+    .map(c => parseInt(c.dataset.page));
 
   const anexo = _comAnexos.find(a => a.id === _pdfOrgId);
   if (anexo) {
-    anexo.selectedPages = (marcados.length === total) ? null : marcados;
+    // null só se todas as páginas em ordem original; senão mantém array com nova ordem
+    const isOriginalOrder = marcados.length === total && marcados.every((p, i) => p === i + 1);
+    anexo.selectedPages = isOriginalOrder ? null : marcados;
     com_renderizarAnexos();
   }
   com_pdfOrgFechar();
-  _mostrarToast(`✅ ${marcados.length} página(s) selecionada(s).`, 'sucesso');
+  _mostrarToast(`✅ ${marcados.length} página(s) configurada(s).`, 'sucesso');
 }
 
 function com_pdfOrgFechar() {
   document.getElementById('com-pdforg-modal').style.display = 'none';
   _pdfOrgId  = null;
   _pdfOrgDoc = null;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DRAG-AND-DROP — Reordenação de páginas (compartilhado pelos modais)
+   ══════════════════════════════════════════════════════════════════ */
+let _pgDragSrc = null;
+
+function _pgDragInit(card) {
+  card.setAttribute('draggable', 'true');
+  card.style.cursor = 'grab';
+
+  card.addEventListener('dragstart', e => {
+    _pgDragSrc = card;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+    // Pequeno delay para o browser capturar o ghost image antes de dim
+    setTimeout(() => {
+      if (_pgDragSrc) {
+        _pgDragSrc.style.opacity   = '0.3';
+        _pgDragSrc.style.transform = 'scale(0.95)';
+      }
+    }, 0);
+  });
+
+  card.addEventListener('dragend', () => {
+    if (_pgDragSrc) {
+      _pgDragSrc.style.opacity   = '';
+      _pgDragSrc.style.transform = '';
+    }
+    _pgDragSrc = null;
+    // Limpa indicadores visuais
+    document.querySelectorAll('.pg-drag-over').forEach(c => {
+      c.style.outline = '';
+      c.classList.remove('pg-drag-over');
+    });
+  });
+
+  card.addEventListener('dragover', e => {
+    e.preventDefault();
+    if (!_pgDragSrc || _pgDragSrc === card) return;
+    e.dataTransfer.dropEffect = 'move';
+
+    const grid = card.parentElement;
+    const all  = [...grid.querySelectorAll('[draggable="true"]')];
+    const si   = all.indexOf(_pgDragSrc);
+    const ti   = all.indexOf(card);
+    if (si === -1 || ti === -1) return;
+
+    // Insere antes ou depois conforme posição relativa
+    if (si < ti) card.after(_pgDragSrc);
+    else         card.before(_pgDragSrc);
+  });
+
+  card.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); });
 }
 </script>
 
@@ -17416,7 +17490,7 @@ function com_pdfOrgFechar() {
 
     <!-- Dica visual -->
     <div style="padding:10px 22px;background:#eff6ff;border-bottom:1px solid #bfdbfe;font-size:.78rem;color:#1d4ed8;flex-shrink:0">
-      💡 <strong>Dica:</strong> Clique em uma página para selecionar/desmarcar. Use <strong>☑ Todas</strong> ou <strong>☐ Nenhuma</strong> por seção. Somente páginas marcadas serão incluídas no PDF gerado.
+      💡 <strong>Clique</strong> na página para marcar/desmarcar &nbsp;·&nbsp; <strong>Arraste ⠿</strong> para reordenar &nbsp;·&nbsp; Use <strong>☑ Todas / ☐ Nenhuma</strong> por seção. Somente páginas marcadas são incluídas, na ordem definida.
     </div>
 
     <!-- Conteúdo (scrollável) -->
@@ -17480,7 +17554,7 @@ function com_pdfOrgFechar() {
 
     <!-- Footer info -->
     <div style="padding:10px 20px;border-top:1px solid #e2e8f0;background:#f8fafc;font-size:.75rem;color:#94a3b8;flex-shrink:0">
-      💡 Clique na página ou no checkbox para selecionar/desmarcar. Apenas as páginas marcadas serão incluídas no PDF final.
+      💡 <strong>Clique</strong> na página para selecionar/desmarcar &nbsp;·&nbsp; <strong>Arraste ⠿</strong> para mudar a ordem &nbsp;·&nbsp; Apenas as páginas marcadas serão incluídas no PDF final, na ordem definida.
     </div>
   </div>
 </div>
