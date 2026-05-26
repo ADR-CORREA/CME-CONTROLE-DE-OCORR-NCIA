@@ -17614,6 +17614,8 @@ function _pgDragInit(card) {
   });
 
   card.addEventListener('dragover', e => {
+    // Se está arrastando uma SEÇÃO, não interferir — deixa o evento subir
+    if (_sectionDragActive) return;
     e.preventDefault();
     if (!_pgDragSrc || _pgDragSrc === card) return;
     e.dataTransfer.dropEffect = 'move';
@@ -17629,7 +17631,11 @@ function _pgDragInit(card) {
     else         card.before(_pgDragSrc);
   });
 
-  card.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); });
+  card.addEventListener('drop', e => {
+    if (_sectionDragActive) return; // deixa seção receber o drop
+    e.preventDefault();
+    e.stopPropagation();
+  });
 }
 
 /* ─── Drag-and-drop de SEÇÕES (reordenar documentos inteiros) ─── */
@@ -17637,48 +17643,55 @@ let _sectionDragSrc    = null;
 let _sectionDragActive = false;
 
 function _secDragInit(handle, section) {
+  // CRÍTICO: sem draggable="true" o drag nunca dispara
+  handle.setAttribute('draggable', 'true');
+
   handle.addEventListener('dragstart', e => {
     _sectionDragSrc    = section;
     _sectionDragActive = true;
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', '');
-    e.stopPropagation(); // não propagar para handlers de cards
+    e.dataTransfer.setData('text/plain', section.dataset.prevgenSection);
+    e.stopPropagation();
     setTimeout(() => {
-      section.style.opacity      = '0.4';
-      section.style.borderColor  = '#1d4ed8';
+      section.style.opacity     = '0.4';
+      section.style.outline     = '2px dashed #1d4ed8';
+      section.style.borderColor = '#1d4ed8';
     }, 0);
   });
 
   handle.addEventListener('dragend', () => {
     if (_sectionDragSrc) {
-      _sectionDragSrc.style.opacity     = '';
+      _sectionDragSrc.style.opacity = '';
+      _sectionDragSrc.style.outline = '';
       _sectionDragSrc.style.borderColor = '#e2e8f0';
     }
     _sectionDragSrc    = null;
     _sectionDragActive = false;
-    // Remove highlight de todas as seções
     document.querySelectorAll('[data-prevgen-section]').forEach(s => {
       s.style.borderColor = '#e2e8f0';
+      s.style.background  = '#fff';
     });
   });
 
-  // dragover no container da seção (highlight + reordenar)
+  // dragover no container da seção: highlight + reordenação em tempo real
   section.addEventListener('dragover', e => {
     if (!_sectionDragActive || !_sectionDragSrc || _sectionDragSrc === section) return;
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
 
-    // Highlight da seção alvo
+    // Highlight visual da seção alvo
     document.querySelectorAll('[data-prevgen-section]').forEach(s => {
       s.style.borderColor = s === section ? '#1d4ed8' : '#e2e8f0';
+      s.style.background  = s === section ? '#eff6ff' : '#fff';
     });
 
-    const parent   = section.parentElement;
-    const allSecs  = [...parent.querySelectorAll('[data-prevgen-section]')];
-    const si       = allSecs.indexOf(_sectionDragSrc);
-    const ti       = allSecs.indexOf(section);
-    if (si === -1 || ti === -1) return;
+    // Reordenação live no DOM
+    const parent  = section.parentElement;
+    const allSecs = [...parent.querySelectorAll(':scope > [data-prevgen-section]')];
+    const si = allSecs.indexOf(_sectionDragSrc);
+    const ti = allSecs.indexOf(section);
+    if (si === -1 || ti === -1 || si === ti) return;
 
     if (si < ti) section.after(_sectionDragSrc);
     else         section.before(_sectionDragSrc);
