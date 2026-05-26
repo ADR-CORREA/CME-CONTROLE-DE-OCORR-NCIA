@@ -2347,7 +2347,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
             <!-- Modelo -->
             <div class="form-field">
               <label>Modelo de Ofício</label>
-              <select id="com-of-modelo" onchange="_comTextoBloqueado=false;com_atualizarCampos();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+              <select id="com-of-modelo" onchange="_comTextoBloqueado=false;_comCorpoEditado=false;_comRestaurarCorpo();com_atualizarCampos();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
                 <option value="">Selecione o modelo...</option>
               </select>
             </div>
@@ -2419,6 +2419,26 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
             <!-- Campos dinâmicos do modelo -->
             <div id="com-of-campos-dinamicos"></div>
+
+            <!-- Corpo do texto (editável direto) -->
+            <div id="com-corpo-wrap" style="display:none;margin-top:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                <label style="font-size:.75rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.04em">
+                  ✍️ Corpo do texto
+                </label>
+                <button id="com-corpo-restaurar-btn" onclick="_comRestaurarCorpo()" style="display:none;
+                  background:none;border:none;cursor:pointer;font-size:.73rem;color:#854d0e;font-weight:600;
+                  padding:2px 6px;border-radius:4px;background:#fef9c3">
+                  🔄 Restaurar original
+                </button>
+              </div>
+              <textarea id="com-of-corpo" rows="6"
+                style="width:100%;resize:vertical;font-family:var(--font-mono);font-size:.78rem;line-height:1.6;
+                       border:1.5px solid #cbd5e1;border-radius:7px;padding:10px;background:#f8faff;
+                       color:#1a1a2e;outline:none;box-sizing:border-box;transition:border-color .15s"
+                placeholder="Selecione o modelo para ver o corpo do texto..."
+                oninput="_comOnCorpoInput(this)"></textarea>
+            </div>
 
             <hr style="border:none;border-top:1px solid #e2e8f0;margin:14px 0">
 
@@ -15754,8 +15774,30 @@ ${paragsHtml}
 }
 
 /* ─── Preview / Limpar / Copiar ────────────────────────────── */
-let _comTextoBloqueado = false; // true quando usuário editou o textarea manualmente
+let _comTextoBloqueado = false; // true quando usuário editou o preview completo
+let _comCorpoEditado   = false; // true quando usuário editou o corpo do texto
 
+/* Usuário editou o CORPO (caixa pequena) */
+function _comOnCorpoInput(ta) {
+  _comCorpoEditado   = true;
+  _comTextoBloqueado = false; // permite que o preview reflita o novo corpo
+  ta.style.borderColor = '#f59e0b'; // borda laranja = editado
+  const btn = document.getElementById('com-corpo-restaurar-btn');
+  if (btn) btn.style.display = 'inline-block';
+  com_atualizarPreview(); // atualiza o preview com o novo corpo
+}
+
+/* Restaura o corpo do texto a partir do modelo */
+function _comRestaurarCorpo() {
+  _comCorpoEditado = false;
+  const ta = document.getElementById('com-of-corpo');
+  if (ta) ta.style.borderColor = '#cbd5e1';
+  const btn = document.getElementById('com-corpo-restaurar-btn');
+  if (btn) btn.style.display = 'none';
+  com_atualizarPreview();
+}
+
+/* Usuário editou o PREVIEW completo (coluna direita) */
 function _comOnTextoInput(ta) {
   document.getElementById('com-char-count').textContent = ta.value.length + ' caracteres';
   _comTextoBloqueado = true;
@@ -15786,16 +15828,25 @@ function com_atualizarPreview() {
   const ta     = document.getElementById('com-of-texto');
   if (!ta) return;
 
+  const corpoWrap = document.getElementById('com-corpo-wrap');
+  const corpoTa   = document.getElementById('com-of-corpo');
+
   if (!modeloId || !modelo) {
     _comTextoBloqueado = false;
+    _comCorpoEditado   = false;
     ta.value = '';
+    if (corpoTa)   corpoTa.value = '';
+    if (corpoWrap) corpoWrap.style.display = 'none';
     const badge = document.getElementById('com-texto-editado-badge');
     if (badge) badge.style.display = 'none';
     document.getElementById('com-char-count').textContent = '0 caracteres';
     return;
   }
 
-  // Se o usuário editou o texto manualmente, não sobrescrever (exceto troca de modelo)
+  // Mostrar caixa do corpo
+  if (corpoWrap) corpoWrap.style.display = 'block';
+
+  // Se o usuário editou o preview completo manualmente, não sobrescrever
   if (_comTextoBloqueado) {
     document.getElementById('com-char-count').textContent = ta.value.length + ' caracteres';
     return;
@@ -15814,8 +15865,17 @@ function com_atualizarPreview() {
   });
 
   const paragrafos = modelo.corpo(campos);
-  // Strip HTML tags for plain-text preview
-  const stripTags = s => s.replace(/<\/?(b|i)>/g,'');
+  const stripTags  = s => s.replace(/<\/?(b|i)>/g,'');
+  const autoCorpo  = paragrafos.map(stripTags).join('\n');
+
+  // Auto-preenche o corpo apenas se o usuário não editou manualmente
+  if (!_comCorpoEditado && corpoTa) {
+    corpoTa.value = autoCorpo;
+    corpoTa.style.borderColor = '#cbd5e1';
+  }
+
+  // Usa o conteúdo atual do corpo (editado ou auto) no preview completo
+  const corpoTexto = (corpoTa && corpoTa.value.trim()) ? corpoTa.value.trim() : autoCorpo;
 
   const linhas = [
     `Ofício nº ${numFmt}.`,
@@ -15829,7 +15889,7 @@ function com_atualizarPreview() {
     '',
     saudacao,
     '',
-    ...paragrafos.map(stripTags),
+    corpoTexto,
     '',
     'Sem mais, esta CME encontra-se à disposição, podendo ser contatada no telefone constantes no rodapé.',
     '',
@@ -17305,8 +17365,15 @@ function _prevGenConfirmar() {
 
 function com_limparOficio() {
   _comTextoBloqueado = false;
+  _comCorpoEditado   = false;
   const badge = document.getElementById('com-texto-editado-badge');
   if (badge) badge.style.display = 'none';
+  const corpoWrap = document.getElementById('com-corpo-wrap');
+  if (corpoWrap) corpoWrap.style.display = 'none';
+  const corpoTa = document.getElementById('com-of-corpo');
+  if (corpoTa) { corpoTa.value = ''; corpoTa.style.borderColor = '#cbd5e1'; }
+  const corpoBtn = document.getElementById('com-corpo-restaurar-btn');
+  if (corpoBtn) corpoBtn.style.display = 'none';
   ['com-of-comarca','com-of-vara','com-of-modelo'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
