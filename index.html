@@ -15870,6 +15870,7 @@ async function com_processarArquivos(files) {
             'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
           const buf    = await file.arrayBuffer();
           const pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+          anexo._totalPages = pdfDoc.numPages;
           const parts  = [];
           for (let p = 1; p <= pdfDoc.numPages; p++) {
             const page    = await pdfDoc.getPage(p);
@@ -15905,13 +15906,27 @@ function com_renderizarAnexos() {
     const badge = a.status === 'lendo' ? '⏳ lendo...' : a.status === 'erro' ? '❌ erro' :
                   a.texto ? `✅ ${(a.texto.length/1000).toFixed(1)}k chars` : '✅ (binário)';
     const kb    = (a.tamanho/1024).toFixed(1);
+    // Para PDFs: mostrar info de páginas selecionadas
+    let pgInfo = '';
+    if (a.tipo === 'pdf') {
+      if (a.selectedPages && a.selectedPages.length > 0) {
+        const totalPg = a._totalPages || '?';
+        pgInfo = ` &nbsp;·&nbsp; <span style="color:#1d4ed8;font-weight:600">${a.selectedPages.length}${totalPg !== '?' ? ' de ' + totalPg : ''} pág.</span>`;
+      } else if (a._totalPages) {
+        pgInfo = ` &nbsp;·&nbsp; ${a._totalPages} pág.`;
+      }
+    }
+    const btnOrg = `<button onclick="com_abrirOrganizador('${a.id}')" title="${a.tipo === 'pdf' ? 'Organizar páginas' : 'Visualizar documento'}"
+        style="background:none;border:1px solid #cbd5e1;border-radius:5px;cursor:pointer;color:#1d4ed8;font-size:.75rem;
+               padding:2px 7px;line-height:1.4;white-space:nowrap;flex-shrink:0">${a.tipo === 'pdf' ? '📋 Organizar' : '👁️ Ver'}</button>`;
     return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#fff;
               border-radius:7px;border:1px solid #e2e8f0;margin-bottom:5px">
       <span style="font-size:1.15rem">${icon}</span>
       <div style="flex:1;min-width:0">
         <div style="font-weight:600;font-size:.8rem;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${a.nome}">${a.nome}</div>
-        <div style="font-size:.7rem;color:#64748b">${kb} KB &nbsp;·&nbsp; ${badge}</div>
+        <div style="font-size:.7rem;color:#64748b">${kb} KB &nbsp;·&nbsp; ${badge}${pgInfo}</div>
       </div>
+      ${btnOrg}
       <button onclick="_comRemoverAnexo('${a.id}')" title="Remover"
         style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:1rem;padding:2px 6px;line-height:1">✕</button>
     </div>`;
@@ -16979,10 +16994,16 @@ async function com_gerarPDFComAnexos() {
 
       for (const anexo of pdfAnexos) {
         try {
-          const buf      = await anexo.file.arrayBuffer();
-          const ext      = await PDFDocument.load(buf);
-          const indices  = ext.getPageIndices();
-          const pages    = await merged.copyPages(ext, indices);
+          const buf = await anexo.file.arrayBuffer();
+          const ext = await PDFDocument.load(buf);
+          // Usar páginas selecionadas (1-indexed → 0-indexed); null = todas
+          let indices;
+          if (anexo.selectedPages && anexo.selectedPages.length > 0) {
+            indices = anexo.selectedPages.map(p => p - 1).filter(i => i >= 0 && i < ext.getPageCount());
+          } else {
+            indices = ext.getPageIndices();
+          }
+          const pages = await merged.copyPages(ext, indices);
           pages.forEach(p => merged.addPage(p));
         } catch(e) { console.warn('Não foi possível incluir', anexo.nome, e.message); }
       }
@@ -17053,7 +17074,184 @@ function rv_limpar() {
   document.getElementById('rv-file-input').value = '';
   _mostrarToast('Painel limpo.', 'sucesso');
 }
+/* ══════════════════════════════════════════════════════════════
+   ORGANIZADOR DE PÁGINAS PDF — Comunicação
+   ══════════════════════════════════════════════════════════════ */
+
+let _pdfOrgId  = null;  // id do anexo sendo organizado
+let _pdfOrgDoc = null;  // PDF.js document
+
+async function com_abrirOrganizador(id) {
+  const anexo = _comAnexos.find(a => a.id === id);
+  if (!anexo) return;
+
+  // Não-PDF: abre / baixa para visualizar
+  if (anexo.tipo !== 'pdf') {
+    const url = URL.createObjectURL(anexo.file);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
+    return;
+  }
+
+  // Abre modal
+  const modal  = document.getElementById('com-pdforg-modal');
+  const grid   = document.getElementById('com-pdforg-grid');
+  const tit    = document.getElementById('com-pdforg-titulo');
+  modal.style.display = 'flex';
+  tit.textContent = anexo.nome;
+  grid.innerHTML  = '<div style="text-align:center;padding:50px;color:#64748b;font-size:.9rem">⏳ Carregando páginas...</div>';
+  document.getElementById('com-pdforg-count').textContent = '';
+  _pdfOrgId = id;
+
+  // Carregar PDF.js (lazy)
+  if (!window.pdfjsLib) {
+    await _carregarScriptSE('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'pdfjsLib');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
+  const buf    = await anexo.file.arrayBuffer();
+  const pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+  _pdfOrgDoc   = pdfDoc;
+  const total  = pdfDoc.numPages;
+  anexo._totalPages = total; // garante que a lista mostra o total correto
+
+  // Páginas selecionadas (null = todas)
+  const sel = anexo.selectedPages
+    ? new Set(anexo.selectedPages)
+    : new Set(Array.from({length: total}, (_, i) => i + 1));
+
+  grid.innerHTML = '';
+
+  for (let n = 1; n <= total; n++) {
+    const checked = sel.has(n);
+    const card = document.createElement('div');
+    card.id = `pdforg-card-${n}`;
+    card.dataset.page = n;
+    card.style.cssText = `position:relative;border-radius:8px;overflow:hidden;cursor:pointer;
+      border:2.5px solid ${checked ? '#1d4ed8' : '#e2e8f0'};
+      box-shadow:${checked ? '0 0 0 2px #bfdbfe' : 'none'};transition:all .15s;background:#fff`;
+    card.innerHTML = `
+      <canvas style="display:block;width:100%;height:auto"></canvas>
+      <label style="position:absolute;top:5px;left:5px;cursor:pointer;z-index:2">
+        <input type="checkbox" class="pdforg-cb" data-page="${n}" ${checked ? 'checked' : ''}
+          style="width:16px;height:16px;accent-color:#1d4ed8;cursor:pointer">
+      </label>
+      <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.45);
+        color:#fff;font-size:.68rem;text-align:center;padding:3px 0;letter-spacing:.02em">
+        Página ${n}
+      </div>`;
+
+    // Clique no card = toggle checkbox
+    card.addEventListener('click', e => {
+      if (e.target.type === 'checkbox') return;
+      const cb = card.querySelector('.pdforg-cb');
+      cb.checked = !cb.checked;
+      _pdfOrgAtualizarCard(card, cb.checked);
+      _pdfOrgAtualizarContador();
+    });
+    card.querySelector('.pdforg-cb').addEventListener('change', e => {
+      _pdfOrgAtualizarCard(card, e.target.checked);
+      _pdfOrgAtualizarContador();
+    });
+
+    grid.appendChild(card);
+
+    // Renderizar thumbnail
+    const page     = await pdfDoc.getPage(n);
+    const viewport = page.getViewport({ scale: 0.35 });
+    const canvas   = card.querySelector('canvas');
+    canvas.width   = viewport.width;
+    canvas.height  = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+  }
+
+  _pdfOrgAtualizarContador();
+}
+
+function _pdfOrgAtualizarCard(card, checked) {
+  card.style.border      = `2.5px solid ${checked ? '#1d4ed8' : '#e2e8f0'}`;
+  card.style.boxShadow   = checked ? '0 0 0 2px #bfdbfe' : 'none';
+}
+
+function _pdfOrgAtualizarContador() {
+  const total  = document.querySelectorAll('#com-pdforg-grid .pdforg-cb').length;
+  const marcados = document.querySelectorAll('#com-pdforg-grid .pdforg-cb:checked').length;
+  const el = document.getElementById('com-pdforg-count');
+  if (el) el.textContent = `${marcados} de ${total} página(s) selecionada(s)`;
+}
+
+function com_pdfOrgSelectAll(marcar) {
+  document.querySelectorAll('#com-pdforg-grid .pdforg-cb').forEach(cb => {
+    cb.checked = marcar;
+    _pdfOrgAtualizarCard(cb.closest('[data-page]'), marcar);
+  });
+  _pdfOrgAtualizarContador();
+}
+
+function com_pdfOrgConfirmar() {
+  const marcados = [...document.querySelectorAll('#com-pdforg-grid .pdforg-cb:checked')]
+    .map(cb => parseInt(cb.dataset.page));
+  const total = document.querySelectorAll('#com-pdforg-grid .pdforg-cb').length;
+
+  const anexo = _comAnexos.find(a => a.id === _pdfOrgId);
+  if (anexo) {
+    anexo.selectedPages = (marcados.length === total) ? null : marcados;
+    com_renderizarAnexos();
+  }
+  com_pdfOrgFechar();
+  _mostrarToast(`✅ ${marcados.length} página(s) selecionada(s).`, 'sucesso');
+}
+
+function com_pdfOrgFechar() {
+  document.getElementById('com-pdforg-modal').style.display = 'none';
+  _pdfOrgId  = null;
+  _pdfOrgDoc = null;
+}
 </script>
+
+<!-- ══ MODAL ORGANIZADOR DE PDF ═══════════════════════════════════ -->
+<div id="com-pdforg-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9998;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:14px;width:min(96vw,960px);max-height:94vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35)">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e2e8f0;flex-shrink:0">
+      <div>
+        <div style="font-weight:700;font-size:1rem;color:#1e293b">📋 Organizar Páginas do PDF</div>
+        <div id="com-pdforg-titulo" style="font-size:.78rem;color:#64748b;margin-top:2px;max-width:600px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+      </div>
+      <button onclick="com_pdfOrgFechar()" title="Fechar"
+        style="background:none;border:none;cursor:pointer;font-size:1.5rem;color:#94a3b8;line-height:1;padding:4px 8px">✕</button>
+    </div>
+
+    <!-- Toolbar -->
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 20px;border-bottom:1px solid #e2e8f0;background:#f8fafc;flex-shrink:0">
+      <button onclick="com_pdfOrgSelectAll(true)"
+        style="background:#fff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:7px;padding:5px 13px;font-size:.81rem;font-weight:600;cursor:pointer">
+        ☑ Selecionar Tudo
+      </button>
+      <button onclick="com_pdfOrgSelectAll(false)"
+        style="background:#fff;color:#64748b;border:1px solid #e2e8f0;border-radius:7px;padding:5px 13px;font-size:.81rem;font-weight:600;cursor:pointer">
+        ☐ Nenhuma
+      </button>
+      <span id="com-pdforg-count" style="font-size:.8rem;color:#64748b;margin-left:4px"></span>
+      <div style="flex:1"></div>
+      <button onclick="com_pdfOrgConfirmar()"
+        style="background:#059669;color:#fff;border:none;border-radius:7px;padding:7px 20px;font-size:.85rem;font-weight:700;cursor:pointer">
+        ✅ Confirmar Seleção
+      </button>
+    </div>
+
+    <!-- Grid de thumbnails -->
+    <div id="com-pdforg-grid"
+      style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;overflow-y:auto;padding:16px 20px;flex:1">
+    </div>
+
+    <!-- Footer info -->
+    <div style="padding:10px 20px;border-top:1px solid #e2e8f0;background:#f8fafc;font-size:.75rem;color:#94a3b8;flex-shrink:0">
+      💡 Clique na página ou no checkbox para selecionar/desmarcar. Apenas as páginas marcadas serão incluídas no PDF final.
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
