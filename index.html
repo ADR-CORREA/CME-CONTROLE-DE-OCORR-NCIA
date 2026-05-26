@@ -16858,7 +16858,8 @@ async function com_gerarPDFComAnexos() {
 
 /* ── Geração efetiva do PDF (chamado após seleção de páginas) ── */
 async function _comGerarPDFExec() {
-  const btn = document.getElementById('com-btn-pdf-anexos');
+  const texto = document.getElementById('com-of-texto').value.trim();
+  const btn   = document.getElementById('com-btn-pdf-anexos');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando PDF...'; }
 
   try {
