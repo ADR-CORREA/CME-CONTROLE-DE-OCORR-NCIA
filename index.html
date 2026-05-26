@@ -17211,12 +17211,18 @@ async function com_abrirPrevGenModal() {
 
   for (const [idx, anexo] of pdfAnexos.entries()) {
     const section = document.createElement('div');
-    section.style.cssText = `margin-bottom:24px;${idx < pdfAnexos.length-1 ? 'padding-bottom:20px;border-bottom:2px dashed #e2e8f0' : ''}`;
+    section.dataset.prevgenSection = anexo.id; // marcador para reordenação
+    section.style.cssText = `margin-bottom:8px;padding:12px 14px;border-radius:10px;
+      border:2px solid #e2e8f0;background:#fff;transition:border-color .15s`;
     content.appendChild(section);
 
-    // Cabeçalho da seção
+    // Cabeçalho da seção com handle de drag
     section.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <div class="sec-drag-handle" style="cursor:grab;color:#94a3b8;font-size:1rem;
+          user-select:none;padding:3px 6px;border-radius:5px;flex-shrink:0;
+          background:#f1f5f9;border:1px solid #e2e8f0;line-height:1.2"
+          title="Arraste para mudar a ordem deste documento">⠿ Mover</div>
         <span style="font-size:1.1rem">📕</span>
         <span style="font-weight:700;font-size:.88rem;color:#1e293b;flex:1;min-width:0;
           white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${anexo.nome}">${anexo.nome}</span>
@@ -17232,6 +17238,9 @@ async function com_abrirPrevGenModal() {
         style="display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:10px">
         <div style="grid-column:1/-1;padding:20px;text-align:center;color:#94a3b8;font-size:.8rem">⏳ Carregando thumbnails...</div>
       </div>`;
+
+    // Drag de seção (reordenar documentos inteiros)
+    _secDragInit(section.querySelector('.sec-drag-handle'), section);
 
     // Renderizar thumbnails de forma assíncrona
     (async () => {
@@ -17342,20 +17351,34 @@ function _prevGenAtualizarContador(id) {
 }
 
 function _prevGenConfirmar() {
-  // Lê cards na ordem atual do DOM por PDF (respeita reordenação por drag)
-  for (const [id, sel] of Object.entries(_prevGenSel)) {
+  // Lê seções na ordem atual do DOM (respeita reordenação de documentos por drag)
+  const sections = [...document.querySelectorAll('#com-prevgen-content [data-prevgen-section]')];
+  const newPdfOrder = [];
+
+  for (const section of sections) {
+    const id    = section.dataset.prevgenSection;
     const anexo = _comAnexos.find(a => a.id === id);
     if (!anexo) continue;
-    const cards = [...document.querySelectorAll(`.prevgen-pg-card[data-aid="${id}"]`)];
+    newPdfOrder.push(anexo);
+
+    // Lê páginas em DOM order (respeita reordenação de páginas por drag)
+    const sel   = _prevGenSel[id];
+    if (!sel) continue;
+    const cards = [...section.querySelectorAll(`.prevgen-pg-card[data-aid="${id}"]`)];
     const total = anexo._totalPages || cards.length;
-    // Páginas selecionadas na nova ordem (DOM order)
     const orderedSel = cards
       .filter(c => sel.has(parseInt(c.dataset.page)))
       .map(c => parseInt(c.dataset.page));
-    // null só se todas em ordem original (sem reordenação, sem remoção)
     const isOriginalOrder = orderedSel.length === total && orderedSel.every((p, i) => p === i + 1);
     anexo.selectedPages = isOriginalOrder ? null : orderedSel;
   }
+
+  // Reordena _comAnexos: PDFs na nova ordem definida no modal
+  if (newPdfOrder.length) {
+    const nonPdfs = _comAnexos.filter(a => !newPdfOrder.includes(a));
+    _comAnexos = [...nonPdfs, ...newPdfOrder];
+  }
+
   com_renderizarAnexos();
   document.getElementById('com-prevgen-modal').style.display = 'none';
   _comGerarPDFExec();
@@ -17608,6 +17631,63 @@ function _pgDragInit(card) {
 
   card.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); });
 }
+
+/* ─── Drag-and-drop de SEÇÕES (reordenar documentos inteiros) ─── */
+let _sectionDragSrc    = null;
+let _sectionDragActive = false;
+
+function _secDragInit(handle, section) {
+  handle.addEventListener('dragstart', e => {
+    _sectionDragSrc    = section;
+    _sectionDragActive = true;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+    e.stopPropagation(); // não propagar para handlers de cards
+    setTimeout(() => {
+      section.style.opacity      = '0.4';
+      section.style.borderColor  = '#1d4ed8';
+    }, 0);
+  });
+
+  handle.addEventListener('dragend', () => {
+    if (_sectionDragSrc) {
+      _sectionDragSrc.style.opacity     = '';
+      _sectionDragSrc.style.borderColor = '#e2e8f0';
+    }
+    _sectionDragSrc    = null;
+    _sectionDragActive = false;
+    // Remove highlight de todas as seções
+    document.querySelectorAll('[data-prevgen-section]').forEach(s => {
+      s.style.borderColor = '#e2e8f0';
+    });
+  });
+
+  // dragover no container da seção (highlight + reordenar)
+  section.addEventListener('dragover', e => {
+    if (!_sectionDragActive || !_sectionDragSrc || _sectionDragSrc === section) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+
+    // Highlight da seção alvo
+    document.querySelectorAll('[data-prevgen-section]').forEach(s => {
+      s.style.borderColor = s === section ? '#1d4ed8' : '#e2e8f0';
+    });
+
+    const parent   = section.parentElement;
+    const allSecs  = [...parent.querySelectorAll('[data-prevgen-section]')];
+    const si       = allSecs.indexOf(_sectionDragSrc);
+    const ti       = allSecs.indexOf(section);
+    if (si === -1 || ti === -1) return;
+
+    if (si < ti) section.after(_sectionDragSrc);
+    else         section.before(_sectionDragSrc);
+  });
+
+  section.addEventListener('drop', e => {
+    if (_sectionDragActive) { e.preventDefault(); e.stopPropagation(); }
+  });
+}
 </script>
 
 <!-- ══ MODAL ORGANIZADOR DE PDF ═══════════════════════════════════ -->
@@ -17628,7 +17708,7 @@ function _pgDragInit(card) {
 
     <!-- Dica visual -->
     <div style="padding:10px 22px;background:#eff6ff;border-bottom:1px solid #bfdbfe;font-size:.78rem;color:#1d4ed8;flex-shrink:0">
-      💡 <strong>Clique</strong> na página para marcar/desmarcar &nbsp;·&nbsp; <strong>Arraste ⠿</strong> para reordenar &nbsp;·&nbsp; Use <strong>☑ Todas / ☐ Nenhuma</strong> por seção. Somente páginas marcadas são incluídas, na ordem definida.
+      💡 <strong>Arraste "⠿ Mover"</strong> para reordenar documentos &nbsp;·&nbsp; <strong>Clique na página</strong> para marcar/desmarcar &nbsp;·&nbsp; <strong>Arraste ⠿</strong> nas páginas para reordená-las &nbsp;·&nbsp; Use <strong>☑ Todas / ☐ Nenhuma</strong> por seção.
     </div>
 
     <!-- Conteúdo (scrollável) -->
