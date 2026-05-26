@@ -2277,16 +2277,19 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           </div>
 
           <!-- Linha de busca -->
-          <div style="display:flex;gap:8px;margin-bottom:10px">
+          <div style="display:flex;gap:8px;margin-bottom:6px">
             <input id="com-busca-input" type="text" placeholder="Digite o nome do monitorado..."
               style="flex:1;padding:8px 12px;border:1px solid #93c5fd;border-radius:8px;font-size:.87rem;outline:none"
               onkeydown="if(event.key==='Enter') com_buscarMonitorado()"
               oninput="com_onBuscaInput(this.value)">
-            <button onclick="com_buscarMonitorado()"
-              style="background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap">
+            <button id="com-busca-btn" onclick="com_buscarMonitorado()"
+              style="background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap;min-width:90px">
               🔍 Buscar
             </button>
           </div>
+
+          <!-- Status da busca (loading / sem resultados) -->
+          <div id="com-busca-status" style="display:none;padding:7px 10px;border-radius:7px;font-size:.82rem;font-weight:600;margin-bottom:6px"></div>
 
           <!-- Sugestões autocomplete -->
           <div id="com-busca-sugestoes" style="display:none;background:#fff;border:1px solid #bfdbfe;border-radius:8px;margin-bottom:8px;max-height:160px;overflow-y:auto"></div>
@@ -16505,6 +16508,24 @@ async function com_onBuscaInput(valor) {
   _comBuscaTimer = setTimeout(() => com_buscarMonitorado(true), 400);
 }
 
+function _comBuscaSetStatus(tipo, texto) {
+  const el  = document.getElementById('com-busca-status');
+  const btn = document.getElementById('com-busca-btn');
+  if (!el) return;
+  if (!tipo) { el.style.display = 'none'; return; }
+  const estilos = {
+    loading: 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe',
+    vazio:   'background:#fef9c3;color:#854d0e;border:1px solid #fde047',
+    erro:    'background:#fee2e2;color:#dc2626;border:1px solid #fca5a5',
+  };
+  el.style.cssText = `display:block;padding:7px 10px;border-radius:7px;font-size:.82rem;font-weight:600;margin-bottom:6px;${estilos[tipo]||''}`;
+  el.textContent = texto;
+  if (btn) {
+    btn.disabled      = tipo === 'loading';
+    btn.textContent   = tipo === 'loading' ? '⏳ Buscando...' : '🔍 Buscar';
+  }
+}
+
 async function com_buscarMonitorado(modoSugestao = false) {
   if (!r2_state.url || !r2_state.token) await r2_carregarConfig();
   const input = document.getElementById('com-busca-input');
@@ -16512,6 +16533,8 @@ async function com_buscarMonitorado(modoSugestao = false) {
   if (!termo) return;
 
   const sugestoesEl = document.getElementById('com-busca-sugestoes');
+
+  if (!modoSugestao) _comBuscaSetStatus('loading', '⏳ Buscando monitorado...');
 
   try {
     const resp = await fetch(
@@ -16523,10 +16546,10 @@ async function com_buscarMonitorado(modoSugestao = false) {
     const lista = data.monitorados || [];
 
     if (modoSugestao) {
-      // Modo autocomplete — mostra dropdown
+      // Modo autocomplete — mostra dropdown sem alterar status
       if (!lista.length) { sugestoesEl.style.display = 'none'; return; }
       sugestoesEl.innerHTML = lista.map(m =>
-        `<div onclick="com_selecionarMonitorado('${m.nome.replace(/'/g,"\\'")}');document.getElementById('com-busca-sugestoes').style.display='none'"
+        `<div onclick="com_selecionarMonitorado('${m.nome.replace(/'/g,"\\'")}');document.getElementById('com-busca-sugestoes').style.display='none';_comBuscaSetStatus(null)"
           style="padding:8px 12px;cursor:pointer;font-size:.84rem;color:#1e293b;border-bottom:1px solid #f1f5f9;transition:background .12s"
           onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
           👤 ${m.nome}
@@ -16534,12 +16557,14 @@ async function com_buscarMonitorado(modoSugestao = false) {
       ).join('');
       sugestoesEl.style.display = 'block';
     } else {
-      // Busca manual — se único resultado, seleciona direto; se múltiplos, mostra dropdown
+      // Busca manual
       sugestoesEl.style.display = 'none';
       if (lista.length === 1) {
+        _comBuscaSetStatus(null);
         input.value = lista[0].nome;
         await com_selecionarMonitorado(lista[0].nome);
       } else if (lista.length > 1) {
+        _comBuscaSetStatus(null);
         sugestoesEl.innerHTML = lista.map(m =>
           `<div onclick="com_selecionarMonitorado('${m.nome.replace(/'/g,"\\'")}');document.getElementById('com-busca-sugestoes').style.display='none'"
             style="padding:8px 12px;cursor:pointer;font-size:.84rem;color:#1e293b;border-bottom:1px solid #f1f5f9;transition:background .12s"
@@ -16549,11 +16574,11 @@ async function com_buscarMonitorado(modoSugestao = false) {
         ).join('');
         sugestoesEl.style.display = 'block';
       } else {
-        _mostrarToast('⚠️ Nenhum monitorado encontrado com esse nome.', 'erro');
+        _comBuscaSetStatus('vazio', `⚠️ Nenhum monitorado encontrado para "${termo}". Verifique o nome e tente novamente.`);
       }
     }
   } catch (e) {
-    _mostrarToast(`❌ Erro na busca: ${e.message}`, 'erro');
+    _comBuscaSetStatus('erro', `❌ Erro na busca: ${e.message}`);
   }
 }
 
