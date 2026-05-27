@@ -13160,14 +13160,13 @@ function r2_renderizarListaMon(lista) {
   const isAdmin = usuarioAtual?.nivel === 'admin';
   el.innerHTML = lista.map(m => {
     const nomeEsc = m.nome.replace(/'/g,"&#39;").replace(/"/g,'&quot;');
-    return `<div style="display:flex;align-items:center;gap:4px;cursor:pointer">
-      <div class="r2-mon-item ${m.nome === r2_state.monitorado ? 'active' : ''}"
-           style="flex:1" onclick="r2_selecionarMonitorado('${nomeEsc}')" title="${nomeEsc}">
-        📁 ${m.nome}
-      </div>
-      ${isAdmin ? `<button onclick="r2_confirmarDeleteMonitorado('${nomeEsc}')"
+    return `<div class="r2-mon-item ${m.nome === r2_state.monitorado ? 'active' : ''}"
+      style="display:flex;align-items:center;justify-content:space-between;cursor:pointer"
+      onclick="r2_selecionarMonitorado('${nomeEsc}')">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${m.nome}</span>
+      ${isAdmin ? `<button onclick="event.stopPropagation();r2_confirmarDeleteMonitorado('${nomeEsc}')"
         title="Excluir pasta do monitorado"
-        style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#ccc;font-size:.85rem;padding:4px;border-radius:4px;transition:color .15s"
+        style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#ccc;font-size:.85rem;padding:4px;border-radius:4px;transition:color .15s;margin-left:4px"
         onmouseover="this.style.color='#dc3545'" onmouseout="this.style.color='#ccc'">🗑️</button>` : ''}
     </div>`;
   }).join('');
