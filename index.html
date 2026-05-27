@@ -13175,19 +13175,12 @@ async function _r2CarregarTodosSilencioso() {
   const indicador = document.getElementById('r2-busca-loading');
   if (indicador) indicador.style.display = 'inline';
   try {
-    let todos = [], pagina = 1, totalPaginas = 1;
-    do {
-      const qs = new URLSearchParams({ pagina, limite: 50 });
-      const data = await r2_api('GET', `/monitorados?${qs}`);
-      todos = todos.concat(data.monitorados || []);
-      totalPaginas = data.total_paginas || 1;
-      pagina++;
-      // Atualiza a lista a cada página — usuário vê resultados chegando
-      r2_state.monitorados = [...todos];
-      _r2AplicarFiltro(document.getElementById('r2-busca-mon')?.value || '');
-    } while (pagina <= totalPaginas);
-
+    // Uma única chamada traz todos os monitorados (Worker suporta até 2000)
+    const data = await r2_api('GET', '/monitorados?limite=2000');
+    const todos = data.monitorados || [];
     _r2MonCacheSet(todos);
+    r2_state.monitorados = todos;
+    _r2AplicarFiltro(document.getElementById('r2-busca-mon')?.value || '');
   } catch(e) {
     const lista = document.getElementById('r2-lista-mon');
     if (lista && lista.innerHTML.includes('Carregando'))
