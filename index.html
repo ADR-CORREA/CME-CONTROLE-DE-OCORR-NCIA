@@ -16897,9 +16897,17 @@ function _comScore(texto, alvo) {
   if (t === a) return 200;
   if (t.includes(a) || a.includes(t)) return 100;
   const stop = new Set(['de','da','do','das','dos','e','a','o','em','no','na','com','para','por']);
-  const palavras = a.split(' ').filter(w => w.length >= 3 && !stop.has(w));
+
+  // Positivo: palavras do alvo (o que a IA extraiu) encontradas no candidato
+  const palavrasA = a.split(' ').filter(w => w.length >= 3 && !stop.has(w));
   let score = 0;
-  for (const p of palavras) { if (t.includes(p)) score += (p.length >= 6 ? 20 : 10); }
+  for (const p of palavrasA) { if (t.includes(p)) score += (p.length >= 6 ? 20 : 10); }
+
+  // Penalidade: palavras relevantes do candidato que NÃO existem no alvo
+  // Ex: "Juizado de Violência Doméstica" tem muitas palavras extras → perde pontos
+  const palavrasT = t.split(' ').filter(w => w.length >= 4 && !stop.has(w));
+  for (const p of palavrasT) { if (!a.includes(p)) score -= 4; }
+
   const ordT = (t.match(/\d+/g) || []).map(Number);
   const ordA = (a.match(/\d+/g) || []).map(Number);
   if (ordA.length && ordT.length) {
