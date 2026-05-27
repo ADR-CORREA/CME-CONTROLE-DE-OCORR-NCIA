@@ -13160,7 +13160,7 @@ function r2_renderizarListaMon(lista) {
   const isAdmin = usuarioAtual?.nivel === 'admin';
   el.innerHTML = lista.map(m => {
     const nomeEsc = m.nome.replace(/'/g,"&#39;").replace(/"/g,'&quot;');
-    return `<div style="display:flex;align-items:center;gap:4px">
+    return `<div style="display:flex;align-items:center;gap:4px;cursor:pointer">
       <div class="r2-mon-item ${m.nome === r2_state.monitorado ? 'active' : ''}"
            style="flex:1" onclick="r2_selecionarMonitorado('${nomeEsc}')" title="${nomeEsc}">
         📁 ${m.nome}
