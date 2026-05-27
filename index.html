@@ -13053,13 +13053,14 @@ ${bodyHtml}
 <script>
 /* ── Estado global R2 ─────────────────────────────────────────── */
 const r2_state = {
-  url:        '',   // Worker URL
-  token:      '',   // AUTH_TOKEN
-  monitorado: '',   // monitorado selecionado (nome real)
-  pasta:      '',   // pasta atual
-  monitorados: [],  // lista completa em memória
+  url:        '',
+  token:      '',
+  monitorado: '',
+  pasta:      '',
+  monitorados: [],
   arquivosCached: [],
 };
+let _r2Carregando = false; // true enquanto fetch está em andamento
 
 /* ── Config: carregar / salvar ────────────────────────────────── */
 function r2_carregarConfig() {
@@ -13153,6 +13154,12 @@ function _r2NormBusca(s) {
 function _r2AplicarFiltro(q) {
   const f = _r2NormBusca(q);
   const todos = r2_state.monitorados;
+  // Se ainda está carregando e não tem dados, não mostra "Nenhum resultado"
+  if (_r2Carregando && !todos.length) {
+    document.getElementById('r2-lista-mon').innerHTML =
+      '<div style="color:#aaa;font-size:.85rem;text-align:center;padding:16px">Buscando…</div>';
+    return;
+  }
   const filtrados = f ? todos.filter(m => _r2NormBusca(m.nome).includes(f)) : todos;
   r2_renderizarListaMon(filtrados, q);
 }
@@ -13178,10 +13185,11 @@ async function r2_carregarMonitorados(forcarReload) {
 }
 
 async function _r2CarregarTodosSilencioso() {
+  if (_r2Carregando) return; // evita chamadas paralelas
+  _r2Carregando = true;
   const indicador = document.getElementById('r2-busca-loading');
   if (indicador) indicador.style.display = 'inline';
   try {
-    // Uma única chamada traz todos os monitorados (Worker suporta até 2000)
     const data = await r2_api('GET', '/monitorados?limite=2000');
     const todos = data.monitorados || [];
     _r2MonCacheSet(todos);
@@ -13192,6 +13200,7 @@ async function _r2CarregarTodosSilencioso() {
     if (lista && lista.innerHTML.includes('Carregando'))
       lista.innerHTML = `<div style="color:#dc3545;font-size:.82rem;padding:10px">${e.message}</div>`;
   } finally {
+    _r2Carregando = false;
     if (indicador) indicador.style.display = 'none';
   }
 }
