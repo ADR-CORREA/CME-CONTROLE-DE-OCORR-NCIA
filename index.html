@@ -15715,7 +15715,8 @@ function com_gerarOficio() {
 <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
 <style>
   @page {
-    margin: 2.5cm 3cm 3cm 3cm;
+    /* ABNT: superior 3cm, esquerda 3cm, inferior 2cm, direita 2cm */
+    margin: 3cm 2cm 2cm 3cm;
   }
   body {
     font-family: Arial, sans-serif;
@@ -15726,21 +15727,6 @@ function com_gerarOficio() {
   p { margin: 0; padding: 0; }
   table { border-collapse: collapse; width: 100%; }
   td { vertical-align: middle; }
-  .linha-dupla {
-    border-top: 3pt solid #1a3a6b;
-    border-bottom: 1pt solid #1a3a6b;
-    height: 4pt;
-    margin: 6pt 0 14pt 0;
-  }
-  .rodape {
-    font-family: Arial, sans-serif;
-    font-size: 8.5pt;
-    text-align: center;
-    color: #333;
-    border-top: 1pt solid #1a3a6b;
-    padding-top: 6pt;
-    margin-top: 60pt;
-  }
 </style>
 </head>
 <body>
@@ -15752,9 +15738,9 @@ function com_gerarOficio() {
       ${cmeCellHtml}
     </td>
     <td style="text-align:center;vertical-align:middle;padding:4pt 0">
-      <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;text-transform:uppercase;letter-spacing:.5pt;margin:0;color:#1a3a6b">Governo do Estado do Amap&#225;</p>
-      <p style="font-family:Arial,sans-serif;font-size:8.5pt;margin:1pt 0;color:#333">Secretaria de Estado da Justi&#231;a e Seguran&#231;a P&#250;blica &#8211; SEJUSP</p>
-      <p style="font-family:Arial,sans-serif;font-size:10pt;font-weight:bold;text-transform:uppercase;margin:2pt 0;color:#1a3a6b">Instituto de Administra&#231;&#227;o Penitenci&#225;ria &#8211; IAPEN/AP</p>
+      <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;text-transform:uppercase;letter-spacing:.5pt;margin:0;color:#000">Governo do Estado do Amap&#225;</p>
+      <p style="font-family:Arial,sans-serif;font-size:8.5pt;margin:1pt 0;color:#000">Secretaria de Estado da Justi&#231;a e Seguran&#231;a P&#250;blica &#8211; SEJUSP</p>
+      <p style="font-family:Arial,sans-serif;font-size:10pt;font-weight:bold;text-transform:uppercase;margin:2pt 0;color:#000">Instituto de Administra&#231;&#227;o Penitenci&#225;ria &#8211; IAPEN/AP</p>
       <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;margin:1pt 0;color:#000">Central de Monitoramento Eletr&#244;nico &#8211; CME</p>
     </td>
     <td style="width:85pt;text-align:center;vertical-align:middle;padding:0 0 0 8pt">
@@ -15763,16 +15749,10 @@ function com_gerarOficio() {
   </tr>
 </table>
 
-<!-- Linha dupla separadora -->
-<table style="width:100%;border-collapse:collapse;margin:4pt 0 16pt 0">
+<!-- Linha separadora simples (ABNT) -->
+<table style="width:100%;border-collapse:collapse;margin:6pt 0 14pt 0">
   <tr>
-    <td style="height:3pt;background:#1a3a6b;font-size:0">&nbsp;</td>
-  </tr>
-  <tr>
-    <td style="height:2pt">&nbsp;</td>
-  </tr>
-  <tr>
-    <td style="height:1pt;background:#1a3a6b;font-size:0">&nbsp;</td>
+    <td style="height:1pt;background:#000;font-size:0">&nbsp;</td>
   </tr>
 </table>
 
@@ -15800,29 +15780,22 @@ ${paragsHtml}
 
 <!-- ══ ENCERRAMENTO ══════════════════════════════════════════════ -->
 <p style="font-size:12pt;margin:14pt 0 10pt 0">
-  Sem mais, esta CME encontra-se &#224; disposi&#231;&#227;o, podendo ser contatada pelos dados constantes no rodap&#233;.
+  Sem mais, esta CME se coloca &#224; disposi&#231;&#227;o para eventuais esclarecimentos.
 </p>
 <p style="font-size:12pt;margin:0 0 0 0">Respeitosamente,</p>
 
 <!-- ══ ASSINATURA ════════════════════════════════════════════════ -->
-<table style="width:100%;margin-top:60pt">
+<table style="width:100%;margin-top:50pt">
   <tr>
     <td style="width:55%;text-align:center;vertical-align:bottom">
       ${assImgCapturada ? `<p style="margin:0 0 0 0;text-align:center"><img src="${assImgCapturada}" style="max-height:60pt;max-width:180pt;object-fit:contain;display:block;margin:0 auto 0 auto"></p>` : ''}
       <p style="border-top:1pt solid #000;padding-top:6pt;font-size:12pt;font-weight:bold;margin:0">${esc(signat)}</p>
       <p style="font-size:11pt;margin:2pt 0 0 0">${esc(cargo)}</p>
-      ${decreto ? `<p style="font-size:10pt;color:#444;margin:2pt 0 0 0">Decreto n&#176; ${esc(decreto)}</p>` : ''}
+      ${decreto ? `<p style="font-size:11pt;margin:2pt 0 0 0">Decreto n&#176; ${esc(decreto)}</p>` : ''}
     </td>
     <td style="width:45%"></td>
   </tr>
 </table>
-
-<!-- ══ RODAPÉ ════════════════════════════════════════════════════ -->
-<div class="rodape">
-  <b>CENTRAL DE MONITORAMENTO ELETR&#212;NICO &#8211; CME / IAPEN-AP</b><br>
-  Av. Machado de Assis, 372 &#8211; Centro &#8211; CEP: 68900-066, Macap&#225;-AP<br>
-  &#128222;&nbsp;(096) 98415-2844&nbsp;&nbsp;|&nbsp;&nbsp;&#9993;&nbsp;cme.iapen.ap@gmail.com
-</div>
 
 </body>
 </html>`;
@@ -15954,7 +15927,7 @@ function com_atualizarPreview() {
     '',
     corpoTexto,
     '',
-    'Sem mais, esta CME encontra-se à disposição, podendo ser contatada no telefone constantes no rodapé.',
+    'Sem mais, esta CME se coloca à disposição para eventuais esclarecimentos.',
     '',
     'Respeitosamente,',
     '',
@@ -15963,11 +15936,6 @@ function com_atualizarPreview() {
     signat,
     cargo,
     ...(decreto ? [`Decreto nº ${decreto}`] : []),
-    '',
-    '─────────────────────────────────────────────',
-    'CENTRAL DE MONITORAMENTO ELETRÔNICO - CME',
-    'Av. Machado de Assis, 372 – Centro – CEP: 68900-066, Macapá-AP.',
-    'Telefone (096) 98415 2844  |  E-mail: cme.iapen.ap@gmail.com',
   ];
 
   ta.value = linhas.join('\n');
