@@ -13157,21 +13157,11 @@ function r2_renderizarListaMon(lista) {
     el.innerHTML = '<div style="color:#aaa;font-size:.83rem;text-align:center;padding:20px 0">Nenhum monitorado.<br>Clique em + Monitorado.</div>';
     return;
   }
-  const isAdmin = true; // todos os servidores podem excluir pastas de monitorados
   el.innerHTML = lista.map(m => {
     const nomeEsc = m.nome.replace(/'/g,"&#39;").replace(/"/g,'&quot;');
-    return `<div style="display:flex;align-items:center;gap:4px">
-      <div class="r2-mon-item ${m.nome === r2_state.monitorado ? 'active' : ''}"
-           style="flex:1"
+    return `<div class="r2-mon-item ${m.nome === r2_state.monitorado ? 'active' : ''}"
            onclick="r2_selecionarMonitorado('${nomeEsc}')"
-           title="${nomeEsc}">
-        📁 ${m.nome}
-      </div>
-      ${isAdmin ? `<button onclick="r2_confirmarDeleteMonitorado('${nomeEsc}')"
-        title="Excluir pasta do monitorado"
-        style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#ccc;font-size:.85rem;padding:4px;border-radius:4px;transition:color .15s"
-        onmouseover="this.style.color='#dc3545'" onmouseout="this.style.color='#ccc'">🗑️</button>` : ''}
-    </div>`;
+           title="${nomeEsc}">📁 ${m.nome}</div>`;
   }).join('');
 }
 
