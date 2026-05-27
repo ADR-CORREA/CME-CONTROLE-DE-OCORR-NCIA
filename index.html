@@ -13137,9 +13137,11 @@ async function r2_inicializarAba() {
 /* ── Cache e filtro em memória de monitorados ─────────────────── */
 const _R2_MON_CACHE_KEY = 'cme_r2_monitorados_v3';
 const _R2_MON_CACHE_TTL = 30 * 60 * 1000;
-function _r2MonCacheGet() {
+function _r2MonCacheGet(ignorarTTL) {
   try { const r = localStorage.getItem(_R2_MON_CACHE_KEY); if (!r) return null;
-    const {ts,data} = JSON.parse(r); return Date.now()-ts > _R2_MON_CACHE_TTL ? null : data;
+    const {ts,data} = JSON.parse(r);
+    if (!ignorarTTL && Date.now()-ts > _R2_MON_CACHE_TTL) return null;
+    return data;
   } catch { return null; }
 }
 function _r2MonCacheSet(d) { try { localStorage.setItem(_R2_MON_CACHE_KEY, JSON.stringify({ts:Date.now(),data:d})); } catch {} }
@@ -13157,15 +13159,19 @@ function _r2AplicarFiltro(q) {
 
 /* ── Monitorados: carrega tudo de uma vez, pagina por página ──── */
 async function r2_carregarMonitorados(forcarReload) {
-  // Cache válido → mostra imediatamente, atualiza em background
-  const cached = forcarReload ? null : _r2MonCacheGet();
-  if (cached && cached.length) {
-    r2_state.monitorados = cached;
+  // Sempre tenta mostrar cache (mesmo expirado) para ser instantâneo
+  const cacheValido   = forcarReload ? null : _r2MonCacheGet(false);      // respeita TTL
+  const cacheQualquer = forcarReload ? null : _r2MonCacheGet(true);       // ignora TTL
+
+  if (cacheQualquer && cacheQualquer.length) {
+    // Mostra imediatamente o que tem (mesmo que expirado)
+    r2_state.monitorados = cacheQualquer;
     _r2AplicarFiltro(document.getElementById('r2-busca-mon')?.value || '');
-    setTimeout(() => _r2CarregarTodosSilencioso(), 100);
+    // Se expirado ou reload forçado → atualiza em background sem travar
+    if (!cacheValido || forcarReload) setTimeout(() => _r2CarregarTodosSilencioso(), 100);
     return;
   }
-  // Sem cache → carrega mostrando loading
+  // Sem nenhum cache → primeira vez, mostra loading
   document.getElementById('r2-lista-mon').innerHTML =
     '<div style="color:#aaa;font-size:.85rem;text-align:center;padding:16px">Carregando…</div>';
   await _r2CarregarTodosSilencioso();
