@@ -17170,9 +17170,28 @@ async function _comGerarPDFExec() {
     for (const p of paragrafosCorpo) {
       if (!p.trim()) { y += 3; continue; }
       const wrapped = doc.splitTextToSize(p.trim(), tw);
-      for (const wl of wrapped) {
+      for (let wi = 0; wi < wrapped.length; wi++) {
+        const wl = wrapped[wi];
         if (y > pageH - mB - 6) { doc.addPage(); y = mT; }
-        doc.text(wl, mL, y, { maxWidth: tw }); y += 5.5;
+        const isLastLine = (wi === wrapped.length - 1);
+        if (isLastLine) {
+          doc.text(wl, mL, y); // última linha: alinhada à esquerda
+        } else {
+          // Justificação manual: distribuir espaço extra entre as palavras
+          const words = wl.trim().split(/\s+/).filter(w => w.length > 0);
+          if (words.length <= 1) {
+            doc.text(wl, mL, y);
+          } else {
+            const totalWordW = words.reduce((acc, w) => acc + doc.getTextWidth(w), 0);
+            const spaceW = (tw - totalWordW) / (words.length - 1);
+            let xPos = mL;
+            for (const word of words) {
+              doc.text(word, xPos, y);
+              xPos += doc.getTextWidth(word) + spaceW;
+            }
+          }
+        }
+        y += 5.5;
       }
       y += 3; // espaço entre parágrafos
     }
@@ -17193,7 +17212,7 @@ async function _comGerarPDFExec() {
 
     // ── Assinatura ───────────────────────────────────────────────
     if (y > pageH - mB - 35) { doc.addPage(); y = mT; }
-    const assX = mL, assW = tw * 0.55, assC = assX + assW / 2;
+    const assW = tw * 0.55, assC = mL + tw / 2, assX = assC - assW / 2;
     if (assImg) {
       try {
         const imgW = 55, imgH = 18;
