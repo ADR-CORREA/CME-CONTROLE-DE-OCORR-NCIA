@@ -2355,13 +2355,13 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
             <!-- Comarca + Vara -->
             <div class="form-field">
               <label>Comarca</label>
-              <select id="com-of-comarca" onchange="com_atualizarVaras();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+              <select id="com-of-comarca" onchange="_comTextoBloqueado=false;com_atualizarVaras();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
                 <option value="">Selecione a comarca...</option>
               </select>
             </div>
             <div class="form-field">
               <label>Vara</label>
-              <select id="com-of-vara" onchange="com_atualizarDestinatario();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+              <select id="com-of-vara" onchange="_comTextoBloqueado=false;com_atualizarDestinatario();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
                 <option value="">Selecione a vara...</option>
               </select>
             </div>
@@ -17064,35 +17064,33 @@ async function _comGerarPDFExec() {
       try { doc.addImage('data:image/png;base64,' + window._IAPEN_LOGO_B64, 'PNG', 210 - mR - logoW, y, logoW, logoH); } catch(e) {}
     }
 
-    // ── Texto institucional (centralizado) ───────────────────────
-    doc.setFont('helvetica', 'bold');   doc.setFontSize(8.5); doc.setTextColor(26, 58, 107);
+    // ── Texto institucional (centralizado, tudo preto — ABNT) ────
+    doc.setFont('helvetica', 'bold');   doc.setFontSize(8.5); doc.setTextColor(0);
     doc.text('GOVERNO DO ESTADO DO AMAPÁ', cx, y + 5,  { align: 'center' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(60, 60, 60);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(0);
     doc.text('Secretaria de Estado da Justiça e Segurança Pública – SEJUSP', cx, y + 10, { align: 'center' });
-    doc.setFont('helvetica', 'bold');   doc.setFontSize(8.5); doc.setTextColor(26, 58, 107);
+    doc.setFont('helvetica', 'bold');   doc.setFontSize(8.5); doc.setTextColor(0);
     doc.text('Instituto de Administração Penitenciária – IAPEN/AP',          cx, y + 15, { align: 'center' });
-    doc.setFont('helvetica', 'bold');   doc.setFontSize(8.5); doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');   doc.setFontSize(8.5); doc.setTextColor(0);
     doc.text('Central de Monitoramento Eletrônico – CME',                    cx, y + 20, { align: 'center' });
     y += logoH + 3;
 
-    // ── Separador duplo azul ─────────────────────────────────────
-    doc.setFillColor(26, 58, 107);
-    doc.rect(mL, y,       tw, 0.9, 'F');
-    doc.rect(mL, y + 1.8, tw, 0.3, 'F');
-    y += 7;
+    // ── Separador simples preto (ABNT) ───────────────────────────
+    doc.setFillColor(0);
+    doc.rect(mL, y, tw, 0.4, 'F');
+    y += 6;
 
-    // ── Número e data (alinhados à direita) ─────────────────────
+    // ── Número do ofício (sem data aqui — data vai antes da assinatura) ──
     doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0);
-    if (numFmt)    { doc.text(`Ofício nº ${numFmt}`,            210 - mR, y, { align: 'right' }); y += 5.5; }
-    if (dataLonga) { doc.setFont('helvetica', 'normal');
-                     doc.text(`Macapá/AP, ${dataLonga}.`, 210 - mR, y, { align: 'right' }); y += 8; }
+    if (numFmt) { doc.text(`Ofício nº ${numFmt}`, 210 - mR, y, { align: 'right' }); y += 9; }
 
     // ── Destinatário ─────────────────────────────────────────────
     if (dest) {
       doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
       doc.text('A Sua Excelência o (a) Senhor (a)', mL, y); y += 5;
       doc.setFont('helvetica', 'bold');
-      doc.text(dest + '.', mL, y); y += 9;
+      const destLines = doc.splitTextToSize(dest + '.', tw);
+      doc.text(destLines, mL, y); y += destLines.length * 5.5 + 4;
     }
 
     // ── Assunto / Processo ───────────────────────────────────────
@@ -17100,15 +17098,21 @@ async function _comGerarPDFExec() {
     const modelo   = COM_MODELOS.find(m => m.id === modeloId);
     if (modelo?.assunto) {
       doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0);
-      doc.text(`Assunto: `, mL, y);
+      const assLbl = 'Assunto: ';
+      const assLblW = doc.getTextWidth(assLbl);
+      doc.text(assLbl, mL, y);
       doc.setFont('helvetica', 'normal');
-      doc.text(modelo.assunto + '.', mL + doc.getTextWidth('Assunto: '), y); y += 5;
+      const assLines = doc.splitTextToSize(modelo.assunto + '.', tw - assLblW);
+      doc.text(assLines[0], mL + assLblW, y);
+      if (assLines.length > 1) { y += 5; doc.text(assLines.slice(1).join(' '), mL, y); }
+      y += 5;
     }
     if (processo) {
       doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
-      doc.text('Processo nº: ', mL, y);
+      const pnLbl = 'Processo nº: ';
+      doc.text(pnLbl, mL, y);
       doc.setFont('helvetica', 'normal');
-      doc.text(processo + '.', mL + doc.getTextWidth('Processo nº: '), y); y += 8;
+      doc.text(processo + '.', mL + doc.getTextWidth(pnLbl), y); y += 8;
     }
 
     // ── Saudação ─────────────────────────────────────────────────
@@ -17117,24 +17121,47 @@ async function _comGerarPDFExec() {
       doc.text(saudacao, mL, y); y += 8;
     }
 
-    // ── Corpo (texto do textarea, linha a linha) ─────────────────
+    // ── Corpo (do modelo — SEM ler preview textarea, evita duplicação) ──
+    const campos = { nome_monitorado: nomeMon };
+    if (modelo) {
+      modelo.campos.forEach(c => {
+        const el = document.getElementById('com-of-campo-' + c.id);
+        let val = el ? el.value.trim() : '';
+        if (c.tipo === 'date' && val) val = com_fmtData(val);
+        campos[c.id] = val;
+      });
+    }
+    const stripTags = s => String(s).replace(/<\/?(b|i)>/g, '');
+    // Se usuário editou o corpo manualmente, usa o textarea; caso contrário usa o modelo
+    const corpoTaPDF = document.getElementById('com-of-corpo');
+    const paragrafosCorpo = (_comCorpoEditado && corpoTaPDF?.value.trim())
+      ? corpoTaPDF.value.trim().split('\n').filter(l => l.trim())
+      : (modelo ? modelo.corpo(campos).map(stripTags) : []);
+
     doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
-    const linhasCorpo = texto.split('\n');
-    for (const l of linhasCorpo) {
-      if (!l.trim()) { y += 4; continue; }
-      const wrapped = doc.splitTextToSize(l.trim(), tw);
+    for (const p of paragrafosCorpo) {
+      if (!p.trim()) { y += 3; continue; }
+      const wrapped = doc.splitTextToSize(p.trim(), tw);
       for (const wl of wrapped) {
         if (y > pageH - mB - 6) { doc.addPage(); y = mT; }
-        doc.text(wl, mL, y); y += 5.5;
+        doc.text(wl, mL, y, { maxWidth: tw }); y += 5.5;
       }
+      y += 3; // espaço entre parágrafos
     }
 
     // ── Encerramento ─────────────────────────────────────────────
     y += 4;
-    if (y > pageH - mB - 30) { doc.addPage(); y = mT; }
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
-    doc.text('Sem mais, esta CME encontra-se à disposição.', mL, y); y += 5;
-    doc.text('Respeitosamente,', mL, y); y += 20;
+    if (y > pageH - mB - 40) { doc.addPage(); y = mT; }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
+    doc.text('Sem mais, esta CME se coloca à disposição para eventuais esclarecimentos.', mL, y); y += 5;
+    doc.text('Respeitosamente,', mL, y); y += 14;
+
+    // ── Data (local e data — antes da assinatura, à direita) ─────
+    if (dataLonga) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+      doc.text(`Macapá/AP, ${dataLonga}.`, 210 - mR, y, { align: 'right' });
+      y += 10;
+    }
 
     // ── Assinatura ───────────────────────────────────────────────
     if (y > pageH - mB - 35) { doc.addPage(); y = mT; }
@@ -17148,23 +17175,20 @@ async function _comGerarPDFExec() {
     }
     doc.setDrawColor(0); doc.setLineWidth(0.3);
     doc.line(assX, y, assX + assW, y); y += 4;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
-    doc.text(signat, assC, y, { align: 'center' }); y += 5;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0);
+    if (signat) { doc.text(signat, assC, y, { align: 'center' }); y += 5; }
     doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
-    doc.text(cargo, assC, y, { align: 'center' }); y += 4;
-    if (decreto) { doc.setFontSize(9); doc.setTextColor(80); doc.text(`Decreto nº ${decreto}`, assC, y, { align: 'center' }); }
+    if (cargo)  { doc.text(cargo,  assC, y, { align: 'center' }); y += 4; }
+    if (decreto){ doc.setFontSize(10); doc.text(`Decreto nº ${decreto}`, assC, y, { align: 'center' }); }
 
-    // ── Rodapé em todas as páginas ───────────────────────────────
+    // ── Numeração de página (só se mais de 1 página) ─────────────
     const totalPag = doc.internal.getNumberOfPages();
-    for (let p = 1; p <= totalPag; p++) {
-      doc.setPage(p);
-      doc.setFillColor(26, 58, 107);
-      doc.rect(mL, pageH - mB + 2, tw, 0.3, 'F');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(50);
-      doc.text('CENTRAL DE MONITORAMENTO ELETRÔNICO – CME / IAPEN-AP', cx, pageH - mB + 7, { align: 'center' });
-      doc.setFont('helvetica', 'normal'); doc.setTextColor(100);
-      doc.text('Av. Machado de Assis, 372 – Centro – CEP: 68900-066, Macapá-AP  |  (096) 98415-2844  |  cme.iapen.ap@gmail.com', cx, pageH - mB + 11, { align: 'center' });
-      if (totalPag > 1) { doc.text(`Página ${p} de ${totalPag}`, 210 - mR, pageH - mB + 7, { align: 'right' }); }
+    if (totalPag > 1) {
+      for (let p = 1; p <= totalPag; p++) {
+        doc.setPage(p);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100);
+        doc.text(`Página ${p} de ${totalPag}`, 210 - mR, pageH - 10, { align: 'right' });
+      }
     }
 
     let finalBytes = doc.output('arraybuffer');
