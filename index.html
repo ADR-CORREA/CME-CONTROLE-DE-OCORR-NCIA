@@ -6150,6 +6150,12 @@ function iniciarApp() {
   atualizarTudo();
   aplicarVisibilidadeTabs(nivel);
   if (nivel === 'admin') { renderizarUsers(); renderizarLogs(); }
+
+  // Pré-carrega monitorados em background após login — busca instantânea quando abrir Arquivos
+  setTimeout(() => {
+    r2_carregarConfig();
+    if (r2_state.url && r2_state.token) _r2MonFetchSilencioso();
+  }, 2000);
 }
 
 /* ─── NAVEGAÇÃO ──────────────────────────────────────── */
@@ -13048,11 +13054,8 @@ const r2_state = {
   token:      '',   // AUTH_TOKEN
   monitorado: '',   // monitorado selecionado (nome real)
   pasta:      '',   // pasta atual
-  monitorados: [],  // cache da lista (página atual)
-  pagina:      1,   // página atual de monitorados
-  totalPaginas: 1,  // total de páginas
-  totalMon:    0,   // total de monitorados
-  buscaMon:   '',   // filtro de busca atual
+  monitorados: [],  // lista completa em memória
+  arquivosCached: [],
 };
 
 /* ── Config: carregar / salvar ────────────────────────────────── */
@@ -13128,27 +13131,52 @@ async function r2_inicializarAba() {
   await r2_carregarMonitorados();
 }
 
-/* ── Monitorados ──────────────────────────────────────────────── */
-async function r2_carregarMonitorados(pagina) {
-  if (pagina !== undefined) r2_state.pagina = pagina;
-  const lista = document.getElementById('r2-lista-mon');
-  lista.innerHTML = '<div style="color:#aaa;font-size:.85rem;text-align:center;padding:16px">Carregando…</div>';
+/* ── Cache de monitorados (localStorage, TTL 30 min) ─────────── */
+const _R2_MON_CACHE_KEY = 'cme_r2_monitorados_v3';
+const _R2_MON_CACHE_TTL = 30 * 60 * 1000;
+function _r2MonCacheGet() {
+  try { const r = localStorage.getItem(_R2_MON_CACHE_KEY); if (!r) return null;
+    const {ts,data} = JSON.parse(r); return Date.now()-ts > _R2_MON_CACHE_TTL ? null : data;
+  } catch { return null; }
+}
+function _r2MonCacheSet(d) { try { localStorage.setItem(_R2_MON_CACHE_KEY, JSON.stringify({ts:Date.now(),data:d})); } catch {} }
+function _r2MonCacheInvalidar() { try { localStorage.removeItem(_R2_MON_CACHE_KEY); } catch {} }
+
+function _r2NormBusca(s) {
+  return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[-_]/g,' ').trim();
+}
+function _r2AplicarFiltro(q) {
+  const f = _r2NormBusca(q);
+  const filtrados = f ? r2_state.monitorados.filter(m => _r2NormBusca(m.nome).includes(f)) : r2_state.monitorados;
+  r2_renderizarListaMon(filtrados);
+}
+async function _r2MonFetchSilencioso() {
   try {
-    const qs = new URLSearchParams({
-      pagina: r2_state.pagina,
-      limite: 50,
-      ...(r2_state.buscaMon ? { busca: r2_state.buscaMon } : {})
-    });
-    const data = await r2_api('GET', `/monitorados?${qs}`);
-    r2_state.monitorados  = data.monitorados   || [];
-    r2_state.totalPaginas = data.total_paginas || 1;
-    r2_state.totalMon     = data.total         || 0;
-    r2_state.pagina       = data.pagina        || 1;
-    r2_renderizarListaMon(r2_state.monitorados);
-    r2_atualizarPaginacao();
+    const data = await r2_api('GET', '/monitorados?limite=1000');
+    const monitorados = data.monitorados || [];
+    _r2MonCacheSet(monitorados);
+    r2_state.monitorados = monitorados;
+    _r2AplicarFiltro(document.getElementById('r2-busca-mon')?.value || '');
   } catch(e) {
-    lista.innerHTML = `<div style="color:#dc3545;font-size:.82rem;padding:10px">${e.message}</div>`;
+    const lista = document.getElementById('r2-lista-mon');
+    if (lista && lista.textContent.includes('Carregando')) {
+      lista.innerHTML = `<div style="color:#dc3545;font-size:.82rem;padding:10px">${e.message}</div>`;
+    }
   }
+}
+
+/* ── Monitorados ──────────────────────────────────────────────── */
+async function r2_carregarMonitorados(forcarReload) {
+  const cached = forcarReload ? null : _r2MonCacheGet();
+  if (cached && cached.length) {
+    r2_state.monitorados = cached;
+    _r2AplicarFiltro(document.getElementById('r2-busca-mon')?.value || '');
+    _r2MonFetchSilencioso();
+    return;
+  }
+  document.getElementById('r2-lista-mon').innerHTML =
+    '<div style="color:#aaa;font-size:.85rem;text-align:center;padding:16px">Carregando…</div>';
+  await _r2MonFetchSilencioso();
 }
 
 function r2_renderizarListaMon(lista) {
@@ -13200,17 +13228,10 @@ async function r2_deletarMonitorado(nome) {
 }
 
 function r2_filtrarMonitorados(q) {
-  r2_state.buscaMon = q.trim();
-  r2_state.pagina   = 1;
-  clearTimeout(r2_filtrarMonitorados._t);
-  r2_filtrarMonitorados._t = setTimeout(() => r2_carregarMonitorados(), 350);
+  _r2AplicarFiltro(q); // filtro em memória — instantâneo, sem API call
 }
 
-function r2_mudarPagina(delta) {
-  const nova = r2_state.pagina + delta;
-  if (nova < 1 || nova > r2_state.totalPaginas) return;
-  r2_carregarMonitorados(nova);
-}
+function r2_mudarPagina(delta) {} // mantido para compatibilidade
 
 function r2_atualizarPaginacao() {
   const pg   = document.getElementById('r2-paginacao');
