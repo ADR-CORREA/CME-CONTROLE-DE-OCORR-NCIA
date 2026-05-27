@@ -13151,17 +13151,28 @@ function _r2MonCacheInvalidar() { try { localStorage.removeItem(_R2_MON_CACHE_KE
 function _r2NormBusca(s) {
   return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[-_]/g,' ').trim();
 }
+const _R2_MON_VISIVEIS = 80; // máx itens renderizados sem busca ativa
+
 function _r2AplicarFiltro(q) {
   const f = _r2NormBusca(q);
   const todos = r2_state.monitorados;
-  // Se ainda está carregando e não tem dados, não mostra "Nenhum resultado"
+
+  // Ainda carregando e sem dados: mostra "Buscando…"
   if (_r2Carregando && !todos.length) {
     document.getElementById('r2-lista-mon').innerHTML =
       '<div style="color:#aaa;font-size:.85rem;text-align:center;padding:16px">Buscando…</div>';
     return;
   }
-  const filtrados = f ? todos.filter(m => _r2NormBusca(m.nome).includes(f)) : todos;
-  r2_renderizarListaMon(filtrados, q);
+
+  let filtrados;
+  if (f) {
+    // Com busca: filtra todos os 10k em memória
+    filtrados = todos.filter(m => _r2NormBusca(m.nome).includes(f) || (m.slug||'').includes(f.replace(/\s/g,'-')));
+  } else {
+    // Sem busca: mostra só os primeiros N para não travar o DOM
+    filtrados = todos.slice(0, _R2_MON_VISIVEIS);
+  }
+  r2_renderizarListaMon(filtrados, q, todos.length);
 }
 
 /* ── Monitorados: carrega tudo de uma vez, pagina por página ──── */
@@ -13205,7 +13216,7 @@ async function _r2CarregarTodosSilencioso() {
   }
 }
 
-function r2_renderizarListaMon(lista, busca) {
+function r2_renderizarListaMon(lista, busca, total) {
   const el = document.getElementById('r2-lista-mon');
   if (!lista.length) {
     const q = (busca||'').trim();
@@ -13214,6 +13225,11 @@ function r2_renderizarListaMon(lista, busca) {
       : '<div style="color:#aaa;font-size:.83rem;text-align:center;padding:20px 0">Nenhum monitorado.<br>Clique em + Monitorado.</div>';
     return;
   }
+  const rodape = !busca && total > _R2_MON_VISIVEIS
+    ? `<div style="color:#aaa;font-size:.75rem;text-align:center;padding:8px 4px;border-top:1px solid #e9ecef;margin-top:4px">
+        Mostrando ${_R2_MON_VISIVEIS} de ${total}. Digite para buscar pelo nome.
+       </div>`
+    : '';
   const isAdmin = usuarioAtual?.nivel === 'admin';
   el.innerHTML = lista.map(m => {
     const nomeEsc = m.nome.replace(/'/g,"&#39;").replace(/"/g,'&quot;');
@@ -13226,7 +13242,7 @@ function r2_renderizarListaMon(lista, busca) {
         style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#ccc;font-size:.85rem;padding:4px;border-radius:4px;transition:color .15s;margin-left:4px"
         onmouseover="this.style.color='#dc3545'" onmouseout="this.style.color='#ccc'">🗑️</button>` : ''}
     </div>`;
-  }).join('');
+  }).join('') + rodape;
 }
 
 /* ── Excluir monitorado inteiro (admin) ───────────────────────── */
