@@ -16898,7 +16898,8 @@ async function _comDefinirComarcaVara(comarcaAI, varaAI, comarcaElId = 'com-of-c
       }
     }
     if (!comarcaEncontrada) {
-      const opt = _comMelhorOpcao(selC, comarcaAI, 30);
+      // Threshold alto (60) para evitar comarca errada por semelhança fraca
+      const opt = _comMelhorOpcao(selC, comarcaAI, 60);
       if (opt) {
         selC.value = opt.value; if (comarcaElId === 'com-of-comarca' && typeof com_atualizarVaras === 'function') com_atualizarVaras(); else if (comarcaElId === 'jur-comarca') jur_atualizarVaras();
         n++; comarcaEncontrada = opt.value;
@@ -16907,8 +16908,9 @@ async function _comDefinirComarcaVara(comarcaAI, varaAI, comarcaElId = 'com-of-c
   }
 
   // 2. Se não achou comarca pela IA, infere pela vara (busca em todas as comarcas)
+  //    Score mínimo alto (50) para evitar inferência incorreta
   if (!comarcaEncontrada && varaAI && typeof COM_COMARCAS !== 'undefined') {
-    let melhorScore = 15, melhorComarca = null, melhorVara = null;
+    let melhorScore = 50, melhorComarca = null, melhorVara = null;
     for (const c of COM_COMARCAS) {
       for (const v of c.varas) {
         const s = _comScore(v, varaAI);
@@ -16933,9 +16935,10 @@ async function _comDefinirComarcaVara(comarcaAI, varaAI, comarcaElId = 'com-of-c
   }
 
   // 3. Com comarca definida, fuzzy match da vara no select já populado
+  //    Threshold 30 para evitar vara errada
   if (comarcaEncontrada && varaAI) {
     await new Promise(r => setTimeout(r, 150));
-    const opt = _comMelhorOpcao(selV, varaAI, 10);
+    const opt = _comMelhorOpcao(selV, varaAI, 30);
     if (opt) {
       selV.value = opt.value;
       if (comarcaElId === 'com-of-comarca' && typeof com_atualizarDestinatario === 'function') com_atualizarDestinatario(); else if (comarcaElId === 'jur-comarca') jur_atualizarDestinatario();
@@ -16980,45 +16983,62 @@ async function com_extrairComIA() {
 
     const d = json.dados || {};
     let n = 0;
+    const preenchidos = [], naoEncontrados = [];
+
+    // ── Helpers de validação client-side (dupla checagem) ──────
+    const validarNome = v => {
+      if (!v || typeof v !== 'string') return false;
+      const nome = v.trim();
+      const palavras = nome.split(/\s+/).filter(p => p.length >= 2);
+      return palavras.length >= 2 && nome.length >= 5 && !/^\d/.test(nome);
+    };
+    const validarProcesso = v => v && /^\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$/.test(v.trim());
+    const validarData = v => {
+      if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v.trim())) return false;
+      const dt = new Date(v); const ano = dt.getFullYear();
+      return !isNaN(dt.getTime()) && ano >= 2000 && ano <= 2035;
+    };
 
     // Nome do monitorado
-    if (d.nome)    { document.getElementById('com-of-nome').value = d.nome.toUpperCase(); n++; }
+    if (validarNome(d.nome)) {
+      document.getElementById('com-of-nome').value = d.nome.trim().toUpperCase();
+      n++; preenchidos.push('Nome');
+    } else { naoEncontrados.push('Nome'); }
+
     // Número do processo
-    if (d.processo){ document.getElementById('com-of-processo').value = d.processo; n++; }
+    if (validarProcesso(d.processo)) {
+      document.getElementById('com-of-processo').value = d.processo.trim();
+      n++; preenchidos.push('Processo');
+    } else { naoEncontrados.push('Processo'); }
+
     // Data
-    if (d.data)    { document.getElementById('com-of-data').value = d.data; n++; }
+    if (validarData(d.data)) {
+      document.getElementById('com-of-data').value = d.data.trim();
+      n++; preenchidos.push('Data');
+    } else { naoEncontrados.push('Data'); }
 
-    // Saudação
-    if (d.saudacao) {
-      const selS = document.getElementById('com-of-saudacao');
-      const opt  = _comMelhorOpcao(selS, d.saudacao, 5);
-      if (opt) { selS.value = opt.value; n++; }
-    }
-
-    // Comarca + Vara — busca inteligente
-    const comarcaOk = await _comDefinirComarcaVara(d.comarca, d.vara);
-    n += comarcaOk;
-
-    // Modelo
-    if (d.modelo) {
-      const selM = document.getElementById('com-of-modelo');
-      let found = false;
-      for (const opt of selM.options) {
-        if (opt.value === d.modelo) { selM.value = opt.value; com_atualizarCampos(); n++; found = true; break; }
-      }
-      if (!found) {
-        const opt = _comMelhorOpcao(selM, d.modelo, 10);
-        if (opt) { selM.value = opt.value; com_atualizarCampos(); n++; }
-      }
+    // Comarca + Vara — somente se comarca veio validada pelo worker
+    if (d.comarca) {
+      const comarcaOk = await _comDefinirComarcaVara(d.comarca, d.vara);
+      if (comarcaOk > 0) { n += comarcaOk; preenchidos.push('Comarca/Vara'); }
+      else { naoEncontrados.push('Comarca'); }
+    } else {
+      naoEncontrados.push('Comarca');
     }
 
     com_atualizarPreview();
 
+    // Mensagem detalhada de resultado
+    const msg = preenchidos.length
+      ? `✅ Preenchido: ${preenchidos.join(', ')}.${naoEncontrados.length ? ` Não encontrado: ${naoEncontrados.join(', ')}.` : ''}`
+      : `⚠️ Nenhum campo pôde ser extraído com segurança dos documentos.`;
+
     if (status) {
-      status.style.background = '#d1fae5'; status.style.color = '#065f46';
-      status.textContent = `✅ IA preencheu ${n} campo(s) automaticamente! Revise e ajuste se necessário.`;
+      status.style.background = preenchidos.length ? '#d1fae5' : '#fef9c3';
+      status.style.color      = preenchidos.length ? '#065f46' : '#92400e';
+      status.textContent = msg;
     }
-    _mostrarToast(`✅ ${n} campo(s) preenchidos pela IA!`, 'sucesso');
+    _mostrarToast(preenchidos.length ? `✅ IA preencheu: ${preenchidos.join(', ')}` : '⚠️ IA não encontrou dados com certeza suficiente.', preenchidos.length ? 'sucesso' : 'aviso');
 
   } catch(e) {
     if (status) {
