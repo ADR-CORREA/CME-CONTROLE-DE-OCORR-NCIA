@@ -16045,10 +16045,47 @@ async function com_processarArquivos(files) {
             parts.push(content.items.map(i => i.str).join(' '));
           }
           anexo.texto = parts.join('\n');
+
+          // ── Detecta PDF escaneado (foto): texto extraído muito curto ──
+          const avgChars = parts.reduce((s, p) => s + p.trim().length, 0) / pdfDoc.numPages;
+          if (avgChars < 40) {
+            anexo.status = 'ocr';
+            anexo._ocrAviso = true;
+            com_renderizarAnexos();
+            const ocrParts = [];
+            const maxPag = Math.min(pdfDoc.numPages, 4); // máx 4 páginas para não ultrapassar timeout
+            for (let p = 1; p <= maxPag; p++) {
+              try {
+                const page     = await pdfDoc.getPage(p);
+                const viewport = page.getViewport({ scale: 1.5 });
+                const canvas   = document.createElement('canvas');
+                canvas.width   = viewport.width;
+                canvas.height  = viewport.height;
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+                const b64 = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+                const r = await _comOcrViaWorker(b64);
+                if (r) ocrParts.push(`[Página ${p}]\n${r}`);
+              } catch(e) { console.warn('OCR página', p, e.message); }
+            }
+            if (ocrParts.length) anexo.texto = ocrParts.join('\n\n');
+          }
         }
 
+      } else if (['jpg', 'jpeg', 'png', 'bmp', 'webp'].includes(tipo)) {
+        // ── Imagem: OCR via Cloudflare Vision AI ──────────────────
+        anexo.status = 'ocr';
+        com_renderizarAnexos();
+        const b64 = await new Promise((res, rej) => {
+          const fr = new FileReader();
+          fr.onload  = e => res(e.target.result.split(',')[1]);
+          fr.onerror = rej;
+          fr.readAsDataURL(file);
+        });
+        const texto = await _comOcrViaWorker(b64);
+        anexo.texto = texto || '';
+
       } else {
-        anexo.texto = ''; // imagem/outro: vai como anexo visual apenas
+        anexo.texto = ''; // outros formatos: anexo visual apenas
       }
       anexo.status = 'ok';
     } catch(e) {
@@ -16070,7 +16107,7 @@ function com_renderizarAnexos() {
   const icons = { pdf:'📕', docx:'📘', doc:'📘', txt:'📃', csv:'📊', png:'🖼️', jpg:'🖼️', jpeg:'🖼️' };
   lista.innerHTML = _comAnexos.map(a => {
     const icon  = icons[a.tipo] || '📄';
-    const badge = a.status === 'lendo' ? '⏳ lendo...' : a.status === 'erro' ? '❌ erro' :
+    const badge = a.status === 'lendo' ? '⏳ lendo...' : a.status === 'ocr' ? '🔍 OCR...' : a.status === 'erro' ? '❌ erro' :
                   a.texto ? `✅ ${(a.texto.length/1000).toFixed(1)}k chars` : '✅ (binário)';
     const kb    = (a.tamanho/1024).toFixed(1);
     // Para PDFs: mostrar info de páginas selecionadas
@@ -16947,6 +16984,24 @@ async function _comDefinirComarcaVara(comarcaAI, varaAI, comarcaElId = 'com-of-c
   }
 
   return n;
+}
+
+/* ── OCR via Cloudflare Vision AI (helper) ───────────────────── */
+async function _comOcrViaWorker(base64jpeg) {
+  try {
+    if (!r2_state.url || !r2_state.token) r2_carregarConfig();
+    const resp = await fetch(`${r2_state.url}/ocr`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${r2_state.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64jpeg }),
+    });
+    if (!resp.ok) return '';
+    const json = await resp.json();
+    return (json.texto || '').trim();
+  } catch(e) {
+    console.warn('[CME] OCR falhou:', e.message);
+    return '';
+  }
 }
 
 /* ── Extração com IA ─────────────────────────────────────────── */
