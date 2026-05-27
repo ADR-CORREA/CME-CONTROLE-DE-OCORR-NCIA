@@ -13131,7 +13131,7 @@ async function r2_inicializarAba() {
   await r2_carregarMonitorados();
 }
 
-/* ── Cache de monitorados (localStorage, TTL 30 min) ─────────── */
+/* ── Cache e filtro em memória de monitorados ─────────────────── */
 const _R2_MON_CACHE_KEY = 'cme_r2_monitorados_v3';
 const _R2_MON_CACHE_TTL = 30 * 60 * 1000;
 function _r2MonCacheGet() {
@@ -13147,42 +13147,56 @@ function _r2NormBusca(s) {
 }
 function _r2AplicarFiltro(q) {
   const f = _r2NormBusca(q);
-  const filtrados = f ? r2_state.monitorados.filter(m => _r2NormBusca(m.nome).includes(f)) : r2_state.monitorados;
-  r2_renderizarListaMon(filtrados);
-}
-async function _r2MonFetchSilencioso() {
-  try {
-    const data = await r2_api('GET', '/monitorados?limite=1000');
-    const monitorados = data.monitorados || [];
-    _r2MonCacheSet(monitorados);
-    r2_state.monitorados = monitorados;
-    _r2AplicarFiltro(document.getElementById('r2-busca-mon')?.value || '');
-  } catch(e) {
-    const lista = document.getElementById('r2-lista-mon');
-    if (lista && lista.textContent.includes('Carregando')) {
-      lista.innerHTML = `<div style="color:#dc3545;font-size:.82rem;padding:10px">${e.message}</div>`;
-    }
-  }
+  const todos = r2_state.monitorados;
+  const filtrados = f ? todos.filter(m => _r2NormBusca(m.nome).includes(f)) : todos;
+  r2_renderizarListaMon(filtrados, q);
 }
 
-/* ── Monitorados ──────────────────────────────────────────────── */
+/* ── Monitorados: carrega tudo de uma vez, pagina por página ──── */
 async function r2_carregarMonitorados(forcarReload) {
+  // Cache válido → mostra imediatamente, atualiza em background
   const cached = forcarReload ? null : _r2MonCacheGet();
   if (cached && cached.length) {
     r2_state.monitorados = cached;
     _r2AplicarFiltro(document.getElementById('r2-busca-mon')?.value || '');
-    _r2MonFetchSilencioso();
+    setTimeout(() => _r2CarregarTodosSilencioso(), 100);
     return;
   }
+  // Sem cache → carrega mostrando loading
   document.getElementById('r2-lista-mon').innerHTML =
     '<div style="color:#aaa;font-size:.85rem;text-align:center;padding:16px">Carregando…</div>';
-  await _r2MonFetchSilencioso();
+  await _r2CarregarTodosSilencioso();
 }
 
-function r2_renderizarListaMon(lista) {
+async function _r2CarregarTodosSilencioso() {
+  try {
+    // Busca em páginas de 50 até trazer todos
+    let todos = [], pagina = 1, totalPaginas = 1;
+    do {
+      const qs = new URLSearchParams({ pagina, limite: 50 });
+      const data = await r2_api('GET', `/monitorados?${qs}`);
+      todos = todos.concat(data.monitorados || []);
+      totalPaginas = data.total_paginas || 1;
+      pagina++;
+    } while (pagina <= totalPaginas);
+
+    _r2MonCacheSet(todos);
+    r2_state.monitorados = todos;
+    _r2AplicarFiltro(document.getElementById('r2-busca-mon')?.value || '');
+  } catch(e) {
+    const lista = document.getElementById('r2-lista-mon');
+    if (lista && lista.innerHTML.includes('Carregando'))
+      lista.innerHTML = `<div style="color:#dc3545;font-size:.82rem;padding:10px">${e.message}</div>`;
+  }
+}
+
+function r2_renderizarListaMon(lista, busca) {
   const el = document.getElementById('r2-lista-mon');
   if (!lista.length) {
-    el.innerHTML = '<div style="color:#aaa;font-size:.83rem;text-align:center;padding:20px 0">Nenhum monitorado.<br>Clique em + Monitorado.</div>';
+    const q = (busca||'').trim();
+    el.innerHTML = q
+      ? `<div style="color:#aaa;font-size:.83rem;text-align:center;padding:20px 8px">Nenhum resultado para <strong>"${q}"</strong>.</div>`
+      : '<div style="color:#aaa;font-size:.83rem;text-align:center;padding:20px 0">Nenhum monitorado.<br>Clique em + Monitorado.</div>';
     return;
   }
   const isAdmin = usuarioAtual?.nivel === 'admin';
