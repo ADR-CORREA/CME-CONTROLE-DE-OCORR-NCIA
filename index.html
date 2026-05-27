@@ -17047,7 +17047,15 @@ async function com_extrairComIA() {
       const palavras = nome.split(/\s+/).filter(p => p.length >= 2);
       return palavras.length >= 2 && nome.length >= 5 && !/^\d/.test(nome);
     };
-    const validarProcesso = v => v && /^\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$/.test(v.trim());
+    const validarProcesso = v => {
+      if (!v) return false;
+      // Remove prefixos comuns que a IA pode incluir: "Processo nº.", "Proc. ", etc.
+      const limpo = v.trim()
+        .replace(/^(processo|proc|autos?)[^\d]*/i, '')
+        .replace(/^n[°º\.]+\s*/i, '')
+        .trim();
+      return /^\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$/.test(limpo) ? limpo : false;
+    };
     const validarData = v => {
       if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v.trim())) return false;
       const dt = new Date(v); const ano = dt.getFullYear();
@@ -17061,8 +17069,9 @@ async function com_extrairComIA() {
     } else { naoEncontrados.push('Nome'); }
 
     // Número do processo
-    if (validarProcesso(d.processo)) {
-      document.getElementById('com-of-processo').value = d.processo.trim();
+    const procValido = validarProcesso(d.processo);
+    if (procValido) {
+      document.getElementById('com-of-processo').value = procValido;
       n++; preenchidos.push('Processo');
     } else { naoEncontrados.push('Processo'); }
 
