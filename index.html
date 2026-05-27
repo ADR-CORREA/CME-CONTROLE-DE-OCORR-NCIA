@@ -15757,11 +15757,8 @@ function com_gerarOficio() {
 </table>
 
 <!-- ══ IDENTIFICAÇÃO DO OFÍCIO ══════════════════════════════════ -->
-<p style="text-align:right;font-size:12pt;font-weight:bold;margin:0 0 2pt 0">
+<p style="text-align:right;font-size:12pt;font-weight:bold;margin:0 0 20pt 0">
   Of&#237;cio n&#176; <b>${esc(numFmt)}</b>
-</p>
-<p style="text-align:right;font-size:12pt;margin:0 0 20pt 0">
-  Macap&#225;/AP, ${esc(dataLonga)}.
 </p>
 
 <!-- ══ DESTINATÁRIO ══════════════════════════════════════════════ -->
@@ -15784,8 +15781,13 @@ ${paragsHtml}
 </p>
 <p style="font-size:12pt;margin:0 0 0 0">Respeitosamente,</p>
 
+<!-- ══ DATA (local e data antes da assinatura) ═══════════════════ -->
+<p style="text-align:right;font-size:12pt;margin:30pt 0 0 0">
+  Macap&#225;/AP, ${esc(dataLonga)}.
+</p>
+
 <!-- ══ ASSINATURA ════════════════════════════════════════════════ -->
-<table style="width:100%;margin-top:50pt">
+<table style="width:100%;margin-top:20pt">
   <tr>
     <td style="width:55%;text-align:center;vertical-align:bottom">
       ${assImgCapturada ? `<p style="margin:0 0 0 0;text-align:center"><img src="${assImgCapturada}" style="max-height:60pt;max-width:180pt;object-fit:contain;display:block;margin:0 auto 0 auto"></p>` : ''}
@@ -15915,7 +15917,6 @@ function com_atualizarPreview() {
 
   const linhas = [
     `Ofício nº ${numFmt}.`,
-    `Macapá/AP, ${dataLonga}.`,
     '',
     `A Sua Excelência o (a) Senhor (a)`,
     dest ? `${dest}.` : '____.',
@@ -15930,6 +15931,8 @@ function com_atualizarPreview() {
     'Sem mais, esta CME se coloca à disposição para eventuais esclarecimentos.',
     '',
     'Respeitosamente,',
+    '',
+    `Macapá/AP, ${dataLonga}.`,
     '',
     '',
     '',
