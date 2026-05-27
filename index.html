@@ -15726,7 +15726,7 @@ function com_gerarOficio() {
   };
 
   const paragsHtml = paragrafos
-    .map(p => `<p style="text-align:justify;margin:10pt 0;line-height:1.5;font-size:12pt">${escP(p)}</p>`)
+    .map(p => `<p style="text-align:justify;text-indent:2.5cm;margin:10pt 0;line-height:1.5;font-size:12pt">${escP(p)}</p>`)
     .join('\n');
 
   // Logos a partir das variáveis globais B64 (mesma abordagem do gerador de Plantão)
@@ -15766,9 +15766,9 @@ function com_gerarOficio() {
       ${cmeCellHtml}
     </td>
     <td style="text-align:center;vertical-align:middle;padding:4pt 0">
-      <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;text-transform:uppercase;letter-spacing:.5pt;margin:0;color:#000">Governo do Estado do Amap&#225;</p>
-      <p style="font-family:Arial,sans-serif;font-size:8.5pt;margin:1pt 0;color:#000">Secretaria de Estado da Justi&#231;a e Seguran&#231;a P&#250;blica &#8211; SEJUSP</p>
-      <p style="font-family:Arial,sans-serif;font-size:10pt;font-weight:bold;text-transform:uppercase;margin:2pt 0;color:#000">Instituto de Administra&#231;&#227;o Penitenci&#225;ria &#8211; IAPEN/AP</p>
+      <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;margin:1pt 0;color:#000">GOVERNO DO ESTADO DO AMAP&#193;</p>
+      <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;margin:1pt 0;color:#000">Secretaria de Estado da Justi&#231;a e Seguran&#231;a P&#250;blica &#8211; SEJUSP</p>
+      <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;margin:1pt 0;color:#000">Instituto de Administra&#231;&#227;o Penitenci&#225;ria &#8211; IAPEN/AP</p>
       <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;margin:1pt 0;color:#000">Central de Monitoramento Eletr&#244;nico &#8211; CME</p>
     </td>
     <td style="width:85pt;text-align:center;vertical-align:middle;padding:0 0 0 8pt">
@@ -17164,24 +17164,35 @@ async function _comGerarPDFExec() {
       : (modelo ? modelo.corpo(campos).map(stripTags) : []);
 
     doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
+    const ABNT_INDENT = 25; // 2,5 cm — recuo ABNT na primeira linha de cada parágrafo
     for (const p of paragrafosCorpo) {
       if (!p.trim()) { y += 3; continue; }
-      const wrapped = doc.splitTextToSize(p.trim(), tw);
-      for (let wi = 0; wi < wrapped.length; wi++) {
-        const wl = wrapped[wi];
+
+      // Primeira linha com recuo; demais com largura total (ABNT)
+      const firstSplit = doc.splitTextToSize(p.trim(), tw - ABNT_INDENT);
+      const firstLine  = firstSplit[0];
+      const restText   = p.trim().substring(firstLine.trimEnd().length).trim();
+      const restLines  = restText ? doc.splitTextToSize(restText, tw) : [];
+
+      // Estrutura unificada: { text, x, avW, last }
+      const allLines = [
+        { text: firstLine, x: mL + ABNT_INDENT, avW: tw - ABNT_INDENT, last: !restText },
+        ...restLines.map((l, i) => ({ text: l, x: mL, avW: tw, last: i === restLines.length - 1 }))
+      ];
+
+      for (const line of allLines) {
         if (y > pageH - mB - 6) { doc.addPage(); y = mT; }
-        const isLastLine = (wi === wrapped.length - 1);
-        if (isLastLine) {
-          doc.text(wl, mL, y); // última linha: alinhada à esquerda
+        if (line.last) {
+          doc.text(line.text, line.x, y); // última linha: alinhada à esquerda
         } else {
-          // Justificação manual: distribuir espaço extra entre as palavras
-          const words = wl.trim().split(/\s+/).filter(w => w.length > 0);
+          // Justificação manual: distribui espaço extra entre as palavras
+          const words = line.text.trim().split(/\s+/).filter(w => w.length > 0);
           if (words.length <= 1) {
-            doc.text(wl, mL, y);
+            doc.text(line.text, line.x, y);
           } else {
             const totalWordW = words.reduce((acc, w) => acc + doc.getTextWidth(w), 0);
-            const spaceW = (tw - totalWordW) / (words.length - 1);
-            let xPos = mL;
+            const spaceW = (line.avW - totalWordW) / (words.length - 1);
+            let xPos = line.x;
             for (const word of words) {
               doc.text(word, xPos, y);
               xPos += doc.getTextWidth(word) + spaceW;
