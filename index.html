@@ -16935,8 +16935,8 @@ async function _comDefinirComarcaVara(comarcaAI, varaAI, comarcaElId = 'com-of-c
       }
     }
     if (!comarcaEncontrada) {
-      // Threshold alto (60) para evitar comarca errada por semelhança fraca
-      const opt = _comMelhorOpcao(selC, comarcaAI, 60);
+      // Threshold 30: a IA já extraiu o nome real, fuzzy só precisa confirmar
+      const opt = _comMelhorOpcao(selC, comarcaAI, 30);
       if (opt) {
         selC.value = opt.value; if (comarcaElId === 'com-of-comarca' && typeof com_atualizarVaras === 'function') com_atualizarVaras(); else if (comarcaElId === 'jur-comarca') jur_atualizarVaras();
         n++; comarcaEncontrada = opt.value;
@@ -16945,9 +16945,9 @@ async function _comDefinirComarcaVara(comarcaAI, varaAI, comarcaElId = 'com-of-c
   }
 
   // 2. Se não achou comarca pela IA, infere pela vara (busca em todas as comarcas)
-  //    Score mínimo alto (50) para evitar inferência incorreta
+  //    Infere comarca a partir da vara quando comarca não veio no texto
   if (!comarcaEncontrada && varaAI && typeof COM_COMARCAS !== 'undefined') {
-    let melhorScore = 50, melhorComarca = null, melhorVara = null;
+    let melhorScore = 20, melhorComarca = null, melhorVara = null;
     for (const c of COM_COMARCAS) {
       for (const v of c.varas) {
         const s = _comScore(v, varaAI);
@@ -16972,10 +16972,9 @@ async function _comDefinirComarcaVara(comarcaAI, varaAI, comarcaElId = 'com-of-c
   }
 
   // 3. Com comarca definida, fuzzy match da vara no select já populado
-  //    Threshold 30 para evitar vara errada
   if (comarcaEncontrada && varaAI) {
     await new Promise(r => setTimeout(r, 150));
-    const opt = _comMelhorOpcao(selV, varaAI, 30);
+    const opt = _comMelhorOpcao(selV, varaAI, 15);
     if (opt) {
       selV.value = opt.value;
       if (comarcaElId === 'com-of-comarca' && typeof com_atualizarDestinatario === 'function') com_atualizarDestinatario(); else if (comarcaElId === 'jur-comarca') jur_atualizarDestinatario();
@@ -17081,13 +17080,13 @@ async function com_extrairComIA() {
       n++; preenchidos.push('Data');
     } else { naoEncontrados.push('Data'); }
 
-    // Comarca + Vara — somente se comarca veio validada pelo worker
-    if (d.comarca) {
+    // Comarca + Vara — tenta sempre que houver comarca OU vara extraída
+    if (d.comarca || d.vara) {
       const comarcaOk = await _comDefinirComarcaVara(d.comarca, d.vara);
       if (comarcaOk > 0) { n += comarcaOk; preenchidos.push('Comarca/Vara'); }
-      else { naoEncontrados.push('Comarca'); }
+      else { naoEncontrados.push('Comarca/Vara'); }
     } else {
-      naoEncontrados.push('Comarca');
+      naoEncontrados.push('Comarca/Vara');
     }
 
     com_atualizarPreview();
