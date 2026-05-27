@@ -3576,9 +3576,12 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
       <div id="r2-conteudo-principal" style="display:flex;gap:16px;min-height:420px">
         <!-- Sidebar: lista de monitorados -->
         <div style="width:270px;flex-shrink:0;background:#f8f9fa;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px">
-          <input id="r2-busca-mon" type="text" placeholder="🔍 Buscar monitorado…"
-                 oninput="r2_filtrarMonitorados(this.value)"
-                 style="border:1px solid #ddd;border-radius:6px;padding:7px 10px;font-size:.9rem;width:100%">
+          <div style="position:relative">
+            <input id="r2-busca-mon" type="text" placeholder="🔍 Buscar monitorado…"
+                   oninput="r2_filtrarMonitorados(this.value)"
+                   style="border:1px solid #ddd;border-radius:6px;padding:7px 10px;font-size:.9rem;width:100%;box-sizing:border-box">
+            <span id="r2-busca-loading" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:.75rem;color:#aaa">⏳ carregando…</span>
+          </div>
           <div id="r2-lista-mon" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
             <div style="color:#999;font-size:.85rem;text-align:center;padding:20px 0">
               Carregando…
@@ -13169,8 +13172,9 @@ async function r2_carregarMonitorados(forcarReload) {
 }
 
 async function _r2CarregarTodosSilencioso() {
+  const indicador = document.getElementById('r2-busca-loading');
+  if (indicador) indicador.style.display = 'inline';
   try {
-    // Busca em páginas de 50 até trazer todos
     let todos = [], pagina = 1, totalPaginas = 1;
     do {
       const qs = new URLSearchParams({ pagina, limite: 50 });
@@ -13178,15 +13182,18 @@ async function _r2CarregarTodosSilencioso() {
       todos = todos.concat(data.monitorados || []);
       totalPaginas = data.total_paginas || 1;
       pagina++;
+      // Atualiza a lista a cada página — usuário vê resultados chegando
+      r2_state.monitorados = [...todos];
+      _r2AplicarFiltro(document.getElementById('r2-busca-mon')?.value || '');
     } while (pagina <= totalPaginas);
 
     _r2MonCacheSet(todos);
-    r2_state.monitorados = todos;
-    _r2AplicarFiltro(document.getElementById('r2-busca-mon')?.value || '');
   } catch(e) {
     const lista = document.getElementById('r2-lista-mon');
     if (lista && lista.innerHTML.includes('Carregando'))
       lista.innerHTML = `<div style="color:#dc3545;font-size:.82rem;padding:10px">${e.message}</div>`;
+  } finally {
+    if (indicador) indicador.style.display = 'none';
   }
 }
 
