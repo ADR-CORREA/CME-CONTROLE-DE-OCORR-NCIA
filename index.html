@@ -5903,6 +5903,34 @@ function getUsuarios() {
 }
 function salvarUsuarios(u) { salvarStore("usuarios", u); }
 
+/* ── Reset de senha via console do navegador ──────────────────────
+   Uso: await _resetarSenha('subgerente', 'NovaSenha@123')
+   Requer acesso físico ao PC (console F12). Salva direto no Supabase.
+   ────────────────────────────────────────────────────────────────── */
+window._resetarSenha = async function(login, novaSenha) {
+  // Carrega lista fresca do Supabase
+  if (window._db) {
+    try {
+      const { data } = await window._db.from('store').select('value').eq('key','cme_usuarios').maybeSingle();
+      if (data?.value) _cache['usuarios'] = data.value;
+    } catch(e) {}
+  }
+  const todos = getUsuarios();
+  const idx   = todos.findIndex(x => (x.usuario||'').toLowerCase() === login.toLowerCase());
+  if (idx === -1) {
+    console.error('Usuário não encontrado:', login);
+    return false;
+  }
+  const { hash, salt } = await hashSenhaPBKDF2(novaSenha);
+  todos[idx].senha       = hash;
+  todos[idx].senhaSalt   = salt;
+  todos[idx].senhaVersao = 3;
+  delete todos[idx].primeiroLogin; // garante que não pede troca obrigatória
+  salvarUsuarios(todos);
+  console.log('✅ Senha de "' + login + '" redefinida com sucesso. Faça login normalmente agora.');
+  return true;
+};
+
 function getOcorrencias() {
   return carregarStore("ocorrencias", DADOS_INICIAIS);
 }
