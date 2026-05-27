@@ -13136,7 +13136,7 @@ async function r2_inicializarAba() {
 }
 
 /* ── Cache e filtro em memória de monitorados ─────────────────── */
-const _R2_MON_CACHE_KEY = 'cme_r2_monitorados_v3';
+const _R2_MON_CACHE_KEY = 'cme_r2_monitorados_v4'; // v4: limite=10000
 const _R2_MON_CACHE_TTL = 30 * 60 * 1000;
 function _r2MonCacheGet(ignorarTTL) {
   try { const r = localStorage.getItem(_R2_MON_CACHE_KEY); if (!r) return null;
@@ -13190,7 +13190,7 @@ async function _r2CarregarTodosSilencioso() {
   const indicador = document.getElementById('r2-busca-loading');
   if (indicador) indicador.style.display = 'inline';
   try {
-    const data = await r2_api('GET', '/monitorados?limite=2000');
+    const data = await r2_api('GET', '/monitorados?limite=10000');
     const todos = data.monitorados || [];
     _r2MonCacheSet(todos);
     r2_state.monitorados = todos;
