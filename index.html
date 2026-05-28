@@ -18502,39 +18502,81 @@ function estat_importarComparacao(input) {
   estat_carregarSheetJS(() => estat_lerArquivo(file, true));
 }
 
+/* Normaliza nomes de colunas — resolve encoding e variações do sistema Akiiles */
+function _estatNormColunas(rows) {
+  if (!rows.length) return rows;
+  const normStr = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9/ ]/g,' ').trim().replace(/\s+/g,' ');
+  const COL_MAP = {
+    'municipio residencial':  'Município Residencial',
+    'vara/juizo':             'Vara/Juízo',
+    'vara/ju zo':             'Vara/Juízo',
+    'n do processo':          'Nº do Processo',
+    'no do processo':         'Nº do Processo',
+    'n  do processo':         'Nº do Processo',
+    'circ/foro':              'Circ/Foro',
+    'tipo de monitorado':     'Tipo de Monitorado',
+    'status monitorado':      'Status Monitorado',
+    'municipio comercial':    'Município Comercial',
+    'nome':                   'Nome',
+    'sexo':                   'Sexo',
+    'grupo':                  'Grupo',
+  };
+  const keys = Object.keys(rows[0]);
+  const remap = {};
+  for (const k of keys) remap[k] = COL_MAP[normStr(k)] || k;
+  return rows.map(r => {
+    const nr = {};
+    for (const [k,v] of Object.entries(r)) nr[remap[k]] = v;
+    return nr;
+  });
+}
+
+/* Encontra a sheet com mais linhas de dados reais (ignora tabelas de cabeçalho HTML) */
+function _estatMelhorSheet(wb) {
+  let best = null, bestCount = -1;
+  for (const name of wb.SheetNames) {
+    const ws = wb.Sheets[name];
+    if (!ws['!ref']) continue;
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    const nRows = range.e.r - range.s.r;
+    if (nRows > bestCount) { best = ws; bestCount = nRows; }
+  }
+  return best || wb.Sheets[wb.SheetNames[0]];
+}
+
 function estat_lerArquivo(file, isComparacao) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      const wb    = XLSX.read(e.target.result, { type: 'binary' });
-      const ws    = wb.Sheets[wb.SheetNames[0]];
-      const rows  = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
 
-      // Detectar linha de cabeçalho real (algumas planilhas têm título na linha 1)
-      let dados = rows;
+      // Seleciona a sheet com mais dados (evita tabelas de cabeçalho HTML)
+      const ws = _estatMelhorSheet(wb);
+      let rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+      // Se a primeira linha parece ser um cabeçalho duplicado (valor = nome de coluna),
+      // reprocessa com range:1 para usar aquela linha como header
       if (rows.length > 0) {
         const first = rows[0];
-        const keys  = Object.keys(first);
-        const hasNome = keys.some(k => String(first[k]).trim() === 'Nome');
-        if (hasNome) {
-          dados = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { range: 1, defval: '' });
-        }
+        const hasNomeLike = Object.keys(first).some(k => String(first[k]).trim() === 'Nome');
+        if (hasNomeLike) rows = XLSX.utils.sheet_to_json(ws, { range: 1, defval: '' });
       }
 
-      const filtrados = dados.filter(r => {
-        const nome = String(r['Nome'] || r[Object.keys(r)[1]] || '').trim();
-        return nome.length > 2;
-      });
+      // Normaliza nomes de colunas (encoding, variações)
+      rows = _estatNormColunas(rows);
+
+      const filtrados = dados => dados.filter(r => String(r['Nome'] || '').trim().length > 2);
+      const dadosFiltrados = filtrados(rows);
 
       if (isComparacao) {
-        _estatDadosComp = filtrados;
+        _estatDadosComp = dadosFiltrados;
         document.getElementById('estat-comp-label').style.display = '';
-        document.getElementById('estat-comp-label').textContent = `📂 ${file.name} (${filtrados.length} registros)`;
+        document.getElementById('estat-comp-label').textContent = `📂 ${file.name} (${dadosFiltrados.length} registros)`;
         estat_renderizarComparacao();
         return;
       }
 
-      _estatDados = filtrados;
+      _estatDados = dadosFiltrados;
 
       document.getElementById('estat-upload-zone').style.display = 'none';
       document.getElementById('estat-content').style.display = 'block';
@@ -19247,19 +19289,17 @@ function psi_lerArquivo(file) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      const wb   = XLSX.read(e.target.result, { type: 'binary' });
-      const ws   = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const wb  = XLSX.read(e.target.result, { type: 'binary' });
+      const ws  = _estatMelhorSheet(wb);
+      let rows  = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
       // Detectar se primeira linha é cabeçalho duplicado
-      let dados = rows;
       if (rows.length > 0) {
-        const first = rows[0];
-        const hasNome = Object.keys(first).some(k => String(first[k]).trim() === 'Nome');
-        if (hasNome) dados = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { range: 1, defval: '' });
+        const hasNome = Object.keys(rows[0]).some(k => String(rows[0][k]).trim() === 'Nome');
+        if (hasNome) rows = XLSX.utils.sheet_to_json(ws, { range: 1, defval: '' });
       }
 
-      _psiDados = dados.filter(r => String(r[PSI_COLS.nome]||'').trim().length > 2);
+      _psiDados = rows.filter(r => String(r[PSI_COLS.nome]||'').trim().length > 2);
 
       document.getElementById('psi-upload-zone').style.display = 'none';
       document.getElementById('psi-content').style.display = 'block';
