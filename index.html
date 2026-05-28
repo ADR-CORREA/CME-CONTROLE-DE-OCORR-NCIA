@@ -12835,8 +12835,8 @@ function baixarModeloPDF() {
 
   /* ── Divisores ── */
   .div-main-bar1 { height: 3px; background: #1a3a6b; margin: 10px 0 1px 0; }
-  .div-main-bar2 { height: 1px; background: #1a3a6b; margin: 0 0 20px 0; }
-  .div-light     { border: none; border-top: 1px solid #ccc; margin: 18px 0; }
+  .div-main-bar2 { height: 1px; background: #1a3a6b; margin: 0 0 28px 0; }
+  .div-light     { border: none; border-top: 1px solid #ccc; margin: 26px 0; }
 
   /* ── Título do assunto ── */
   .titulo-assunto {
@@ -12854,7 +12854,7 @@ function baixarModeloPDF() {
     border-left: 3px solid #1a3a6b;
     background: #f5f5f5;
     padding: 10px 16px;
-    margin-bottom: 20px;
+    margin-bottom: 28px;
     font-size: 10.5pt;
     line-height: 1.6;
   }
@@ -12863,7 +12863,7 @@ function baixarModeloPDF() {
 
   /* ── Corpo do documento ── */
   .corpo {
-    margin: 0 0 14pt 0;        /* ABNT: parágrafo com espaço após */
+    margin: 0 0 22pt 0;        /* ABNT: parágrafo com espaço após */
     text-align: justify;
     line-height: 1.5;
   }
@@ -12883,11 +12883,11 @@ function baixarModeloPDF() {
   }
 
   /* ── Espaçador (linha em branco no template) ── */
-  .spacer { height: 14pt; }
+  .spacer { height: 20pt; }
 
   /* ── Bloco de assinatura ── */
   .ass-bloco {
-    margin-top: 40pt;
+    margin-top: 48pt;
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -12911,11 +12911,11 @@ function baixarModeloPDF() {
   .ass-meta-italic   { margin: 2px 0; font-style: italic; font-size: 10pt; color: #555; text-align: center; }
 
   /* ── Data por extenso ── */
-  .data-extenso { margin-top: 28pt; text-align: right; font-size: 11pt; }
+  .data-extenso { margin-top: 50pt; text-align: right; font-size: 11pt; }
 
   /* ── Rodapé ── */
   .rodape {
-    margin-top: 28pt;
+    margin-top: 36pt;
     border-top: 2px solid #1a3a6b;
     padding-top: 8px;
     text-align: center;
@@ -16452,7 +16452,7 @@ function com_gerarOficio() {
   };
 
   const paragsHtml = paragrafos
-    .map(p => `<p style="text-align:justify;text-indent:1.25cm;margin:10pt 0;line-height:1.5;font-size:12pt">${escP(p)}</p>`)
+    .map(p => `<p style="text-align:justify;text-indent:1.25cm;margin:0 0 22pt 0;line-height:1.5;font-size:12pt">${escP(p)}</p>`)
     .join('\n');
 
   // Logos a partir das variáveis globais B64 (mesma abordagem do gerador de Plantão)
@@ -16524,24 +16524,24 @@ function com_gerarOficio() {
 <p style="font-size:12pt;margin:0 0 18pt 0"><b>Processo n&#176;:</b> ${esc(processo)}.</p>
 
 <!-- ══ SAUDAÇÃO ══════════════════════════════════════════════════ -->
-<p style="font-size:12pt;margin:0 0 10pt 0">${esc(saudacao)}</p>
+<p style="font-size:12pt;margin:0 0 18pt 0">${esc(saudacao)}</p>
 
 <!-- ══ CORPO ═════════════════════════════════════════════════════ -->
 ${paragsHtml}
 
 <!-- ══ ENCERRAMENTO ══════════════════════════════════════════════ -->
-<p style="font-size:12pt;margin:14pt 0 10pt 0">
+<p style="font-size:12pt;margin:28pt 0 14pt 0">
   Sem mais, esta CME se coloca &#224; disposi&#231;&#227;o para eventuais esclarecimentos.
 </p>
-<p style="font-size:12pt;margin:0 0 0 0">Respeitosamente,</p>
+<p style="font-size:12pt;margin:0 0 8pt 0">Respeitosamente,</p>
 
 <!-- ══ DATA (local e data antes da assinatura) ═══════════════════ -->
-<p style="text-align:right;font-size:12pt;margin:30pt 0 0 0">
+<p style="text-align:right;font-size:12pt;margin:52pt 0 0 0">
   Macap&#225;/AP, ${esc(dataLonga)}.
 </p>
 
 <!-- ══ ASSINATURA ════════════════════════════════════════════════ -->
-<table style="width:100%;margin-top:20pt">
+<table style="width:100%;margin-top:28pt">
   <tr>
     <td style="width:55%;text-align:center;vertical-align:bottom">
       ${assImgCapturada ? `<p style="margin:0 0 0 0;text-align:center"><img src="${assImgCapturada}" style="max-height:60pt;max-width:180pt;object-fit:contain;display:block;margin:0 auto 0 auto"></p>` : ''}
@@ -17288,8 +17288,8 @@ function jur_gerarDoc() {
 
   // Corpo: transforma linhas do textarea em parágrafos HTML
   const paragsHtml = txt.split('\n').map(l => {
-    if (!l.trim()) return `<p style="margin:4pt 0">&nbsp;</p>`;
-    return `<p style="text-align:justify;margin:8pt 0;line-height:1.5;font-size:12pt">${esc(l)}</p>`;
+    if (!l.trim()) return `<p style="margin:12pt 0">&nbsp;</p>`;
+    return `<p style="text-align:justify;margin:0 0 22pt 0;line-height:1.5;font-size:12pt">${esc(l)}</p>`;
   }).join('\n');
 
   const doc = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
@@ -17305,7 +17305,7 @@ function jur_gerarDoc() {
   td { vertical-align: middle; }
   .rodape {
     font-family: Arial, sans-serif; font-size: 8.5pt; text-align: center; color: #333;
-    border-top: 1pt solid #1a3a6b; padding-top: 6pt; margin-top: 60pt;
+    border-top: 1pt solid #1a3a6b; padding-top: 6pt; margin-top: 30pt;
   }
 </style>
 </head>
@@ -17347,10 +17347,10 @@ ${processo ? `<p style="font-size:12pt;margin:0 0 18pt 0"><b>Processo n&#176;:</
 ${paragsHtml}
 
 <!-- ══ ENCERRAMENTO ══════════════════════════════════════════════ -->
-<p style="font-size:12pt;margin:14pt 0 4pt 0">Respeitosamente,</p>
+<p style="font-size:12pt;margin:28pt 0 10pt 0">Respeitosamente,</p>
 
 <!-- ══ ASSINATURA ════════════════════════════════════════════════ -->
-<table style="width:100%;margin-top:60pt">
+<table style="width:100%;margin-top:48pt">
   <tr>
     <td style="width:55%;text-align:center;vertical-align:bottom">
       ${assImg ? `<p style="margin:0;text-align:center"><img src="${assImg}" style="max-height:60pt;max-width:180pt;object-fit:contain;display:block;margin:0 auto"></p>` : ''}
