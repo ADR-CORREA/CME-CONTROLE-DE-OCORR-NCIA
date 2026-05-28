@@ -2332,7 +2332,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px;flex-wrap:wrap">
           <button class="btn-secondary" onclick="com_limparOficio()">🗑️ Limpar</button>
           <button class="btn-secondary" onclick="com_copiarOficio()">📋 Copiar Texto</button>
-          <button class="btn-primary"   onclick="com_gerarOficio()">📄 Gerar .doc</button>
+          <button class="btn-primary"   onclick="com_gerarOficio()">🖨️ Gerar PDF</button>
           <button id="com-btn-pdf-anexos" onclick="com_gerarPDFComAnexos()"
             style="background:#059669;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">
             📑 PDF com Anexos
@@ -16466,114 +16466,139 @@ function com_gerarOficio() {
   const cmeCellHtml   = cmeSrc   ? `<img src="${cmeSrc}"   width="75" height="75" style="display:block;margin:auto">` : _logoPlaceholder;
   const iapenCellHtml = iapenSrc ? `<img src="${iapenSrc}" width="75" height="75" style="display:block;margin:auto">` : _logoPlaceholder;
 
-  const doc = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
-  xmlns:w='urn:schemas-microsoft-com:office:word'
-  xmlns:v='urn:schemas-microsoft-com:vml'>
+  const doc = `<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
-<meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
+<meta charset="UTF-8">
+<title>Of&#237;cio ${esc(numFmt)} &#8211; ${esc(nomeMon)}</title>
 <style>
-  @page {
-    /* ABNT: superior 3cm, esquerda 3cm, inferior 2cm, direita 2cm */
-    margin: 3cm 2cm 2cm 3cm;
-  }
+  @page { margin: 3cm 2cm 2cm 3cm; size: A4 portrait; }
+  *, *::before, *::after { box-sizing: border-box; }
   body {
     font-family: Arial, sans-serif;
     font-size: 12pt;
     line-height: 1.5;
     color: #000;
+    margin: 0; padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 247mm;   /* área útil A4: 297 − 3cm sup − 2cm inf */
   }
-  p { margin: 0; padding: 0; }
-  table { border-collapse: collapse; width: 100%; }
-  td { vertical-align: middle; }
+
+  /* ── Cabeçalho ── */
+  .cabecalho { display: table; width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+  .cab-col   { display: table-cell; vertical-align: middle; }
+  .cab-logo  { width: 90px; text-align: center; padding: 0 4px; }
+  .cab-logo img { max-width: 82px; max-height: 82px; object-fit: contain; }
+  .cab-texto { text-align: center; padding: 0 10px; }
+  .cab-linha { font-size: 9pt; font-weight: bold; margin: 1px 0; }
+  .sep-linha { height: 1px; background: #000; margin: 8px 0 20px 0; }
+
+  /* ── Conteúdo: flex:1 empurra assinatura para baixo ── */
+  .conteudo { flex: 1; display: flex; flex-direction: column; }
+
+  /* ── Parágrafos do ofício ── */
+  .of-num       { text-align: right; font-weight: bold; margin: 0 0 20px 0; }
+  .dest-titulo  { margin: 0; }
+  .dest-nome    { font-weight: bold; margin: 0 0 18px 0; }
+  .ref-assunto  { margin: 0 0 4px 0; }
+  .ref-processo { margin: 0 0 26px 0; }
+  .saudacao     { margin: 0 0 26px 0; }
+  .sem-mais     { margin: 32px 0 18px 0; }
+  .respeitosamente { margin: 0; }
+
+  /* ── Área de assinatura ──────────────────────────────
+     margin-top:auto num flex-column empurra este bloco
+     para o fundo da .conteudo, posicionando a assinatura
+     em aprox. 80% da altura da folha.
+     ─────────────────────────────────────────────────── */
+  .ass-area { margin-top: auto; padding-top: 6px; }
+  .data-ext { text-align: right; margin: 0 0 28px 0; }
+  .ass-bloco { width: 55%; text-align: center; }
+  .ass-img {
+    max-height: 60pt; max-width: 180pt;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 2px;
+  }
+  .ass-nome  { border-top: 1px solid #000; padding-top: 6px; font-weight: bold; font-size: 12pt; margin: 0; }
+  .ass-cargo { font-size: 11pt; margin: 2px 0 0 0; }
+  .ass-dec   { font-size: 11pt; margin: 2px 0 0 0; }
+
+  /* ── Botão de impressão (some no PDF) ── */
+  .btn-imp {
+    display: block; margin: 20px auto 0; padding: 10px 32px;
+    background: #1a3a6b; color: #fff; border: none; border-radius: 6px;
+    font-size: 13pt; cursor: pointer; font-family: Arial;
+  }
+  .btn-imp:hover { background: #254d99; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+  }
 </style>
 </head>
 <body>
 
-<!-- ══ CABEÇALHO ══════════════════════════════════════════════ -->
-<table style="width:100%;border-collapse:collapse;margin-bottom:4pt">
-  <tr>
-    <td style="width:85pt;text-align:center;vertical-align:middle;padding:0 8pt 0 0">
-      ${cmeCellHtml}
-    </td>
-    <td style="text-align:center;vertical-align:middle;padding:4pt 0">
-      <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;margin:1pt 0;color:#000">GOVERNO DO ESTADO DO AMAP&#193;</p>
-      <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;margin:1pt 0;color:#000">Secretaria de Estado da Justi&#231;a e Seguran&#231;a P&#250;blica &#8211; SEJUSP</p>
-      <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;margin:1pt 0;color:#000">Instituto de Administra&#231;&#227;o Penitenci&#225;ria &#8211; IAPEN/AP</p>
-      <p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;margin:1pt 0;color:#000">Central de Monitoramento Eletr&#244;nico &#8211; CME</p>
-    </td>
-    <td style="width:85pt;text-align:center;vertical-align:middle;padding:0 0 0 8pt">
-      ${iapenCellHtml}
-    </td>
-  </tr>
-</table>
+<!-- Cabeçalho institucional -->
+<div class="cabecalho">
+  <div class="cab-col cab-logo">${cmeSrc ? `<img src="${cmeSrc}" alt="CME">` : ''}</div>
+  <div class="cab-col cab-texto">
+    <div class="cab-linha">GOVERNO DO ESTADO DO AMAP&#193;</div>
+    <div class="cab-linha">Secretaria de Estado da Justi&#231;a e Seguran&#231;a P&#250;blica &#8211; SEJUSP</div>
+    <div class="cab-linha">Instituto de Administra&#231;&#227;o Penitenci&#225;ria &#8211; IAPEN/AP</div>
+    <div class="cab-linha">Central de Monitoramento Eletr&#244;nico &#8211; CME</div>
+  </div>
+  <div class="cab-col cab-logo">${iapenSrc ? `<img src="${iapenSrc}" alt="IAPEN">` : ''}</div>
+</div>
+<div class="sep-linha"></div>
 
-<!-- Linha separadora -->
-<table style="width:100%;border-collapse:collapse;margin:6pt 0 16pt 0">
-  <tr>
-    <td style="height:1pt;background:#000;font-size:0">&nbsp;</td>
-  </tr>
-</table>
+<!-- Conteúdo (flex:1 — empurra .ass-area via margin-top:auto) -->
+<div class="conteudo">
 
-<!-- ══ LAYOUT: linha-1=corpo (min 400pt), linha-2=data+assinatura ════════
-     height:400pt na célula funciona como min-height no Word — quando o
-     conteúdo é curto a célula cresce até 400pt empurrando a assinatura
-     para a parte inferior da folha (A4 ABNT ≈ 700pt de área útil).
-     ════════════════════════════════════════════════════════════════════ -->
-<table style="width:100%;border-collapse:collapse">
-<tr><td style="vertical-align:top;padding:0;height:400pt">
+  <p class="of-num">Of&#237;cio n&#176; <strong>${esc(numFmt)}</strong></p>
 
-<p style="text-align:right;font-size:12pt;font-weight:bold;margin:0 0 22pt 0">
-  Of&#237;cio n&#176; <b>${esc(numFmt)}</b>
-</p>
+  <p class="dest-titulo">A Sua Excel&#234;ncia o (a) Senhor (a)</p>
+  <p class="dest-nome">${esc(dest)}.</p>
 
-<p style="font-size:12pt;margin:0 0 2pt 0">A Sua Excel&#234;ncia o (a) Senhor (a)</p>
-<p style="font-size:12pt;font-weight:bold;margin:0 0 20pt 0">${esc(dest)}.</p>
+  <p class="ref-assunto"><strong>Assunto:</strong> ${esc(modelo.assunto)}.</p>
+  <p class="ref-processo"><strong>Processo n&#176;:</strong> ${esc(processo)}.</p>
 
-<p style="font-size:12pt;margin:0 0 4pt 0"><b>Assunto:</b> ${esc(modelo.assunto)}.</p>
-<p style="font-size:12pt;margin:0 0 26pt 0"><b>Processo n&#176;:</b> ${esc(processo)}.</p>
+  <p class="saudacao">${esc(saudacao)}</p>
 
-<p style="font-size:12pt;margin:0 0 26pt 0">${esc(saudacao)}</p>
+  ${paragsHtml}
 
-<!-- ══ CORPO ═════════════════════════════════════════════════════ -->
-${paragsHtml}
+  <p class="sem-mais">Sem mais, esta CME se coloca &#224; disposi&#231;&#227;o para eventuais esclarecimentos.</p>
+  <p class="respeitosamente">Respeitosamente,</p>
 
-<p style="font-size:12pt;margin:34pt 0 20pt 0">
-  Sem mais, esta CME se coloca &#224; disposi&#231;&#227;o para eventuais esclarecimentos.
-</p>
-<p style="font-size:12pt;margin:0">Respeitosamente,</p>
+  <!-- margin-top:auto posiciona a assinatura em ~80% da folha -->
+  <div class="ass-area">
+    <p class="data-ext">Macap&#225;/AP, ${esc(dataLonga)}.</p>
+    <div class="ass-bloco">
+      ${assImgCapturada ? `<img class="ass-img" src="${assImgCapturada}" alt="Assinatura">` : ''}
+      <p class="ass-nome">${esc(signat)}</p>
+      <p class="ass-cargo">${esc(cargo)}</p>
+      ${decreto ? `<p class="ass-dec">Decreto n&#176; ${esc(decreto)}</p>` : ''}
+    </div>
+  </div>
 
-</td></tr>
-<tr><td style="vertical-align:top;padding:0">
+</div>
 
-<p style="text-align:right;font-size:12pt;margin:10pt 0 0 0">
-  Macap&#225;/AP, ${esc(dataLonga)}.
-</p>
+<div class="no-print" style="text-align:center;margin-top:20px">
+  <button class="btn-imp" onclick="window.print()">&#128247; Imprimir / Salvar como PDF</button>
+  <p style="font-size:9pt;color:#777;margin-top:6px">No di&#225;logo de impress&#227;o, escolha <strong>"Salvar como PDF"</strong>.<br>Desative <em>Cabe&#231;alhos e rodap&#233;s</em> do navegador para resultado mais limpo.</p>
+</div>
 
-<table style="width:100%;margin-top:36pt;border-collapse:collapse">
-  <tr>
-    <td style="width:55%;text-align:center;vertical-align:bottom">
-      ${assImgCapturada ? `<p style="margin:0;text-align:center"><img src="${assImgCapturada}" style="max-height:60pt;max-width:180pt;object-fit:contain;display:block;margin:0 auto"></p>` : ''}
-      <p style="border-top:1pt solid #000;padding-top:6pt;font-size:12pt;font-weight:bold;margin:0">${esc(signat)}</p>
-      <p style="font-size:11pt;margin:2pt 0 0 0">${esc(cargo)}</p>
-      ${decreto ? `<p style="font-size:11pt;margin:2pt 0 0 0">Decreto n&#176; ${esc(decreto)}</p>` : ''}
-    </td>
-    <td style="width:45%"></td>
-  </tr>
-</table>
-
-</td></tr>
-</table>
-
+<script>window.onload=function(){setTimeout(function(){window.print();},650);};<\/script>
 </body>
 </html>`;
 
-  const blob    = new Blob(['﻿' + doc], {type:'application/msword;charset=utf-8'});
-  const url     = URL.createObjectURL(blob);
-  const a       = document.createElement('a');
-  const nomeArq = `Oficio_${numero}_${nomeMon.replace(/\s+/g,'_').substring(0,20)}.doc`;
-  a.href = url; a.download = nomeArq; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 8000);
-  _mostrarToast('&#10004; Of&#237;cio gerado: ' + nomeArq, 'sucesso');
+  const blob    = new Blob([doc], {type:'text/html;charset=utf-8'});
+  const blobUrl = URL.createObjectURL(blob);
+  const win     = window.open(blobUrl, '_blank');
+  if (!win) { _mostrarToast('&#9888; Popup bloqueado! Permita popups para este site.', 'erro'); return; }
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+  _mostrarToast('&#128247; Of&#237;cio gerado! Escolha "Salvar como PDF" na impressora.', 'sucesso');
 }
 
 /* ─── Preview / Limpar / Copiar ────────────────────────────── */
