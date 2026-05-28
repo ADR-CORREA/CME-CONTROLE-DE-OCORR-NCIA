@@ -17969,7 +17969,7 @@ async function _comGerarPDFExec() {
 
     // ── Número do ofício (sem data aqui — data vai antes da assinatura) ──
     doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0);
-    if (numFmt) { doc.text(`Ofício nº ${numFmt}`, 210 - mR, y, { align: 'right' }); y += 9; }
+    if (numFmt) { doc.text(`Ofício nº ${numFmt}`, 210 - mR, y, { align: 'right' }); y += 14; }
 
     // ── Destinatário ─────────────────────────────────────────────
     if (dest) {
@@ -17977,7 +17977,7 @@ async function _comGerarPDFExec() {
       doc.text('A Sua Excelência o (a) Senhor (a)', mL, y); y += 5;
       doc.setFont('helvetica', 'bold');
       const destLines = doc.splitTextToSize(dest + '.', tw);
-      doc.text(destLines, mL, y); y += destLines.length * 5.5 + 4;
+      doc.text(destLines, mL, y); y += destLines.length * 6 + 12;
     }
 
     // ── Assunto / Processo ───────────────────────────────────────
@@ -17991,21 +17991,21 @@ async function _comGerarPDFExec() {
       doc.setFont('helvetica', 'normal');
       const assLines = doc.splitTextToSize(modelo.assunto + '.', tw - assLblW);
       doc.text(assLines[0], mL + assLblW, y);
-      if (assLines.length > 1) { y += 5; doc.text(assLines.slice(1).join(' '), mL, y); }
-      y += 5;
+      if (assLines.length > 1) { y += 6; doc.text(assLines.slice(1).join(' '), mL, y); }
+      y += 12;
     }
     if (processo) {
       doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
       const pnLbl = 'Processo nº: ';
       doc.text(pnLbl, mL, y);
       doc.setFont('helvetica', 'normal');
-      doc.text(processo + '.', mL + doc.getTextWidth(pnLbl), y); y += 8;
+      doc.text(processo + '.', mL + doc.getTextWidth(pnLbl), y); y += 14;
     }
 
     // ── Saudação ─────────────────────────────────────────────────
     if (saudacao) {
       doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
-      doc.text(saudacao, mL, y); y += 8;
+      doc.text(saudacao, mL, y); y += 14;
     }
 
     // ── Corpo (do modelo — SEM ler preview textarea, evita duplicação) ──
@@ -18028,7 +18028,7 @@ async function _comGerarPDFExec() {
     doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
     const ABNT_INDENT = 12.5; // 1,25 cm — recuo na primeira linha de cada parágrafo
     for (const p of paragrafosCorpo) {
-      if (!p.trim()) { y += 3; continue; }
+      if (!p.trim()) { y += 6; continue; }
 
       // Primeira linha com recuo; demais com largura total (ABNT)
       const firstSplit = doc.splitTextToSize(p.trim(), tw - ABNT_INDENT);
@@ -18061,9 +18061,9 @@ async function _comGerarPDFExec() {
             }
           }
         }
-        y += 5.5;
+        y += 6;
       }
-      y += 8; // espaço entre parágrafos (ABNT)
+      y += 11; // espaço entre parágrafos (ABNT)
     }
 
     // ── Encerramento ─────────────────────────────────────────────
