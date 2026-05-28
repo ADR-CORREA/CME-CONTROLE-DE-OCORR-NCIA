@@ -3806,6 +3806,57 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         <!-- Cards de resumo -->
         <div id="estat-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px"></div>
 
+        <!-- Barra de ações extras -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <button class="btn-secondary" onclick="estat_toggleGraficos()" id="estat-btn-graficos">📊 Gráficos</button>
+          <button class="btn-secondary" onclick="estat_gerarPDF()" id="estat-btn-pdf">📄 Relatório PDF</button>
+          <label style="cursor:pointer">
+            <input type="file" id="estat-comp-input" accept=".xls,.xlsx,.csv" style="display:none" onchange="estat_importarComparacao(this)">
+            <span class="btn-secondary" onclick="document.getElementById('estat-comp-input').click()">📅 Comparar Período</span>
+          </label>
+          <div id="estat-comp-label" style="align-self:center;font-size:.82rem;color:#64748b;display:none"></div>
+        </div>
+
+        <!-- Gráficos (colapsável) -->
+        <div id="estat-graficos-section" style="display:none;margin-bottom:20px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+              <div style="font-size:.82rem;font-weight:600;color:#64748b;margin-bottom:10px">Distribuição por Grupo/Regime</div>
+              <canvas id="estat-chart-grupo" height="220"></canvas>
+            </div>
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+              <div style="font-size:.82rem;font-weight:600;color:#64748b;margin-bottom:10px">Top 8 Municípios</div>
+              <canvas id="estat-chart-municipio" height="220"></canvas>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+              <div style="font-size:.82rem;font-weight:600;color:#64748b;margin-bottom:10px">Sexo</div>
+              <canvas id="estat-chart-sexo" height="180"></canvas>
+            </div>
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+              <div style="font-size:.82rem;font-weight:600;color:#64748b;margin-bottom:10px">Top 8 Varas</div>
+              <canvas id="estat-chart-vara" height="180"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comparação histórica -->
+        <div id="estat-comp-section" style="display:none;margin-bottom:20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px">
+          <div style="font-weight:600;color:#15803d;margin-bottom:12px;font-size:.95rem">📅 Comparação entre períodos</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px" id="estat-comp-cards"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div>
+              <div style="font-size:.78rem;font-weight:600;color:#15803d;margin-bottom:6px">🆕 Novos (entraram)</div>
+              <div id="estat-comp-novos" style="font-size:.82rem;max-height:160px;overflow-y:auto"></div>
+            </div>
+            <div>
+              <div style="font-size:.78rem;font-weight:600;color:#dc2626;margin-bottom:6px">❌ Saídas (não constam mais)</div>
+              <div id="estat-comp-saidos" style="font-size:.82rem;max-height:160px;overflow-y:auto"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Busca por linguagem natural -->
         <div style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:10px;padding:16px;margin-bottom:20px">
           <div style="font-weight:600;color:#4f46e5;margin-bottom:10px;font-size:.95rem">🤖 Busca por linguagem natural</div>
@@ -18158,9 +18209,11 @@ function _secDragInit(handle, section) {
 /* ═══════════════════════════════════════════════════════════════
    ESTATÍSTICAS — leitura local de XLS + filtros + busca IA
    ═══════════════════════════════════════════════════════════════ */
-let _estatDados = [];         // array com todos os registros
-let _estatFiltros = {};       // filtros ativos { municipio, vara, grupo, tipo, sexo }
-let _estatPagina  = 1;
+let _estatDados     = [];    // array com todos os registros
+let _estatDadosComp = [];    // array do segundo arquivo (comparação)
+let _estatFiltros   = {};    // filtros ativos { municipio, vara, grupo, tipo, sexo }
+let _estatPagina    = 1;
+let _estatCharts    = {};    // instâncias Chart.js ativas
 const _ESTAT_POR_PAG = 50;
 
 // ── Lê a lista de colunas usadas na tabela ──────────────────────
@@ -18180,23 +18233,29 @@ function estat_inicializar() {
   // Só monta a tela; dados são carregados pelo upload
 }
 
+/* ── Carrega SheetJS dinamicamente ─────────────────────────────── */
+function estat_carregarSheetJS(cb) {
+  if (typeof XLSX !== 'undefined') { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
 /* ── Importação do XLS ─────────────────────────────────────────── */
 function estat_importar(input) {
   const file = input.files[0];
   if (!file) return;
-
-  // Carrega SheetJS dinamicamente se necessário
-  if (typeof XLSX === 'undefined') {
-    const s = document.createElement('script');
-    s.src = 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
-    s.onload = () => estat_lerArquivo(file);
-    document.head.appendChild(s);
-  } else {
-    estat_lerArquivo(file);
-  }
+  estat_carregarSheetJS(() => estat_lerArquivo(file, false));
 }
 
-function estat_lerArquivo(file) {
+function estat_importarComparacao(input) {
+  const file = input.files[0];
+  if (!file) return;
+  estat_carregarSheetJS(() => estat_lerArquivo(file, true));
+}
+
+function estat_lerArquivo(file, isComparacao) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
@@ -18209,19 +18268,26 @@ function estat_lerArquivo(file) {
       if (rows.length > 0) {
         const first = rows[0];
         const keys  = Object.keys(first);
-        // Se a primeira linha não tem "Nome" como chave mas tem como valor, tenta reprocessar
         const hasNome = keys.some(k => String(first[k]).trim() === 'Nome');
         if (hasNome) {
-          // A linha 0 é o cabeçalho real — reprocessar com header na linha correta
-          const ws2 = XLSX.read(XLSX.utils.sheet_to_csv(ws), { type: 'string' });
           dados = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { range: 1, defval: '' });
         }
       }
 
-      _estatDados = dados.filter(r => {
+      const filtrados = dados.filter(r => {
         const nome = String(r['Nome'] || r[Object.keys(r)[1]] || '').trim();
         return nome.length > 2;
       });
+
+      if (isComparacao) {
+        _estatDadosComp = filtrados;
+        document.getElementById('estat-comp-label').style.display = '';
+        document.getElementById('estat-comp-label').textContent = `📂 ${file.name} (${filtrados.length} registros)`;
+        estat_renderizarComparacao();
+        return;
+      }
+
+      _estatDados = filtrados;
 
       document.getElementById('estat-upload-zone').style.display = 'none';
       document.getElementById('estat-content').style.display = 'block';
@@ -18459,105 +18525,317 @@ function estat_buscarIA() {
 
   const msgEl = document.getElementById('estat-ia-msg');
   msgEl.style.display = 'block';
+  msgEl.textContent = '🤖 Consultando IA...';
 
-  // NLP local: palavras-chave → filtros automáticos
+  // Coleta valores únicos para enviar ao worker
+  const municipios = [...new Set(_estatDados.map(r => String(r['Município Residencial']||'').trim()))].filter(Boolean);
+  const varas      = [...new Set(_estatDados.map(r => String(r['Vara/Juízo']||'').trim()))].filter(Boolean);
+  const grupos     = [...new Set(_estatDados.map(r => String(r['Grupo']||'').trim()))].filter(Boolean);
+  const tipos      = [...new Set(_estatDados.map(r => String(r['Tipo de Monitorado']||'').trim()))].filter(Boolean);
+
+  const apiBase  = (typeof r2_state !== 'undefined' && r2_state.url) || '';
+  const apiToken = (typeof r2_state !== 'undefined' && r2_state.token) || (typeof window._CME_API_TOKEN !== 'undefined' ? window._CME_API_TOKEN : '');
+
+  if (apiBase && apiToken) {
+    fetch(apiBase.replace(/\/$/, '') + '/query-estat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiToken },
+      body: JSON.stringify({ query, municipios, varas, grupos, tipos })
+    })
+    .then(r => r.json())
+    .then(res => {
+      const f = res.filtros || {};
+      _estat_aplicarFiltrosIA(f, query);
+      const resumo = f.resumo || '';
+      const filtrosDetec = Object.entries(_estatFiltros)
+        .filter(([k]) => !k.startsWith('_'))
+        .map(([k,v]) => `${k}="${String(v).substring(0,25)}"`)
+        .join(', ');
+      msgEl.textContent = resumo
+        ? `🤖 ${resumo}`
+        : (filtrosDetec ? `🤖 IA detectou: ${filtrosDetec}` : '🤖 Nenhum filtro específico — busca textual aplicada');
+    })
+    .catch(() => {
+      msgEl.textContent = '⚠️ IA indisponível — usando busca local';
+      _estat_nlpLocal(query, msgEl);
+    });
+  } else {
+    _estat_nlpLocal(query, msgEl);
+  }
+}
+
+/* NLP local (fallback sem worker) */
+function _estat_nlpLocal(query, msgEl) {
   const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const q = norm(query);
+  const f = {};
 
-  // Limpa filtros de pill anteriores (mantém só o novo _query)
-  const filtrosAnteriores = Object.keys(_estatFiltros).filter(k => !k.startsWith('_'));
-
-  // Detecta município
   const municipios = [...new Set(_estatDados.map(r => String(r['Município Residencial']||'').trim()))].filter(Boolean);
   for (const m of municipios) {
-    if (q.includes(norm(m))) {
-      _estatFiltros.municipio = m;
-      // Ativa pill visual
-      document.querySelectorAll('.estat-pill[data-filtro="municipio"]').forEach(p => {
-        if (p.dataset.valor === m) {
-          p.style.background='#4f46e5';p.style.color='#fff';
-          p.style.borderColor='#4f46e5';p.style.fontWeight='600';
-        }
-      });
-      break;
-    }
+    if (q.includes(norm(m))) { f.municipio = m; break; }
   }
 
-  // Detecta sexo
-  if (q.includes('femini') || q.includes('mulher')) {
-    _estatFiltros.sexo = 'feminino';
-    document.querySelectorAll('.estat-pill[data-filtro="sexo"]').forEach(p => {
-      if (norm(p.dataset.valor).includes('fem')) {
-        p.style.background='#4f46e5';p.style.color='#fff';p.style.borderColor='#4f46e5';p.style.fontWeight='600';
-      }
-    });
-  } else if (q.includes('masculi') || q.includes('homem')) {
-    _estatFiltros.sexo = 'masculino';
-    document.querySelectorAll('.estat-pill[data-filtro="sexo"]').forEach(p => {
-      if (norm(p.dataset.valor).includes('masc')) {
-        p.style.background='#4f46e5';p.style.color='#fff';p.style.borderColor='#4f46e5';p.style.fontWeight='600';
-      }
-    });
-  }
+  if (q.includes('femini') || q.includes('mulher')) f.sexo = 'feminino';
+  else if (q.includes('masculi') || q.includes('homem')) f.sexo = 'masculino';
 
-  // Detecta grupo/regime por keywords
   const grupos = [...new Set(_estatDados.map(r => String(r['Grupo']||'').trim()))].filter(Boolean);
-  const grupoKeywords = {
-    'violencia': 'violenc', 'vd': 'violenc', 'domestica': 'violenc',
-    'semiaberto': 'semiaber', 'semi aberto': 'semiaber',
-    'cautelar': 'cautelar', 'domiciliar': 'domiciliar',
-    'aberto': 'aberto', 'fechado': 'fechad', 'saida temporaria': 'saida',
-  };
-  for (const [kw, match] of Object.entries(grupoKeywords)) {
+  const gkw = {'violencia':'violenc','vd':'violenc','domestica':'violenc','semiaberto':'semiaber',
+    'cautelar':'cautelar','domiciliar':'domiciliar','aberto':'aberto','fechado':'fechad'};
+  for (const [kw, match] of Object.entries(gkw)) {
     if (q.includes(norm(kw))) {
       const grp = grupos.find(g => norm(g).includes(match));
-      if (grp) {
-        _estatFiltros.grupo = grp;
-        document.querySelectorAll('.estat-pill[data-filtro="grupo"]').forEach(p => {
-          if (p.dataset.valor === grp) {
-            p.style.background='#4f46e5';p.style.color='#fff';p.style.borderColor='#4f46e5';p.style.fontWeight='600';
-          }
-        });
-        break;
-      }
+      if (grp) { f.grupo = grp; break; }
     }
   }
 
-  // Detecta vara por keywords
   const varas = [...new Set(_estatDados.map(r => String(r['Vara/Juízo']||'').trim()))].filter(Boolean);
   for (const v of varas) {
-    const nv = norm(v);
-    if (q.split(/\s+/).filter(t => t.length >= 4).some(t => nv.includes(t))) {
-      _estatFiltros.vara = v;
-      document.querySelectorAll('.estat-pill[data-filtro="vara"]').forEach(p => {
-        if (p.dataset.valor === v) {
-          p.style.background='#4f46e5';p.style.color='#fff';p.style.borderColor='#4f46e5';p.style.fontWeight='600';
+    if (q.split(/\s+/).filter(t => t.length >= 4).some(t => norm(v).includes(t))) { f.vara = v; break; }
+  }
+
+  if (q.includes('provisori')) f.tipo = 'Provisório';
+  else if (q.includes('sentenciado')) f.tipo = 'Sentenciado';
+  else if (q.includes('vitima') || q.includes('vítima')) f.tipo = 'Vítima';
+  else if (q.includes('medida cautelar')) f.tipo = 'Medida Cautelar Diversa da Prisão';
+
+  f.texto = query;
+  _estat_aplicarFiltrosIA(f, query);
+
+  const filtrosDetec = Object.entries(_estatFiltros)
+    .filter(([k])=>!k.startsWith('_'))
+    .map(([k,v])=>`${k}="${String(v).substring(0,25)}"`).join(', ');
+  if (msgEl) msgEl.textContent = filtrosDetec
+    ? `🤖 Filtros detectados (local): ${filtrosDetec}`
+    : '🤖 Nenhum filtro específico — buscando por texto livre';
+}
+
+function _estat_aplicarFiltrosIA(f, query) {
+  // Limpa filtros anteriores (exceto internos)
+  Object.keys(_estatFiltros).filter(k=>!k.startsWith('_')).forEach(k => delete _estatFiltros[k]);
+  document.querySelectorAll('.estat-pill').forEach(p => {
+    p.style.background='#f8fafc'; p.style.color='#475569';
+    p.style.borderColor='#cbd5e1'; p.style.fontWeight='';
+  });
+
+  const colMap = { municipio:'municipio', vara:'vara', grupo:'grupo', tipo:'tipo', sexo:'sexo' };
+  for (const [chave, valor] of Object.entries(f)) {
+    if (!valor || chave === 'texto' || chave === 'resumo') continue;
+    if (colMap[chave]) {
+      _estatFiltros[chave] = valor;
+      document.querySelectorAll(`.estat-pill[data-filtro="${chave}"]`).forEach(p => {
+        if (p.dataset.valor === valor) {
+          p.style.background='#4f46e5'; p.style.color='#fff';
+          p.style.borderColor='#4f46e5'; p.style.fontWeight='600';
         }
       });
-      break;
     }
   }
 
-  // Detecta tipo de monitorado
-  if (q.includes('provisori') || q.includes('provisório')) _estatFiltros.tipo = 'Provisório';
-  else if (q.includes('sentenciado')) _estatFiltros.tipo = 'Sentenciado';
-  else if (q.includes('vitima') || q.includes('vítima')) _estatFiltros.tipo = 'Vítima';
-  else if (q.includes('medida cautelar')) _estatFiltros.tipo = 'Medida Cautelar Diversa da Prisão';
-
-  // Texto livre como filtro adicional
-  _estatFiltros._query = query;
-
+  _estatFiltros._query = f.texto || query;
   _estatPagina = 1;
   estat_aplicarFiltros();
+}
 
-  // Mostra resumo do que foi interpretado
-  const filtrosDetec = Object.entries(_estatFiltros)
-    .filter(([k]) => !k.startsWith('_'))
-    .map(([k,v]) => `${k}="${v.substring(0,30)}"`)
-    .join(', ');
-  msgEl.textContent = filtrosDetec
-    ? `🤖 Filtros detectados: ${filtrosDetec}`
-    : '🤖 Nenhum filtro específico detectado — buscando por texto livre';
+/* ── Gráficos (Chart.js) ────────────────────────────────────────── */
+function estat_toggleGraficos() {
+  const sec = document.getElementById('estat-graficos-section');
+  const btn = document.getElementById('estat-btn-graficos');
+  if (sec.style.display === 'none') {
+    sec.style.display = 'block';
+    btn.textContent = '📊 Ocultar Gráficos';
+    estat_renderizarGraficos();
+  } else {
+    sec.style.display = 'none';
+    btn.textContent = '📊 Gráficos';
+  }
+}
+
+function estat_renderizarGraficos() {
+  if (typeof Chart === 'undefined') {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js';
+    s.onload = _estat_desenharGraficos;
+    document.head.appendChild(s);
+  } else {
+    _estat_desenharGraficos();
+  }
+}
+
+function _estat_freq(dados, col, top) {
+  const cnt = {};
+  dados.forEach(r => { const v = String(r[col]||'').trim(); if(v) cnt[v]=(cnt[v]||0)+1; });
+  return Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0, top||999);
+}
+
+function _estat_criarChart(id, type, labels, values, colors, indexAxis) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  if (_estatCharts[id]) _estatCharts[id].destroy();
+  _estatCharts[id] = new Chart(canvas, {
+    type,
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 1, borderColor: '#fff' }] },
+    options: {
+      indexAxis: indexAxis || 'x',
+      responsive: true,
+      plugins: { legend: { display: type === 'doughnut', position: 'bottom', labels: { font: { size: 10 } } } },
+      scales: type !== 'doughnut' ? {
+        x: { ticks: { font: { size: 10 } } },
+        y: { ticks: { font: { size: 10 } } }
+      } : {},
+    }
+  });
+}
+
+function _estat_desenharGraficos() {
+  const d = _estatFiltros._resultado || _estatDados;
+  const CORES = ['#4f46e5','#0891b2','#dc2626','#16a34a','#d97706','#7c3aed','#db2777','#059669','#ea580c','#6366f1'];
+
+  // Gráfico 1: Grupos
+  const grupos = _estat_freq(d, 'Grupo', 10);
+  _estat_criarChart('estat-chart-grupo', 'doughnut',
+    grupos.map(([k])=>k.replace(/^\d+\.\s*/,'')),
+    grupos.map(([,v])=>v), CORES);
+
+  // Gráfico 2: Municípios (barras horizontais)
+  const muns = _estat_freq(d, 'Município Residencial', 8);
+  _estat_criarChart('estat-chart-municipio', 'bar',
+    muns.map(([k])=>k), muns.map(([,v])=>v),
+    CORES.slice(0,8), 'y');
+
+  // Gráfico 3: Sexo
+  const sexo = _estat_freq(d, 'Sexo', 5);
+  _estat_criarChart('estat-chart-sexo', 'doughnut',
+    sexo.map(([k])=>k), sexo.map(([,v])=>v), ['#1d4ed8','#be185d','#6b7280']);
+
+  // Gráfico 4: Varas (barras horizontais)
+  const varas = _estat_freq(d, 'Vara/Juízo', 8);
+  _estat_criarChart('estat-chart-vara', 'bar',
+    varas.map(([k])=>k.substring(0,40)), varas.map(([,v])=>v),
+    CORES.slice(1,9), 'y');
+}
+
+/* ── Comparação histórica ───────────────────────────────────────── */
+function estat_renderizarComparacao() {
+  if (!_estatDados.length || !_estatDadosComp.length) return;
+  const sec = document.getElementById('estat-comp-section');
+  sec.style.display = 'block';
+
+  const nomesAtuais = new Set(_estatDados.map(r => String(r['Nome']||'').trim().toUpperCase()).filter(Boolean));
+  const nomesAnt    = new Set(_estatDadosComp.map(r => String(r['Nome']||'').trim().toUpperCase()).filter(Boolean));
+
+  const novos  = [...nomesAtuais].filter(n => !nomesAnt.has(n));
+  const saidos = [...nomesAnt].filter(n => !nomesAtuais.has(n));
+  const ambos  = [...nomesAtuais].filter(n => nomesAnt.has(n));
+
+  // Cards resumo
+  document.getElementById('estat-comp-cards').innerHTML = [
+    { label: 'Período Anterior', valor: nomesAnt.size, cor: '#64748b', icon: '📋' },
+    { label: 'Período Atual',    valor: nomesAtuais.size, cor: '#4f46e5', icon: '📋' },
+    { label: 'Entradas',         valor: novos.length, cor: '#16a34a', icon: '🆕' },
+    { label: 'Saídas',           valor: saidos.length, cor: '#dc2626', icon: '❌' },
+    { label: 'Permaneceram',     valor: ambos.length, cor: '#0891b2', icon: '✅' },
+  ].map(c => `
+    <div style="background:#fff;border-radius:8px;padding:10px;text-align:center;border:1px solid #d1fae5">
+      <div>${c.icon}</div>
+      <div style="font-size:1.5rem;font-weight:700;color:${c.cor}">${c.valor}</div>
+      <div style="font-size:.75rem;color:#64748b">${c.label}</div>
+    </div>`).join('');
+
+  // Listas
+  const listStyle = 'padding:3px 0;border-bottom:1px solid #f1f5f9;color:#374151';
+  document.getElementById('estat-comp-novos').innerHTML =
+    novos.slice(0,100).map(n=>`<div style="${listStyle}">+ ${n}</div>`).join('') ||
+    '<span style="color:#94a3b8">Nenhuma entrada nova</span>';
+  document.getElementById('estat-comp-saidos').innerHTML =
+    saidos.slice(0,100).map(n=>`<div style="${listStyle};color:#dc2626">- ${n}</div>`).join('') ||
+    '<span style="color:#94a3b8">Nenhuma saída detectada</span>';
+}
+
+/* ── Gerar relatório PDF ────────────────────────────────────────── */
+function estat_gerarPDF() {
+  const dados = _estatFiltros._resultado || _estatDados;
+  if (!dados.length) { alert('Nenhum dado carregado.'); return; }
+
+  function _carregar(cb) {
+    if (typeof window.jspdf !== 'undefined' || typeof window.jsPDF !== 'undefined') { cb(); return; }
+    const s1 = document.createElement('script');
+    s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s1.onload = () => {
+      const s2 = document.createElement('script');
+      s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+      s2.onload = cb;
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(s1);
+  }
+
+  _carregar(() => {
+    const { jsPDF } = window.jspdf || window;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
+    const now = new Date();
+    const dtStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+    // Header
+    doc.setFillColor(79,70,229);
+    doc.rect(0, 0, W, 16, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(12);
+    doc.text('CENTRAL DE MONITORAMENTO ELETRÔNICO — CME/IAPEN-AP', W/2, 7, {align:'center'});
+    doc.setFontSize(9);
+    doc.setFont('helvetica','normal');
+    doc.text('Relatório de Monitorados', W/2, 12, {align:'center'});
+
+    // Filtros ativos
+    const filtrosAtivos = Object.entries(_estatFiltros)
+      .filter(([k])=>!k.startsWith('_'))
+      .map(([k,v])=>`${k}: ${String(v).substring(0,25)}`).join('  |  ');
+    doc.setTextColor(80,80,80);
+    doc.setFontSize(8);
+    doc.text(filtrosAtivos ? 'Filtros: ' + filtrosAtivos : 'Sem filtros aplicados', 10, 22);
+    doc.text(`Total: ${dados.length} registros`, W-10, 22, {align:'right'});
+
+    // Tabela
+    const rows = dados.slice(0, 500).map((r,i) => [
+      i+1,
+      String(r['Nome']||'').substring(0,35),
+      String(r['Sexo']||'')[0]||'',
+      String(r['Município Residencial']||'').substring(0,14),
+      String(r['Vara/Juízo']||'').replace(/^(VARA |JUIZADO |TRIBUNAL |PLANTÃO |VARA DO |1ª |2ª |3ª )/i,'').substring(0,32),
+      String(r['Grupo']||'').replace(/^\d+\.\s*/,'').substring(0,22),
+      String(r['Tipo de Monitorado']||'').substring(0,14),
+    ]);
+
+    doc.autoTable({
+      startY: 26,
+      head: [['#','Nome','Sx','Município','Vara/Juízo','Grupo/Regime','Tipo']],
+      body: rows,
+      styles: { fontSize: 7, cellPadding: 1.5 },
+      headStyles: { fillColor: [79,70,229], textColor: 255, fontStyle: 'bold', fontSize: 7 },
+      alternateRowStyles: { fillColor: [248,250,252] },
+      columnStyles: {
+        0: { cellWidth: 8 }, 1: { cellWidth: 52 }, 2: { cellWidth: 8 },
+        3: { cellWidth: 22 }, 4: { cellWidth: 56 }, 5: { cellWidth: 38 }, 6: { cellWidth: 22 },
+      },
+      margin: { left: 10, right: 10 },
+      didDrawPage: (data) => {
+        // Footer em cada página
+        const pg = doc.internal.getCurrentPageInfo().pageNumber;
+        const total = doc.internal.getNumberOfPages ? doc.internal.getNumberOfPages() : '?';
+        doc.setFillColor(240,240,248);
+        doc.rect(0, H-10, W, 10, 'F');
+        doc.setTextColor(100,100,120);
+        doc.setFontSize(7);
+        doc.text('CME/IAPEN-AP  |  cme@iapen.ap.gov.br  |  (96) 98415-2844', W/2, H-4, {align:'center'});
+        doc.text(`Gerado em ${dtStr}`, 10, H-4);
+        doc.text(`Pág. ${pg}`, W-10, H-4, {align:'right'});
+      }
+    });
+
+    doc.save(`relatorio_cme_${now.toISOString().slice(0,10)}.pdf`);
+  });
 }
 
 /* ── Exportar resultado ─────────────────────────────────────────── */
