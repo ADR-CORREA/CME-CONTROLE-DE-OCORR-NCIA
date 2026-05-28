@@ -12405,10 +12405,11 @@ Policial Penal
 
   const templates = {
     'VINCULAÇÃO': `
-Registramos nesta data (${dataFmt}) a VINCULAÇÃO do dispositivo de monitoramento eletrônico (tornozeleira) de número de série ${tnz} ao monitorado:
+Registramos nesta data (${dataFmt}) a VINCULAÇÃO do dispositivo de monitoramento eletrônico (tornozeleira) ao monitorado identificado abaixo:
 
 • MONITORADO: ${monit}
 • PROCESSO/ALVARÁ: ${processo}
+• Nº DE SÉRIE DA TORNOZELEIRA: ${tnz}
 
 O equipamento foi devidamente instalado no tornozelo esquerdo do (a) monitorado (a), conforme procedimento padrão desta Central. Foram repassadas ao (à) monitorado (a) as instruções de uso, proibições e obrigações relativas ao cumprimento da medida cautelar/pena alternativa.
 
@@ -12417,169 +12418,172 @@ Policial Penal
 Plantão: ${plantao}`,
 
     'VINCULAÇÃO JVD': `
-Registramos nesta data (${dataFmt}) a VINCULAÇÃO mediante JUIZADO DE VIOLÊNCIA DOMÉSTICA (JVD) do dispositivo de monitoramento eletrônico (tornozeleira) de número de série ${tnz} ao monitorado:
+Registramos nesta data (${dataFmt}) a VINCULAÇÃO mediante JUIZADO DE VIOLÊNCIA DOMÉSTICA (JVD) do dispositivo de monitoramento eletrônico ao monitorado identificado abaixo:
 
 • MONITORADO: ${monit}
 • PROCESSO/ALVARÁ: ${processo}
+• Nº DE SÉRIE DA TORNOZELEIRA: ${tnz}
 
-O equipamento foi instalado em cumprimento a decisão judicial no âmbito do Juizado de Violência Doméstica, conforme determinação judicial. O (a) monitorado (a) foi orientado (a) quanto às regras de uso e das consequências em caso de violação.
+O equipamento foi instalado em cumprimento a decisão judicial no âmbito do Juizado de Violência Doméstica. O (a) monitorado (a) foi devidamente orientado (a) quanto às regras de uso, restrições e consequências em caso de violação da medida.
 
 Servidor responsável: ${servidor}
 Policial Penal
 Plantão: ${plantao}`,
 
     'DESVINCULAÇÃO': `
-Registramos nesta data (${dataFmt}) a DESVINCULAÇÃO do dispositivo de monitoramento eletrônico (tornozeleira) de número de série ${tnz} do monitorado:
+Registramos nesta data (${dataFmt}) a DESVINCULAÇÃO do dispositivo de monitoramento eletrônico do monitorado identificado abaixo:
 
 • MONITORADO: ${monit}
 • PROCESSO/ALVARÁ: ${processo}
+• Nº DE SÉRIE DA TORNOZELEIRA: ${tnz}
 
-A desvinculação foi realizada em conformidade com determinação judicial/administrativa, sendo o equipamento recolhido e encaminhado ao setor de estoque desta Central para os devidos procedimentos.
+A desvinculação foi realizada em conformidade com determinação judicial/administrativa. O equipamento foi recolhido e encaminhado ao setor de estoque desta Central para os devidos procedimentos de triagem e manutenção.
 
 Servidor responsável: ${servidor}
 Policial Penal
 Plantão: ${plantao}`,
 
     'TROCA/SUBSTITUIÇÃO DE TORNOZELEIRA': `
-Registramos nesta data (${dataFmt}) a TROCA/SUBSTITUIÇÃO do dispositivo de monitoramento eletrônico do monitorado:
+Registramos nesta data (${dataFmt}) a TROCA/SUBSTITUIÇÃO do dispositivo de monitoramento eletrônico do monitorado identificado abaixo:
 
 • MONITORADO: ${monit}
 • PROCESSO/ALVARÁ: ${processo}
 
-• TNZ RECOLHIDA (ANTIGA): ${tnzA}
-• TNZ INSTALADA (NOVA):   ${tnzN}
+• TORNOZELEIRA RECOLHIDA (ANTIGA): ${tnzA}
+• TORNOZELEIRA INSTALADA (NOVA): ${tnzN}
 
-A substituição foi realizada devido a problemas técnicos/operacionais no equipamento anterior. O novo dispositivo foi devidamente instalado e testado, confirmando seu correto funcionamento.
+A substituição foi realizada em razão de problemas técnicos/operacionais no equipamento anterior. O novo dispositivo foi devidamente instalado, configurado e testado, confirmando seu correto funcionamento antes da entrega ao monitorado.
 
 Servidor responsável: ${servidor}
 Policial Penal
 Plantão: ${plantao}`,
 
     'JUSTIFICATIVA DE SAÍDA DE ZONA': `
-Registramos nesta data (${dataFmt}) a JUSTIFICATIVA DE SAÍDA DE ZONA referente ao monitorado:
+Registramos nesta data (${dataFmt}) a JUSTIFICATIVA DE SAÍDA DE ZONA referente ao monitorado identificado abaixo:
 
 • MONITORADO: ${monit}
 • PROCESSO/ALVARÁ: ${processo}
-• TORNOZELEIRA: ${tnz}
+• Nº DE SÉRIE DA TORNOZELEIRA: ${tnz}
 
-JUSTIFICATIVA: ${just}
+JUSTIFICATIVA APRESENTADA: ${just}
 
-O alerta foi devidamente analisado por esta Central, registrado e encaminhado conforme protocolo operacional vigente. Situação regularizada.
+O alerta foi devidamente analisado por esta Central, registrado nos sistemas e encaminhado conforme protocolo operacional vigente. A situação foi regularizada após verificação e aceitação da justificativa apresentada.
 
 Servidor responsável: ${servidor}
 Policial Penal
 Plantão: ${plantao}`,
 
     'JUSTIFICATIVA ATESTADO MÉDICO': `
-Registramos nesta data (${dataFmt}) a JUSTIFICATIVA DE AUSÊNCIA POR ATESTADO MÉDICO referente ao monitorado:
+Registramos nesta data (${dataFmt}) a JUSTIFICATIVA DE AUSÊNCIA POR ATESTADO MÉDICO referente ao monitorado identificado abaixo:
 
 • MONITORADO: ${monit}
 • PROCESSO/ALVARÁ: ${processo}
-• TORNOZELEIRA: ${tnz}
+• Nº DE SÉRIE DA TORNOZELEIRA: ${tnz}
 
-JUSTIFICATIVA: ${just}
+JUSTIFICATIVA APRESENTADA: ${just}
 
-O documento médico apresentado foi verificado e aceito como justificativa para a ausência/saída de zona monitorada. O atestado encontra-se arquivado para os devidos fins legais.
+O documento médico foi devidamente analisado, verificado quanto à sua autenticidade e aceito como justificativa para a ausência/saída de zona monitorada. O atestado encontra-se arquivado nesta Central para os devidos fins legais e de registro.
 
 Servidor responsável: ${servidor}
 Policial Penal
 Plantão: ${plantao}`,
 
     'INSPEÇÃO DE TORNOZELEIRA': `
-Registramos nesta data (${dataFmt}) a realização de INSPEÇÃO DE TORNOZELEIRA referente ao monitorado:
+Registramos nesta data (${dataFmt}) a realização de INSPEÇÃO DE TORNOZELEIRA referente ao monitorado identificado abaixo:
 
 • MONITORADO: ${monit}
 • PROCESSO/ALVARÁ: ${processo}
-• TORNOZELEIRA: ${tnz}
+• Nº DE SÉRIE DA TORNOZELEIRA: ${tnz}
 
-A inspeção foi realizada verificando-se o estado geral do equipamento, nível de bateria, integridade física do dispositivo e da cinta de fixação, bem como o correto funcionamento dos sistemas de GPS e comunicação.
+A inspeção foi realizada verificando-se o estado geral do equipamento, nível de bateria, integridade física do dispositivo e da cinta de fixação, bem como o correto funcionamento dos sistemas de GPS e comunicação. Resultado da inspeção:
 
-☐ Equipamento em bom estado
-☐ Cinta em bom estado
+☐ Equipamento em bom estado de conservação
+☐ Cinta de fixação íntegra e sem avarias
 ☐ Sinal GPS operacional
-☐ Comunicação operacional
+☐ Comunicação GPRS operacional
 
 Servidor responsável: ${servidor}
 Policial Penal
 Plantão: ${plantao}`,
 
     'TEMPO LIMITE AUSÊNCIA GPRS': `
-Registramos nesta data (${dataFmt}) o alerta de TEMPO LIMITE DE AUSÊNCIA DE SINAL GPRS referente ao monitorado:
+Registramos nesta data (${dataFmt}) o alerta de TEMPO LIMITE DE AUSÊNCIA DE SINAL GPRS referente ao monitorado identificado abaixo:
 
 • MONITORADO: ${monit}
 • PROCESSO/ALVARÁ: ${processo}
-• TORNOZELEIRA: ${tnz}
+• Nº DE SÉRIE DA TORNOZELEIRA: ${tnz}
 
-Constatou-se que o dispositivo ultrapassou o tempo máximo permitido sem sinal GPS/GPRS. Foram adotadas as medidas previstas no protocolo operacional desta Central, incluindo tentativa de contato com o monitorado e comunicação à autoridade competente.
+Constatou-se que o dispositivo ultrapassou o tempo máximo permitido sem sinal GPS/GPRS. Foram adotadas as medidas previstas no protocolo operacional desta Central, incluindo tentativa de contato com o monitorado e comunicação à autoridade judicial competente.
 
-Situação: _________________
-Providências adotadas: _________________
+Situação apurada: _______________________________________________________
+
+Providências adotadas: ___________________________________________________
 
 Servidor responsável: ${servidor}
 Policial Penal
 Plantão: ${plantao}`,
 
     'PERMUTA SERVIDOR/PLANTÃO': `
-Registramos nesta data (${dataFmt}) a PERMUTA DE SERVIDOR entre plantões desta Central:
+Registramos nesta data (${dataFmt}) a PERMUTA DE SERVIDOR entre plantões desta Central de Monitoramento Eletrônico:
 
 • SERVIDOR SAINDO: ${srvSai}
 • SERVIDOR ENTRANDO: ${srvEntra}
 • PLANTÃO DE REFERÊNCIA: ${plantao}
 
-A permuta foi acordada entre os servidores envolvidos e está devidamente registrada para fins de controle de frequência e escala de serviço desta Central.
+A permuta foi previamente acordada entre os servidores envolvidos, estando devidamente registrada para fins de controle de frequência, escala de serviço e demais providências administrativas desta Central.
 
 Responsável pelo registro: ${servidor}
 Policial Penal`,
 
     'INFORMATIVO – ENTREGA DE DECLARAÇÃO': `
-Registramos nesta data (${dataFmt}) o INFORMATIVO DE ENTREGA DE DECLARAÇÃO referente ao monitorado:
+Registramos nesta data (${dataFmt}) o INFORMATIVO DE ENTREGA DE DECLARAÇÃO referente ao monitorado identificado abaixo:
 
 • MONITORADO: ${monit}
 • PROCESSO/ALVARÁ: ${processo}
 
-O (a) monitorado (a) compareceu a esta Central e realizou a entrega de declaração conforme solicitado. O documento foi recebido, protocolado e encaminhado ao setor competente para as devidas providências.
+O (a) monitorado (a) compareceu pessoalmente a esta Central e realizou a entrega de declaração conforme solicitado. O documento foi recebido, conferido, protocolado e encaminhado ao setor competente para as devidas providências.
 
 Servidor responsável: ${servidor}
 Policial Penal
 Plantão: ${plantao}`,
 
     'INFORMATIVO – ATUALIZAÇÃO CADASTRAL': `
-Registramos nesta data (${dataFmt}) o INFORMATIVO DE ATUALIZAÇÃO CADASTRAL referente ao monitorado:
+Registramos nesta data (${dataFmt}) o INFORMATIVO DE ATUALIZAÇÃO CADASTRAL referente ao monitorado identificado abaixo:
 
 • MONITORADO: ${monit}
 • PROCESSO/ALVARÁ: ${processo}
 
-Os dados cadastrais do (a) monitorado (a) foram devidamente atualizados no sistema desta Central, conforme solicitação e documentação apresentada.
+Os dados cadastrais do (a) monitorado (a) foram devidamente atualizados no sistema desta Central, conforme solicitação e documentação apresentada e verificada.
 
-Dados atualizados: _________________
+Dados atualizados: ______________________________________________________
 
 Servidor responsável: ${servidor}
 Policial Penal
 Plantão: ${plantao}`,
 
     'ALTERAÇÃO ENDEREÇO/ZONA': `
-Registramos nesta data (${dataFmt}) a ALTERAÇÃO DE ENDEREÇO E/OU ZONA DE MONITORAMENTO referente ao monitorado:
+Registramos nesta data (${dataFmt}) a ALTERAÇÃO DE ENDEREÇO E/OU ZONA DE MONITORAMENTO referente ao monitorado identificado abaixo:
 
 • MONITORADO: ${monit}
 • PROCESSO/ALVARÁ: ${processo}
-• TORNOZELEIRA: ${tnz}
+• Nº DE SÉRIE DA TORNOZELEIRA: ${tnz}
 
 MOTIVO/JUSTIFICATIVA: ${just}
 
-A alteração de zona/endereço foi realizada no sistema após análise da documentação apresentada e autorização judicial/administrativa competente. O novo endereço e parâmetros de zona foram configurados no sistema de monitoramento.
+A alteração de zona/endereço foi realizada no sistema após análise da documentação apresentada e com autorização judicial/administrativa competente. O novo endereço e os parâmetros de zona de monitoramento foram devidamente configurados e testados no sistema.
 
 Servidor responsável: ${servidor}
 Policial Penal
 Plantão: ${plantao}`,
 
     'VINCULAÇÃO – DPP': `
-Registramos nesta data (${dataFmt}) a VINCULAÇÃO de DISPOSITIVO DE PROTEÇÃO PESSOAL (DPP) ao monitorado/usuário:
+Registramos nesta data (${dataFmt}) a VINCULAÇÃO de DISPOSITIVO DE PROTEÇÃO PESSOAL (DPP) ao monitorado/usuário identificado abaixo:
 
 • MONITORADO/USUÁRIO: ${monit}
 • PROCESSO/ALVARÁ: ${processo}
-• Nº SÉRIE DO DPP: ${dpp}
+• Nº DE SÉRIE DO DPP: ${dpp}
 
-O dispositivo foi entregue, configurado e testado, confirmando seu correto funcionamento. O (a) usuário (a) foi instruído (a) quanto ao modo de uso e acionamento em situações de emergência.
+O dispositivo foi entregue, configurado e testado, confirmando seu correto funcionamento. O (a) usuário (a) foi devidamente instruído (a) quanto ao modo de uso, acionamento em situações de emergência e procedimentos de manutenção e recarga.
 
 Servidor responsável: ${servidor}
 Policial Penal
@@ -12737,46 +12741,127 @@ function baixarModeloPDF() {
 <meta charset="UTF-8">
 <title>CME \u2013 ${esc(assunto)}${monitorado ? ' \u2013 ' + esc(monitorado.toUpperCase()) : ''}</title>
 <style>
-  @page { margin: 2cm 2cm 2.8cm 2cm; size: A4 portrait; }
+  /* ── ABNT NBR 14724 — Margens: sup 3cm, dir 2cm, inf 2cm, esq 3cm ── */
+  @page { margin: 3cm 2cm 2cm 3cm; size: A4 portrait; }
   *, *::before, *::after { box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #000; margin: 0; padding: 0; }
-  .cabecalho { display: table; width: 100%; border-collapse: collapse; }
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 12pt;
+    line-height: 1.5;          /* ABNT: espaçamento 1,5 entre linhas */
+    color: #000;
+    margin: 0; padding: 0;
+  }
+
+  /* ── Cabeçalho ── */
+  .cabecalho { display: table; width: 100%; border-collapse: collapse; margin-bottom: 2px; }
   .cab-col   { display: table-cell; vertical-align: middle; }
-  .cab-logo  { width: 95px; text-align: center; padding: 2px 4px; }
-  .cab-logo img { max-width: 85px; max-height: 85px; object-fit: contain; }
-  .cab-texto { text-align: center; padding: 0 8px; }
-  .cab-texto .t-gov   { font-size: 8.5pt; font-weight: bold; margin-bottom: 1px; }
-  .cab-texto .t-sec   { font-size: 8.5pt; font-weight: bold; margin: 1px 0; }
-  .cab-texto .t-iapen { font-size: 8.5pt; font-weight: bold; margin: 1px 0; }
-  .cab-texto .t-cme   { font-size: 8.5pt; font-weight: bold; margin-top: 1px; }
-  .div-main  { border: none; margin: 8px 0 16px 0; }
-  .div-main-bar1 { height: 3px; background: #1a3a6b; margin: 8px 0 1px 0; }
-  .div-main-bar2 { height: 1px; background: #1a3a6b; margin: 0 0 16px 0; }
-  .div-light { border: none; border-top: 1px solid #bbb; margin: 12px 0; }
-  .titulo-assunto { font-size: 13pt; font-weight: bold; text-align: center;
-                    text-transform: uppercase; letter-spacing: .4px; margin: 0 0 10px 0; }
-  .meta-bloco  { border-left: 3px solid #1a3a6b; background: #f7f7f7;
-                 padding: 7px 14px; margin-bottom: 14px; font-size: 10pt; }
-  .meta-linha  { margin: 2px 0; }
-  .meta-cargo  { font-style: italic; color: #444; display: block; margin-top: 2px; }
-  .corpo             { margin: 5px 0; text-align: justify; }
-  .bullet            { margin: 3px 0; font-weight: bold; }
-  .check             { margin: 3px 0; }
-  .spacer            { height: 9px; }
-  .ass-bloco         { margin-top: 56px; text-align: center; display: flex; flex-direction: column; align-items: center; }
-  .ass-img           { max-height: 80px; max-width: 260px; width: auto; height: auto; object-fit: contain; display: block; margin-bottom: 0px; }
-  .ass-linha         { font-family: 'Courier New', monospace; letter-spacing: 2px; margin: 0 0 6px 0; color: #000; }
-  .ass-meta          { margin: 14px 0 1px 0; font-weight: bold; font-size: 10.5pt; text-align: center; }
-  .ass-meta          + .ass-meta { margin-top: 1px; }
-  .ass-meta-italic   { margin: 1px 0; font-style: italic; font-size: 10pt; text-align: center; }
-  .data-extenso { margin-top: 36px; text-align: right; font-size: 10pt; }
-  .rodape { margin-top: 36px; border-top: 1px solid #000; padding-top: 8px;
-            text-align: center; font-size: 8pt; color: #444; }
+  .cab-logo  { width: 90px; text-align: center; padding: 0 4px; }
+  .cab-logo img { max-width: 78px; max-height: 78px; object-fit: contain; }
+  .cab-texto { text-align: center; padding: 0 10px; }
+  .cab-texto .t-gov   { font-size: 9pt; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+  .cab-texto .t-sec   { font-size: 9pt; font-weight: bold; margin: 2px 0; }
+  .cab-texto .t-iapen { font-size: 9pt; font-weight: bold; margin: 2px 0; }
+  .cab-texto .t-cme   { font-size: 9pt; font-weight: bold; margin-top: 2px; }
+
+  /* ── Divisores ── */
+  .div-main-bar1 { height: 3px; background: #1a3a6b; margin: 10px 0 1px 0; }
+  .div-main-bar2 { height: 1px; background: #1a3a6b; margin: 0 0 20px 0; }
+  .div-light     { border: none; border-top: 1px solid #ccc; margin: 18px 0; }
+
+  /* ── Título do assunto ── */
+  .titulo-assunto {
+    font-size: 14pt;
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    line-height: 1.3;
+    margin: 0 0 18px 0;
+  }
+
+  /* ── Bloco de metadados (data, plantão, servidor) ── */
+  .meta-bloco {
+    border-left: 3px solid #1a3a6b;
+    background: #f5f5f5;
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    font-size: 10.5pt;
+    line-height: 1.6;
+  }
+  .meta-linha  { margin: 3px 0; }
+  .meta-cargo  { font-style: italic; color: #444; display: block; margin-top: 3px; }
+
+  /* ── Corpo do documento ── */
+  .corpo {
+    margin: 0 0 14pt 0;        /* ABNT: parágrafo com espaço após */
+    text-align: justify;
+    line-height: 1.5;
+  }
+  .corpo:last-of-type { margin-bottom: 0; }
+
+  /* ── Bullets e checkboxes ── */
+  .bullet {
+    margin: 6pt 0;
+    font-weight: bold;
+    padding-left: 6px;
+    line-height: 1.5;
+  }
+  .check  {
+    margin: 5pt 0;
+    padding-left: 6px;
+    line-height: 1.5;
+  }
+
+  /* ── Espaçador (linha em branco no template) ── */
+  .spacer { height: 14pt; }
+
+  /* ── Bloco de assinatura ── */
+  .ass-bloco {
+    margin-top: 40pt;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .ass-img {
+    max-height: 80px; max-width: 240px;
+    width: auto; height: auto;
+    object-fit: contain;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .ass-linha {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 2px;
+    margin: 0 0 4px 0;
+    color: #000;
+  }
+  .ass-meta          { margin: 10pt 0 0 0; font-weight: bold; font-size: 11pt; text-align: center; }
+  .ass-meta + .ass-meta { margin-top: 2px; }
+  .ass-meta-italic   { margin: 2px 0; font-style: italic; font-size: 10pt; color: #555; text-align: center; }
+
+  /* ── Data por extenso ── */
+  .data-extenso { margin-top: 28pt; text-align: right; font-size: 11pt; }
+
+  /* ── Rodapé ── */
+  .rodape {
+    margin-top: 28pt;
+    border-top: 2px solid #1a3a6b;
+    padding-top: 8px;
+    text-align: center;
+    font-size: 8.5pt;
+    color: #444;
+  }
   .rodape p { margin: 2px 0; }
-  .btn-imp { display: block; margin: 18px auto 0; padding: 10px 32px;
-             background: #000; color: #fff; border: none; border-radius: 6px;
-             font-size: 13pt; cursor: pointer; font-family: Arial; }
-  .btn-imp:hover { background: #333; }
+
+  /* ── Botão de impressão (some no PDF) ── */
+  .btn-imp {
+    display: block; margin: 20px auto 0; padding: 10px 32px;
+    background: #1a3a6b; color: #fff; border: none; border-radius: 6px;
+    font-size: 13pt; cursor: pointer; font-family: Arial;
+  }
+  .btn-imp:hover { background: #254d99; }
+
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .no-print { display: none !important; }
