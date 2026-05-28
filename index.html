@@ -3781,13 +3781,28 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <div class="dash-update" id="estat-subtitle">Importe o cadastro completo de monitorados (.xls) para análise</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <label style="cursor:pointer">
+          <label id="estat-import-label" style="cursor:pointer">
             <input type="file" id="estat-file-input" accept=".xls,.xlsx,.csv" style="display:none" onchange="estat_importar(this)">
             <span class="btn-secondary" onclick="document.getElementById('estat-file-input').click()">📂 Importar XLS</span>
+          </label>
+          <label id="psi-import-label" style="cursor:pointer;display:none">
+            <input type="file" id="psi-file-input" accept=".xls,.xlsx" style="display:none" onchange="psi_importar(this)">
+            <span class="btn-secondary" onclick="document.getElementById('psi-file-input').click()">📂 Importar XLS</span>
           </label>
           <button class="btn-secondary" onclick="estat_exportarResultado()" id="estat-btn-export" style="display:none">⬇️ Exportar</button>
         </div>
       </div>
+
+      <!-- Abas internas: Monitorados / Psicossocial -->
+      <div style="display:flex;gap:4px;border-bottom:2px solid #e2e8f0;margin-bottom:20px;margin-top:4px">
+        <button id="estat-tab-mon" onclick="estat_mudarModo('monitorados')"
+          style="padding:8px 18px;border:none;border-bottom:2px solid #4f46e5;background:none;font-weight:600;color:#4f46e5;cursor:pointer;margin-bottom:-2px;border-radius:6px 6px 0 0;font-size:.9rem">👥 Monitorados</button>
+        <button id="estat-tab-psi" onclick="estat_mudarModo('psicossocial')"
+          style="padding:8px 18px;border:none;border-bottom:2px solid transparent;background:none;font-weight:500;color:#94a3b8;cursor:pointer;margin-bottom:-2px;border-radius:6px 6px 0 0;font-size:.9rem">🧠 Psicossocial</button>
+      </div>
+
+      <!-- MODO: Monitorados -->
+      <div id="estat-modo-monitorados">
 
       <!-- Upload zone (aparece antes de importar) -->
       <div id="estat-upload-zone" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;border:2px dashed #cbd5e1;border-radius:12px;margin:24px 0;color:#94a3b8;font-size:1rem;gap:16px">
@@ -3937,6 +3952,155 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <div id="estat-paginacao" style="display:flex;justify-content:center;gap:8px;padding:12px;border-top:1px solid #e2e8f0"></div>
         </div>
       </div><!-- /estat-content -->
+      </div><!-- /estat-modo-monitorados -->
+
+      <!-- MODO: Psicossocial -->
+      <div id="estat-modo-psicossocial" style="display:none">
+
+        <!-- Upload zone psicossocial -->
+        <div id="psi-upload-zone" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;border:2px dashed #c7d2fe;border-radius:12px;margin:24px 0;color:#94a3b8;font-size:1rem;gap:16px">
+          <div style="font-size:3rem">🧠</div>
+          <div style="font-weight:600;color:#64748b">Importe o arquivo psicossocial_CME.xlsx</div>
+          <div style="font-size:.85rem">Atendimentos, laudos e acompanhamentos do setor psicossocial</div>
+          <label style="cursor:pointer">
+            <input type="file" accept=".xls,.xlsx" style="display:none" onchange="psi_importar(this)">
+            <span class="btn-primary" style="padding:10px 24px;font-size:.95rem">📂 Selecionar arquivo</span>
+          </label>
+        </div>
+
+        <!-- Conteúdo psicossocial (aparece após importar) -->
+        <div id="psi-content" style="display:none">
+
+          <!-- Cards -->
+          <div id="psi-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px"></div>
+
+          <!-- Ações -->
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <button class="btn-secondary" onclick="psi_toggleGraficos()" id="psi-btn-graficos">📊 Gráficos</button>
+            <button class="btn-secondary" onclick="psi_gerarPDF()">📄 Relatório PDF</button>
+            <button class="btn-secondary" onclick="psi_exportarResultado()">⬇️ Exportar XLS</button>
+          </div>
+
+          <!-- Gráficos (colapsável) -->
+          <div id="psi-graficos-section" style="display:none;margin-bottom:20px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+                <div style="font-size:.82rem;font-weight:600;color:#64748b;margin-bottom:10px">Tipo de Atendimento</div>
+                <canvas id="psi-chart-tipo" height="220"></canvas>
+              </div>
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+                <div style="font-size:.82rem;font-weight:600;color:#64748b;margin-bottom:10px">Nível de Risco</div>
+                <canvas id="psi-chart-risco" height="220"></canvas>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+                <div style="font-size:.82rem;font-weight:600;color:#64748b;margin-bottom:10px">Situação</div>
+                <canvas id="psi-chart-situacao" height="180"></canvas>
+              </div>
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+                <div style="font-size:.82rem;font-weight:600;color:#64748b;margin-bottom:10px">Área / Profissional</div>
+                <canvas id="psi-chart-area" height="180"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Busca NLP -->
+          <div style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:10px;padding:16px;margin-bottom:20px">
+            <div style="font-weight:600;color:#4f46e5;margin-bottom:10px;font-size:.95rem">🤖 Busca por linguagem natural</div>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="psi-query" placeholder="Ex: atendimentos de urgência com alto risco em violência doméstica..."
+                style="flex:1;padding:9px 12px;border:1px solid #c7d2fe;border-radius:8px;font-size:.9rem"
+                onkeydown="if(event.key==='Enter') psi_buscar()">
+              <button class="btn-primary" onclick="psi_buscar()" style="white-space:nowrap">🔍 Buscar</button>
+              <button class="btn-secondary" onclick="psi_limparFiltros()" title="Limpar">✕</button>
+            </div>
+            <div id="psi-ia-msg" style="margin-top:8px;font-size:.83rem;color:#6366f1;display:none"></div>
+            <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">
+              <span style="font-size:.78rem;color:#64748b;align-self:center">Exemplos:</span>
+              <button class="btn-secondary" style="font-size:.78rem;padding:3px 10px" onclick="psi_aplicarExemplo(this.textContent)">urgência + alto risco</button>
+              <button class="btn-secondary" style="font-size:.78rem;padding:3px 10px" onclick="psi_aplicarExemplo(this.textContent)">vítima + violência doméstica</button>
+              <button class="btn-secondary" style="font-size:.78rem;padding:3px 10px" onclick="psi_aplicarExemplo(this.textContent)">serviço social presencial</button>
+              <button class="btn-secondary" style="font-size:.78rem;padding:3px 10px" onclick="psi_aplicarExemplo(this.textContent)">descumprimento</button>
+              <button class="btn-secondary" style="font-size:.78rem;padding:3px 10px" onclick="psi_aplicarExemplo(this.textContent)">psicologia</button>
+            </div>
+          </div>
+
+          <!-- Filtros pills -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+            <div>
+              <div style="font-size:.75rem;font-weight:600;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Público</div>
+              <div id="psi-filtros-publico" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+            </div>
+            <div>
+              <div style="font-size:.75rem;font-weight:600;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Área</div>
+              <div id="psi-filtros-area" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+            </div>
+            <div>
+              <div style="font-size:.75rem;font-weight:600;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Caráter</div>
+              <div id="psi-filtros-carater" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+            </div>
+            <div>
+              <div style="font-size:.75rem;font-weight:600;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Situação</div>
+              <div id="psi-filtros-situacao" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+            </div>
+            <div>
+              <div style="font-size:.75rem;font-weight:600;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Nível de Risco</div>
+              <div id="psi-filtros-risco" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+            </div>
+            <div>
+              <div style="font-size:.75rem;font-weight:600;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Tipo de Atendimento</div>
+              <div id="psi-filtros-tipo" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+            </div>
+            <div>
+              <div style="font-size:.75rem;font-weight:600;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Modalidade</div>
+              <div id="psi-filtros-modalidade" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+            </div>
+            <div>
+              <div style="font-size:.75rem;font-weight:600;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Profissional</div>
+              <div id="psi-filtros-profissional" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+            </div>
+            <div>
+              <div style="font-size:.75rem;font-weight:600;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Medida</div>
+              <div id="psi-filtros-medida" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+            </div>
+          </div>
+
+          <!-- Filtros ativos -->
+          <div id="psi-filtros-ativos" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.83rem">
+            <strong>Filtros ativos:</strong> <span id="psi-filtros-desc"></span>
+            <button onclick="psi_limparFiltros()" style="margin-left:10px;font-size:.78rem;color:#3b82f6;background:none;border:none;cursor:pointer;text-decoration:underline">limpar tudo</button>
+          </div>
+
+          <!-- Resultado count -->
+          <div id="psi-resultado-count" style="font-size:.82rem;color:#64748b;margin-bottom:8px"></div>
+
+          <!-- Tabela -->
+          <div style="overflow-x:auto;border-radius:10px;border:1px solid #e2e8f0">
+            <table id="psi-tabela" style="width:100%;border-collapse:collapse;font-size:.82rem">
+              <thead>
+                <tr style="background:#f8fafc;text-align:left">
+                  <th style="padding:10px 8px;font-size:.75rem;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">#</th>
+                  <th style="padding:10px 8px;font-size:.75rem;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Data</th>
+                  <th style="padding:10px 8px;font-size:.75rem;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Público</th>
+                  <th style="padding:10px 8px;font-size:.75rem;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Nome</th>
+                  <th style="padding:10px 8px;font-size:.75rem;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Medida</th>
+                  <th style="padding:10px 8px;font-size:.75rem;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Tipo Atendimento</th>
+                  <th style="padding:10px 8px;font-size:.75rem;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Área</th>
+                  <th style="padding:10px 8px;font-size:.75rem;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Caráter</th>
+                  <th style="padding:10px 8px;font-size:.75rem;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Situação</th>
+                  <th style="padding:10px 8px;font-size:.75rem;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Risco</th>
+                  <th style="padding:10px 8px;font-size:.75rem;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Profissional</th>
+                </tr>
+              </thead>
+              <tbody id="psi-tbody"></tbody>
+            </table>
+          </div>
+          <div id="psi-paginacao" style="display:flex;justify-content:center;gap:8px;padding:12px;border-top:1px solid #e2e8f0"></div>
+
+        </div><!-- /psi-content -->
+      </div><!-- /estat-modo-psicossocial -->
+
     </div><!-- /panel-estatisticas -->
 
     <!-- Modal Config R2 -->
@@ -18836,6 +19000,550 @@ function estat_gerarPDF() {
 
     doc.save(`relatorio_cme_${now.toISOString().slice(0,10)}.pdf`);
   });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MODO: alternância Monitorados ↔ Psicossocial
+   ══════════════════════════════════════════════════════════════════ */
+let _estatModo = 'monitorados';
+
+function estat_mudarModo(modo) {
+  _estatModo = modo;
+  const isM = modo === 'monitorados';
+  document.getElementById('estat-modo-monitorados').style.display  = isM ? '' : 'none';
+  document.getElementById('estat-modo-psicossocial').style.display = isM ? 'none' : '';
+  document.getElementById('estat-import-label').style.display = isM ? '' : 'none';
+  document.getElementById('psi-import-label').style.display   = isM ? 'none' : '';
+  document.getElementById('estat-btn-export').style.display   = 'none';
+
+  // Aba ativa
+  const tabMon = document.getElementById('estat-tab-mon');
+  const tabPsi = document.getElementById('estat-tab-psi');
+  tabMon.style.borderBottomColor = isM ? '#4f46e5' : 'transparent';
+  tabMon.style.color  = isM ? '#4f46e5' : '#94a3b8';
+  tabMon.style.fontWeight = isM ? '600' : '500';
+  tabPsi.style.borderBottomColor = isM ? 'transparent' : '#4f46e5';
+  tabPsi.style.color  = isM ? '#94a3b8' : '#4f46e5';
+  tabPsi.style.fontWeight = isM ? '500' : '600';
+
+  document.getElementById('estat-subtitle').textContent = isM
+    ? (_estatDados.length ? `${_estatDados.length} monitorados carregados` : 'Importe o cadastro completo de monitorados (.xls)')
+    : (_psiDados.length  ? `${_psiDados.length} atendimentos carregados`   : 'Importe o arquivo psicossocial_CME.xlsx');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MÓDULO PSICOSSOCIAL
+   ══════════════════════════════════════════════════════════════════ */
+let _psiDados   = [];
+let _psiFiltros = {};
+let _psiPagina  = 1;
+let _psiCharts  = {};
+const _PSI_POR_PAG = 50;
+
+// Mapeamento de colunas XLS → JS keys
+const PSI_COLS = {
+  data:         'Data/Hora',
+  publico:      'Publico',
+  nome:         'Nome',
+  cpf:          'CPF',
+  processo:     'N Processo',
+  medida:       'Medida',
+  origem:       'Origem Demanda',
+  tipo:         'Tipo Atendimento',
+  modalidade:   'Modalidade',
+  area:         'Area',
+  carater:      'Carater',
+  situacao:     'Situacao',
+  risco:        'Nivel Risco',
+  fatores:      'Fatores Vuln.',
+  encaminha:    'Encaminhamentos',
+  profissional: 'Profissional',
+  descricao:    'Descricao',
+};
+
+/* ── Importar arquivo ────────────────────────────────────────────── */
+function psi_importar(input) {
+  const file = input.files[0];
+  if (!file) return;
+  estat_carregarSheetJS(() => psi_lerArquivo(file));
+}
+
+function psi_lerArquivo(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb   = XLSX.read(e.target.result, { type: 'binary' });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+      // Detectar se primeira linha é cabeçalho duplicado
+      let dados = rows;
+      if (rows.length > 0) {
+        const first = rows[0];
+        const hasNome = Object.keys(first).some(k => String(first[k]).trim() === 'Nome');
+        if (hasNome) dados = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { range: 1, defval: '' });
+      }
+
+      _psiDados = dados.filter(r => String(r[PSI_COLS.nome]||'').trim().length > 2);
+
+      document.getElementById('psi-upload-zone').style.display = 'none';
+      document.getElementById('psi-content').style.display = 'block';
+      document.getElementById('estat-subtitle').textContent =
+        `${_psiDados.length} atendimentos carregados — ${file.name}`;
+
+      psi_renderizarCards();
+      psi_renderizarFiltros();
+      psi_aplicarFiltros();
+    } catch(err) {
+      alert('Erro ao ler o arquivo: ' + err.message);
+      console.error(err);
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+/* ── Cards de resumo ─────────────────────────────────────────────── */
+function psi_renderizarCards() {
+  const d = _psiFiltros._resultado || _psiDados;
+  const total     = d.length;
+  const mon       = d.filter(r => String(r[PSI_COLS.publico]||'').toLowerCase().includes('monitor')).length;
+  const vit       = d.filter(r => String(r[PSI_COLS.publico]||'').toLowerCase().includes('v') && String(r[PSI_COLS.publico]||'').toLowerCase().includes('tima')).length;
+  const urg       = d.filter(r => String(r[PSI_COLS.carater]||'').toLowerCase().includes('urg')).length;
+  const alto      = d.filter(r => String(r[PSI_COLS.risco]||'').toLowerCase() === 'alto').length;
+  const psicol    = d.filter(r => String(r[PSI_COLS.area]||'').toLowerCase().includes('psicol')).length;
+  const social    = d.filter(r => String(r[PSI_COLS.area]||'').toLowerCase().includes('social')).length;
+
+  document.getElementById('psi-cards').innerHTML = [
+    { label:'Total', valor:total, cor:'#4f46e5', icon:'📋' },
+    { label:'Monitorados', valor:mon, cor:'#0891b2', icon:'👤' },
+    { label:'Vítimas', valor:vit, cor:'#be185d', icon:'🛡️' },
+    { label:'Urgências', valor:urg, cor:'#dc2626', icon:'⚡' },
+    { label:'Alto Risco', valor:alto, cor:'#b91c1c', icon:'⚠️' },
+    { label:'Psicologia', valor:psicol, cor:'#7c3aed', icon:'🧠' },
+    { label:'Serv. Social', valor:social, cor:'#0369a1', icon:'🤝' },
+  ].map(c => `
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center;border-left:4px solid ${c.cor}">
+      <div style="font-size:1.4rem">${c.icon}</div>
+      <div style="font-size:1.7rem;font-weight:700;color:${c.cor}">${c.valor}</div>
+      <div style="font-size:.75rem;color:#64748b;margin-top:2px">${c.label}</div>
+    </div>`).join('');
+}
+
+/* ── Filtros pills ───────────────────────────────────────────────── */
+function psi_renderizarFiltros() {
+  function freq(col) {
+    const cnt = {};
+    _psiDados.forEach(r => { const v = String(r[col]||'').trim(); if(v) cnt[v]=(cnt[v]||0)+1; });
+    return Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
+  }
+  function pills(containerId, col, filtroKey, max) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = freq(col).slice(0, max||15).map(([val, cnt]) => `
+      <span class="psi-pill" data-filtro="${filtroKey}" data-valor="${val.replace(/"/g,'&quot;')}"
+        onclick="psi_toggleFiltro('${filtroKey}', this)"
+        style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:.76rem;cursor:pointer;border:1px solid #cbd5e1;background:#f8fafc;color:#475569;white-space:nowrap">
+        ${val.length > 40 ? val.substring(0,38)+'…' : val} <span style="color:#94a3b8">(${cnt})</span>
+      </span>`).join('');
+  }
+  pills('psi-filtros-publico',     PSI_COLS.publico,     'publico',     4);
+  pills('psi-filtros-area',        PSI_COLS.area,        'area',        4);
+  pills('psi-filtros-carater',     PSI_COLS.carater,     'carater',     4);
+  pills('psi-filtros-situacao',    PSI_COLS.situacao,    'situacao',    8);
+  pills('psi-filtros-risco',       PSI_COLS.risco,       'risco',       4);
+  pills('psi-filtros-tipo',        PSI_COLS.tipo,        'tipo',        10);
+  pills('psi-filtros-modalidade',  PSI_COLS.modalidade,  'modalidade',  4);
+  pills('psi-filtros-profissional',PSI_COLS.profissional,'profissional',10);
+  pills('psi-filtros-medida',      PSI_COLS.medida,      'medida',      6);
+}
+
+/* ── Toggle pill ─────────────────────────────────────────────────── */
+function psi_toggleFiltro(chave, el) {
+  const valor = el.dataset.valor;
+  if (_psiFiltros[chave] === valor) {
+    delete _psiFiltros[chave];
+    el.style.background='#f8fafc'; el.style.color='#475569';
+    el.style.borderColor='#cbd5e1'; el.style.fontWeight='';
+  } else {
+    document.querySelectorAll(`.psi-pill[data-filtro="${chave}"]`).forEach(p => {
+      p.style.background='#f8fafc'; p.style.color='#475569';
+      p.style.borderColor='#cbd5e1'; p.style.fontWeight='';
+    });
+    _psiFiltros[chave] = valor;
+    el.style.background='#4f46e5'; el.style.color='#fff';
+    el.style.borderColor='#4f46e5'; el.style.fontWeight='600';
+  }
+  _psiPagina = 1;
+  psi_aplicarFiltros();
+}
+
+/* ── Aplica filtros ──────────────────────────────────────────────── */
+function psi_aplicarFiltros() {
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+  let resultado = [..._psiDados];
+
+  const colMap = {
+    publico:'Publico', area:'Area', carater:'Carater', situacao:'Situacao',
+    risco:'Nivel Risco', tipo:'Tipo Atendimento', modalidade:'Modalidade',
+    profissional:'Profissional', medida:'Medida',
+  };
+
+  for (const [chave, valor] of Object.entries(_psiFiltros)) {
+    if (chave.startsWith('_')) continue;
+    const col = colMap[chave];
+    if (col) resultado = resultado.filter(r => String(r[col]||'').trim() === valor);
+  }
+
+  if (_psiFiltros._query) {
+    const terms = norm(_psiFiltros._query).split(/\s+/).filter(t => t.length >= 2);
+    resultado = resultado.filter(r => {
+      const blob = norm(Object.values(r).join(' '));
+      return terms.every(t => blob.includes(t));
+    });
+  }
+
+  _psiFiltros._resultado = resultado;
+
+  const desc = Object.entries(_psiFiltros)
+    .filter(([k]) => !k.startsWith('_'))
+    .map(([k,v]) => `<strong>${k}</strong>: ${String(v).substring(0,25)}`).join(' &nbsp;|&nbsp; ');
+  const qd = _psiFiltros._query ? `<strong>busca</strong>: "${_psiFiltros._query}"` : '';
+  const full = [desc, qd].filter(Boolean).join(' &nbsp;|&nbsp; ');
+
+  const fa = document.getElementById('psi-filtros-ativos');
+  if (full) { fa.style.display='block'; document.getElementById('psi-filtros-desc').innerHTML=full; }
+  else fa.style.display='none';
+
+  psi_renderizarCards();
+  psi_renderizarTabela(resultado);
+
+  // Atualiza gráficos se visíveis
+  if (document.getElementById('psi-graficos-section').style.display !== 'none') {
+    _psi_desenharGraficos();
+  }
+}
+
+/* ── Tabela paginada ─────────────────────────────────────────────── */
+const RISCO_COR = { 'Alto':'#dc2626', 'Médio':'#d97706', 'Baixo':'#16a34a' };
+const CARATER_ICON = { 'Urgência':'⚡', 'Rotina':'📋', 'Requisição judicial':'⚖️' };
+
+function psi_renderizarTabela(dados) {
+  const total  = dados.length;
+  const inicio = (_psiPagina-1)*_PSI_POR_PAG;
+  const fim    = Math.min(inicio+_PSI_POR_PAG, total);
+  const pagina = dados.slice(inicio, fim);
+
+  document.getElementById('psi-resultado-count').textContent =
+    `${total} resultado${total!==1?'s':''} — exibindo ${inicio+1}–${fim}`;
+
+  const tbody = document.getElementById('psi-tbody');
+  tbody.innerHTML = pagina.map((r, i) => {
+    const data   = String(r['Data/Hora']||'').split('T')[0];
+    const pub    = String(r['Publico']||'').trim();
+    const nome   = String(r['Nome']||'').trim();
+    const medida = String(r['Medida']||'').trim();
+    const tipo   = String(r['Tipo Atendimento']||'').trim().substring(0,35);
+    const area   = String(r['Area']||'').trim();
+    const carat  = String(r['Carater']||'').trim();
+    const situ   = String(r['Situacao']||'').trim().substring(0,35);
+    const risco  = String(r['Nivel Risco']||'').trim();
+    const prof   = String(r['Profissional']||'').split(' ')[0]; // só primeiro nome
+    const riscoCor = RISCO_COR[risco] || '#64748b';
+    const caratIcon = CARATER_ICON[carat] || '';
+    const isUrg  = carat.toLowerCase().includes('urg');
+    const rowBg  = isUrg ? 'background:#fff7f7' : '';
+
+    return `<tr style="${rowBg}">
+      <td style="padding:8px;color:#94a3b8;font-size:.75rem">${inicio+i+1}</td>
+      <td style="padding:8px;font-size:.8rem">${data}</td>
+      <td style="padding:8px"><span style="font-size:.75rem;padding:2px 7px;border-radius:10px;background:${pub.includes('itor')?'#dbeafe':'#fce7f3'};color:${pub.includes('itor')?'#1d4ed8':'#9d174d'}">${pub}</span></td>
+      <td style="padding:8px;font-weight:500;font-size:.82rem">${nome}</td>
+      <td style="padding:8px;font-size:.78rem;color:#64748b">${medida}</td>
+      <td style="padding:8px;font-size:.78rem">${tipo}</td>
+      <td style="padding:8px;font-size:.78rem">${area}</td>
+      <td style="padding:8px;font-size:.78rem">${caratIcon} ${carat}</td>
+      <td style="padding:8px;font-size:.78rem">${situ}</td>
+      <td style="padding:8px"><span style="font-weight:600;color:${riscoCor};font-size:.78rem">${risco||'—'}</span></td>
+      <td style="padding:8px;font-size:.78rem;color:#64748b">${prof}</td>
+    </tr>`;
+  }).join('');
+
+  // Paginação
+  const totalPags = Math.ceil(total/_PSI_POR_PAG);
+  const pag = document.getElementById('psi-paginacao');
+  if (totalPags <= 1) { pag.innerHTML=''; return; }
+  const btn  = 'padding:5px 12px;border-radius:6px;border:1px solid #e2e8f0;cursor:pointer;font-size:.82rem;background:#fff';
+  const btnA = btn+';background:#4f46e5;color:#fff;border-color:#4f46e5;font-weight:600';
+  let html = '';
+  if (_psiPagina > 1) html += `<button style="${btn}" onclick="psi_irPagina(${_psiPagina-1})">‹</button>`;
+  for (let p=Math.max(1,_psiPagina-3); p<=Math.min(totalPags,_psiPagina+3); p++)
+    html += `<button style="${p===_psiPagina?btnA:btn}" onclick="psi_irPagina(${p})">${p}</button>`;
+  if (_psiPagina < totalPags) html += `<button style="${btn}" onclick="psi_irPagina(${_psiPagina+1})">›</button>`;
+  pag.innerHTML = html;
+}
+
+function psi_irPagina(p) {
+  _psiPagina = p;
+  psi_renderizarTabela(_psiFiltros._resultado || _psiDados);
+  document.getElementById('psi-tabela').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+/* ── Limpar filtros ──────────────────────────────────────────────── */
+function psi_limparFiltros() {
+  _psiFiltros = {};
+  _psiPagina  = 1;
+  const qi = document.getElementById('psi-query');
+  if (qi) qi.value = '';
+  const mi = document.getElementById('psi-ia-msg');
+  if (mi) mi.style.display = 'none';
+  document.querySelectorAll('.psi-pill').forEach(p => {
+    p.style.background='#f8fafc'; p.style.color='#475569';
+    p.style.borderColor='#cbd5e1'; p.style.fontWeight='';
+  });
+  psi_aplicarFiltros();
+}
+
+/* ── Exemplos de busca ───────────────────────────────────────────── */
+function psi_aplicarExemplo(texto) {
+  document.getElementById('psi-query').value = texto;
+  psi_buscar();
+}
+
+/* ── Busca NLP ───────────────────────────────────────────────────── */
+function psi_buscar() {
+  const query = (document.getElementById('psi-query').value || '').trim();
+  if (!query) { psi_limparFiltros(); return; }
+
+  const msgEl = document.getElementById('psi-ia-msg');
+  msgEl.style.display = 'block';
+  msgEl.textContent = '🔍 Buscando...';
+
+  // NLP local
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const q = norm(query);
+
+  // Limpa filtros de pill anteriores
+  Object.keys(_psiFiltros).filter(k=>!k.startsWith('_')).forEach(k => delete _psiFiltros[k]);
+  document.querySelectorAll('.psi-pill').forEach(p => {
+    p.style.background='#f8fafc'; p.style.color='#475569';
+    p.style.borderColor='#cbd5e1'; p.style.fontWeight='';
+  });
+
+  function matchPill(filtroKey, col, matcher) {
+    const vals = [...new Set(_psiDados.map(r => String(r[col]||'').trim()))].filter(Boolean);
+    for (const v of vals) {
+      if (matcher(norm(v))) {
+        _psiFiltros[filtroKey] = v;
+        document.querySelectorAll(`.psi-pill[data-filtro="${filtroKey}"]`).forEach(p => {
+          if (p.dataset.valor === v) {
+            p.style.background='#4f46e5'; p.style.color='#fff';
+            p.style.borderColor='#4f46e5'; p.style.fontWeight='600';
+          }
+        });
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Público
+  if (q.includes('vitima') || q.includes('vítima')) matchPill('publico', 'Publico', v => v.includes('tima'));
+  else if (q.includes('monitor')) matchPill('publico', 'Publico', v => v.includes('monitor'));
+
+  // Área
+  if (q.includes('psicol')) matchPill('area', 'Area', v => v.includes('psicol'));
+  else if (q.includes('social')) matchPill('area', 'Area', v => v.includes('social'));
+
+  // Caráter
+  if (q.includes('urg')) matchPill('carater', 'Carater', v => v.includes('urg'));
+  else if (q.includes('judicial') || q.includes('requisic')) matchPill('carater', 'Carater', v => v.includes('judici'));
+  else if (q.includes('rotina')) matchPill('carater', 'Carater', v => v.includes('roti'));
+
+  // Risco
+  if (q.includes('alto risco') || q.includes('alto')) matchPill('risco', 'Nivel Risco', v => v === 'alto');
+  else if (q.includes('medio') || q.includes('médio')) matchPill('risco', 'Nivel Risco', v => v.includes('dio'));
+  else if (q.includes('baixo risco') || q.includes('baixo')) matchPill('risco', 'Nivel Risco', v => v === 'baixo');
+
+  // Situação
+  if (q.includes('descumpriment')) matchPill('situacao', 'Situacao', v => v.includes('descumpr'));
+  else if (q.includes('risco imediato')) matchPill('situacao', 'Situacao', v => v.includes('imediato'));
+  else if (q.includes('regular') || q.includes('comparec')) matchPill('situacao', 'Situacao', v => v.includes('regular'));
+
+  // Modalidade
+  if (q.includes('presencial')) matchPill('modalidade', 'Modalidade', v => v.includes('presenc'));
+  else if (q.includes('remoto') || q.includes('telefon')) matchPill('modalidade', 'Modalidade', v => v.includes('remoto'));
+
+  // Tipo de atendimento
+  if (q.includes('inicial') || q.includes('pos-vinculac') || q.includes('pós-vinculac')) matchPill('tipo', 'Tipo Atendimento', v => v.includes('inicial'));
+  else if (q.includes('relatorio') || q.includes('relatório')) matchPill('tipo', 'Tipo Atendimento', v => v.includes('relat'));
+  else if (q.includes('acompanhamento')) matchPill('tipo', 'Tipo Atendimento', v => v.includes('acompanham'));
+
+  _psiFiltros._query = query;
+  _psiPagina = 1;
+  psi_aplicarFiltros();
+
+  const filtrosDetec = Object.entries(_psiFiltros)
+    .filter(([k])=>!k.startsWith('_'))
+    .map(([k,v])=>`${k}="${String(v).substring(0,25)}"`).join(', ');
+  msgEl.textContent = filtrosDetec
+    ? `🤖 Filtros detectados: ${filtrosDetec}`
+    : '🤖 Nenhum filtro específico — buscando por texto livre';
+}
+
+/* ── Gráficos ────────────────────────────────────────────────────── */
+function psi_toggleGraficos() {
+  const sec = document.getElementById('psi-graficos-section');
+  const btn = document.getElementById('psi-btn-graficos');
+  if (sec.style.display === 'none') {
+    sec.style.display = 'block';
+    btn.textContent = '📊 Ocultar Gráficos';
+    psi_renderizarGraficos();
+  } else {
+    sec.style.display = 'none';
+    btn.textContent = '📊 Gráficos';
+  }
+}
+
+function psi_renderizarGraficos() {
+  if (typeof Chart === 'undefined') {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js';
+    s.onload = _psi_desenharGraficos;
+    document.head.appendChild(s);
+  } else {
+    _psi_desenharGraficos();
+  }
+}
+
+function _psi_desenharGraficos() {
+  const d = _psiFiltros._resultado || _psiDados;
+  const CORES = ['#4f46e5','#0891b2','#dc2626','#16a34a','#d97706','#7c3aed','#db2777','#059669'];
+
+  function freq(col, top) {
+    const cnt = {};
+    d.forEach(r => { const v=String(r[col]||'').trim(); if(v) cnt[v]=(cnt[v]||0)+1; });
+    return Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,top||999);
+  }
+  function criarChart(id, type, entries, colors, indexAxis) {
+    const canvas = document.getElementById(id);
+    if (!canvas) return;
+    if (_psiCharts[id]) _psiCharts[id].destroy();
+    _psiCharts[id] = new Chart(canvas, {
+      type, data: { labels: entries.map(([k])=>k.substring(0,35)), datasets:[{ data:entries.map(([,v])=>v), backgroundColor:colors||CORES, borderWidth:1, borderColor:'#fff' }] },
+      options: { indexAxis:indexAxis||'x', responsive:true, plugins:{ legend:{ display:type==='doughnut', position:'bottom', labels:{font:{size:9}} } },
+        scales: type!=='doughnut' ? { x:{ticks:{font:{size:9}}}, y:{ticks:{font:{size:9}}} } : {} }
+    });
+  }
+
+  criarChart('psi-chart-tipo',     'bar',      freq('Tipo Atendimento',7), CORES, 'y');
+  criarChart('psi-chart-risco',    'doughnut', freq('Nivel Risco',3), ['#dc2626','#d97706','#16a34a']);
+  criarChart('psi-chart-situacao', 'bar',      freq('Situacao',5), CORES, 'y');
+  criarChart('psi-chart-area',     'doughnut', freq('Area',4));
+}
+
+/* ── Relatório PDF ───────────────────────────────────────────────── */
+function psi_gerarPDF() {
+  const dados = _psiFiltros._resultado || _psiDados;
+  if (!dados.length) { alert('Nenhum dado carregado.'); return; }
+
+  function _carregar(cb) {
+    if (typeof window.jspdf !== 'undefined') { cb(); return; }
+    const s1 = document.createElement('script');
+    s1.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s1.onload = () => {
+      const s2 = document.createElement('script');
+      s2.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+      s2.onload = cb;
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(s1);
+  }
+
+  _carregar(() => {
+    const { jsPDF } = window.jspdf || window;
+    const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
+    const now = new Date();
+    const dtStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+    doc.setFillColor(124,58,237);
+    doc.rect(0,0,W,16,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(12);
+    doc.text('CENTRAL DE MONITORAMENTO ELETRÔNICO — CME/IAPEN-AP', W/2, 7, {align:'center'});
+    doc.setFontSize(9);
+    doc.setFont('helvetica','normal');
+    doc.text('Relatório de Atendimentos Psicossociais', W/2, 12, {align:'center'});
+
+    const filtrosAtivos = Object.entries(_psiFiltros).filter(([k])=>!k.startsWith('_'))
+      .map(([k,v])=>`${k}: ${String(v).substring(0,20)}`).join(' | ');
+    doc.setTextColor(80,80,80); doc.setFontSize(8);
+    doc.text(filtrosAtivos || 'Sem filtros aplicados', 10, 22);
+    doc.text(`Total: ${dados.length} atendimentos`, W-10, 22, {align:'right'});
+
+    const rows = dados.map((r,i) => [
+      i+1,
+      String(r['Data/Hora']||'').split('T')[0],
+      String(r['Publico']||'').trim(),
+      String(r['Nome']||'').substring(0,30),
+      String(r['Tipo Atendimento']||'').substring(0,30),
+      String(r['Area']||'').trim(),
+      String(r['Carater']||'').trim(),
+      String(r['Situacao']||'').substring(0,30),
+      String(r['Nivel Risco']||'').trim() || '—',
+      String(r['Profissional']||'').split(' ').slice(0,2).join(' '),
+    ]);
+
+    doc.autoTable({
+      startY:26,
+      head:[['#','Data','Público','Nome','Tipo Atendimento','Área','Caráter','Situação','Risco','Profissional']],
+      body: rows,
+      styles:{ fontSize:7, cellPadding:1.5 },
+      headStyles:{ fillColor:[124,58,237], textColor:255, fontStyle:'bold', fontSize:7 },
+      alternateRowStyles:{ fillColor:[248,250,252] },
+      columnStyles:{ 0:{cellWidth:8}, 1:{cellWidth:18}, 2:{cellWidth:18}, 3:{cellWidth:40},
+        4:{cellWidth:42}, 5:{cellWidth:20}, 6:{cellWidth:18}, 7:{cellWidth:40}, 8:{cellWidth:14}, 9:{cellWidth:32} },
+      margin:{ left:10, right:10 },
+      didDrawPage: () => {
+        const pg = doc.internal.getCurrentPageInfo().pageNumber;
+        doc.setFillColor(240,235,255); doc.rect(0,H-10,W,10,'F');
+        doc.setTextColor(100,80,140); doc.setFontSize(7);
+        doc.text('CME/IAPEN-AP  |  cme@iapen.ap.gov.br  |  (96) 98415-2844', W/2, H-4, {align:'center'});
+        doc.text(`Gerado em ${dtStr}`, 10, H-4);
+        doc.text(`Pág. ${pg}`, W-10, H-4, {align:'right'});
+      }
+    });
+
+    doc.save(`psicossocial_cme_${now.toISOString().slice(0,10)}.pdf`);
+  });
+}
+
+/* ── Exportar XLS ────────────────────────────────────────────────── */
+function psi_exportarResultado() {
+  const dados = _psiFiltros._resultado || _psiDados;
+  if (!dados.length) { alert('Nenhum dado para exportar.'); return; }
+  if (typeof XLSX === 'undefined') { alert('SheetJS não carregado.'); return; }
+
+  const ws = XLSX.utils.json_to_sheet(dados.map(r => ({
+    'Data/Hora':       r['Data/Hora']||'',
+    'Público':         r['Publico']||'',
+    'Nome':            r['Nome']||'',
+    'Medida':          r['Medida']||'',
+    'Tipo Atendimento':r['Tipo Atendimento']||'',
+    'Modalidade':      r['Modalidade']||'',
+    'Área':            r['Area']||'',
+    'Caráter':         r['Carater']||'',
+    'Situação':        r['Situacao']||'',
+    'Nível Risco':     r['Nivel Risco']||'',
+    'Profissional':    r['Profissional']||'',
+    'Encaminhamentos': r['Encaminhamentos']||'',
+  })));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Psicossocial');
+  const dt = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `psicossocial_cme_${dt}.xlsx`);
 }
 
 /* ── Exportar resultado ─────────────────────────────────────────── */
