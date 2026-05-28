@@ -16418,11 +16418,11 @@ function com_gerarOficio() {
   const decreto    = document.getElementById('com-of-decreto').value.trim();
   const assImgCapturada = usuarioAtual?.assinatura || null;
 
-  if (!modeloId)  return _mostrarToast('&#9888; Selecione o modelo de of&#237;cio.','erro');
-  if (!dest)      return _mostrarToast('&#9888; Selecione comarca e vara.','erro');
-  if (!numero)    return _mostrarToast('&#9888; Informe o n&#250;mero do of&#237;cio.','erro');
-  if (!nomeMon)   return _mostrarToast('&#9888; Informe o nome do monitorado.','erro');
-  if (!processo)  return _mostrarToast('&#9888; Informe o n&#250;mero do processo.','erro');
+  if (!modeloId)  return _mostrarToast('⚠️ Selecione o modelo de ofício.','erro');
+  if (!dest)      return _mostrarToast('⚠️ Selecione comarca e vara.','erro');
+  if (!numero)    return _mostrarToast('⚠️ Informe o número do ofício.','erro');
+  if (!nomeMon)   return _mostrarToast('⚠️ Informe o nome do monitorado.','erro');
+  if (!processo)  return _mostrarToast('⚠️ Informe o número do processo.','erro');
 
   const modelo = COM_MODELOS.find(m => m.id === modeloId);
   if (!modelo) return;
@@ -18063,15 +18063,20 @@ async function _comGerarPDFExec() {
         }
         y += 5.5;
       }
-      y += 3; // espaço entre parágrafos
+      y += 8; // espaço entre parágrafos (ABNT)
     }
 
     // ── Encerramento ─────────────────────────────────────────────
-    y += 4;
-    if (y > pageH - mB - 40) { doc.addPage(); y = mT; }
+    y += 8;
+    if (y > pageH - mB - 55) { doc.addPage(); y = mT; }
     doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
-    doc.text('Sem mais, esta CME se coloca à disposição para eventuais esclarecimentos.', mL, y); y += 5;
-    doc.text('Respeitosamente,', mL, y); y += 14;
+    const semMaisLines = doc.splitTextToSize('Sem mais, esta CME se coloca à disposição para eventuais esclarecimentos.', tw);
+    doc.text(semMaisLines, mL, y); y += semMaisLines.length * 5.5 + 6;
+    doc.text('Respeitosamente,', mL, y); y += 6;
+
+    // ── Empurra assinatura para ~80% da área útil da folha A4 ────
+    const yAssin = mT + (pageH - mT - mB) * 0.80;
+    if (y < yAssin) y = yAssin;
 
     // ── Data (local e data — antes da assinatura, à direita) ─────
     if (dataLonga) {
