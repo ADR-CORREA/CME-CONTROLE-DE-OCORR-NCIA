@@ -12820,6 +12820,9 @@ function baixarModeloPDF() {
     line-height: 1.5;          /* ABNT: espaçamento 1,5 entre linhas */
     color: #000;
     margin: 0; padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 247mm;         /* A4 área útil: 297mm − 3cm sup − 2cm inf */
   }
 
   /* ── Cabeçalho ── */
@@ -12958,9 +12961,10 @@ function baixarModeloPDF() {
   <div class="meta-bloco">${metaHtml}</div>
 </div>
 
+<div style="flex:1">
 <hr class="div-light">
-
 ${bodyHtml}
+</div>
 
 <div class="data-extenso">${dataExtenso}</div>
 
@@ -17339,6 +17343,10 @@ function jur_gerarDoc() {
   <tr><td style="height:1pt;background:#1a3a6b;font-size:0">&nbsp;</td></tr>
 </table>
 
+<!-- layout: linha-1=corpo (min 380pt), linha-2=assinatura+rodapé -->
+<table style="width:100%;border-collapse:collapse">
+<tr><td style="vertical-align:top;padding:0;height:380pt">
+
 <!-- ══ IDENTIFICAÇÃO ═══════════════════════════════════════════ -->
 ${numFmt ? `<p style="text-align:right;font-size:12pt;font-weight:bold;margin:0 0 2pt 0">Of&#237;cio n&#176; <b>${esc(numFmt)}</b></p>` : ''}
 ${dataLonga ? `<p style="text-align:right;font-size:12pt;margin:0 0 20pt 0">Macap&#225;/AP, ${dataLonga}.</p>` : '<p style="margin:0 0 20pt 0">&nbsp;</p>'}
@@ -17356,8 +17364,10 @@ ${paragsHtml}
 <!-- ══ ENCERRAMENTO ══════════════════════════════════════════════ -->
 <p style="font-size:12pt;margin:28pt 0 10pt 0">Respeitosamente,</p>
 
-<!-- ══ ASSINATURA ════════════════════════════════════════════════ -->
-<table style="width:100%;margin-top:48pt">
+</td></tr>
+<tr><td style="vertical-align:top;padding:0">
+
+<table style="width:100%;margin-top:20pt;border-collapse:collapse">
   <tr>
     <td style="width:55%;text-align:center;vertical-align:bottom">
       ${assImg ? `<p style="margin:0;text-align:center"><img src="${assImg}" style="max-height:60pt;max-width:180pt;object-fit:contain;display:block;margin:0 auto"></p>` : ''}
@@ -17375,6 +17385,9 @@ ${paragsHtml}
   Av. Machado de Assis, 372 &#8211; Centro &#8211; CEP: 68900-066, Macap&#225;-AP<br>
   &#128222;&nbsp;(096) 98415-2844&nbsp;&nbsp;|&nbsp;&nbsp;&#9993;&nbsp;cme.iapen.ap@gmail.com
 </div>
+
+</td></tr>
+</table>
 
 </body>
 </html>`;
