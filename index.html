@@ -16503,54 +16503,61 @@ function com_gerarOficio() {
   </tr>
 </table>
 
-<!-- Linha separadora simples (ABNT) -->
-<table style="width:100%;border-collapse:collapse;margin:6pt 0 14pt 0">
+<!-- Linha separadora -->
+<table style="width:100%;border-collapse:collapse;margin:6pt 0 16pt 0">
   <tr>
     <td style="height:1pt;background:#000;font-size:0">&nbsp;</td>
   </tr>
 </table>
 
-<!-- ══ IDENTIFICAÇÃO DO OFÍCIO ══════════════════════════════════ -->
-<p style="text-align:right;font-size:12pt;font-weight:bold;margin:0 0 20pt 0">
+<!-- ══ LAYOUT: linha-1=corpo (min 400pt), linha-2=data+assinatura ════════
+     height:400pt na célula funciona como min-height no Word — quando o
+     conteúdo é curto a célula cresce até 400pt empurrando a assinatura
+     para a parte inferior da folha (A4 ABNT ≈ 700pt de área útil).
+     ════════════════════════════════════════════════════════════════════ -->
+<table style="width:100%;border-collapse:collapse">
+<tr><td style="vertical-align:top;padding:0;height:400pt">
+
+<p style="text-align:right;font-size:12pt;font-weight:bold;margin:0 0 22pt 0">
   Of&#237;cio n&#176; <b>${esc(numFmt)}</b>
 </p>
 
-<!-- ══ DESTINATÁRIO ══════════════════════════════════════════════ -->
 <p style="font-size:12pt;margin:0 0 2pt 0">A Sua Excel&#234;ncia o (a) Senhor (a)</p>
-<p style="font-size:12pt;font-weight:bold;margin:0 0 14pt 0">${esc(dest)}.</p>
+<p style="font-size:12pt;font-weight:bold;margin:0 0 20pt 0">${esc(dest)}.</p>
 
-<!-- ══ REFERÊNCIA ════════════════════════════════════════════════ -->
-<p style="font-size:12pt;margin:0 0 2pt 0"><b>Assunto:</b> ${esc(modelo.assunto)}.</p>
-<p style="font-size:12pt;margin:0 0 18pt 0"><b>Processo n&#176;:</b> ${esc(processo)}.</p>
+<p style="font-size:12pt;margin:0 0 4pt 0"><b>Assunto:</b> ${esc(modelo.assunto)}.</p>
+<p style="font-size:12pt;margin:0 0 26pt 0"><b>Processo n&#176;:</b> ${esc(processo)}.</p>
 
-<!-- ══ SAUDAÇÃO ══════════════════════════════════════════════════ -->
-<p style="font-size:12pt;margin:0 0 18pt 0">${esc(saudacao)}</p>
+<p style="font-size:12pt;margin:0 0 26pt 0">${esc(saudacao)}</p>
 
 <!-- ══ CORPO ═════════════════════════════════════════════════════ -->
 ${paragsHtml}
 
-<!-- ══ ENCERRAMENTO ══════════════════════════════════════════════ -->
-<p style="font-size:12pt;margin:28pt 0 14pt 0">
+<p style="font-size:12pt;margin:34pt 0 20pt 0">
   Sem mais, esta CME se coloca &#224; disposi&#231;&#227;o para eventuais esclarecimentos.
 </p>
-<p style="font-size:12pt;margin:0 0 8pt 0">Respeitosamente,</p>
+<p style="font-size:12pt;margin:0">Respeitosamente,</p>
 
-<!-- ══ DATA (local e data antes da assinatura) ═══════════════════ -->
-<p style="text-align:right;font-size:12pt;margin:52pt 0 0 0">
+</td></tr>
+<tr><td style="vertical-align:top;padding:0">
+
+<p style="text-align:right;font-size:12pt;margin:10pt 0 0 0">
   Macap&#225;/AP, ${esc(dataLonga)}.
 </p>
 
-<!-- ══ ASSINATURA ════════════════════════════════════════════════ -->
-<table style="width:100%;margin-top:28pt">
+<table style="width:100%;margin-top:36pt;border-collapse:collapse">
   <tr>
     <td style="width:55%;text-align:center;vertical-align:bottom">
-      ${assImgCapturada ? `<p style="margin:0 0 0 0;text-align:center"><img src="${assImgCapturada}" style="max-height:60pt;max-width:180pt;object-fit:contain;display:block;margin:0 auto 0 auto"></p>` : ''}
+      ${assImgCapturada ? `<p style="margin:0;text-align:center"><img src="${assImgCapturada}" style="max-height:60pt;max-width:180pt;object-fit:contain;display:block;margin:0 auto"></p>` : ''}
       <p style="border-top:1pt solid #000;padding-top:6pt;font-size:12pt;font-weight:bold;margin:0">${esc(signat)}</p>
       <p style="font-size:11pt;margin:2pt 0 0 0">${esc(cargo)}</p>
       ${decreto ? `<p style="font-size:11pt;margin:2pt 0 0 0">Decreto n&#176; ${esc(decreto)}</p>` : ''}
     </td>
     <td style="width:45%"></td>
   </tr>
+</table>
+
+</td></tr>
 </table>
 
 </body>
