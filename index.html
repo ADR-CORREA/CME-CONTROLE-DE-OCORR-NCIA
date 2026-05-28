@@ -8830,7 +8830,9 @@ function ass_remover() {
   _mostrarToast('Assinatura removida.', 'sucesso');
 }
 
+let _criandoUsuario = false;
 function criarUsuario() {
+  if (_criandoUsuario) return;  // evita duplo clique durante PBKDF2
   const nome  = document.getElementById("new-name").value.trim();
   const user  = document.getElementById("new-user").value.trim();
   const pass  = document.getElementById("new-pass").value;
@@ -8843,10 +8845,14 @@ function criarUsuario() {
   if (pass.length < 6) {
     msg.className = "sys-alert error"; msg.textContent = "Senha muito curta (mínimo 6 caracteres)."; return;
   }
-  const us = getUsuarios();
-  if (us.find(u => u.usuario === user)) {
+  const us = getUsuarios().slice(); // cópia para evitar mutação compartilhada entre chamadas concorrentes
+  if (us.find(u => u.usuario === user.toLowerCase())) {
     msg.className = "sys-alert error"; msg.textContent = "Login já está em uso."; return;
   }
+  _criandoUsuario = true;
+  const btn = document.querySelector('#panel-admin .btn-primary[onclick="criarUsuario()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Criando...'; }
+  msg.className = "sys-alert"; msg.textContent = "";
   hashSenhaPBKDF2(pass).then(({ hash, salt }) => {
     us.push({ usuario: user.toLowerCase(), senha: hash, senhaSalt: salt, senhaVersao: 3, nome, cargo, nivel, primeiroLogin: true });
     salvarUsuarios(us);
@@ -8857,7 +8863,13 @@ function criarUsuario() {
     document.getElementById("new-pass").value  = "";
     if (document.getElementById("new-cargo")) document.getElementById("new-cargo").value = "";
     renderizarUsers();
-    setTimeout(() => { msg.className = "sys-alert"; }, 3000);
+    setTimeout(() => { if (msg.className === "sys-alert success") msg.className = "sys-alert"; }, 3000);
+  }).catch(err => {
+    console.error('[CME] criarUsuario:', err);
+    msg.className = "sys-alert error"; msg.textContent = "⚠️ Erro ao criar usuário: " + (err?.message || String(err));
+  }).finally(() => {
+    _criandoUsuario = false;
+    if (btn) { btn.disabled = false; btn.textContent = '➕ Criar Servidor'; }
   });
 }
 
@@ -12239,9 +12251,17 @@ function salvarMovEstoque(tipo) {
   _mostrarToast('✓ ' + tipoLabel + ' registrada com sucesso!', 'ok');
 }
 
-// Fechar modal clicando fora
-document.querySelectorAll(".modal-overlay").forEach(m => {
-  m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); });
+// Fechar modal clicando fora — event delegation cobre todos os modais, incluindo os adicionados depois
+document.addEventListener('click', e => {
+  if (e.target.classList && e.target.classList.contains('modal-overlay')) {
+    e.target.classList.remove('open');
+  }
+});
+// Fechar modal com tecla Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+  }
 });
 
 // Auto-atualizar a cada 5 min
