@@ -16281,6 +16281,7 @@ function _cmeComboInit(selectId) {
 
   function syncInputFromSelect() {
     const v = origDesc.get.call(sel);
+    if (!v) { inp.value = ''; return; } // sem seleção → limpa campo (evita filtro "Selecione a vara...")
     const opt = Array.from(sel.options).find(o => o.value === v);
     inp.value = opt ? opt.textContent : '';
   }
