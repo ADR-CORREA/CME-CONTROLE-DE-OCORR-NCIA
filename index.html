@@ -8851,14 +8851,31 @@ function ass_salvar() {
       document.getElementById('ass-msg').innerHTML = '<div class="sys-alert error">Desenhe a assinatura antes de salvar.</div>';
       return;
     }
-    dataUrl = canvas.toDataURL('image/png');
+    // Composite sobre canvas branco → salva como JPEG (sem fundo preto)
+    const _offCv = document.createElement('canvas');
+    _offCv.width = canvas.width; _offCv.height = canvas.height;
+    const _offCtx = _offCv.getContext('2d');
+    _offCtx.fillStyle = '#fff';
+    _offCtx.fillRect(0, 0, _offCv.width, _offCv.height);
+    _offCtx.drawImage(canvas, 0, 0);
+    dataUrl = _offCv.toDataURL('image/jpeg', 0.92);
   } else {
     const img = document.getElementById('ass-preview-img').src;
     if (!img || img === window.location.href) {
       document.getElementById('ass-msg').innerHTML = '<div class="sys-alert error">Selecione uma imagem primeiro.</div>';
       return;
     }
-    dataUrl = img;
+    // Composite sobre canvas branco → remove fundo transparente da imagem
+    const _preImg = document.getElementById('ass-preview-img');
+    const _w2 = _preImg.naturalWidth  || 600;
+    const _h2 = _preImg.naturalHeight || 200;
+    const _offCv2 = document.createElement('canvas');
+    _offCv2.width = _w2; _offCv2.height = _h2;
+    const _offCtx2 = _offCv2.getContext('2d');
+    _offCtx2.fillStyle = '#fff';
+    _offCtx2.fillRect(0, 0, _w2, _h2);
+    _offCtx2.drawImage(_preImg, 0, 0);
+    dataUrl = _offCv2.toDataURL('image/jpeg', 0.92);
   }
   const us = getUsuarios();
   us[_assIdx].assinatura = dataUrl;
@@ -12896,6 +12913,7 @@ function baixarModeloPDF() {
     object-fit: contain;
     display: block;
     margin-bottom: 2px;
+    mix-blend-mode: multiply;
   }
   .ass-linha {
     font-family: 'Courier New', monospace;
@@ -13589,7 +13607,7 @@ function imprimirModeloMulti() {
   .e-relatorio   { margin: 10px 0 6px 0; font-style: italic; }
   .local-data    { margin: 20px 0 4px 0; text-align: right; font-size: 10pt; }
   .ass-bloco     { margin-top: 48px; text-align: center; display: flex; flex-direction: column; align-items: center; }
-  .ass-img       { max-height: 80px; max-width: 260px; width: auto; height: auto; object-fit: contain; display: block; margin-bottom: 0; }
+  .ass-img       { max-height: 80px; max-width: 260px; width: auto; height: auto; object-fit: contain; display: block; margin-bottom: 0; mix-blend-mode: multiply; }
   .ass-linha     { font-family: 'Courier New', monospace; letter-spacing: 2px; margin: 0 0 6px 0; color: #000; }
   .linha-tit     { border-top: 1px solid #bbb; margin: 10px 0; }
   .ass-cargo     { margin: 14px 0 1px 0; font-size: 10.5pt; font-weight: bold; text-align: center; }
@@ -16531,6 +16549,7 @@ function com_gerarOficio() {
     object-fit: contain;
     display: block;
     margin: 0 auto 2px;
+    mix-blend-mode: multiply;
   }
   .ass-nome  { border-top: 1px solid #000; padding-top: 6px; font-weight: bold; font-size: 12pt; margin: 0; }
   .ass-cargo { font-size: 11pt; margin: 2px 0 0 0; }
@@ -18152,7 +18171,21 @@ async function _comGerarPDFExec() {
     if (assImg) {
       try {
         const imgW = 55, imgH = 18;
-        doc.addImage(assImg, 'PNG', assC - imgW / 2, y, imgW, imgH);
+        // Converte PNG transparente → JPEG branco para evitar fundo preto no jsPDF
+        const _assJpeg = await new Promise(res => {
+          const _i = new Image();
+          _i.onload = () => {
+            const _c = document.createElement('canvas');
+            _c.width = _i.naturalWidth; _c.height = _i.naturalHeight;
+            const _x = _c.getContext('2d');
+            _x.fillStyle = '#fff'; _x.fillRect(0, 0, _c.width, _c.height);
+            _x.drawImage(_i, 0, 0);
+            res(_c.toDataURL('image/jpeg', 0.92));
+          };
+          _i.onerror = () => res(assImg);
+          _i.src = assImg;
+        });
+        doc.addImage(_assJpeg, 'JPEG', assC - imgW / 2, y, imgW, imgH);
         y += imgH + 1;
       } catch(e) {}
     }
