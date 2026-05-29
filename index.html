@@ -13913,10 +13913,16 @@ function r2_renderizarListaMon(lista, busca, total) {
       style="display:flex;align-items:center;justify-content:space-between;cursor:pointer"
       onclick="r2_selecionarMonitorado('${nomeEsc}')">
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${m.nome}</span>
-      ${isAdmin ? `<button onclick="event.stopPropagation();r2_confirmarDeleteMonitorado('${nomeEsc}')"
-        title="Excluir pasta do monitorado"
-        style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#ccc;font-size:.85rem;padding:4px;border-radius:4px;transition:color .15s;margin-left:4px"
-        onmouseover="this.style.color='#dc3545'" onmouseout="this.style.color='#ccc'">🗑️</button>` : ''}
+      <span style="display:flex;gap:2px;flex-shrink:0">
+        <button onclick="event.stopPropagation();r2_renomearMonitoradoDialog('${nomeEsc}')"
+          title="Renomear pasta"
+          style="background:none;border:none;cursor:pointer;color:#ccc;font-size:.85rem;padding:4px;border-radius:4px;transition:color .15s"
+          onmouseover="this.style.color='#1F4E78'" onmouseout="this.style.color='#ccc'">✏️</button>
+        ${isAdmin ? `<button onclick="event.stopPropagation();r2_confirmarDeleteMonitorado('${nomeEsc}')"
+          title="Excluir pasta do monitorado"
+          style="background:none;border:none;cursor:pointer;color:#ccc;font-size:.85rem;padding:4px;border-radius:4px;transition:color .15s"
+          onmouseover="this.style.color='#dc3545'" onmouseout="this.style.color='#ccc'">🗑️</button>` : ''}
+      </span>
     </div>`;
   }).join('') + rodape;
 }
@@ -13925,6 +13931,27 @@ function r2_renderizarListaMon(lista, busca, total) {
 function r2_confirmarDeleteMonitorado(nome) {
   if (!confirm(`⚠️ ATENÇÃO!\n\nExcluir TODOS os arquivos do monitorado "${nome}"?\n\nEsta ação é IRREVERSÍVEL e apagará permanentemente todos os documentos das pastas Processo, Docs do monitorado e Justificativa.`)) return;
   r2_deletarMonitorado(nome);
+}
+
+/* ── Renomear pasta do monitorado (todos os servidores) ──────── */
+async function r2_renomearMonitoradoDialog(nomeAtual) {
+  const nomeNovo = prompt(`Renomear pasta:\n"${nomeAtual}"\n\nNovo nome (exatamente como aparece nos processos):`, nomeAtual);
+  if (!nomeNovo || !nomeNovo.trim() || nomeNovo.trim() === nomeAtual) return;
+  const novoTrimmed = nomeNovo.trim().toUpperCase();
+  try {
+    _mostrarToast('✏️ Renomeando pasta…', 'sucesso');
+    await r2_api('POST', '/rename-monitorado',
+      { 'Content-Type': 'application/json' },
+      JSON.stringify({ nomeAntigo: nomeAtual, nomeNovo: novoTrimmed })
+    );
+    // Atualiza estado se o monitorado ativo foi renomeado
+    if (r2_state.monitorado === nomeAtual) r2_state.monitorado = novoTrimmed;
+    _mostrarToast(`✅ Pasta renomeada para "${novoTrimmed}"`, 'sucesso');
+    addLog(`R2: pasta renomeada "${nomeAtual}" → "${novoTrimmed}" (${usuarioAtual.nome})`);
+    await r2_inicializar();
+  } catch(e) {
+    _mostrarToast(`⚠️ Erro ao renomear: ${e.message}`, 'erro');
+  }
 }
 
 async function r2_deletarMonitorado(nome) {
@@ -14636,6 +14663,7 @@ function r2_renderizarProcesso(arquivos) {
               <span style="color:#aaa;white-space:nowrap;font-size:.75rem">${dt}</span>
               <button class="r2-acao-icone" style="background:#f0fdf4;color:#166534" onclick="r2_visualizarArquivo('${ek}','${nomeLimpo.replace(/'/g,"&#39;")}')" title="Visualizar">👁️</button>
               <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78" onclick="r2_baixarArquivo('${ek}','${nomeLimpo.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
+              <button class="r2-acao-icone" style="background:#fef9c3;color:#713f12" onclick="r2_abrirRename('${ek}','${nomeLimpo.replace(/'/g,"&#39;")}')" title="Renomear">✏️</button>
               ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828" onclick="r2_confirmarDelete('${ek}','${nomeLimpo.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
             </div>`;
           }).join('') : `<div style="padding:8px 14px;color:#bbb;font-size:.82rem;font-style:italic">Nenhum documento anexado.</div>`}
@@ -14661,6 +14689,7 @@ function r2_renderizarProcesso(arquivos) {
             <span style="color:#aaa;font-size:.75rem">${dt}</span>
             <button class="r2-acao-icone" style="background:#f0fdf4;color:#166534" onclick="r2_visualizarArquivo('${ek}','${nomeShow.replace(/'/g,"&#39;")}')" title="Visualizar">👁️</button>
             <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78" onclick="r2_baixarArquivo('${ek}','${nomeShow.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
+            <button class="r2-acao-icone" style="background:#fef9c3;color:#713f12" onclick="r2_abrirRename('${ek}','${nomeShow.replace(/'/g,"&#39;")}')" title="Renomear">✏️</button>
             ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828" onclick="r2_confirmarDelete('${ek}','${nomeShow.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
           </div>`;
         }).join('')}
