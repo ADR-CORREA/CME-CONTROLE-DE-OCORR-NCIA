@@ -12975,7 +12975,7 @@ ${bodyHtml}
   </p>
 </div>
 
-<script>window.onload=function(){setTimeout(function(){window.print();},650);};<\/script>
+<script>window.onload=function(){var b=document.body;var phPx=914,pwPx=604;var p=b.style.width;b.style.width=pwPx+'px';var h=b.scrollHeight;b.style.width=p;if(h>phPx){b.style.zoom=((phPx*0.97)/h).toFixed(4);}setTimeout(function(){window.print();},750);};<\/script>
 </body></html>`;
 
   // Usar Blob URL em vez de document.write — garante que imagens base64 renderizem
@@ -13648,7 +13648,7 @@ ${bodyHtml}
   </p>
 </div>
 
-<script>window.onload=function(){setTimeout(function(){window.print();},650);};<\/script>
+<script>window.onload=function(){var b=document.body;var phPx=914,pwPx=604;var p=b.style.width;b.style.width=pwPx+'px';var h=b.scrollHeight;b.style.width=p;if(h>phPx){b.style.zoom=((phPx*0.97)/h).toFixed(4);}setTimeout(function(){window.print();},750);};<\/script>
 </body></html>`;
 
   const blob2 = new Blob([docHtml], { type: 'text/html;charset=utf-8' });
@@ -16615,7 +16615,7 @@ function com_gerarOficio() {
   <p style="font-size:9pt;color:#777;margin-top:6px">No di&#225;logo de impress&#227;o, escolha <strong>"Salvar como PDF"</strong>.<br>Desative <em>Cabe&#231;alhos e rodap&#233;s</em> do navegador para resultado mais limpo.</p>
 </div>
 
-<script>window.onload=function(){setTimeout(function(){window.print();},650);};<\/script>
+<script>window.onload=function(){var b=document.body;var phPx=914,pwPx=604;var p=b.style.width;b.style.width=pwPx+'px';var h=b.scrollHeight;b.style.width=p;if(h>phPx){b.style.zoom=((phPx*0.97)/h).toFixed(4);}setTimeout(function(){window.print();},750);};<\/script>
 </body>
 </html>`;
 
@@ -18054,8 +18054,32 @@ async function _comGerarPDFExec() {
 
     doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
     const ABNT_INDENT = 12.5; // 1,25 cm — recuo na primeira linha de cada parágrafo
+
+    // ── Auto-compressão: garante que o corpo cabe em 1 página ─
+    let lineH = 6, paraSpacing = 11, emptyLineH = 6;
+    {
+      const _yAssinEst = mT + (pageH - mT - mB) * 0.80;
+      const _encerH    = 38; // estimativa: 8 + semMais + Respeitosamente
+      const _avail     = _yAssinEst - y - _encerH;
+      let _totH = 0;
+      for (const _p of paragrafosCorpo) {
+        if (!_p.trim()) { _totH += emptyLineH; continue; }
+        const _fs = doc.splitTextToSize(_p.trim(), tw - ABNT_INDENT);
+        const _rt = _fs[0] ? _p.trim().substring(_fs[0].trimEnd().length).trim() : '';
+        const _rl = _rt ? doc.splitTextToSize(_rt, tw).length : 0;
+        _totH += (1 + _rl) * lineH + paraSpacing;
+      }
+      if (_totH > _avail && _avail > 10) {
+        const _ratio = Math.max(0.60, _avail / _totH);
+        lineH       = Math.round(lineH       * _ratio * 10) / 10;
+        paraSpacing = Math.round(paraSpacing * _ratio * 10) / 10;
+        emptyLineH  = Math.round(emptyLineH  * _ratio * 10) / 10;
+      }
+    }
+    // ──────────────────────────────────────────────────────────
+
     for (const p of paragrafosCorpo) {
-      if (!p.trim()) { y += 6; continue; }
+      if (!p.trim()) { y += emptyLineH; continue; }
 
       // Primeira linha com recuo; demais com largura total (ABNT)
       const firstSplit = doc.splitTextToSize(p.trim(), tw - ABNT_INDENT);
@@ -18070,7 +18094,7 @@ async function _comGerarPDFExec() {
       ];
 
       for (const line of allLines) {
-        if (y > pageH - mB - 6) { doc.addPage(); y = mT; }
+        if (y > pageH - mB - lineH) { doc.addPage(); y = mT; }
         if (line.last) {
           doc.text(line.text, line.x, y); // última linha: alinhada à esquerda
         } else {
@@ -18088,9 +18112,9 @@ async function _comGerarPDFExec() {
             }
           }
         }
-        y += 6;
+        y += lineH;
       }
-      y += 11; // espaço entre parágrafos (ABNT)
+      y += paraSpacing; // espaço entre parágrafos (ABNT)
     }
 
     // ── Encerramento ─────────────────────────────────────────────
