@@ -14997,6 +14997,29 @@ function r2_iconeArquivo(nome) {
           // Outros usuários legado continuam funcionando via migração no login
         }
       }
+      // ── Migração: assinaturas PNG transparente → JPEG fundo branco ──
+      // Remove o quadrado preto que aparecia ao imprimir/gerar PDF
+      for (const u of usuarios) {
+        if (u.assinatura && u.assinatura.startsWith('data:image/png')) {
+          try {
+            u.assinatura = await new Promise(res => {
+              const _mi = new Image();
+              _mi.onload = () => {
+                const _mc = document.createElement('canvas');
+                _mc.width = _mi.naturalWidth; _mc.height = _mi.naturalHeight;
+                const _mx = _mc.getContext('2d');
+                _mx.fillStyle = '#fff'; _mx.fillRect(0, 0, _mc.width, _mc.height);
+                _mx.drawImage(_mi, 0, 0);
+                res(_mc.toDataURL('image/jpeg', 0.92));
+              };
+              _mi.onerror = () => res(u.assinatura);
+              _mi.src = u.assinatura;
+            });
+            precisaSalvar = true;
+          } catch(e) { /* mantém original se falhar */ }
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────
       if (precisaSalvar) {
         seeds.push(window._db.from('store').upsert({ key: 'cme_usuarios', value: usuarios }, { onConflict: 'key' }));
       }
