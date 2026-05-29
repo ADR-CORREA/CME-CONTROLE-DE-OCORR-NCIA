@@ -12787,6 +12787,11 @@ function baixarModeloPDF() {
   }
   if (_inAss) bodyHtml += `</div>\n`; // fecha .ass-bloco
 
+  // ── Separa corpo de texto do bloco de assinatura (posicionamento ABNT) ──
+  const _assIdx  = bodyHtml.indexOf('<div class="ass-bloco">');
+  const _bodyTxt = _assIdx >= 0 ? bodyHtml.slice(0, _assIdx) : bodyHtml;
+  const _assBlk  = _assIdx >= 0 ? bodyHtml.slice(_assIdx) : '';
+
   const meses = ['janeiro','fevereiro','mar\u00e7o','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   const agora = new Date();
   const dataExtenso = `Macap\u00e1 \u2013 AP, ${agora.getDate()} de ${meses[agora.getMonth()]} de ${agora.getFullYear()}`;
@@ -12875,8 +12880,11 @@ function baixarModeloPDF() {
   .spacer { height: 20pt; }
 
   /* ── Bloco de assinatura ── */
+  /* margin-top:auto no .ass-area empurra o conjunto data+assinatura
+     para o fundo do flex-column, posicionando per ABNT */
+  .ass-area  { margin-top: auto; padding-top: 6px; }
   .ass-bloco {
-    margin-top: 48pt;
+    margin-top: 6pt;
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -12900,7 +12908,7 @@ function baixarModeloPDF() {
   .ass-meta-italic   { margin: 2px 0; font-style: italic; font-size: 10pt; color: #555; text-align: center; }
 
   /* ── Data por extenso ── */
-  .data-extenso { margin-top: 50pt; text-align: right; font-size: 11pt; }
+  .data-extenso { margin-top: 0; margin-bottom: 14pt; text-align: right; font-size: 11pt; }
 
   /* ── Rodapé ── */
   .rodape {
@@ -12954,12 +12962,14 @@ function baixarModeloPDF() {
   <div class="meta-bloco">${metaHtml}</div>
 </div>
 
-<div style="flex:1">
+<div style="flex:1;display:flex;flex-direction:column;">
 <hr class="div-light">
-${bodyHtml}
+<div style="flex:1">${_bodyTxt}</div>
+<div class="ass-area">
+  <div class="data-extenso">${dataExtenso}</div>
+  ${_assBlk}
 </div>
-
-<div class="data-extenso">${dataExtenso}</div>
+</div>
 
 <div class="rodape">
   <p>Av. Machado de Assis, 372 \u2013 Centro, CEP 68900-066 \u2013 Macap\u00e1-AP</p>
