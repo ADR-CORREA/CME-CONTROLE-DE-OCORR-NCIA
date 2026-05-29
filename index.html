@@ -12967,7 +12967,7 @@ function baixarModeloPDF() {
     font-size: 13pt; cursor: pointer; font-family: Arial;
   }
   .btn-imp:hover { background: #254d99; }
-
+  @media screen { body { padding: 3cm 2cm 2.5cm 3cm; } }
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .no-print { display: none !important; }
@@ -13648,7 +13648,7 @@ function imprimirModeloMulti() {
              background: #000; color: #fff; border: none; border-radius: 6px;
              font-size: 13pt; cursor: pointer; font-family: Arial; }
   .btn-imp:hover { background: #333; }
-
+  @media screen { body { padding: 2cm 2cm 2.8cm 2cm; } }
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .no-print { display: none !important; }
@@ -16617,6 +16617,10 @@ function com_gerarOficio() {
   }
   .rodape-doc p { margin: 2px 0; }
 
+  /* ── Visualização em tela: aplica margens equivalentes ao @page ── */
+  @media screen {
+    body { padding: 3cm 2cm 2.5cm 3cm; }
+  }
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .no-print { display: none !important; }
