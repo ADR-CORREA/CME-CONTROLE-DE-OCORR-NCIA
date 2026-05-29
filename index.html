@@ -4705,7 +4705,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
       <!-- Painel: Desenhar -->
       <div id="ass-panel-draw">
         <p style="font-size:.82rem;color:#888;margin:0 0 8px 0">Desenhe sua assinatura abaixo com o mouse ou dedo:</p>
-        <canvas id="ass-canvas" width="460" height="160"
+        <canvas id="ass-canvas" width="460" height="200"
           style="border:1px solid #ccc;border-radius:8px;background:#fff;cursor:crosshair;touch-action:none;width:100%;max-width:460px;display:block"></canvas>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button class="btn-secondary" style="font-size:.82rem" onclick="ass_limpar()">🗑️ Limpar</button>
@@ -8796,7 +8796,7 @@ function ass_iniciarCanvas() {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   ctx.strokeStyle = '#000';
-  ctx.lineWidth   = 2;
+  ctx.lineWidth   = 2.5;
   ctx.lineCap     = 'round';
   ctx.lineJoin    = 'round';
 
@@ -8851,14 +8851,36 @@ function ass_salvar() {
       document.getElementById('ass-msg').innerHTML = '<div class="sys-alert error">Desenhe a assinatura antes de salvar.</div>';
       return;
     }
-    // Composite sobre canvas branco → salva como JPEG (sem fundo preto)
-    const _offCv = document.createElement('canvas');
-    _offCv.width = canvas.width; _offCv.height = canvas.height;
-    const _offCtx = _offCv.getContext('2d');
-    _offCtx.fillStyle = '#fff';
-    _offCtx.fillRect(0, 0, _offCv.width, _offCv.height);
-    _offCtx.drawImage(canvas, 0, 0);
-    dataUrl = _offCv.toDataURL('image/jpeg', 0.92);
+    // Recorta ao traço desenhado + fundo branco → JPEG sem bordas vazias
+    {
+      const _d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let _x0 = canvas.width, _x1 = 0, _y0 = canvas.height, _y1 = 0;
+      for (let _y = 0; _y < canvas.height; _y++) {
+        for (let _x = 0; _x < canvas.width; _x++) {
+          if (_d[(_y * canvas.width + _x) * 4 + 3] > 10) {
+            if (_x < _x0) _x0 = _x; if (_x > _x1) _x1 = _x;
+            if (_y < _y0) _y0 = _y; if (_y > _y1) _y1 = _y;
+          }
+        }
+      }
+      const _pad = 16;
+      const _cx = Math.max(0, _x0 - _pad);
+      const _cy = Math.max(0, _y0 - _pad);
+      const _cw = Math.min(canvas.width,  _x1 + _pad) - _cx;
+      const _ch = Math.min(canvas.height, _y1 + _pad) - _cy;
+      const _oCv = document.createElement('canvas');
+      _oCv.width  = (_cw > 0) ? _cw : canvas.width;
+      _oCv.height = (_ch > 0) ? _ch : canvas.height;
+      const _oCtx = _oCv.getContext('2d');
+      _oCtx.fillStyle = '#fff';
+      _oCtx.fillRect(0, 0, _oCv.width, _oCv.height);
+      if (_cw > 0 && _ch > 0) {
+        _oCtx.drawImage(canvas, _cx, _cy, _cw, _ch, 0, 0, _cw, _ch);
+      } else {
+        _oCtx.drawImage(canvas, 0, 0);
+      }
+      dataUrl = _oCv.toDataURL('image/jpeg', 0.95);
+    }
   } else {
     const img = document.getElementById('ass-preview-img').src;
     if (!img || img === window.location.href) {
@@ -12913,7 +12935,6 @@ function baixarModeloPDF() {
     object-fit: contain;
     display: block;
     margin-bottom: 2px;
-    mix-blend-mode: multiply;
   }
   .ass-linha {
     font-family: 'Courier New', monospace;
@@ -13607,7 +13628,7 @@ function imprimirModeloMulti() {
   .e-relatorio   { margin: 10px 0 6px 0; font-style: italic; }
   .local-data    { margin: 20px 0 4px 0; text-align: right; font-size: 10pt; }
   .ass-bloco     { margin-top: 48px; text-align: center; display: flex; flex-direction: column; align-items: center; }
-  .ass-img       { max-height: 80px; max-width: 260px; width: auto; height: auto; object-fit: contain; display: block; margin-bottom: 0; mix-blend-mode: multiply; }
+  .ass-img       { max-height: 80px; max-width: 260px; width: auto; height: auto; object-fit: contain; display: block; margin-bottom: 0; }
   .ass-linha     { font-family: 'Courier New', monospace; letter-spacing: 2px; margin: 0 0 6px 0; color: #000; }
   .linha-tit     { border-top: 1px solid #bbb; margin: 10px 0; }
   .ass-cargo     { margin: 14px 0 1px 0; font-size: 10.5pt; font-weight: bold; text-align: center; }
@@ -16573,7 +16594,6 @@ function com_gerarOficio() {
     object-fit: contain;
     display: block;
     margin: 0 auto 2px;
-    mix-blend-mode: multiply;
   }
   .ass-nome  { border-top: 1px solid #000; padding-top: 6px; font-weight: bold; font-size: 12pt; margin: 0; }
   .ass-cargo { font-size: 11pt; margin: 2px 0 0 0; }
@@ -18194,9 +18214,8 @@ async function _comGerarPDFExec() {
     const assW = tw * 0.55, assC = mL + tw / 2, assX = assC - assW / 2;
     if (assImg) {
       try {
-        const imgW = 55, imgH = 18;
-        // Converte PNG transparente → JPEG branco para evitar fundo preto no jsPDF
-        const _assJpeg = await new Promise(res => {
+        // Converte PNG→JPEG branco + calcula dimensões pela proporção real
+        const _assData = await new Promise(res => {
           const _i = new Image();
           _i.onload = () => {
             const _c = document.createElement('canvas');
@@ -18204,12 +18223,17 @@ async function _comGerarPDFExec() {
             const _x = _c.getContext('2d');
             _x.fillStyle = '#fff'; _x.fillRect(0, 0, _c.width, _c.height);
             _x.drawImage(_i, 0, 0);
-            res(_c.toDataURL('image/jpeg', 0.92));
+            res({ jpeg: _c.toDataURL('image/jpeg', 0.95),
+                  w: _i.naturalWidth, h: _i.naturalHeight });
           };
-          _i.onerror = () => res(assImg);
+          _i.onerror = () => res({ jpeg: assImg, w: 460, h: 160 });
           _i.src = assImg;
         });
-        doc.addImage(_assJpeg, 'JPEG', assC - imgW / 2, y, imgW, imgH);
+        const _aRatio = _assData.w / (_assData.h || 1);
+        const _mxW = 55, _mxH = 24;
+        let imgW = _mxW, imgH = imgW / _aRatio;
+        if (imgH > _mxH) { imgH = _mxH; imgW = imgH * _aRatio; }
+        doc.addImage(_assData.jpeg, 'JPEG', assC - imgW / 2, y, imgW, imgH);
         y += imgH + 1;
       } catch(e) {}
     }
