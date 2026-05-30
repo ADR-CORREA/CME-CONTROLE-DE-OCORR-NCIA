@@ -17121,7 +17121,7 @@ async function _bmonSelecionarMon(pref, nome) {
           <input type="checkbox" class="${pref}-doc-check" data-key="${arq.key}" data-nome="${(arq.nome||'').replace(/"/g,'&quot;')}"
             style="width:15px;height:15px;cursor:pointer;accent-color:#1d4ed8" onchange="_bmonAtualizarContador('${pref}')">
           <span style="font-size:1rem">${icon}</span>
-          <span style="flex:1;font-size:.8rem;color:#1e293b">${arq.nome || arq.key.split('/').pop()}</span>
+          <span style="flex:1;font-size:.8rem;color:#1e293b">${esc(arq.nome || arq.key.split('/').pop())}</span>
           <span style="font-size:.72rem;color:#94a3b8">${kb}</span>
         </label>`;
       }
@@ -17831,7 +17831,7 @@ async function com_selecionarMonitorado(nome) {
               style="width:15px;height:15px;cursor:pointer;accent-color:#1d4ed8;flex-shrink:0" onchange="com_atualizarContadorDocs()">
             <span style="font-size:1rem;flex-shrink:0">${icon}</span>
             <span style="flex:1;font-size:.8rem;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
-              title="${(arq.nome||'').replace(/"/g,'&quot;')}">${arq.nome || arq.key.split('/').pop()}</span>
+              title="${esc(arq.nome||'')}">${esc(arq.nome || arq.key.split('/').pop())}</span>
           </label>
           <button onclick="com_previewDocR2('${safeKeyPreview}','${safeNomePreview}')" title="Visualizar documento"
             style="background:none;border:1px solid #cbd5e1;border-radius:5px;cursor:pointer;color:#1d4ed8;
@@ -18526,7 +18526,7 @@ async function com_abrirPrevGenModal() {
           title="Arraste para mudar a ordem deste documento">⠿ Mover</div>
         <span style="font-size:1.1rem">📕</span>
         <span style="font-weight:700;font-size:.88rem;color:#1e293b;flex:1;min-width:0;
-          white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${anexo.nome}">${anexo.nome}</span>
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(anexo.nome)}">${esc(anexo.nome)}</span>
         <span id="pg-count-${anexo.id}" style="font-size:.78rem;color:#64748b;white-space:nowrap"></span>
         <button onclick="com_prevgenSelectAll('${anexo.id}',true)"
           style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:6px;
