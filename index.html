@@ -5906,65 +5906,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
   </div>
 </div>
 
-<!-- MODAL COM-RELATORIO -->
-<div class="modal-overlay" id="modal-com-relatorio">
-  <div class="modal-box" style="max-width:480px">
-    <div class="modal-header">
-      <h3>📄 Marcar Relatório como Enviado</h3>
-      <button class="modal-close" onclick="fecharModal('modal-com-relatorio')">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="com-rel-edit-id">
-      <div style="margin-bottom:14px;padding:10px;background:#f0f4ff;border-radius:8px">
-        <div style="font-size:.82rem;color:#666">Relatório</div>
-        <div style="font-weight:700" id="com-rel-tipo-display"></div>
-        <div style="color:#444;margin-top:2px" id="com-rel-monitorado-display"></div>
-      </div>
-      <div class="form-field">
-        <label>Data do envio *</label>
-        <input type="date" id="com-rel-data-envio">
-      </div>
-      <div class="form-field">
-        <label>Observação</label>
-        <textarea id="com-rel-obs" rows="2" placeholder="Observação sobre o envio" style="resize:vertical"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="fecharModal('modal-com-relatorio')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarComRelatorio()">✅ Marcar como Enviado</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL COM-GERENCIA -->
-<div class="modal-overlay" id="modal-com-gerencia">
-  <div class="modal-box" style="max-width:480px">
-    <div class="modal-header">
-      <h3>📋 Marcar Demanda como Enviada</h3>
-      <button class="modal-close" onclick="fecharModal('modal-com-gerencia')">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="com-ger-edit-id">
-      <div style="margin-bottom:14px;padding:10px;background:#f0f4ff;border-radius:8px">
-        <div style="font-size:.82rem;color:#666">Demanda</div>
-        <div style="font-weight:700" id="com-ger-titulo-display"></div>
-        <div style="color:#444;margin-top:2px" id="com-ger-resp-display"></div>
-      </div>
-      <div class="form-field">
-        <label>Data do envio *</label>
-        <input type="date" id="com-ger-data-envio">
-      </div>
-      <div class="form-field">
-        <label>Observação</label>
-        <textarea id="com-ger-obs" rows="2" placeholder="Observação sobre o envio" style="resize:vertical"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="fecharModal('modal-com-gerencia')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarComGerencia()">✅ Marcar como Enviado</button>
-    </div>
-  </div>
-</div>
+<!-- MODAIS com-relatorio e com-gerencia removidos (fluxo COM→Relatório/Gerência descontinuado; botões chamavam funções inexistentes) -->
 
 <!-- MODAL COM-OCORRENCIA -->
 <div class="modal-overlay" id="modal-com-ocorrencia">
@@ -10020,7 +9962,6 @@ function desarquivarGerencia(id) {
   salvarStore('gerencia', dados);
   renderizarGerArquivados();
   renderizarGerencia();
-  atualizarBadgeGer();
   _mostrarToast('↩ Demanda desarquivada.', 'sucesso');
 }
 
@@ -10051,7 +9992,6 @@ function atualizarBadgeRel() {
   const badge = document.getElementById('rel-badge');
   if (badge) { badge.textContent = total > 9 ? '9+' : total; badge.style.display = total > 0 ? 'flex' : 'none'; }
 }
-function atualizarBadgeGer() { /* fluxo COM→Gerência removido */ }
 function marcarOcVisto() {
   _cache['_ocBadgeVisto'] = new Date().toISOString();
   const b = document.getElementById('oc-badge'); if (b) b.style.display = 'none';
