@@ -16559,7 +16559,7 @@ function com_gerarOficio() {
   };
 
   const paragsHtml = paragrafos
-    .map(p => `<p style="text-align:justify;text-indent:1.25cm;margin:0 0 22pt 0;line-height:1.5;font-size:12pt">${escP(p)}</p>`)
+    .map(p => `<p style="text-align:justify;margin:0 0 22pt 0;line-height:1.5;font-size:12pt">${escP(p)}</p>`)
     .join('\n');
 
   // Logos a partir das variáveis globais B64 (mesma abordagem do gerador de Plantão)
@@ -18157,7 +18157,7 @@ async function _comGerarPDFExec() {
       : (modelo ? modelo.corpo(campos).map(stripTags) : []);
 
     doc.setFont('times', 'normal'); doc.setFontSize(12); doc.setTextColor(0);
-    const ABNT_INDENT = 12.5; // 1,25 cm — recuo na primeira linha de cada parágrafo
+    const ABNT_INDENT = 0; // sem recuo — parágrafos colados à margem esquerda
 
     // ── Auto-compressão: garante que o corpo cabe em 1 página ─
     let lineH = 6, paraSpacing = 11, emptyLineH = 6;
