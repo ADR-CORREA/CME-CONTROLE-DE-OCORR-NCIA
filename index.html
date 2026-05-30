@@ -7015,11 +7015,11 @@ function renderizarOcArquivadas() {
   }
   tbody.innerHTML = ocs.map(o => `<tr>
     <td style="font-weight:600">${o.id}</td>
-    <td>${o.monitorado||''}</td>
-    <td>${o.medida||''}</td>
-    <td>${o.tipo||''}</td>
+    <td>${esc(o.monitorado)||''}</td>
+    <td>${esc(o.medida)||''}</td>
+    <td>${esc(o.tipo)||''}</td>
     <td style="white-space:nowrap">${o.dataAlerta ? new Date(o.dataAlerta).toLocaleString('pt-BR') : ''}</td>
-    <td>${o.prodocNum||'—'}</td>
+    <td>${esc(o.prodocNum)||'—'}</td>
     <td style="white-space:nowrap">${o.comEnviadoEm ? new Date(o.comEnviadoEm).toLocaleString('pt-BR') : '—'}</td>
     <td style="white-space:nowrap">
       <button class="btn-sm btn-outline" onclick="desarquivarOcorrencia('${o.id}')">↩ Desarquivar</button>
@@ -7511,19 +7511,19 @@ function renderizarOFCArquivados() {
   tbody.innerHTML = lista.map((r, i) => {
     const ek = (r.id || i).toString().replace(/"/g,'&quot;');
     const comBadge = r.enviadoCOM && r.enviadoCOM !== 'Não'
-      ? `<span style="background:#dcfce7;color:#15803d;border-radius:4px;padding:1px 6px;font-size:.75rem">${r.enviadoCOM}</span>`
+      ? `<span style="background:#dcfce7;color:#15803d;border-radius:4px;padding:1px 6px;font-size:.75rem">${esc(r.enviadoCOM)}</span>`
       : `<span style="background:#fee2e2;color:#dc2626;border-radius:4px;padding:1px 6px;font-size:.75rem">Não</span>`;
     return `<tr style="background:#f0fdf4">
-      <td>${r.id||'—'}</td>
-      <td style="font-weight:500">${r.nome||'—'}</td>
-      <td>${r.acaoPenal||'—'}</td>
-      <td style="font-size:.78rem">${r.numProcesso||'—'}</td>
-      <td>${r.varaOrigem||'—'}</td>
-      <td><span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 6px;font-size:.78rem">${r.forum||'—'}</span></td>
-      <td>${r.dtReceOFC||'—'}</td>
-      <td>${r.prazoFinal||'—'}</td>
+      <td>${esc(r.id)||'—'}</td>
+      <td style="font-weight:500">${esc(r.nome)||'—'}</td>
+      <td>${esc(r.acaoPenal)||'—'}</td>
+      <td style="font-size:.78rem">${esc(r.numProcesso)||'—'}</td>
+      <td>${esc(r.varaOrigem)||'—'}</td>
+      <td><span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 6px;font-size:.78rem">${esc(r.forum)||'—'}</span></td>
+      <td>${esc(r.dtReceOFC)||'—'}</td>
+      <td>${esc(r.prazoFinal)||'—'}</td>
       <td>${comBadge}</td>
-      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.tratativa||'').replace(/"/g,'&quot;')}">${r.tratativa||'—'}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.tratativa)}">${esc(r.tratativa)||'—'}</td>
       <td>
         <button class="btn-secondary" style="padding:2px 8px;font-size:.78rem" onclick="abrirModalOFC('${ek}')">✏️</button>
       </td>
@@ -8554,9 +8554,9 @@ function renderizarUsers() {
         ${iniciais}
       </div>
       <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:.88rem;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.nome}</div>
+        <div style="font-weight:600;font-size:.88rem;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.nome)}</div>
         <div style="font-size:.73rem;color:#64748b;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          @${u.usuario}${u.cargo ? ' &nbsp;·&nbsp; ' + u.cargo : ''}
+          @${esc(u.usuario)}${u.cargo ? ' &nbsp;·&nbsp; ' + esc(u.cargo) : ''}
         </div>
         <div style="margin-top:3px">${assTag}${plTag}</div>
       </div>
@@ -9086,7 +9086,7 @@ function admin_popularLogSistema() {
     const d = l.ts ? new Date(l.ts).toLocaleString('pt-BR') : '';
     return `<div style="display:flex;gap:12px;padding:3px 0;border-bottom:1px solid #f5f5f5">
       <span style="color:#94a3b8;white-space:nowrap;min-width:140px">${d}</span>
-      <span>${l.msg}</span>
+      <span>${esc(l.msg)}</span>
     </div>`;
   }).join('');
 }
@@ -9151,11 +9151,11 @@ async function admin_carregarAuditArquivos() {
       <td style="padding:6px 10px;white-space:nowrap">
         <span style="color:${cor};font-weight:600">${acao_label[r.action]||r.action}</span>
       </td>
-      <td style="padding:6px 10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.monitorado||''}">${r.monitorado||'—'}</td>
-      <td style="padding:6px 10px;white-space:nowrap;color:#64748b">${r.pasta||'—'}</td>
-      <td style="padding:6px 10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.filename||''}">${r.filename||'—'}</td>
-      <td style="padding:6px 10px;white-space:nowrap;font-weight:600">${r.usuario||'—'}</td>
-      <td style="padding:6px 10px;white-space:nowrap;font-size:.75rem;color:#64748b">${r.nivel||'—'}</td>
+      <td style="padding:6px 10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.monitorado)}">${esc(r.monitorado)||'—'}</td>
+      <td style="padding:6px 10px;white-space:nowrap;color:#64748b">${esc(r.pasta)||'—'}</td>
+      <td style="padding:6px 10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.filename)}">${esc(r.filename)||'—'}</td>
+      <td style="padding:6px 10px;white-space:nowrap;font-weight:600">${esc(r.usuario)||'—'}</td>
+      <td style="padding:6px 10px;white-space:nowrap;font-size:.75rem;color:#64748b">${esc(r.nivel)||'—'}</td>
       <td style="padding:6px 10px;font-size:.78rem;color:#888;white-space:nowrap">${dt}</td>
     </tr>`;
   }).join('');
@@ -9728,11 +9728,11 @@ function renderizarComArquivados() {
   }
 
   tbody.innerHTML = rows.map(r => `<tr>
-    <td>${r.desc}</td>
-    <td>${r.tipo}</td>
+    <td>${esc(r.desc)}</td>
+    <td>${esc(r.tipo)}</td>
     <td style="white-space:nowrap">${r.enviadoEm ? new Date(r.enviadoEm).toLocaleString('pt-BR') : '—'}</td>
-    <td>${r.prodoc}</td>
-    <td>${r.plantao}</td>
+    <td>${esc(r.prodoc)}</td>
+    <td>${esc(r.plantao)}</td>
     <td style="white-space:nowrap">
       <button class="btn-sm btn-outline" onclick="desarquivarComItem('${r.chave}')">↩ Desarquivar</button>
       <button class="btn-sm btn-danger"  onclick="excluirComItem('${r.chave}')">🗑️</button>
@@ -9816,9 +9816,9 @@ function renderizarRelArquivadas() {
   }
   tbody.innerHTML = lista.map((r,i) => `<tr>
     <td>${i+1}</td>
-    <td>${r.tipo||''}</td>
-    <td>${r.monitorado||''}</td>
-    <td>${r.servidor||''}</td>
+    <td>${esc(r.tipo)||''}</td>
+    <td>${esc(r.monitorado)||''}</td>
+    <td>${esc(r.servidor)||''}</td>
     <td>${(r.dataRecebimento||'').split('-').reverse().join('/')}</td>
     <td>${(r.dataEnvio||'').split('-').reverse().join('/')}</td>
     <td><strong>${(r.comEnviadoEm||'').replace('T',' ').slice(0,16)}</strong></td>
@@ -9904,10 +9904,10 @@ function renderizarGerArquivados() {
   }
   tbody.innerHTML = lista.map(d => `<tr>
     <td>${(d.prazo||'').split('-').reverse().join('/')}</td>
-    <td>${d.titulo||''}</td>
-    <td>${d.responsavel||''}</td>
+    <td>${esc(d.titulo)||''}</td>
+    <td>${esc(d.responsavel)||''}</td>
     <td><strong>${(d.comEnviadoEm||'').split('-').reverse().join('/')}</strong></td>
-    <td>${d.comObs||'—'}</td>
+    <td>${esc(d.comObs)||'—'}</td>
     <td style="white-space:nowrap">
       <button class="btn-sm btn-outline" onclick="desarquivarGerencia('${d.id}')">↩ Desarquivar</button>
       <button class="btn-sm btn-danger"  onclick="excluirGerenciaArquivada('${d.id}')">🗑️</button>
@@ -11284,15 +11284,15 @@ function renderizarComunicacao() {
       : `<button class="btn-sm btn-outline" onclick="verComunicacao(${idx})" title="Visualizar">👁</button>`;
     return `<tr>
       <td>${o.id}</td>
-      <td>${o.monitorado||''}${badgeCrit}</td>
-      <td>${o.medida||''}</td>
-      <td>${o.tipo||''}</td>
+      <td>${esc(o.monitorado)||''}${badgeCrit}</td>
+      <td>${esc(o.medida)||''}</td>
+      <td>${esc(o.tipo)||''}</td>
       <td style="white-space:nowrap">${o.dataAlerta ? new Date(o.dataAlerta).toLocaleString('pt-BR') : ''}</td>
-      <td>${o._status||''}</td>
+      <td>${esc(o._status)||''}</td>
       <td>${badgeProdoc}</td>
-      <td>${o.prodocNum||'—'}</td>
+      <td>${esc(o.prodocNum)||'—'}</td>
       <td>${o.prodocData ? new Date(o.prodocData).toLocaleDateString('pt-BR') : '—'}</td>
-      <td>${o.plantao||''}</td>
+      <td>${esc(o.plantao)||''}</td>
       <td>${btnEdit}</td>
     </tr>`;
   }).join('');
