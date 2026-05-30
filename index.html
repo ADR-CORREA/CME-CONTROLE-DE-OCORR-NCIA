@@ -4573,6 +4573,12 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         </div>
       </div>
 
+      <!-- Histórico / auditoria da ocorrência -->
+      <div style="margin-top:14px;border-top:1px solid #e0e6ed;padding-top:10px">
+        <div style="font-weight:600;font-size:.85rem;color:var(--az1);margin-bottom:6px">📜 Histórico</div>
+        <div id="ver-historico" style="max-height:170px;overflow-y:auto;font-size:.8rem;color:#444;display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-ver-ocorrencia')">Fechar</button>
@@ -6384,6 +6390,13 @@ function _etapaOc(o) {
   if (o.etapa) return o.etapa;
   if (o.encaminhadoCom) return 'comunicacao';
   return null;
+}
+
+/* Registra um evento no histórico/auditoria da própria ocorrência (quem/quando/o quê) */
+function _histOc(oc, acao) {
+  if (!oc) return;
+  (oc.historico = oc.historico || []).push({ ts: new Date().toISOString(), usuario: usuarioAtual?.nome || '?', acao });
+  if (oc.historico.length > 100) oc.historico = oc.historico.slice(-100);
 }
 
 function getLogs() { return carregarStore("logs", []); }
@@ -8275,6 +8288,18 @@ function visualizarOcorrencia(idx) {
   document.getElementById('ver-descricao').value    = ou(oc.descricao);
   document.getElementById('ver-obs').value          = ou(oc.obs);
 
+  // Histórico / auditoria da ocorrência (mais recente no topo)
+  const histEl = document.getElementById('ver-historico');
+  if (histEl) {
+    const h = (oc.historico || []).slice().reverse();
+    histEl.innerHTML = h.length
+      ? h.map(e => `<div style="display:flex;gap:8px;border-bottom:1px solid #f0f2f5;padding-bottom:3px">
+          <span style="color:#888;white-space:nowrap;font-family:var(--font-mono);font-size:.73rem">${e.ts ? new Date(e.ts).toLocaleString('pt-BR') : '—'}</span>
+          <span>${esc(e.acao)} — <strong>${esc(e.usuario)}</strong></span>
+        </div>`).join('')
+      : '<div style="color:#999">Sem histórico registrado.</div>';
+  }
+
   // Botão Editar no rodapé
   document.getElementById('ver-btn-editar').onclick = function() {
     fecharModal('modal-ver-ocorrencia');
@@ -8364,9 +8389,12 @@ async function salvarOcorrencia() {
 
   if (i >= 0) {
     arr[i] = { ...arr[i], id, ...campos };
+    _histOc(arr[i], 'Editou os dados da ocorrência');
     addLog(`Editou ocorrência #${id} (${usuarioAtual.nome})`);
   } else {
-    arr.push({ id, ...campos, ciodes: '', contatos: '', prodoc: '', prodocNum: '', prodocData: '', juridico: {} });
+    const novoOc = { id, ...campos, ciodes: '', contatos: '', prodoc: '', prodocNum: '', prodocData: '', juridico: {} };
+    _histOc(novoOc, 'Criou a ocorrência');
+    arr.push(novoOc);
     addLog(`Criou ocorrência #${id} (${usuarioAtual.nome})`);
   }
   salvarStore('ocorrencias', arr);
@@ -9680,6 +9708,7 @@ function enviarRelParaCom(idx) {
   }
   o.etapa    = 'comunicacao';
   o.encComEm = new Date().toISOString();
+  _histOc(o, 'Relatório confeccionado e enviado à Comunicação');
   salvarStore('ocorrencias', ocs);
   renderizarRelRecebidos();
   atualizarBadgeCom();
@@ -10043,6 +10072,7 @@ function salvarComOcorrencia() {
   ocs[idx].etapa = 'arquivado';
   ocs[idx].comEnviadoEm = new Date().toISOString();
   ocs[idx].comObs = document.getElementById('com-oc-obs').value.trim();
+  _histOc(ocs[idx], 'PRODOC enviado pela Comunicação — caso arquivado');
   salvarStore('ocorrencias', ocs);
   fecharModal('modal-com-ocorrencia');
   renderizarComunicacao();
@@ -10089,6 +10119,7 @@ function encParaRelatorio(idx) {
   if (!confirm(`Enviar o caso #${o.id} (${o.monitorado || ''}) para o RELATÓRIO?`)) return;
   o.etapa    = 'relatorio';
   o.encRelEm = new Date().toISOString();
+  _histOc(o, 'Encaminhado ao Relatório');
   salvarStore('ocorrencias', ocs);
   renderizarCriticos();
   atualizarBadgeRel();
