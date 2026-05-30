@@ -2534,7 +2534,8 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px;flex-wrap:wrap">
           <button class="btn-secondary" onclick="jur_limpar()">🗑️ Limpar</button>
           <button class="btn-secondary" onclick="jur_copiar()">📋 Copiar Texto</button>
-          <button class="btn-primary"   onclick="jur_gerarDoc()">📄 Gerar .doc</button>
+          <button class="btn-primary"   onclick="jur_gerarPDF()">🖨️ Gerar PDF</button>
+          <button class="btn-secondary" onclick="jur_gerarDoc()">📄 Gerar .doc</button>
         </div>
 
         <!-- Grid 1fr 1fr -->
@@ -17568,6 +17569,157 @@ ${paragsHtml}
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 8000);
   _mostrarToast('📄 Documento jurídico gerado com sucesso!', 'sucesso');
+}
+
+/* ─── JURÍDICO: gerar PDF formatado (ABNT, mesmo padrão da Comunicação) ─── */
+function jur_gerarPDF() {
+  const txt = (document.getElementById('jur-texto')?.value || '').trim();
+  if (!txt) { _mostrarToast('⚠️ Nenhum texto para gerar. Selecione um modelo primeiro.', 'erro'); return; }
+
+  const signat  = (document.getElementById('jur-signatario')?.value || '').trim();
+  const assImg  = usuarioAtual?.assinatura || null;
+  const _jAgora = new Date();
+  const _jDataHora = _jAgora.toLocaleString('pt-BR');
+
+  const esc = s => String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  const cmeSrc   = window._CME_LOGO_B64   ? 'data:image/png;base64,' + window._CME_LOGO_B64   : '';
+  const iapenSrc = window._IAPEN_LOGO_B64 ? 'data:image/png;base64,' + window._IAPEN_LOGO_B64 : '';
+  const _ph = `<div style="width:80px;height:80px;border:1px solid #999;display:flex;align-items:center;justify-content:center;font-size:7pt;color:#999;text-align:center;margin:auto">CME/<br>IAPEN</div>`;
+  const cmeCell   = cmeSrc   ? `<img src="${cmeSrc}"   width="80" height="80" style="display:block;margin:auto">` : _ph;
+  const iapenCell = iapenSrc ? `<img src="${iapenSrc}" width="80" height="80" style="display:block;margin:auto">` : _ph;
+
+  // ── Parse das linhas: separa corpo do bloco de assinatura ──
+  const lines = txt.split('\n');
+  // Índice da linha de fecho (Atenciosamente/Respeitosamente)
+  let fechoIdx = -1;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (/^(atenciosamente|respeitosamente)\b/i.test(lines[i].trim())) { fechoIdx = i; break; }
+  }
+  // Índice do nome do signatário (para inserir a imagem da assinatura)
+  let sigIdx = -1;
+  if (signat) {
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (lines[i].trim() === signat) { sigIdx = i; break; }
+    }
+  }
+
+  function linhaHtml(t, idx) {
+    if (!t) return '<div style="height:9pt"></div>';
+    // Cabeçalho (nº ofício / local-data) → à direita
+    if (/^(OF[ÍI]CIO|RELAT[ÓO]RIO)\b/i.test(t) || /^Macap[áa]\/AP,/i.test(t)) {
+      return `<p style="text-align:right;margin:0 0 4pt 0;font-size:12pt">${esc(t)}</p>`;
+    }
+    // Bloco de assinatura (do fecho em diante) → centralizado
+    if (fechoIdx >= 0 && idx >= fechoIdx) {
+      if (idx === sigIdx) {
+        return `<p style="text-align:center;font-weight:bold;font-size:12pt;border-top:1px solid #000;padding-top:6pt;margin:0;width:72%;margin-left:auto;margin-right:auto">${esc(t)}</p>`;
+      }
+      if (idx > sigIdx && sigIdx >= 0) {
+        return `<p style="text-align:center;font-size:11pt;margin:2pt 0 0 0">${esc(t)}</p>`;
+      }
+      // o próprio fecho (Atenciosamente/Respeitosamente) → à esquerda
+      return `<p style="text-align:left;font-size:12pt;margin:0 0 6pt 0">${esc(t)}</p>`;
+    }
+    // Corpo: parágrafos longos com recuo ABNT; linhas curtas (dest, saudação) sem recuo
+    if (t.length > 60) {
+      return `<p style="text-align:justify;text-indent:1.25cm;margin:0 0 12pt 0;line-height:1.5;font-size:12pt">${esc(t)}</p>`;
+    }
+    return `<p style="text-align:justify;margin:0 0 6pt 0;line-height:1.5;font-size:12pt">${esc(t)}</p>`;
+  }
+
+  // Monta corpo (antes do fecho) e bloco de assinatura (do fecho em diante)
+  let corpoHtml = '', assHtml = '';
+  lines.forEach((l, i) => {
+    const t = l.trim();
+    // Insere imagem da assinatura logo antes do nome do signatário
+    if (i === sigIdx && assImg) {
+      assHtml += `<div style="text-align:center;margin-top:14pt"><img src="${assImg}" style="max-height:60pt;max-width:180pt;object-fit:contain;display:block;margin:0 auto 2pt"></div>`;
+    }
+    const html = linhaHtml(t, i);
+    if (fechoIdx >= 0 && i >= fechoIdx) assHtml += html;
+    else corpoHtml += html;
+  });
+  // Se não houve fecho detectado, tudo é corpo (e a assinatura vai no fim)
+  if (fechoIdx < 0) { corpoHtml += assHtml; assHtml = ''; }
+
+  const docHtml = `<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<meta charset="UTF-8">
+<title>Documento Jurídico – CME/IAPEN</title>
+<style>
+  @page { margin: 3cm 2cm 2.5cm 3cm; size: A4 portrait; }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 12pt; line-height: 1.5; color: #000;
+    margin: 0; padding: 0;
+    display: flex; flex-direction: column;
+    min-height: 224mm;
+  }
+  .cabecalho { display: table; width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+  .cab-col   { display: table-cell; vertical-align: middle; }
+  .cab-logo  { width: 95px; text-align: center; padding: 0 4px; }
+  .cab-texto { text-align: center; padding: 0 10px; }
+  .cab-linha { font-size: 10pt; font-weight: bold; margin: 1px 0; color: #000; }
+  .sep-linha { height: 1px; background: #000; margin: 8px 0 28px 0; }
+  .conteudo  { flex: 1; display: flex; flex-direction: column; }
+  .ass-area  { margin-top: auto; padding-top: 10px; }
+  .rodape-doc {
+    border-top: 1px solid #000; padding-top: 6px; text-align: center;
+    font-size: 8pt; color: #444; margin-top: 16px;
+  }
+  .rodape-doc p { margin: 2px 0; }
+  .btn-imp { display: block; margin: 20px auto 0; padding: 10px 32px;
+    background: #1a3a6b; color: #fff; border: none; border-radius: 6px;
+    font-size: 13pt; cursor: pointer; font-family: Arial; }
+  @media screen { body { padding: 3cm 2cm 2.5cm 3cm; } }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+    .rodape-doc { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 6px 3cm 4px 2cm; margin: 0; }
+  }
+</style>
+</head><body>
+
+<div class="cabecalho">
+  <div class="cab-col cab-logo">${cmeCell}</div>
+  <div class="cab-col cab-texto">
+    <p class="cab-linha">GOVERNO DO ESTADO DO AMAPÁ</p>
+    <p class="cab-linha">Secretaria de Estado da Justiça e Segurança Pública – SEJUSP</p>
+    <p class="cab-linha">Instituto de Administração Penitenciária – IAPEN/AP</p>
+    <p class="cab-linha">Central de Monitoramento Eletrônico – CME</p>
+  </div>
+  <div class="cab-col cab-logo">${iapenCell}</div>
+</div>
+<div class="sep-linha"></div>
+
+<div class="conteudo">
+  <div style="flex:1">${corpoHtml}</div>
+  <div class="ass-area">${assHtml}</div>
+</div>
+
+<div class="rodape-doc">
+  <p>Av. Machado de Assis, 372 – Centro, CEP 68900-066 – Macapá-AP</p>
+  <p>cme@iapen.ap.gov.br &nbsp;|&nbsp; (96) 98415-2844</p>
+  <p style="color:#888">Documento gerado em ${_jDataHora}</p>
+</div>
+
+<div class="no-print" style="text-align:center;margin-top:20px">
+  <button class="btn-imp" onclick="window.print()">🖨️ Imprimir / Salvar como PDF</button>
+  <p style="font-size:9pt;color:#777;margin-top:6px">No diálogo de impressão, escolha <strong>"Salvar como PDF"</strong>.<br>Desative <em>Cabeçalhos e rodapés</em> do navegador para resultado mais limpo.</p>
+</div>
+
+<script>window.onload=function(){var b=document.body;var phPx=914,pwPx=604;var p=b.style.width;b.style.width=pwPx+'px';var h=b.scrollHeight;b.style.width=p;if(h>phPx){b.style.zoom=((phPx*0.97)/h).toFixed(4);}setTimeout(function(){window.print();},750);};<\/script>
+</body></html>`;
+
+  const blob = new Blob([docHtml], { type: 'text/html;charset=utf-8' });
+  const blobUrl = URL.createObjectURL(blob);
+  const janela = window.open(blobUrl, '_blank');
+  if (!janela) { _mostrarToast('⚠️ Popup bloqueado! Permita popups para este site.', 'erro'); return; }
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+  _mostrarToast('🖨️ Documento aberto! Escolha "Salvar como PDF" na impressora.', 'sucesso');
 }
 
 /* ── Busca de Documentos do Monitorado ──────────────────────── */
