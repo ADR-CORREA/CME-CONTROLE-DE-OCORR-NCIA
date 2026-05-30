@@ -12852,7 +12852,7 @@ function baixarModeloPDF() {
     margin: 0; padding: 0;
     display: flex;
     flex-direction: column;
-    min-height: 247mm;         /* A4 área útil: 297mm − 3cm sup − 2cm inf */
+    min-height: 224mm;         /* área útil 242mm − ~18mm reservados ao rodapé fixo */
   }
 
   /* ── Cabeçalho ── */
@@ -13601,7 +13601,7 @@ function imprimirModeloMulti() {
   @page { margin: 2cm 2cm 2.8cm 2cm; size: A4 portrait; }
   *, *::before, *::after { box-sizing: border-box; }
   body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; color: #000; margin: 0; padding: 0;
-         display: flex; flex-direction: column; min-height: 253mm; /* 297-2cm-2.8cm */ }
+         display: flex; flex-direction: column; min-height: 233mm; /* área útil 249mm − ~16mm rodapé fixo */ }
 
   /* Cabeçalho */
   .cabecalho { display: table; width: 100%; border-collapse: collapse; }
@@ -16585,7 +16585,7 @@ function com_gerarOficio() {
     margin: 0; padding: 0;
     display: flex;
     flex-direction: column;
-    min-height: 247mm;   /* área útil A4: 297 − 3cm sup − 2cm inf */
+    min-height: 224mm;   /* área útil 242mm − ~18mm reservados ao rodapé fixo */
   }
 
   /* ── Cabeçalho ── */
@@ -16617,14 +16617,14 @@ function com_gerarOficio() {
      ─────────────────────────────────────────────────── */
   .ass-area { margin-top: auto; padding-top: 6px; }
   .data-ext { text-align: right; margin: 0 0 28px 0; }
-  .ass-bloco { width: 55%; text-align: center; margin: 0 auto; }
+  .ass-bloco { width: 72%; max-width: 115mm; text-align: center; margin: 0 auto; }
   .ass-img {
     max-height: 60pt; max-width: 180pt;
     object-fit: contain;
     display: block;
     margin: 0 auto 2px;
   }
-  .ass-nome  { border-top: 1px solid #000; padding-top: 6px; font-weight: bold; font-size: 12pt; margin: 0; }
+  .ass-nome  { border-top: 1px solid #000; padding-top: 6px; font-weight: bold; font-size: 11.5pt; margin: 0; line-height: 1.25; }
   .ass-cargo { font-size: 11pt; margin: 2px 0 0 0; }
   .ass-dec   { font-size: 11pt; margin: 2px 0 0 0; }
 
@@ -16637,7 +16637,7 @@ function com_gerarOficio() {
   .btn-imp:hover { background: #254d99; }
   /* ── Rodapé ABNT fixo no fundo da folha ── */
   .rodape-doc {
-    border-top: 1px solid #1a3a6b;
+    border-top: 1px solid #000;
     padding-top: 6px;
     text-align: center;
     font-size: 8pt;
@@ -17494,11 +17494,9 @@ function jur_gerarDoc() {
   </tr>
 </table>
 
-<!-- Linha dupla separadora -->
+<!-- Linha separadora única (ABNT preto) -->
 <table style="width:100%;border-collapse:collapse;margin:4pt 0 16pt 0">
-  <tr><td style="height:3pt;background:#1a3a6b;font-size:0">&nbsp;</td></tr>
-  <tr><td style="height:2pt">&nbsp;</td></tr>
-  <tr><td style="height:1pt;background:#1a3a6b;font-size:0">&nbsp;</td></tr>
+  <tr><td style="height:1pt;background:#000;font-size:0">&nbsp;</td></tr>
 </table>
 
 <!-- layout: linha-1=corpo (min 380pt), linha-2=assinatura+rodapé -->
