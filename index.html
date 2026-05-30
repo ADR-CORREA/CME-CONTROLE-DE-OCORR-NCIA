@@ -9792,10 +9792,9 @@ function mudarSubAbaGer(aba) {
 
 // ── Badge de notificação ──────────────────────────────
 function atualizarBadgeCom() {
-  const lastVisto = _cache['_comLastVisto'] || '1970-01-01T00:00:00.000Z';
-  // Casos enviados do Relatório para a Comunicação (novo fluxo) + legado
-  const novos = getOcorrencias().filter(o => _etapaOc(o) === 'comunicacao' && ((o.encComEm || o.encaminhadoComEm || '') > lastVisto));
-  const total = novos.length;
+  // Fila da Comunicação: casos vindos do Relatório aguardando envio (pendentes).
+  // Contagem persistente — não some ao abrir a aba; só cai quando o caso é enviado/arquivado.
+  const total = getOcorrencias().filter(o => _etapaOc(o) === 'comunicacao').length;
   const badge = document.getElementById('com-badge');
   if (!badge) return;
   if (total > 0) {
@@ -9808,8 +9807,7 @@ function atualizarBadgeCom() {
 
 function marcarComVisto() {
   _cache['_comLastVisto'] = new Date().toISOString();
-  const badge = document.getElementById('com-badge');
-  if (badge) badge.style.display = 'none';
+  atualizarBadgeCom();  // mostra a fila pendente real (não esconde à força)
 }
 
 // ── Renderizar COM → Relatório ──────────────────────────────
@@ -10047,9 +10045,9 @@ function atualizarBadgeOc() {
 function atualizarBadgeRel() {
   const last = _cache['_relBadgeVisto'] || '1970-01-01';
   const ocs = getOcorrencias();
-  // Aviso 1: casos recebidos dos Críticos aguardando relatório
-  const recebidos = ocs.filter(o => _etapaOc(o) === 'relatorio' && (o.encRelEm||'') > last).length;
-  // Aviso 2: casos do fluxo arquivados pela Comunicação (passaram pelo Relatório)
+  // Fila: casos recebidos dos Críticos aguardando confecção (pendentes, persistente)
+  const recebidos = ocs.filter(o => _etapaOc(o) === 'relatorio').length;
+  // Notificação: casos do fluxo arquivados pela Comunicação (some ao visitar a aba)
   const arquivados = ocs.filter(o => o.arquivadaPorComunicacao && o.encRelEm && (o.comEnviadoEm||'') > last).length;
   const total = recebidos + arquivados;
   const badge = document.getElementById('rel-badge');
@@ -10062,7 +10060,7 @@ function marcarOcVisto() {
 }
 function marcarRelVisto() {
   _cache['_relBadgeVisto'] = new Date().toISOString();
-  const b = document.getElementById('rel-badge'); if (b) b.style.display = 'none';
+  atualizarBadgeRel();  // mantém a fila de recebidos; some só a notificação de arquivados
 }
 function marcarGerVisto() {
   _cache['_gerBadgeVisto'] = new Date().toISOString();
