@@ -12898,6 +12898,7 @@ function baixarModeloPDF() {
   .corpo {
     margin: 0 0 22pt 0;        /* ABNT: parágrafo com espaço após */
     text-align: justify;
+    text-indent: 1.25cm;       /* ABNT: recuo de primeira linha */
     line-height: 1.5;
   }
   .corpo:last-of-type { margin-bottom: 0; }
@@ -13623,7 +13624,7 @@ function imprimirModeloMulti() {
   .titulo-doc    { font-size: 13pt; font-weight: bold; text-align: center;
                    text-transform: uppercase; letter-spacing: .5px; margin: 0 0 14px 0; }
   .campo-id      { margin: 3px 0; font-size: 10.5pt; }
-  .corpo         { margin: 6px 0; text-align: justify; }
+  .corpo         { margin: 6px 0; text-align: justify; text-indent: 1.25cm; line-height: 1.5; }
   .corpo-esp     { margin: 8px 0; font-style: normal; }
   .e-relatorio   { margin: 10px 0 6px 0; font-style: italic; }
   .local-data    { margin: 20px 0 4px 0; text-align: right; font-size: 10pt; }
@@ -15910,7 +15911,7 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
   .titulo-rel  { font-size: 13pt; font-weight: bold; text-align: center; text-transform: uppercase; margin: 0 0 16px 0; }
   .secao-tit   { font-size: 11pt; font-weight: bold; text-decoration: underline; margin: 14px 0 4px 0; }
   .dado        { margin: 3px 0; font-size: 10.5pt; }
-  .corpo       { margin: 7px 0; text-align: justify; font-size: 11pt; }
+  .corpo       { margin: 7px 0; text-align: justify; text-indent: 1.25cm; font-size: 11pt; }
   .ident-bloco { border-left: 3px solid #000; padding: 8px 14px; background: #f7f7f7; margin: 12px 0; font-size: 10.5pt; }
   .ident-bloco p { margin: 3px 0; }
 
@@ -16559,7 +16560,7 @@ function com_gerarOficio() {
   };
 
   const paragsHtml = paragrafos
-    .map(p => `<p style="text-align:justify;margin:0 0 22pt 0;line-height:1.5;font-size:12pt">${escP(p)}</p>`)
+    .map(p => `<p style="text-align:justify;text-indent:1.25cm;margin:0 0 22pt 0;line-height:1.5;font-size:12pt">${escP(p)}</p>`)
     .join('\n');
 
   // Logos a partir das variáveis globais B64 (mesma abordagem do gerador de Plantão)
@@ -17458,7 +17459,7 @@ function jur_gerarDoc() {
   // Corpo: transforma linhas do textarea em parágrafos HTML
   const paragsHtml = txt.split('\n').map(l => {
     if (!l.trim()) return `<p style="margin:12pt 0">&nbsp;</p>`;
-    return `<p style="text-align:justify;margin:0 0 22pt 0;line-height:1.5;font-size:12pt">${esc(l)}</p>`;
+    return `<p style="text-align:justify;text-indent:1.25cm;margin:0 0 22pt 0;line-height:1.5;font-size:12pt">${esc(l)}</p>`;
   }).join('\n');
 
   const doc = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
@@ -18157,7 +18158,7 @@ async function _comGerarPDFExec() {
       : (modelo ? modelo.corpo(campos).map(stripTags) : []);
 
     doc.setFont('times', 'normal'); doc.setFontSize(12); doc.setTextColor(0);
-    const ABNT_INDENT = 0; // sem recuo — parágrafos colados à margem esquerda
+    const ABNT_INDENT = 12.5; // 1,25 cm — recuo ABNT na primeira linha de cada parágrafo
 
     // ── Auto-compressão: garante que o corpo cabe em 1 página ─
     let lineH = 6, paraSpacing = 11, emptyLineH = 6;
