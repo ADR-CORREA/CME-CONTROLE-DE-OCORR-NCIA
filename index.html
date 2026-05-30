@@ -6380,34 +6380,35 @@ function _limparFalhas(u) { delete _loginTentativas[u]; }
 function getUsuarios() {
   return carregarStore("usuarios", USUARIOS_PADRAO);
 }
-function salvarUsuarios(u) { salvarStore("usuarios", u); }
+function salvarUsuarios(u) {
+  _cache['usuarios'] = u;
+  if (window._db && window._sessionHash && window._sessionUser) {
+    window._db.rpc('cme_save_usuarios', { p_username: window._sessionUser, p_hash: window._sessionHash, p_usuarios: JSON.parse(JSON.stringify(u)) })
+      .then(({ error }) => { if (error) { console.error('[CME] Erro ao salvar usuários:', error); _mostrarToast('⚠️ Erro ao salvar usuários: ' + error.message, 'erro'); } });
+  }
+}
 
 /* ── Reset de senha via console do navegador ──────────────────────
    Uso: await _resetarSenha('subgerente', 'NovaSenha@123')
    Requer acesso físico ao PC (console F12). Salva direto no Supabase.
    ────────────────────────────────────────────────────────────────── */
 window._resetarSenha = async function(login, novaSenha) {
-  // Carrega lista fresca do Supabase
-  if (window._db) {
-    try {
-      const { data } = await window._db.from('store').select('value').eq('key','cme_usuarios').maybeSingle();
-      if (data?.value) _cache['usuarios'] = data.value;
-    } catch(e) {}
-  }
-  const todos = getUsuarios();
-  const idx   = todos.findIndex(x => (x.usuario||'').toLowerCase() === login.toLowerCase());
-  if (idx === -1) {
-    console.error('Usuário não encontrado:', login);
+  if (!window._db || !window._sessionHash || !window._sessionUser) {
+    console.error('Faça login como admin no sistema antes de usar _resetarSenha.');
     return false;
   }
+  const { data: todos } = await window._db.rpc('cme_get_usuarios', { p_username: window._sessionUser, p_hash: window._sessionHash });
+  if (!todos) { console.error('Sem permissão (requer admin/subgerente logado).'); return false; }
+  const idx = todos.findIndex(x => (x.usuario||'').toLowerCase() === login.toLowerCase());
+  if (idx === -1) { console.error('Usuário não encontrado:', login); return false; }
   const { hash, salt } = await hashSenhaPBKDF2(novaSenha);
   todos[idx].senha       = hash;
   todos[idx].senhaSalt   = salt;
   todos[idx].senhaVersao = 3;
-  delete todos[idx].primeiroLogin; // garante que não pede troca obrigatória
-  salvarUsuarios(todos);
-  console.log('✅ Senha de "' + login + '" redefinida com sucesso. Faça login normalmente agora.');
-  return true;
+  delete todos[idx].primeiroLogin;
+  const { data: ok } = await window._db.rpc('cme_save_usuarios', { p_username: window._sessionUser, p_hash: window._sessionHash, p_usuarios: JSON.parse(JSON.stringify(todos)) });
+  if (ok) { _cache['usuarios'] = todos; console.log('✅ Senha de "' + login + '" redefinida. Faça login normalmente.'); return true; }
+  console.error('Falha ao salvar — verifique permissões.'); return false;
 };
 
 function getOcorrencias() {
@@ -6478,33 +6479,45 @@ async function fazerLogin() {
   // Rate limiting
   if (_loginBloqueado(u)) return;
 
-  // Recarregar usuários do Supabase antes de validar (garante dados frescos pós-criação)
-  if (window._db) {
-    try {
-      const { data } = await window._db.from('store').select('value').eq('key', 'cme_usuarios').maybeSingle();
-      if (data?.value) _cache['usuarios'] = data.value;
-    } catch(e) { /* usa cache existente se falhar */ }
-  }
-
-  const usuarios = getUsuarios();
-
-  // Encontrar usuário pelo login (case-insensitive)
-  const candidato = usuarios.find(x => (x.usuario || '').toLowerCase() === u);
   let usuario = null;
 
-  if (candidato) {
-    const senhaOk = await verificarSenhaUsuario(p, candidato);
-    if (senhaOk) {
-      usuario = candidato;
-      // Auto-migração para PBKDF2 se ainda estiver em formato antigo
-      if (candidato.senhaVersao !== 3) {
-        const { hash: novoHash, salt: novoSalt } = await hashSenhaPBKDF2(p);
-        candidato.senha       = novoHash;
-        candidato.senhaSalt   = novoSalt;
-        candidato.senhaVersao = 3;
-        salvarUsuarios(usuarios);
+  if (window._db) {
+    try {
+      // Passo 1: buscar salt do usuário (não expõe o hash armazenado)
+      const { data: loginInfo } = await window._db.rpc('cme_get_login_info', { p_username: u });
+
+      // Passo 2: computar hash localmente com o salt recebido
+      let hash;
+      if (loginInfo?.senhaVersao === 3 && loginInfo?.senhaSalt) {
+        const { hash: h } = await hashSenhaPBKDF2(p, loginInfo.senhaSalt);
+        hash = h;
+      } else {
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(_SHA_SALT + p));
+        hash = _bytesToHex(buf);
       }
-    }
+
+      // Passo 3: validar server-side — retorna usuário sem campos de senha
+      const { data: validado } = await window._db.rpc('cme_validate_login', { p_username: u, p_hash: hash });
+
+      if (validado) {
+        usuario = validado;
+        window._sessionUser = u;
+        window._sessionHash = hash;
+
+        // Admin/subgerente: carregar lista de usuários para o painel
+        if (['admin', 'subgerente'].includes(usuario.nivel)) {
+          const { data: lista } = await window._db.rpc('cme_get_usuarios', { p_username: u, p_hash: hash });
+          if (lista) _cache['usuarios'] = lista;
+        }
+
+        // Auto-migração v2 → PBKDF2 v3 (transparente para o usuário)
+        if (!loginInfo?.senhaSalt) {
+          const { hash: novoHash, salt: novoSalt } = await hashSenhaPBKDF2(p);
+          const { data: migrou } = await window._db.rpc('cme_update_senha', { p_username: u, p_hash_atual: hash, p_novo_hash: novoHash, p_novo_salt: novoSalt });
+          if (migrou) window._sessionHash = novoHash;
+        }
+      }
+    } catch(e) { console.error('[CME] Erro no login:', e); }
   }
 
   if (!usuario) {
@@ -8617,11 +8630,11 @@ let _editAssNovaBase64 = null;   // nova assinatura carregada (ou null = sem mud
 let _editAssRemover    = false;  // flag: remover assinatura existente
 
 async function abrirModalEditarUsuario(loginId) {
-  // Sempre busca dados frescos do Supabase antes de abrir
-  if (window._db) {
+  // Busca dados frescos via RPC (requer admin autenticado)
+  if (window._db && window._sessionHash && window._sessionUser) {
     try {
-      const { data } = await window._db.from('store').select('value').eq('key', 'cme_usuarios').maybeSingle();
-      if (data?.value) _cache['usuarios'] = data.value;
+      const { data } = await window._db.rpc('cme_get_usuarios', { p_username: window._sessionUser, p_hash: window._sessionHash });
+      if (data) _cache['usuarios'] = data;
     } catch(e) { /* usa cache existente se falhar */ }
   }
 
@@ -15037,52 +15050,8 @@ function r2_iconeArquivo(nome) {
     });
 
     // Semear dados padrão se ainda não existem no banco (await garante conclusão antes de logar)
+    // cme_usuarios é protegido por RLS — gerenciado exclusivamente via funções RPC
     const seeds = [];
-    if (!data.find(r => r.key === 'cme_usuarios')) {
-      _cache['usuarios'] = USUARIOS_PADRAO;
-      seeds.push(window._db.from('store').insert({ key: 'cme_usuarios', value: USUARIOS_PADRAO }));
-    } else {
-      // Migração de senhas legado (btoa → SHA-256) e garantia do admin
-      const usuarios = _cache['usuarios'] || [];
-      let precisaSalvar = false;
-      for (const u of usuarios) {
-        if (_ehBase64Legado(u.senha)) {
-          // Senha ainda em btoa — não podemos converter sem a senha original.
-          // Força reset para hash padrão apenas se for o admin sem senha alterada.
-          if (u.usuario === 'admin' && u.senha === btoa('Admin@480096')) {
-            u.senha = "a6b893f39bec5621db142a2fe3d2aa18e6f28878c2caf81ce033c42e11e0ef95";
-            precisaSalvar = true;
-          }
-          // Outros usuários legado continuam funcionando via migração no login
-        }
-      }
-      // ── Migração: assinaturas PNG transparente → JPEG fundo branco ──
-      // Remove o quadrado preto que aparecia ao imprimir/gerar PDF
-      for (const u of usuarios) {
-        if (u.assinatura && u.assinatura.startsWith('data:image/png')) {
-          try {
-            u.assinatura = await new Promise(res => {
-              const _mi = new Image();
-              _mi.onload = () => {
-                const _mc = document.createElement('canvas');
-                _mc.width = _mi.naturalWidth; _mc.height = _mi.naturalHeight;
-                const _mx = _mc.getContext('2d');
-                _mx.fillStyle = '#fff'; _mx.fillRect(0, 0, _mc.width, _mc.height);
-                _mx.drawImage(_mi, 0, 0);
-                res(_mc.toDataURL('image/jpeg', 0.92));
-              };
-              _mi.onerror = () => res(u.assinatura);
-              _mi.src = u.assinatura;
-            });
-            precisaSalvar = true;
-          } catch(e) { /* mantém original se falhar */ }
-        }
-      }
-      // ─────────────────────────────────────────────────────────────────
-      if (precisaSalvar) {
-        seeds.push(window._db.from('store').upsert({ key: 'cme_usuarios', value: usuarios }, { onConflict: 'key' }));
-      }
-    }
     if (!data.find(r => r.key === 'cme_ocorrencias')) {
       _cache['ocorrencias'] = DADOS_INICIAIS;
       seeds.push(window._db.from('store').insert({ key: 'cme_ocorrencias', value: DADOS_INICIAIS }));
