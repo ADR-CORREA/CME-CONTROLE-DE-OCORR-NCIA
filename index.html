@@ -8319,7 +8319,20 @@ function recalcularStatus() {
 // Recalcular quando data mudar
 document.getElementById("oc-data").addEventListener("change", atualizarPlantaoOcorrencia);
 
-function salvarOcorrencia() {
+// Lê a versão mais fresca do array de ocorrências (do banco) p/ merge seguro.
+// Em caso de falha, cai para o _cache. Evita sobrescrever edições simultâneas.
+async function _ocorrenciasFrescas() {
+  let arr = getOcorrencias();
+  if (window._db) {
+    try {
+      const { data } = await window._db.from('store').select('value').eq('key', 'cme_ocorrencias').maybeSingle();
+      if (data && Array.isArray(data.value)) arr = data.value;
+    } catch (e) { /* usa _cache se a leitura falhar */ }
+  }
+  return arr;
+}
+
+async function salvarOcorrencia() {
   const idEdit = document.getElementById("oc-id-edit").value;
   const id = parseInt(document.getElementById("oc-id").value);
   if (!id) return alert("Informe o ID da ocorrência.");
@@ -8329,50 +8342,45 @@ function salvarOcorrencia() {
   const tipo = document.getElementById("oc-tipo").value;
   if (!medida || !tipo) return alert("Selecione a Medida e o Tipo de Violação.");
 
-  const oc = {
-    id,
+  // Apenas os campos editáveis neste formulário
+  const campos = {
     dataAlerta: data,
     monitorado: document.getElementById("oc-monitorado").value,
-    medida,
-    tipo,
-    plantao: document.getElementById("oc-plantao").value,
-    operador: document.getElementById("oc-operador").value,
+    medida, tipo,
+    plantao:   document.getElementById("oc-plantao").value,
+    operador:  document.getElementById("oc-operador").value,
     descricao: document.getElementById("oc-descricao").value,
-    // PRODOC/CIODES gerenciados pela aba Comunicação — preservados do registro existente
-    ciodes: '', contatos: '', prodoc: '', prodocNum: '', prodocData: '',
-    obs: document.getElementById("oc-obs").value,
-    juridico: {},
+    obs:       document.getElementById("oc-obs").value,
   };
 
-  const ocs = getOcorrencias();
-  if (idEdit !== "") {
-    const existing = ocs[parseInt(idEdit)] || {};
-    // Preserva campos gerenciados pela aba Comunicação
-    oc.ciodes     = existing.ciodes     || '';
-    oc.prodoc     = existing.prodoc     || '';
-    oc.prodocNum  = existing.prodocNum  || '';
-    oc.prodocData = existing.prodocData || '';
-    oc.contatos   = existing.contatos   || '';
-    oc.juridico   = existing.juridico   || {};
-    ocs[parseInt(idEdit)] = oc;
+  // MERGE por ID sobre a base mais fresca (não sobrescreve edições simultâneas
+  // de outras ocorrências; preserva TODOS os demais campos da ocorrência editada,
+  // inclusive PRODOC/CIODES/jurídico e o estado do fluxo etapa/encRelEm/encComEm).
+  const arr = await _ocorrenciasFrescas();
+  const i = arr.findIndex(o => o.id === id);
+  const novo = (idEdit === "");
+
+  if (novo && i >= 0) return alert("Já existe uma ocorrência com este ID.");
+
+  if (i >= 0) {
+    arr[i] = { ...arr[i], id, ...campos };
     addLog(`Editou ocorrência #${id} (${usuarioAtual.nome})`);
   } else {
-    // Verificar duplicata de ID
-    if (ocs.find(o => o.id === id)) return alert("Já existe uma ocorrência com este ID.");
-    ocs.push(oc);
+    arr.push({ id, ...campos, ciodes: '', contatos: '', prodoc: '', prodocNum: '', prodocData: '', juridico: {} });
     addLog(`Criou ocorrência #${id} (${usuarioAtual.nome})`);
   }
-  salvarOcorrencias(ocs);
+  salvarStore('ocorrencias', arr);
   fecharModal("modal-ocorrencia");
   atualizarTudo();
 }
 
-function excluirOcorrencia(idx) {
+async function excluirOcorrencia(idx) {
+  const id = getOcorrencias()[idx]?.id;
+  if (id == null) return;
   if (!confirm("Tem certeza que deseja excluir esta ocorrência? Esta ação não pode ser desfeita.")) return;
-  const ocs = getOcorrencias();
-  const id = ocs[idx]?.id;
-  ocs.splice(idx, 1);
-  salvarOcorrencias(ocs);
+  // Remove por ID sobre a base mais fresca (não ressuscita/sobrescreve outras edições)
+  const arr = (await _ocorrenciasFrescas()).filter(o => o.id !== id);
+  salvarStore('ocorrencias', arr);
   addLog(`Excluiu ocorrência #${id} (${usuarioAtual.nome})`);
   atualizarTudo();
 }
