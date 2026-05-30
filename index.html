@@ -305,8 +305,7 @@ input, select, textarea, button { font-family: var(--font-sans); }
   cursor: pointer;
   font-size: .88rem;
   transition: background .15s;
-  white-space: normal;
-  word-break: break-word;
+  white-space: nowrap;
 }
 .r2-mon-item:hover { background: #e9ecef; }
 .r2-mon-item.active { background: #1F4E78; color: #fff; font-weight: 600; }
@@ -3601,14 +3600,14 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
       <div id="r2-conteudo-principal" style="display:flex;gap:16px;min-height:420px">
         <!-- Sidebar: lista de monitorados -->
-        <div style="width:270px;flex-shrink:0;background:#f8f9fa;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px">
+        <div style="width:460px;flex-shrink:0;background:#f8f9fa;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px">
           <div style="position:relative">
             <input id="r2-busca-mon" type="text" placeholder="🔍 Buscar monitorado…"
                    oninput="r2_filtrarMonitorados(this.value)"
                    style="border:1px solid #ddd;border-radius:6px;padding:7px 10px;font-size:.9rem;width:100%;box-sizing:border-box">
             <span id="r2-busca-loading" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:.75rem;color:#aaa">⏳ carregando…</span>
           </div>
-          <div id="r2-lista-mon" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
+          <div id="r2-lista-mon" style="flex:1;overflow-y:auto;overflow-x:auto;display:flex;flex-direction:column;gap:4px">
             <div style="color:#999;font-size:.85rem;text-align:center;padding:20px 0">
               Carregando…
             </div>
@@ -14058,9 +14057,9 @@ function r2_renderizarListaMon(lista, busca, total) {
   el.innerHTML = lista.map(m => {
     const nomeEsc = m.nome.replace(/'/g,"&#39;").replace(/"/g,'&quot;');
     return `<div class="r2-mon-item ${m.nome === r2_state.monitorado ? 'active' : ''}"
-      style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;cursor:pointer"
+      style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer"
       onclick="r2_selecionarMonitorado('${nomeEsc}')">
-      <span style="flex:1;min-width:0;white-space:normal;word-break:break-word;line-height:1.3" title="${nomeEsc}">📁 ${m.nome}</span>
+      <span style="white-space:nowrap" title="${nomeEsc}">📁 ${m.nome}</span>
       <span style="display:flex;gap:2px;flex-shrink:0">
         <button onclick="event.stopPropagation();r2_renomearMonitoradoDialog('${nomeEsc}')"
           title="Renomear pasta"
