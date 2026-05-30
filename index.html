@@ -1641,10 +1641,29 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
     <!-- ─── RELATÓRIO ─── -->
     <div class="tab-panel" id="panel-relatorio">
       <div class="sub-tabs">
+        <div class="sub-tab"        id="rel-stab-recebidos" onclick="mudarSubAbaRel('recebidos')">📥 Recebidos<span id="rel-rec-count" style="color:#e67e22;font-weight:700"></span></div>
         <div class="sub-tab active" id="rel-stab-lista"      onclick="mudarSubAbaRel('lista')">📄 Relatórios</div>
         <div class="sub-tab"        id="rel-stab-arquivadas" onclick="mudarSubAbaRel('arquivadas')">📁 Arquivadas</div>
         <div class="sub-tab"        id="rel-stab-gerador"    onclick="mudarSubAbaRel('gerador')">⚡ Gerador de Violações</div>
       </div>
+      <!-- ── Sub-painel: Recebidos dos Críticos (fluxo) ── -->
+      <div class="sub-panel" id="rel-panel-recebidos">
+        <div class="table-toolbar">
+          <div style="font-weight:600;color:var(--az1)">📥 Casos recebidos dos Críticos — aguardando confecção do relatório</div>
+          <div class="table-actions">
+            <button class="btn-secondary" onclick="renderizarRelRecebidos()">🔄 Atualizar</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th>ID</th><th>Monitorado</th><th>Medida</th><th>Tipo</th><th>Recebido em</th><th>Relatório</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="tbody-rel-recebidos"></tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="sub-panel active" id="rel-panel-lista">
         <div class="table-wrapper">
           <div class="table-toolbar">
@@ -6416,6 +6435,17 @@ function getOcorrencias() {
 }
 function salvarOcorrencias(d) { salvarStore("ocorrencias", d); }
 
+/* ── Etapa do fluxo Crítico → Relatório → Comunicação → Arquivado ──
+   Retorna: 'relatorio' | 'comunicacao' | 'arquivado' | null (fora do fluxo).
+   Trata casos legados (encaminhadoCom direto) como etapa 'comunicacao'. */
+function _etapaOc(o) {
+  if (!o) return null;
+  if (o.arquivadaPorComunicacao) return 'arquivado';
+  if (o.etapa) return o.etapa;
+  if (o.encaminhadoCom) return 'comunicacao';
+  return null;
+}
+
 function getLogs() { return carregarStore("logs", []); }
 function addLog(msg) {
   // Busca o estado atual dos logs direto do Supabase para evitar conflito entre PCs
@@ -6726,6 +6756,7 @@ function atualizarTudo() {
     "Atualizado em " + new Date().toLocaleTimeString("pt-BR");
   atualizarBadgeCom();
   atualizarBadgeOc();
+  atualizarBadgeRel();
   atualizarBadgeTriagemArq();
   atualizarBadgePsiArq();
   atualizarBadgeSemCom();
@@ -6829,13 +6860,13 @@ function renderizarCriticos() {
       <td style="font-family:var(--font-mono);font-size:.8rem">${formatDate(oc.dataAlerta)}</td>
       <td style="text-align:center">${oc.prodoc === "SIM" ? "✅" : "—"}</td>
       <td>${esc(oc.plantao) || "-"}</td>
-      <td style="text-align:center;white-space:nowrap">${
-        oc.arquivadaPorComunicacao
-          ? '<span style="color:#27ae60;font-size:.78rem;font-weight:600">✅ Arquivado</span>'
-          : oc.encaminhadoCom
-            ? `<span style="color:#1F4E78;font-size:.78rem;font-weight:600">📡 Enc.<br><small>${formatDate(oc.encaminhadoComEm)}</small></span>`
-            : `<button class="btn-sm btn-primary" style="font-size:.75rem" onclick="abrirModalEncaminharCom(${findIdx(oc.id)})">📡 Enc. p/ COM</button>`
-      }</td>
+      <td style="text-align:center;white-space:nowrap">${(() => {
+        const et = _etapaOc(oc);
+        if (et === 'arquivado')   return '<span style="color:#27ae60;font-size:.78rem;font-weight:600">✅ Arquivado</span>';
+        if (et === 'comunicacao') return '<span style="color:#8e44ad;font-size:.78rem;font-weight:600">📨 Na Comunicação</span>';
+        if (et === 'relatorio')   return `<span style="color:#1F4E78;font-size:.78rem;font-weight:600">📋 No Relatório<br><small>${formatDate(oc.encRelEm)}</small></span>`;
+        return `<button class="btn-sm btn-primary" style="font-size:.75rem" onclick="encParaRelatorio(${findIdx(oc.id)})">📋 Enc. p/ Relatório</button>`;
+      })()}</td>
       <td style="white-space:nowrap">
         <button class="btn-sm btn-outline" onclick="verOcorrenciaIdx(${findIdx(oc.id)})" title="Visualizar">👁</button>
         <button class="btn-edit" onclick="editarOcorrencia(${findIdx(oc.id)})" style="margin-left:4px">Editar</button>
@@ -7337,18 +7368,18 @@ function renderizarOFC() {
 
     return `<tr style="${rowStyle}">
       <td style="font-family:var(--font-mono);color:#6b7280">${i+1}</td>
-      <td><strong>${r.nome}</strong></td>
+      <td><strong>${esc(r.nome)}</strong></td>
       <td>${statusBadge}</td>
-      <td style="font-size:.8rem">${r.acaoPenal||'—'}</td>
-      <td style="font-family:var(--font-mono);font-size:.77rem">${r.numProcesso||'—'}</td>
-      <td style="font-size:.79rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.varaOrigem||''}">${r.varaOrigem||'—'}</td>
-      <td style="text-align:center"><strong>${r.forum||'—'}</strong></td>
+      <td style="font-size:.8rem">${esc(r.acaoPenal)||'—'}</td>
+      <td style="font-family:var(--font-mono);font-size:.77rem">${esc(r.numProcesso)||'—'}</td>
+      <td style="font-size:.79rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.varaOrigem||'')}">${esc(r.varaOrigem)||'—'}</td>
+      <td style="text-align:center"><strong>${esc(r.forum)||'—'}</strong></td>
       <td style="font-family:var(--font-mono);font-size:.8rem">${_ofcFmtData(r.dataRecebOFC)}</td>
-      <td style="text-align:center;font-weight:bold">${r.prazoEmDias||'—'}</td>
+      <td style="text-align:center;font-weight:bold">${esc(r.prazoEmDias)||'—'}</td>
       <td style="font-family:var(--font-mono);font-size:.8rem">${_ofcFmtData(r.prazoFinal)}</td>
       <td style="text-align:center">${diasLabel}</td>
       <td style="text-align:center">${comLabel}</td>
-      <td style="font-size:.79rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.tratativa||''}">${tratTrunc}</td>
+      <td style="font-size:.79rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.tratativa||'')}">${esc(tratTrunc)}</td>
       <td style="white-space:nowrap;display:flex;gap:4px">
         <button class="btn-sm btn-outline" onclick="verOFC('${r.id}')" title="Visualizar">👁</button>
         <button class="btn-sm btn-outline" style="color:#2563eb;border-color:#2563eb" onclick="abrirModalOFC('${r.id}')" title="Editar">✏</button>
@@ -9045,7 +9076,7 @@ function renderizarLogs() {
   if (!el) return;
   el.innerHTML = logs.length ? logs.map(l => {
     const d = new Date(l.ts).toLocaleString("pt-BR");
-    return `<div style="padding:4px 0;border-bottom:1px solid var(--cz4)">[${d}] ${l.msg}</div>`;
+    return `<div style="padding:4px 0;border-bottom:1px solid var(--cz4)">[${d}] ${esc(l.msg)}</div>`;
   }).join("") : "<div style='color:var(--cz2)'>Nenhum log ainda.</div>";
   // Também atualiza o painel de auditoria completa, se visível
   admin_popularLogSistema();
@@ -9498,8 +9529,13 @@ function baixarModeloExcel() {
 
 let _relFiltro = '';
 
+let _relOcVinculo = null;  // id da ocorrência vinculada ao relatório em edição (fluxo)
+
 function getRelatorios() {
   return carregarStore('relatorios', { registros: [] });
+}
+function _relTemRelatorio(ocId) {
+  return (getRelatorios().registros || []).some(r => r.ocorrenciaId === ocId);
 }
 
 function filtrarRelatorio(val) {
@@ -9558,6 +9594,7 @@ function renderizarRelatorio() {
 
 function abrirModalRelatorio(id) {
   const titleEl = document.getElementById('rel-modal-title');
+  _relOcVinculo = null;
   // Limpar campos
   ['rel-edit-id','rel-monitorado','rel-servidor','rel-data-recebimento','rel-data-envio','rel-obs'].forEach(fid => {
     const el = document.getElementById(fid); if (el) el.value = '';
@@ -9580,6 +9617,7 @@ function abrirModalRelatorio(id) {
       document.getElementById('rel-data-recebimento').value = r.dataRecebimento || '';
       document.getElementById('rel-data-envio').value       = r.dataEnvio || '';
       document.getElementById('rel-obs').value               = r.obs || '';
+      _relOcVinculo = r.ocorrenciaId || null;
       if (titleEl) titleEl.textContent = '✏️ Editar Relatório';
     }
   } else {
@@ -9608,7 +9646,7 @@ function salvarRelatorio() {
   const lista = dados.registros || [];
   const editId = document.getElementById('rel-edit-id').value;
 
-  const obj = { tipo, monitorado, servidor, dataRecebimento, dataEnvio, obs };
+  const obj = { tipo, monitorado, servidor, dataRecebimento, dataEnvio, obs, ocorrenciaId: _relOcVinculo || null };
 
   if (editId) {
     const idx = lista.findIndex(x => x.id === editId);
@@ -9626,6 +9664,8 @@ function salvarRelatorio() {
   salvarStore('relatorios', dados);
   fecharModal('modal-relatorio');
   renderizarRelatorio();
+  if (document.getElementById('rel-panel-recebidos')?.classList.contains('active')) renderizarRelRecebidos();
+  _relOcVinculo = null;
   _mostrarToast('✅ Relatório salvo!', 'sucesso');
 }
 
@@ -9636,6 +9676,66 @@ function excluirRelatorio(id) {
   salvarStore('relatorios', dados);
   renderizarRelatorio();
   _mostrarToast('🗑️ Relatório excluído.', 'sucesso');
+}
+
+/* ── Relatório: casos RECEBIDOS dos Críticos (novo fluxo) ───────── */
+function renderizarRelRecebidos() {
+  const recebidos = getOcorrencias().filter(o => _etapaOc(o) === 'relatorio');
+  const cnt = document.getElementById('rel-rec-count');
+  if (cnt) cnt.textContent = recebidos.length ? ` (${recebidos.length})` : '';
+  const tbody = document.getElementById('tbody-rel-recebidos');
+  if (!tbody) return;
+  if (!recebidos.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#888">Nenhum caso aguardando confecção de relatório.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = recebidos.map(o => {
+    const idx   = findIdx(o.id);
+    const feito = _relTemRelatorio(o.id);
+    return `<tr>
+      <td style="font-family:var(--font-mono)">${o.id}</td>
+      <td><strong>${esc(o.monitorado) || '-'}</strong></td>
+      <td>${esc(o.medida) || '-'}</td>
+      <td>${esc(o.tipo) || '-'}</td>
+      <td style="font-size:.8rem">${formatDate(o.encRelEm)}</td>
+      <td style="text-align:center">${feito ? '<span style="color:#27ae60;font-weight:600">✅ Feito</span>' : '<span style="color:#e67e22;font-weight:600">⏳ Pendente</span>'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-sm btn-outline" onclick="confeccionarRelatorioDeOc(${idx})">📝 Confeccionar</button>
+        <button class="btn-sm btn-primary" onclick="enviarRelParaCom(${idx})" style="margin-left:4px">✅ Enviar p/ Comunicação</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function confeccionarRelatorioDeOc(idx) {
+  const o = getOcorrencias()[idx];
+  if (!o) return;
+  abrirModalRelatorio();          // abre modal limpo (zera _relOcVinculo)
+  _relOcVinculo = o.id;           // vincula este relatório à ocorrência
+  document.getElementById('rel-monitorado').value = o.monitorado || '';
+  const tipoSel = document.getElementById('rel-tipo');
+  if (tipoSel) {
+    const valida = [...tipoSel.options].map(op => op.value).filter(Boolean);
+    tipoSel.value = valida.includes('Relatório de Violação') ? 'Relatório de Violação' : (valida[0] || '');
+  }
+  toggleCamposRelatorio();
+}
+
+function enviarRelParaCom(idx) {
+  const ocs = getOcorrencias();
+  const o = ocs[idx];
+  if (!o) return;
+  if (!_relTemRelatorio(o.id)) {
+    if (!confirm('Nenhum relatório foi confeccionado para este caso ainda.\nEnviar para a Comunicação mesmo assim?')) return;
+  } else {
+    if (!confirm(`Enviar o caso #${o.id} (${o.monitorado || ''}) para a COMUNICAÇÃO?`)) return;
+  }
+  o.etapa    = 'comunicacao';
+  o.encComEm = new Date().toISOString();
+  salvarStore('ocorrencias', ocs);
+  renderizarRelRecebidos();
+  atualizarBadgeCom();
+  _mostrarToast('✅ Enviado para a Comunicação!', 'sucesso');
 }
 
 function exportarRelatorioExcel() {
@@ -9670,10 +9770,11 @@ function mudarSubAbaCom(aba) {
 
 // Navegação sub-abas Relatório
 function mudarSubAbaRel(aba) {
-  ['lista','arquivadas','gerador'].forEach(a => {
+  ['recebidos','lista','arquivadas','gerador'].forEach(a => {
     document.getElementById('rel-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('rel-panel-' + a)?.classList.toggle('active', a === aba);
   });
+  if (aba === 'recebidos')  renderizarRelRecebidos();
   if (aba === 'lista')      renderizarRelatorio();
   if (aba === 'arquivadas') renderizarRelArquivadas();
   if (aba === 'gerador')    rv_inicializar();
@@ -9692,9 +9793,9 @@ function mudarSubAbaGer(aba) {
 // ── Badge de notificação ──────────────────────────────
 function atualizarBadgeCom() {
   const lastVisto = _cache['_comLastVisto'] || '1970-01-01T00:00:00.000Z';
-  // Ocorrências encaminhadas de Críticos ainda não arquivadas
-  const crits = getOcorrencias().filter(o => o.encaminhadoCom && !o.arquivadaPorComunicacao && (o.encaminhadoComEm||'') > lastVisto);
-  const total = crits.length;
+  // Casos enviados do Relatório para a Comunicação (novo fluxo) + legado
+  const novos = getOcorrencias().filter(o => _etapaOc(o) === 'comunicacao' && ((o.encComEm || o.encaminhadoComEm || '') > lastVisto));
+  const total = novos.length;
   const badge = document.getElementById('com-badge');
   if (!badge) return;
   if (total > 0) {
@@ -9943,7 +10044,17 @@ function atualizarBadgeOc() {
   const badge = document.getElementById('oc-badge');
   if (badge) { badge.textContent = count > 9 ? '9+' : count; badge.style.display = count > 0 ? 'flex' : 'none'; }
 }
-function atualizarBadgeRel() { /* fluxo COM→Relatório removido */ }
+function atualizarBadgeRel() {
+  const last = _cache['_relBadgeVisto'] || '1970-01-01';
+  const ocs = getOcorrencias();
+  // Aviso 1: casos recebidos dos Críticos aguardando relatório
+  const recebidos = ocs.filter(o => _etapaOc(o) === 'relatorio' && (o.encRelEm||'') > last).length;
+  // Aviso 2: casos do fluxo arquivados pela Comunicação (passaram pelo Relatório)
+  const arquivados = ocs.filter(o => o.arquivadaPorComunicacao && o.encRelEm && (o.comEnviadoEm||'') > last).length;
+  const total = recebidos + arquivados;
+  const badge = document.getElementById('rel-badge');
+  if (badge) { badge.textContent = total > 9 ? '9+' : total; badge.style.display = total > 0 ? 'flex' : 'none'; }
+}
 function atualizarBadgeGer() { /* fluxo COM→Gerência removido */ }
 function marcarOcVisto() {
   _cache['_ocBadgeVisto'] = new Date().toISOString();
@@ -9985,14 +10096,16 @@ function salvarComOcorrencia() {
   if (prodocNum) ocs[idx].prodocNum = prodocNum;
   ocs[idx].prodocData = dataEnvio;
   ocs[idx].arquivadaPorComunicacao = true;
+  ocs[idx].etapa = 'arquivado';
   ocs[idx].comEnviadoEm = new Date().toISOString();
   ocs[idx].comObs = document.getElementById('com-oc-obs').value.trim();
   salvarStore('ocorrencias', ocs);
   fecharModal('modal-com-ocorrencia');
   renderizarComunicacao();
   atualizarBadgeOc();
+  atualizarBadgeRel();
   atualizarTudo();
-  _mostrarToast('✅ PRODOC marcado como enviado! Ocorrência arquivada.', 'sucesso');
+  _mostrarToast('✅ PRODOC enviado! Caso arquivado e avisos enviados à Ocorrência e ao Relatório.', 'sucesso');
 }
 
 /* ── Críticos → Encaminhar para Comunicação ──────────────────── */
@@ -10022,6 +10135,20 @@ function salvarEncaminharCom() {
   renderizarCriticos();
   atualizarBadgeCom();
   _mostrarToast('📡 Encaminhado para Comunicação! A COM irá confirmar o envio.', 'sucesso');
+}
+
+/* ── Críticos → Relatório (novo fluxo) ──────────────────────────── */
+function encParaRelatorio(idx) {
+  const ocs = getOcorrencias();
+  const o = ocs[idx];
+  if (!o) return;
+  if (!confirm(`Enviar o caso #${o.id} (${o.monitorado || ''}) para o RELATÓRIO?`)) return;
+  o.etapa    = 'relatorio';
+  o.encRelEm = new Date().toISOString();
+  salvarStore('ocorrencias', ocs);
+  renderizarCriticos();
+  atualizarBadgeRel();
+  _mostrarToast('📋 Enviado para o Relatório! O setor irá confeccionar o documento.', 'sucesso');
 }
 
 /* ═══════════════════════ MÓDULO GERÊNCIA ════════════════════════ */
@@ -10066,9 +10193,9 @@ function renderizarGerencia() {
     const prazoFmt = (d.prazo||'').split('-').reverse().join('/');
     return `<tr style="${rowStyle}">
       <td style="white-space:nowrap;font-weight:600">${prazoFmt}</td>
-      <td>${d.titulo||''}</td>
-      <td>${d.descricao||''}</td>
-      <td>${d.responsavel||''}</td>
+      <td>${esc(d.titulo)||''}</td>
+      <td>${esc(d.descricao)||''}</td>
+      <td>${esc(d.responsavel)||''}</td>
       <td>${statusBadge}</td>
       <td style="white-space:nowrap">
         <button class="btn-sm btn-outline" onclick="verGerencia('${d.id}')" title="Visualizar">👁</button>
@@ -10758,16 +10885,16 @@ function renderizarPsi() {
     const btnEx   = podeMod ? '<button class="btn-sm btn-danger"  onclick="excluirAtendimentoPsi(\''+a.id+'\')">🗑️</button>' : '';
     return '<tr>'
       +'<td style="white-space:nowrap">'+dataFmt+(hora?' '+hora:'')+'</td>'
-      +'<td><span style="'+(PUB_COR[a.publico]||'')+'">'+(a.publico||'—')+'</span></td>'
-      +'<td><strong>'+(a.nome||'')+'</strong></td>'
-      +'<td style="font-size:.82rem">'+(a.processo||'—')+'</td>'
-      +'<td>'+(a.medida||'—')+'</td>'
-      +'<td>'+(a.tipo||'')+'</td>'
-      +'<td>'+(a.area||'')+'</td>'
-      +'<td style="'+(CAR_COR[a.carater]||'')+'">'+(a.carater||'')+'</td>'
-      +'<td style="font-size:.82rem">'+(a.situacao||'—')+'</td>'
+      +'<td><span style="'+(PUB_COR[a.publico]||'')+'">'+esc(a.publico||'—')+'</span></td>'
+      +'<td><strong>'+esc(a.nome||'')+'</strong></td>'
+      +'<td style="font-size:.82rem">'+esc(a.processo||'—')+'</td>'
+      +'<td>'+esc(a.medida||'—')+'</td>'
+      +'<td>'+esc(a.tipo||'')+'</td>'
+      +'<td>'+esc(a.area||'')+'</td>'
+      +'<td style="'+(CAR_COR[a.carater]||'')+'">'+esc(a.carater||'')+'</td>'
+      +'<td style="font-size:.82rem">'+esc(a.situacao||'—')+'</td>'
       +'<td>'+risco+'</td>'
-      +'<td>'+(a.profissional||'')+'</td>'
+      +'<td>'+esc(a.profissional||'')+'</td>'
       +'<td style="white-space:nowrap">'+proxFmt+'</td>'
       +'<td style="white-space:nowrap">'+btnVer+btnEd+btnEx+'</td>'
       +'</tr>';
@@ -11236,8 +11363,8 @@ function renderizarComunicacao() {
   }
   // Priorizar itens encaminhados de Críticos; dentro de cada grupo, mais recentes primeiro
   filtrados = [...filtrados].sort((a,b) => {
-    const aPrio = (a.encaminhadoCom && !a.arquivadaPorComunicacao) ? 0 : 1;
-    const bPrio = (b.encaminhadoCom && !b.arquivadaPorComunicacao) ? 0 : 1;
+    const aPrio = (_etapaOc(a) === 'comunicacao') ? 0 : 1;
+    const bPrio = (_etapaOc(b) === 'comunicacao') ? 0 : 1;
     if (aPrio !== bPrio) return aPrio - bPrio;
     return (b.dataAlerta||'').localeCompare(a.dataAlerta||'');
   });
@@ -11274,8 +11401,8 @@ function renderizarComunicacao() {
     const badgeProdoc = o.prodoc === 'SIM'
       ? '<span class="badge badge-ok">SIM</span>'
       : '<span class="badge badge-vencido">NÃO</span>';
-    const badgeCrit = (o.encaminhadoCom && !o.arquivadaPorComunicacao)
-      ? '<span style="background:#c0392b;color:#fff;font-size:.68rem;border-radius:3px;padding:1px 5px;font-weight:700;margin-left:4px">🚨 CRÍTICO</span>'
+    const badgeCrit = (_etapaOc(o) === 'comunicacao')
+      ? '<span style="background:#8e44ad;color:#fff;font-size:.68rem;border-radius:3px;padding:1px 5px;font-weight:700;margin-left:4px">📋 DO RELATÓRIO</span>'
       : '';
     const btnEdit = podeEdit
       ? `<button class="btn-sm btn-outline" onclick="verComunicacao(${idx})" title="Visualizar">👁</button>
@@ -11331,12 +11458,14 @@ function salvarComunicacao() {
   // Ao marcar PRODOC como SIM → arquivar a ocorrência
   if (prodocVal === 'SIM') {
     ocs[idx].arquivadaPorComunicacao = true;
+    ocs[idx].etapa = 'arquivado';
     ocs[idx].comEnviadoEm = new Date().toISOString();
   }
   salvarStore('ocorrencias', ocs);
   fecharModal('modal-comunicacao');
   renderizarComunicacao();
   atualizarBadgeOc();
+  atualizarBadgeRel();
   atualizarTudo();
   _mostrarToast('✅ PRODOC enviado! Ocorrência arquivada.', 'sucesso');
 }
