@@ -6821,14 +6821,14 @@ function renderizarCriticos() {
     return `<tr class="${rowClass}">
       <td style="text-align:center;font-weight:700;color:${priorColor};font-family:var(--font-mono)">${priorNum}º</td>
       <td style="font-family:var(--font-mono)">${oc.id}</td>
-      <td><strong>${oc.monitorado || "-"}</strong></td>
-      <td>${oc.medida || "-"}</td>
-      <td>${oc.tipo || "-"}</td>
+      <td><strong>${esc(oc.monitorado) || "-"}</strong></td>
+      <td>${esc(oc.medida) || "-"}</td>
+      <td>${esc(oc.tipo) || "-"}</td>
       <td>${badge}</td>
       <td style="font-family:var(--font-mono);font-size:.8rem">${pr}</td>
       <td style="font-family:var(--font-mono);font-size:.8rem">${formatDate(oc.dataAlerta)}</td>
       <td style="text-align:center">${oc.prodoc === "SIM" ? "✅" : "—"}</td>
-      <td>${oc.plantao || "-"}</td>
+      <td>${esc(oc.plantao) || "-"}</td>
       <td style="text-align:center;white-space:nowrap">${
         oc.arquivadaPorComunicacao
           ? '<span style="color:#27ae60;font-size:.78rem;font-weight:600">✅ Arquivado</span>'
@@ -7083,12 +7083,12 @@ function renderizarJuridico() {
     if (sc === "DESVINCULADO") rowBg = "row-comunicado";
     return `<tr class="${rowBg}">
       <td style="font-family:var(--font-mono);font-weight:700">${oc.id}</td>
-      <td><strong>${oc.monitorado || "—"}</strong></td>
-      <td>${oc.medida || "—"}</td>
-      <td>${oc.tipo || "—"}</td>
+      <td><strong>${esc(oc.monitorado) || "—"}</strong></td>
+      <td>${esc(oc.medida) || "—"}</td>
+      <td>${esc(oc.tipo) || "—"}</td>
       <td style="font-family:var(--font-mono);font-size:.78rem">${formatDate(oc.dataAlerta)}</td>
-      <td style="font-family:var(--font-mono);font-size:.78rem">${oc.prodocData || "—"}</td>
-      <td style="font-family:var(--font-mono)">${oc.prodocNum || "—"}</td>
+      <td style="font-family:var(--font-mono);font-size:.78rem">${esc(oc.prodocData) || "—"}</td>
+      <td style="font-family:var(--font-mono)">${esc(oc.prodocNum) || "—"}</td>
       <td style="text-align:center;font-family:var(--font-mono)">${diasViol !== "" ? diasViol : "—"}</td>
       <td style="text-align:center;font-family:var(--font-mono)">${diasProd !== "" ? diasProd : "—"}</td>
       <td>${v60}</td>
@@ -7780,16 +7780,16 @@ function renderizarSemComDesvinc() {
     const diasNaDesvinc = m.diasSemCom || _diasSemComAtual(m);
     return `<tr style="background:#f0fdf4">
       <td>${i + 1}</td>
-      <td><strong>${m.nome}</strong></td>
-      <td style="font-family:var(--font-mono)">${m.registro}</td>
-      <td style="font-size:.82rem">${(m.ultimaComunicacao||'').slice(0,16).replace('T',' ')}</td>
+      <td><strong>${esc(m.nome)}</strong></td>
+      <td style="font-family:var(--font-mono)">${esc(m.registro)}</td>
+      <td style="font-size:.82rem">${esc((m.ultimaComunicacao||'').slice(0,16).replace('T',' '))}</td>
       <td style="text-align:center;font-weight:bold;color:#dc2626">${diasNaDesvinc}d</td>
-      <td style="font-size:.8rem">${m.unidade||'—'}</td>
+      <td style="font-size:.8rem">${esc(m.unidade)||'—'}</td>
       <td style="font-family:var(--font-mono);font-size:.82rem"><strong>${dataDesvinc}</strong></td>
-      <td>${dv.servidor||'—'}</td>
-      <td style="font-size:.8rem">${dv.ato||'—'}</td>
-      <td style="font-size:.8rem">${dv.sistema||'—'}</td>
-      <td style="font-size:.79rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${dv.obs||''}">${dv.obs||'—'}</td>
+      <td>${esc(dv.servidor)||'—'}</td>
+      <td style="font-size:.8rem">${esc(dv.ato)||'—'}</td>
+      <td style="font-size:.8rem">${esc(dv.sistema)||'—'}</td>
+      <td style="font-size:.79rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(dv.obs)}">${esc(dv.obs)||'—'}</td>
       <td style="white-space:nowrap">
         <button class="btn-sm btn-outline" onclick="verMonitoradoSemCom('${m.id}')" title="Visualizar">👁</button>
         <button class="btn-sm btn-outline" style="color:#ea580c;border-color:#ea580c;margin-left:4px" onclick="reverterDesvinculacao('${m.id}')" title="Reverter">↩</button>
@@ -7908,13 +7908,13 @@ function renderizarSemCom() {
     const btnDesvinc = !desv(m) ? `<button class="btn-sm" style="background:#dc2626;color:#fff;border:none;border-radius:4px;padding:2px 7px;cursor:pointer;font-size:.8rem" onclick="abrirModalDesvinc('${m.id}')">⚡ Desvincular</button>` : '';
     return `<tr style="${rowStyle}">
       <td>${i+1}</td>
-      <td><strong>${m.nome}</strong>${badges180}</td>
-      <td style="font-family:var(--font-mono)">${m.registro}</td>
-      <td style="font-size:.82rem">${(m.ultimaComunicacao||'').slice(0,16).replace('T',' ')}</td>
-      <td style="font-size:.82rem">${m.tempoSemCom||'—'}</td>
+      <td><strong>${esc(m.nome)}</strong>${badges180}</td>
+      <td style="font-family:var(--font-mono)">${esc(m.registro)}</td>
+      <td style="font-size:.82rem">${esc((m.ultimaComunicacao||'').slice(0,16).replace('T',' '))}</td>
+      <td style="font-size:.82rem">${esc(m.tempoSemCom)||'—'}</td>
       <td style="font-weight:bold;color:${dias>=180?'#dc2626':dias>=7?'#ea580c':'#374151'}">${dias}</td>
-      <td style="font-size:.8rem">${m.intervalo||'—'}</td>
-      <td style="font-size:.8rem">${m.unidade||'—'}</td>
+      <td style="font-size:.8rem">${esc(m.intervalo)||'—'}</td>
+      <td style="font-size:.8rem">${esc(m.unidade)||'—'}</td>
       <td>${sitLabel}</td>
       <td style="text-align:center">${tratQt > 0 ? `<span style="background:#dbeafe;color:#1d4ed8;border-radius:10px;padding:1px 8px;font-size:.82rem">${tratQt}</span>` : '—'}</td>
       <td style="white-space:nowrap;display:flex;gap:4px;flex-wrap:wrap;align-items:center">
@@ -9541,12 +9541,12 @@ function renderizarRelatorio() {
     const envFmt  = (r.dataEnvio||'').split('-').reverse().join('/');
     return `<tr>
       <td style="text-align:center;font-weight:700">${lista.length - i}</td>
-      <td>${r.tipo||''}</td>
-      <td>${r.monitorado||''}</td>
+      <td>${esc(r.tipo)||''}</td>
+      <td>${esc(r.monitorado)||''}</td>
       <td>${recFmt||'—'}</td>
       <td>${envFmt||'—'}</td>
-      <td>${r.servidor||''}</td>
-      <td>${r.obs||'—'}</td>
+      <td>${esc(r.servidor)||''}</td>
+      <td>${esc(r.obs)||'—'}</td>
       <td style="white-space:nowrap">
         <button class="btn-sm btn-outline" onclick="verRelatorio('${r.id}')" title="Visualizar">👁</button>
         <button class="btn-sm btn-outline" onclick="abrirModalRelatorio('${r.id}')" style="margin-left:4px">✏️</button>
@@ -10273,15 +10273,15 @@ function renderizarTriagem() {
       : `<button class="btn-sm btn-outline" onclick="verTriagem('${a.id}')" title="Visualizar">👁</button>`;
     return `<tr>
       <td>${dataFmt}${hora ? ' ' + hora : ''}</td>
-      <td>${a.nome||''}</td>
-      <td>${a.cpf||''}</td>
-      <td>${a.tipo||''}</td>
-      <td>${a.medida||''}</td>
-      <td>${a.condicao||''}</td>
-      <td>${a.adv||''}</td>
-      <td>${a.clienteMonitorado||''}</td>
-      <td>${a.responsavel||''}</td>
-      <td>${a.obs||''}</td>
+      <td>${esc(a.nome)||''}</td>
+      <td>${esc(a.cpf)||''}</td>
+      <td>${esc(a.tipo)||''}</td>
+      <td>${esc(a.medida)||''}</td>
+      <td>${esc(a.condicao)||''}</td>
+      <td>${esc(a.adv)||''}</td>
+      <td>${esc(a.clienteMonitorado)||''}</td>
+      <td>${esc(a.responsavel)||''}</td>
+      <td>${esc(a.obs)||''}</td>
       ${podeMod ? `<td>${btns}</td>` : ''}
     </tr>`;
   }).join('');
