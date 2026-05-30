@@ -12845,7 +12845,7 @@ function baixarModeloPDF() {
   @page { margin: 3cm 2cm 2.5cm 3cm; size: A4 portrait; }
   *, *::before, *::after { box-sizing: border-box; }
   body {
-    font-family: Arial, sans-serif;
+    font-family: 'Times New Roman', Times, serif;
     font-size: 12pt;
     line-height: 1.5;          /* ABNT: espaçamento 1,5 entre linhas */
     color: #000;
@@ -12859,16 +12859,16 @@ function baixarModeloPDF() {
   .cabecalho { display: table; width: 100%; border-collapse: collapse; margin-bottom: 2px; }
   .cab-col   { display: table-cell; vertical-align: middle; }
   .cab-logo  { width: 90px; text-align: center; padding: 0 4px; }
-  .cab-logo img { max-width: 78px; max-height: 78px; object-fit: contain; }
+  .cab-logo img { max-width: 80px; max-height: 80px; object-fit: contain; }
   .cab-texto { text-align: center; padding: 0 10px; }
-  .cab-texto .t-gov   { font-size: 9pt; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
-  .cab-texto .t-sec   { font-size: 9pt; font-weight: bold; margin: 2px 0; }
-  .cab-texto .t-iapen { font-size: 9pt; font-weight: bold; margin: 2px 0; }
-  .cab-texto .t-cme   { font-size: 9pt; font-weight: bold; margin-top: 2px; }
+  .cab-texto .t-gov   { font-size: 10pt; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+  .cab-texto .t-sec   { font-size: 10pt; font-weight: bold; margin: 2px 0; }
+  .cab-texto .t-iapen { font-size: 10pt; font-weight: bold; margin: 2px 0; }
+  .cab-texto .t-cme   { font-size: 10pt; font-weight: bold; margin-top: 2px; }
 
   /* ── Divisores ── */
-  .div-main-bar1 { height: 3px; background: #1a3a6b; margin: 10px 0 1px 0; }
-  .div-main-bar2 { height: 1px; background: #1a3a6b; margin: 0 0 28px 0; }
+  .div-main-bar1 { height: 1px; background: #000; margin: 8px 0 0 0; }
+  .div-main-bar2 { height: 0; margin: 0 0 22px 0; }
   .div-light     { border: none; border-top: 1px solid #ccc; margin: 26px 0; }
 
   /* ── Título do assunto ── */
@@ -12884,8 +12884,8 @@ function baixarModeloPDF() {
 
   /* ── Bloco de metadados (data, plantão, servidor) ── */
   .meta-bloco {
-    border-left: 3px solid #1a3a6b;
-    background: #f5f5f5;
+    border-left: 3px solid #000;
+    background: #f6f6f6;
     padding: 10px 16px;
     margin-bottom: 28px;
     font-size: 10.5pt;
@@ -12952,7 +12952,7 @@ function baixarModeloPDF() {
   /* ── Rodapé ── */
   .rodape {
     margin-top: 36pt;
-    border-top: 2px solid #1a3a6b;
+    border-top: 1px solid #000;
     padding-top: 8px;
     text-align: center;
     font-size: 8.5pt;
@@ -13600,23 +13600,23 @@ function imprimirModeloMulti() {
 <style>
   @page { margin: 2cm 2cm 2.8cm 2cm; size: A4 portrait; }
   *, *::before, *::after { box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.65; color: #000; margin: 0; padding: 0;
+  body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; color: #000; margin: 0; padding: 0;
          display: flex; flex-direction: column; min-height: 253mm; /* 297-2cm-2.8cm */ }
 
   /* Cabeçalho */
   .cabecalho { display: table; width: 100%; border-collapse: collapse; }
   .cab-col   { display: table-cell; vertical-align: middle; }
   .cab-logo  { width: 95px; text-align: center; padding: 2px 4px; }
-  .cab-logo img { max-width: 85px; max-height: 85px; object-fit: contain; }
+  .cab-logo img { max-width: 80px; max-height: 80px; object-fit: contain; }
   .cab-texto { text-align: center; padding: 0 8px; }
-  .t-gov   { font-size: 8.5pt; font-weight: bold; margin-bottom: 1px; }
-  .t-sec   { font-size: 8.5pt; font-weight: bold; margin: 1px 0; }
-  .t-iapen { font-size: 8.5pt; font-weight: bold; margin: 1px 0; }
-  .t-cme   { font-size: 8.5pt; font-weight: bold; margin-top: 1px; }
+  .t-gov   { font-size: 10pt; font-weight: bold; margin-bottom: 1px; }
+  .t-sec   { font-size: 10pt; font-weight: bold; margin: 1px 0; }
+  .t-iapen { font-size: 10pt; font-weight: bold; margin: 1px 0; }
+  .t-cme   { font-size: 10pt; font-weight: bold; margin-top: 1px; }
 
   /* Divisórias */
-  .div-main-bar1 { height: 3px; background: #1a3a6b; margin: 8px 0 1px 0; }
-  .div-main-bar2 { height: 1px; background: #1a3a6b; margin: 0 0 20px 0; }
+  .div-main-bar1 { height: 1px; background: #000; margin: 8px 0 0 0; }
+  .div-main-bar2 { height: 0; margin: 0 0 16px 0; }
   .div-light { border: none; border-top: 1px solid #bbb; margin: 14px 0; }
 
   /* Conteúdo */
@@ -13636,11 +13636,11 @@ function imprimirModeloMulti() {
   .spacer        { height: 9px; }
 
   /* Identificação */
-  .id-bloco { border-left: 3px solid #1a3a6b; background: #f7f7f7;
+  .id-bloco { border-left: 3px solid #000; background: #f6f6f6;
               padding: 7px 14px; margin: 10px 0 16px 0; font-size: 10.5pt; }
 
   /* Rodapé */
-  .rodape { margin-top: 36px; border-top: 1px solid #1a3a6b; padding-top: 8px;
+  .rodape { margin-top: 36px; border-top: 1px solid #000; padding-top: 8px;
             text-align: center; font-size: 8pt; color: #444; }
   .rodape p { margin: 2px 0; }
 
@@ -16566,8 +16566,8 @@ function com_gerarOficio() {
   const cmeSrc   = window._CME_LOGO_B64   ? 'data:image/png;base64,' + window._CME_LOGO_B64   : '';
   const iapenSrc = window._IAPEN_LOGO_B64 ? 'data:image/png;base64,' + window._IAPEN_LOGO_B64 : '';
   const _logoPlaceholder = `<div style="width:75pt;height:75pt;border:1pt solid #ccc;display:flex;align-items:center;justify-content:center;font-size:7pt;color:#999;text-align:center">CME/<br>IAPEN</div>`;
-  const cmeCellHtml   = cmeSrc   ? `<img src="${cmeSrc}"   width="75" height="75" style="display:block;margin:auto">` : _logoPlaceholder;
-  const iapenCellHtml = iapenSrc ? `<img src="${iapenSrc}" width="75" height="75" style="display:block;margin:auto">` : _logoPlaceholder;
+  const cmeCellHtml   = cmeSrc   ? `<img src="${cmeSrc}"   width="80" height="80" style="display:block;margin:auto">` : _logoPlaceholder;
+  const iapenCellHtml = iapenSrc ? `<img src="${iapenSrc}" width="80" height="80" style="display:block;margin:auto">` : _logoPlaceholder;
 
   const doc = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -16578,7 +16578,7 @@ function com_gerarOficio() {
   @page { margin: 3cm 2cm 2.5cm 3cm; size: A4 portrait; }
   *, *::before, *::after { box-sizing: border-box; }
   body {
-    font-family: Arial, sans-serif;
+    font-family: 'Times New Roman', Times, serif;
     font-size: 12pt;
     line-height: 1.5;
     color: #000;
@@ -16592,9 +16592,9 @@ function com_gerarOficio() {
   .cabecalho { display: table; width: 100%; border-collapse: collapse; margin-bottom: 4px; }
   .cab-col   { display: table-cell; vertical-align: middle; }
   .cab-logo  { width: 90px; text-align: center; padding: 0 4px; }
-  .cab-logo img { max-width: 82px; max-height: 82px; object-fit: contain; }
+  .cab-logo img { max-width: 80px; max-height: 80px; object-fit: contain; }
   .cab-texto { text-align: center; padding: 0 10px; }
-  .cab-linha { font-size: 9pt; font-weight: bold; margin: 1px 0; }
+  .cab-linha { font-size: 10pt; font-weight: bold; margin: 1px 0; }
   .sep-linha { height: 1px; background: #000; margin: 8px 0 36px 0; }
 
   /* ── Conteúdo: flex:1 empurra assinatura para baixo ── */
@@ -17442,8 +17442,8 @@ function jur_gerarDoc() {
   const cmeSrc   = window._CME_LOGO_B64   ? 'data:image/png;base64,' + window._CME_LOGO_B64   : '';
   const iapenSrc = window._IAPEN_LOGO_B64 ? 'data:image/png;base64,' + window._IAPEN_LOGO_B64 : '';
   const _ph = `<div style="width:75pt;height:75pt;border:1pt solid #ccc;display:flex;align-items:center;justify-content:center;font-size:7pt;color:#999;text-align:center">CME/<br>IAPEN</div>`;
-  const cmeCell   = cmeSrc   ? `<img src="${cmeSrc}"   width="75" height="75" style="display:block;margin:auto">` : _ph;
-  const iapenCell = iapenSrc ? `<img src="${iapenSrc}" width="75" height="75" style="display:block;margin:auto">` : _ph;
+  const cmeCell   = cmeSrc   ? `<img src="${cmeSrc}"   width="80" height="80" style="display:block;margin:auto">` : _ph;
+  const iapenCell = iapenSrc ? `<img src="${iapenSrc}" width="80" height="80" style="display:block;margin:auto">` : _ph;
 
   // Data longa
   const meses = ['janeiro','fevereiro','mar&#231;o','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -17468,13 +17468,13 @@ function jur_gerarDoc() {
 <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
 <style>
   @page { margin: 2.5cm 3cm 3cm 3cm; }
-  body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.5; color: #000; }
+  body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; color: #000; }
   p { margin: 0; padding: 0; }
   table { border-collapse: collapse; width: 100%; }
   td { vertical-align: middle; }
   .rodape {
     font-family: Arial, sans-serif; font-size: 8.5pt; text-align: center; color: #333;
-    border-top: 1pt solid #1a3a6b; padding-top: 6pt; margin-top: 30pt;
+    border-top: 1pt solid #000; padding-top: 6pt; margin-top: 30pt;
   }
 </style>
 </head>
@@ -17485,10 +17485,10 @@ function jur_gerarDoc() {
   <tr>
     <td style="width:85pt;text-align:center;vertical-align:middle;padding:0 8pt 0 0">${cmeCell}</td>
     <td style="text-align:center;vertical-align:middle;padding:4pt 0">
-      <p style="font-size:9pt;font-weight:bold;text-transform:uppercase;letter-spacing:.5pt;margin:0;color:#1a3a6b">Governo do Estado do Amap&#225;</p>
-      <p style="font-size:8.5pt;margin:1pt 0;color:#333">Secretaria de Estado da Justi&#231;a e Seguran&#231;a P&#250;blica &#8211; SEJUSP</p>
-      <p style="font-size:10pt;font-weight:bold;text-transform:uppercase;margin:2pt 0;color:#1a3a6b">Instituto de Administra&#231;&#227;o Penitenci&#225;ria &#8211; IAPEN/AP</p>
-      <p style="font-size:9pt;font-weight:bold;margin:1pt 0;color:#000">Central de Monitoramento Eletr&#244;nico &#8211; CME</p>
+      <p style="font-size:10pt;font-weight:bold;text-transform:uppercase;letter-spacing:.5pt;margin:0;color:#000">Governo do Estado do Amap&#225;</p>
+      <p style="font-size:10pt;margin:1pt 0;color:#000">Secretaria de Estado da Justi&#231;a e Seguran&#231;a P&#250;blica &#8211; SEJUSP</p>
+      <p style="font-size:10pt;font-weight:bold;text-transform:uppercase;margin:2pt 0;color:#000">Instituto de Administra&#231;&#227;o Penitenci&#225;ria &#8211; IAPEN/AP</p>
+      <p style="font-size:10pt;font-weight:bold;margin:1pt 0;color:#000">Central de Monitoramento Eletr&#244;nico &#8211; CME</p>
     </td>
     <td style="width:85pt;text-align:center;vertical-align:middle;padding:0 0 0 8pt">${iapenCell}</td>
   </tr>
@@ -18079,7 +18079,7 @@ async function _comGerarPDFExec() {
     const numFmt = numero ? `${numero}/${ano} – CME/IAPEN` : '';
 
     // ── Logos ────────────────────────────────────────────────────
-    const logoW = 22, logoH = 22;
+    const logoW = 21, logoH = 21;
     if (window._CME_LOGO_B64) {
       try { doc.addImage('data:image/png;base64,' + window._CME_LOGO_B64,   'PNG', mL,            y, logoW, logoH); } catch(e) {}
     }
@@ -18088,7 +18088,7 @@ async function _comGerarPDFExec() {
     }
 
     // ── Texto institucional (centralizado, tudo negrito, mesmo tamanho — ABNT) ────
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(0);
+    doc.setFont('times', 'bold'); doc.setFontSize(9.5); doc.setTextColor(0);
     doc.text('GOVERNO DO ESTADO DO AMAPÁ',                                    cx, y + 5,  { align: 'center' });
     doc.text('Secretaria de Estado da Justiça e Segurança Pública – SEJUSP', cx, y + 10, { align: 'center' });
     doc.text('Instituto de Administração Penitenciária – IAPEN/AP',           cx, y + 15, { align: 'center' });
@@ -18101,14 +18101,14 @@ async function _comGerarPDFExec() {
     y += 14;
 
     // ── Número do ofício (sem data aqui — data vai antes da assinatura) ──
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0);
+    doc.setFont('times', 'bold'); doc.setFontSize(12); doc.setTextColor(0);
     if (numFmt) { doc.text(`Ofício nº ${numFmt}`, 210 - mR, y, { align: 'right' }); y += 14; }
 
     // ── Destinatário ─────────────────────────────────────────────
     if (dest) {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
+      doc.setFont('times', 'normal'); doc.setFontSize(12); doc.setTextColor(0);
       doc.text('A Sua Excelência o (a) Senhor (a)', mL, y); y += 5;
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('times', 'bold');
       const destLines = doc.splitTextToSize(dest + '.', tw);
       doc.text(destLines, mL, y); y += destLines.length * 6 + 12;
     }
@@ -18117,27 +18117,27 @@ async function _comGerarPDFExec() {
     const modeloId = document.getElementById('com-of-modelo')?.value || '';
     const modelo   = COM_MODELOS.find(m => m.id === modeloId);
     if (modelo?.assunto) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0);
+      doc.setFont('times', 'bold'); doc.setFontSize(12); doc.setTextColor(0);
       const assLbl = 'Assunto: ';
       const assLblW = doc.getTextWidth(assLbl);
       doc.text(assLbl, mL, y);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont('times', 'normal');
       const assLines = doc.splitTextToSize(modelo.assunto + '.', tw - assLblW);
       doc.text(assLines[0], mL + assLblW, y);
       if (assLines.length > 1) { y += 6; doc.text(assLines.slice(1).join(' '), mL, y); }
       y += 12;
     }
     if (processo) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+      doc.setFont('times', 'bold'); doc.setFontSize(12);
       const pnLbl = 'Processo nº: ';
       doc.text(pnLbl, mL, y);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont('times', 'normal');
       doc.text(processo + '.', mL + doc.getTextWidth(pnLbl), y); y += 14;
     }
 
     // ── Saudação ─────────────────────────────────────────────────
     if (saudacao) {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
+      doc.setFont('times', 'normal'); doc.setFontSize(12); doc.setTextColor(0);
       doc.text(saudacao, mL, y); y += 14;
     }
 
@@ -18158,7 +18158,7 @@ async function _comGerarPDFExec() {
       ? corpoTaPDF.value.trim().split('\n').filter(l => l.trim())
       : (modelo ? modelo.corpo(campos).map(stripTags) : []);
 
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
+    doc.setFont('times', 'normal'); doc.setFontSize(12); doc.setTextColor(0);
     const ABNT_INDENT = 12.5; // 1,25 cm — recuo na primeira linha de cada parágrafo
 
     // ── Auto-compressão: garante que o corpo cabe em 1 página ─
@@ -18226,7 +18226,7 @@ async function _comGerarPDFExec() {
     // ── Encerramento ─────────────────────────────────────────────
     y += 8;
     if (y > pageH - mB - 55) { doc.addPage(); y = mT; }
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(0);
+    doc.setFont('times', 'normal'); doc.setFontSize(12); doc.setTextColor(0);
     const semMaisLines = doc.splitTextToSize('Sem mais, esta CME se coloca à disposição para eventuais esclarecimentos.', tw);
     doc.text(semMaisLines, mL, y); y += semMaisLines.length * 5.5 + 6;
     doc.text('Respeitosamente,', mL, y); y += 6;
@@ -18237,7 +18237,7 @@ async function _comGerarPDFExec() {
 
     // ── Data (local e data — antes da assinatura, à direita) ─────
     if (dataLonga) {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+      doc.setFont('times', 'normal'); doc.setFontSize(12);
       doc.text(`Macapá/AP, ${dataLonga}.`, 210 - mR, y, { align: 'right' });
       y += 10;
     }
@@ -18272,9 +18272,9 @@ async function _comGerarPDFExec() {
     }
     doc.setDrawColor(0); doc.setLineWidth(0.3);
     doc.line(assX, y, assX + assW, y); y += 4;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0);
+    doc.setFont('times', 'bold'); doc.setFontSize(12); doc.setTextColor(0);
     if (signat) { doc.text(signat, assC, y, { align: 'center' }); y += 5; }
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+    doc.setFont('times', 'normal'); doc.setFontSize(10);
     if (cargo)  { doc.text(cargo,  assC, y, { align: 'center' }); y += 4; }
     if (decreto){ doc.setFontSize(10); doc.text(`Decreto nº ${decreto}`, assC, y, { align: 'center' }); }
 
@@ -18283,7 +18283,7 @@ async function _comGerarPDFExec() {
     if (totalPag > 1) {
       for (let p = 1; p <= totalPag; p++) {
         doc.setPage(p);
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100);
+        doc.setFont('times', 'normal'); doc.setFontSize(8); doc.setTextColor(100);
         doc.text(`Página ${p} de ${totalPag}`, 210 - mR, pageH - 10, { align: 'right' });
       }
     }
@@ -18295,9 +18295,9 @@ async function _comGerarPDFExec() {
     for (let pRod = 1; pRod <= totalPagRod; pRod++) {
       doc.setPage(pRod);
       const yRod = pageH - mB + 3;
-      doc.setDrawColor(26, 58, 107); doc.setLineWidth(0.3);
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
       doc.line(mL, yRod, 210 - mR, yRod);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(80);
+      doc.setFont('times', 'normal'); doc.setFontSize(7.5); doc.setTextColor(80);
       doc.text('Av. Machado de Assis, 372 – Centro, CEP 68900-066 – Macapá-AP', cx, yRod + 4, { align: 'center' });
       doc.text('cme@iapen.ap.gov.br  |  (96) 98415-2844', cx, yRod + 9, { align: 'center' });
       doc.text('Documento gerado em ' + dtGerado, cx, yRod + 14, { align: 'center' });
