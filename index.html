@@ -4609,6 +4609,10 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         <input type="text" id="edit-cress" placeholder="Ex: 12345/AP">
       </div>
       <div class="form-field">
+        <label>Decreto de nomeação <span style="color:#888;font-weight:400;font-size:.8rem">(aparece na assinatura dos documentos)</span></label>
+        <input type="text" id="edit-decreto" placeholder="Ex: 6157/2025 – GEA">
+      </div>
+      <div class="form-field">
         <label>Nível de acesso</label>
         <select id="edit-nivel">
           <option value="plantao">Operador / Plantão</option>
@@ -8632,6 +8636,7 @@ async function abrirModalEditarUsuario(loginId) {
   document.getElementById('edit-usuario').value       = u.usuario || '';
   document.getElementById('edit-cargo').value         = u.cargo   || '';
   document.getElementById('edit-cress').value         = u.cress   || '';
+  document.getElementById('edit-decreto').value       = u.decreto || '';
   document.getElementById('edit-nivel').value         = u.nivel   || 'plantao';
   document.getElementById('edit-nova-senha').value    = '';
   document.getElementById('edit-conf-senha').value    = '';
@@ -8692,6 +8697,7 @@ async function salvarEdicaoUsuario() {
   const usuario = document.getElementById('edit-usuario').value.trim();
   const cargo   = document.getElementById('edit-cargo').value.trim();
   const cress   = document.getElementById('edit-cress').value.trim();
+  const decreto = document.getElementById('edit-decreto').value.trim();
   const nivel   = document.getElementById('edit-nivel').value;
   const nova    = document.getElementById('edit-nova-senha').value;
   const conf    = document.getElementById('edit-conf-senha').value;
@@ -8726,6 +8732,7 @@ async function salvarEdicaoUsuario() {
   u.usuario = usuario;
   u.cargo   = cargo;
   u.cress   = cress;
+  if (decreto) u.decreto = decreto; else delete u.decreto;
   u.nivel   = nivel;
 
   // Assinatura
@@ -8739,7 +8746,7 @@ async function salvarEdicaoUsuario() {
 
   // Atualizar sessão se for o próprio usuário logado
   if (usuarioAtual && usuarioAtual.usuario === usuario) {
-    Object.assign(usuarioAtual, { nome, cargo, cress, nivel,
+    Object.assign(usuarioAtual, { nome, cargo, cress, decreto: decreto || undefined, nivel,
       assinatura: u.assinatura || null });
   }
 
@@ -16459,10 +16466,12 @@ function com_init() {
   const cargoEl  = document.getElementById('com-of-cargo');
   if (signatEl && !signatEl.value && usuarioAtual?.nome)  signatEl.value = usuarioAtual.nome;
   if (cargoEl  && !cargoEl.value  && usuarioAtual?.cargo) cargoEl.value  = usuarioAtual.cargo;
-  // Decreto: visível só para gerência e admin
+  // Decreto: visível só para gerência e admin; auto-preenche do perfil do usuário
   const temDecreto = ['gerencia', 'admin'].includes(usuarioAtual?.nivel);
   const decWrap = document.getElementById('com-of-decreto-wrap');
   if (decWrap) decWrap.style.display = temDecreto ? '' : 'none';
+  const decEl = document.getElementById('com-of-decreto');
+  if (decEl && usuarioAtual?.decreto) decEl.value = usuarioAtual.decreto;
   _cmeComboInit('com-of-comarca');
   _cmeComboInit('com-of-vara');
   com_setupDropZone(); // inicializa drag-and-drop de anexos
@@ -17303,10 +17312,12 @@ function jur_init() {
   const cargoEl  = document.getElementById('jur-cargo');
   if (signatEl && !signatEl.value && usuarioAtual?.nome)  signatEl.value = usuarioAtual.nome;
   if (cargoEl  && !cargoEl.value  && usuarioAtual?.cargo) cargoEl.value  = usuarioAtual.cargo;
-  // Decreto: visível só para gerência e admin
+  // Decreto: visível só para gerência e admin; auto-preenche do perfil do usuário
   const temDecreto = ['gerencia', 'admin'].includes(usuarioAtual?.nivel);
   const decWrap = document.getElementById('jur-decreto-wrap');
   if (decWrap) decWrap.style.display = temDecreto ? '' : 'none';
+  const jurDecEl = document.getElementById('jur-decreto');
+  if (jurDecEl && usuarioAtual?.decreto) jurDecEl.value = usuarioAtual.decreto;
 }
 
 function jur_atualizarVaras() {
