@@ -17052,7 +17052,7 @@ async function com_processarArquivos(files) {
             anexo._ocrAviso = true;
             com_renderizarAnexos();
             const ocrParts = [];
-            const maxPag = Math.min(pdfDoc.numPages, 4); // máx 4 páginas para não ultrapassar timeout
+            const maxPag = Math.min(pdfDoc.numPages, 10); // máx 10 páginas (OCR de PDF escaneado)
             for (let p = 1; p <= maxPag; p++) {
               try {
                 const page     = await pdfDoc.getPage(p);
@@ -17323,7 +17323,7 @@ async function _bmonCarregarEExtrair(pref) {
   if (!textos.length) { setStatus('❌ Não foi possível extrair texto dos documentos.', false); return; }
 
   setStatus('🤖 Enviando para análise da IA...');
-  const textoGeral = textos.join('\n\n---\n\n').slice(0, 9000);
+  const textoGeral = textos.join('\n\n---\n\n').slice(0, 12000);
   const comarcas = typeof COM_COMARCAS !== 'undefined' ? COM_COMARCAS.map(c => c.nome) : [];
   const varas    = typeof COM_COMARCAS !== 'undefined' ? COM_COMARCAS.flatMap(c => c.varas) : [];
 
@@ -18179,7 +18179,7 @@ async function com_extrairComIA() {
   const comTexto = _comAnexos.filter(a => a.texto.trim());
   if (!comTexto.length) { _mostrarToast('⚠️ Nenhum texto pôde ser extraído dos documentos.', 'erro'); return; }
 
-  const textoGeral = comTexto.map(a => `=== ${a.nome} ===\n${a.texto}`).join('\n\n---\n\n').slice(0, 9000);
+  const textoGeral = comTexto.map(a => `=== ${a.nome} ===\n${a.texto}`).join('\n\n---\n\n').slice(0, 12000);
 
   const btn    = document.getElementById('com-btn-extrair-ia');
   const status = document.getElementById('com-ia-status');
