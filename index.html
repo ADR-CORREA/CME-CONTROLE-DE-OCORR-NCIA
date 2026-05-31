@@ -6499,6 +6499,9 @@ async function fazerLogin() {
           const { data: migrou } = await window._db.rpc('cme_update_senha', { p_username: u, p_hash_atual: hash, p_novo_hash: novoHash, p_novo_salt: novoSalt });
           if (migrou) window._sessionHash = novoHash;
         }
+
+        // Troca usuário+hash por um token de sessão do Worker (p/ acesso aos arquivos)
+        try { await _obterTokenSessao(); } catch (e) {}
       }
     } catch(e) { console.error('[CME] Erro no login:', e); }
   }
@@ -6600,7 +6603,10 @@ async function definirPrimeiraSenha() {
 function fazerLogout() {
   addLog(`Logout: ${usuarioAtual.nome}`);
   usuarioAtual = null;
+  window._sessionUser = null; window._sessionHash = null;
+  _r2Session = null;
   localStorage.removeItem('cme_sessao');
+  localStorage.removeItem('cme_r2_session');
   // Resetar visibilidade das abas para o estado padrão (CSS assume o controle)
   document.querySelectorAll('.nav-tab').forEach(t => t.style.display = '');
   document.getElementById("app").style.display = "none";
@@ -13864,6 +13870,37 @@ const r2_state = {
 };
 let _r2Carregando = false; // true enquanto fetch está em andamento
 
+/* ── Token de SESSÃO do Worker (Fase 2 de segurança) ──────────────
+   Após o login, o app troca usuário+hash por um token de sessão assinado.
+   As chamadas ao Worker usam esse token; fallback ao token legado durante
+   a migração (removido na Fase 3). */
+let _r2Session = null; // { token, exp }
+function _r2SessionToken() {
+  const agora = Math.floor(Date.now() / 1000);
+  if (_r2Session && _r2Session.exp > agora) return _r2Session.token;
+  try { const s = JSON.parse(localStorage.getItem('cme_r2_session') || 'null'); if (s && s.exp > agora) { _r2Session = s; return s.token; } } catch (e) {}
+  return null;
+}
+function _workerToken() { return _r2SessionToken() || r2_state.token; }
+async function _obterTokenSessao() {
+  if (!window._sessionUser || !window._sessionHash) return null;
+  try {
+    if (!r2_state.url) r2_carregarConfig();
+    const res = await fetch(r2_state.url.replace(/\/$/, '') + '/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: window._sessionUser, hash: window._sessionHash }),
+    });
+    if (!res.ok) return null;
+    const j = await res.json();
+    if (j && j.token) {
+      _r2Session = { token: j.token, exp: j.exp };
+      try { localStorage.setItem('cme_r2_session', JSON.stringify(_r2Session)); } catch (e) {}
+      return j.token;
+    }
+  } catch (e) { console.warn('[CME] token de sessão do Worker indisponível:', e.message); }
+  return null;
+}
+
 /* ── Config: carregar / salvar ────────────────────────────────── */
 function r2_carregarConfig() {
   // Valores padrão já configurados — todos os usuários conectam automaticamente
@@ -13906,7 +13943,7 @@ async function r2_api(method, path, headers = {}, body = null) {
   const res = await fetch(base + path, {
     method,
     headers: {
-      'Authorization': `Bearer ${r2_state.token}`,
+      'Authorization': `Bearer ${_workerToken()}`,
       'X-Usuario': usuarioAtual?.nome || 'desconhecido',
       'X-Nivel':   usuarioAtual?.nivel || '',
       ...headers,
@@ -14253,7 +14290,7 @@ async function r2_baixarRelatorio() {
   try {
     const qs  = new URLSearchParams({ monitorado: r2_state.monitorado });
     const res = await fetch(`${r2_state.url}/relatorio?${qs}`, {
-      headers: { Authorization: `Bearer ${r2_state.token}` },
+      headers: { Authorization: `Bearer ${_workerToken()}` },
     });
     if (!res.ok) throw new Error(`Erro ${res.status}`);
     const blob = await res.blob();
@@ -17164,7 +17201,7 @@ async function _bmonPesquisar(pref, modoSugestao = false) {
   try {
     const resp = await fetch(
       `${r2_state.url}/monitorados?busca=${encodeURIComponent(termo)}&limite=20`,
-      { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
+      { headers: { 'Authorization': `Bearer ${_workerToken()}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
     );
     if (!resp.ok) throw new Error(await resp.text());
     const lista = (await resp.json()).monitorados || [];
@@ -17198,7 +17235,7 @@ async function _bmonSelecionarMon(pref, nome) {
   try {
     const resp = await fetch(
       `${r2_state.url}/list?monitorado=${encodeURIComponent(nome)}`,
-      { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
+      { headers: { 'Authorization': `Bearer ${_workerToken()}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
     );
     if (!resp.ok) throw new Error(await resp.text());
     st.docsCache = (await resp.json()).arquivos || [];
@@ -17292,7 +17329,7 @@ async function _bmonCarregarEExtrair(pref) {
     const key = chk.dataset.key, nome = chk.dataset.nome || key.split('/').pop();
     try {
       const resp = await fetch(`${r2_state.url}/download?key=${encodeURIComponent(key)}`,
-        { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } });
+        { headers: { 'Authorization': `Bearer ${_workerToken()}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const blob = await resp.blob();
       const txt = await _bmonExtrairTexto(new File([blob], nome, { type: blob.type }));
@@ -17309,7 +17346,7 @@ async function _bmonCarregarEExtrair(pref) {
   try {
     const resp = await fetch(`${r2_state.url}/extrair-campos`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${r2_state.token}`, 'Content-Type': 'application/json',
+      headers: { 'Authorization': `Bearer ${_workerToken()}`, 'Content-Type': 'application/json',
         'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' },
       body: JSON.stringify({ texto: textoGeral, comarcas, varas }),
     });
@@ -17837,7 +17874,7 @@ async function com_buscarMonitorado(modoSugestao = false) {
   try {
     const resp = await fetch(
       `${r2_state.url}/monitorados?busca=${encodeURIComponent(termo)}&limite=20`,
-      { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
+      { headers: { 'Authorization': `Bearer ${_workerToken()}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
     );
     if (!resp.ok) throw new Error(await resp.text());
     const data = await resp.json();
@@ -17895,7 +17932,7 @@ async function com_selecionarMonitorado(nome) {
   try {
     const resp = await fetch(
       `${r2_state.url}/list?monitorado=${encodeURIComponent(nome)}`,
-      { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
+      { headers: { 'Authorization': `Bearer ${_workerToken()}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
     );
     if (!resp.ok) throw new Error(await resp.text());
     const data = await resp.json();
@@ -17989,7 +18026,7 @@ async function com_carregarEExtrair() {
     try {
       const resp = await fetch(
         `${r2_state.url}/download?key=${encodeURIComponent(key)}`,
-        { headers: { 'Authorization': `Bearer ${r2_state.token}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
+        { headers: { 'Authorization': `Bearer ${_workerToken()}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
       );
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const blob = await resp.blob();
@@ -18138,7 +18175,7 @@ async function _comOcrViaWorker(base64jpeg) {
     if (!r2_state.url || !r2_state.token) r2_carregarConfig();
     const resp = await fetch(`${r2_state.url}/ocr`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${r2_state.token}`, 'Content-Type': 'application/json' },
+      headers: { 'Authorization': `Bearer ${_workerToken()}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ image: base64jpeg }),
     });
     if (!resp.ok) return '';
@@ -18174,7 +18211,7 @@ async function com_extrairComIA() {
 
     const resp = await fetch(`${r2_state.url}/extrair-campos`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${r2_state.token}`, 'Content-Type': 'application/json' },
+      headers: { 'Authorization': `Bearer ${_workerToken()}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ texto: textoGeral, comarcas: comarcasList }),
     });
     if (!resp.ok) throw new Error(`Erro HTTP ${resp.status}`);
@@ -19477,7 +19514,7 @@ function estat_buscarIA() {
   const tipos      = [...new Set(_estatDados.map(r => String(r['Tipo de Monitorado']||'').trim()))].filter(Boolean);
 
   const apiBase  = (typeof r2_state !== 'undefined' && r2_state.url) || '';
-  const apiToken = (typeof r2_state !== 'undefined' && r2_state.token) || (typeof window._CME_API_TOKEN !== 'undefined' ? window._CME_API_TOKEN : '');
+  const apiToken = (typeof _workerToken === 'function' ? _workerToken() : (typeof r2_state !== 'undefined' && r2_state.token) || '') || (typeof window._CME_API_TOKEN !== 'undefined' ? window._CME_API_TOKEN : '');
 
   if (apiBase && apiToken) {
     fetch(apiBase.replace(/\/$/, '') + '/query-estat', {
@@ -20259,6 +20296,7 @@ function _r2Base() {
     : '';
 }
 function _r2Token() {
+  if (typeof _workerToken === 'function') { const t = _workerToken(); if (t) return t; }
   return (typeof r2_state !== 'undefined' && r2_state.token)
     ? r2_state.token
     : (typeof window._CME_API_TOKEN !== 'undefined' ? window._CME_API_TOKEN : '');
