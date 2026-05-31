@@ -16277,7 +16277,10 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
   zip.file('word/_rels/header1.xml.rels',hdrRelsXml);
   zip.file('word/footer1.xml',footerXml);
   media.concat(hdrMedia).forEach(m=>zip.file(m.name,m.b64,{base64:true}));
-  return await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  // O Word rejeita .docx que contém entradas de DIRETÓRIO no zip (JSZip as cria
+  // automaticamente). Removê-las deixa o pacote igual ao do python-docx.
+  Object.keys(zip.files).forEach(k => { if (zip.files[k].dir) delete zip.files[k]; });
+  return await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',compression:'DEFLATE'});
 }
 
 // ── Gerador Word (.doc) — estrutura idêntica ao Python gerar_relatorios.py ──
