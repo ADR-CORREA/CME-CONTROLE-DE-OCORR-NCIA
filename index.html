@@ -1918,6 +1918,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
                 <th>Nº</th>
                 <th>Tipo de Relatório</th>
                 <th>Monitorado</th>
+                <th>Período</th>
                 <th>Data Recebimento</th>
                 <th>Data Envio Comunicação</th>
                 <th>Servidor Responsável</th>
@@ -5842,6 +5843,19 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
               <input type="date" id="rel-data-envio">
             </div>
           </div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>Período do Relatório — Início *</label>
+              <input type="date" id="rel-periodo-inicio">
+            </div>
+            <div class="form-field">
+              <label>Período do Relatório — Fim *</label>
+              <input type="date" id="rel-periodo-fim">
+            </div>
+          </div>
+          <div class="form-field" style="background:#f0f7ff;border:1px solid #dbeafe;border-radius:8px;padding:8px 12px;font-size:.8rem;color:#1e40af;margin-bottom:4px">
+            ℹ️ O período é usado para alertar quando já existe relatório do mesmo monitorado cobrindo o mesmo intervalo (evita relatório duplicado).
+          </div>
           <div class="form-field">
             <label>Observação</label>
             <textarea id="rel-obs" rows="2" placeholder="Observações adicionais (opcional)" style="resize:vertical"></textarea>
@@ -8567,6 +8581,7 @@ function verRelatorio(id) {
       _vf('Tipo de Relatório', r.tipo) +
       _vf('Monitorado', r.monitorado) +
       _vf('Servidor Responsável', r.servidor) +
+      _vf('Período do Relatório', (r.periodoInicio && r.periodoFim) ? (r.periodoInicio.split('-').reverse().join('/') + ' a ' + r.periodoFim.split('-').reverse().join('/')) : '—') +
       _vf('Data de Recebimento', r.dataRecebimento ? r.dataRecebimento.split('-').reverse().join('/') : '') +
       _vf('Data Envio à Comunicação', r.dataEnvio ? r.dataEnvio.split('-').reverse().join('/') : '') +
       _vf('Enviado COM em', r.comEnviadoEm ? r.comEnviadoEm.replace('T',' ').slice(0,16) : 'Não enviado')
@@ -9986,17 +10001,21 @@ function renderizarRelatorio() {
   if (!tbody) return;
 
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#888">Nenhum relatório registrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:#888">Nenhum relatório registrado.</td></tr>';
     return;
   }
 
   tbody.innerHTML = lista.map((r, i) => {
     const recFmt  = (r.dataRecebimento||'').split('-').reverse().join('/');
     const envFmt  = (r.dataEnvio||'').split('-').reverse().join('/');
+    const perFmt  = (r.periodoInicio && r.periodoFim)
+      ? `${(r.periodoInicio||'').split('-').reverse().join('/')} a ${(r.periodoFim||'').split('-').reverse().join('/')}`
+      : '—';
     return `<tr>
       <td style="text-align:center;font-weight:700">${lista.length - i}</td>
       <td>${esc(r.tipo)||''}</td>
       <td>${esc(r.monitorado)||''}</td>
+      <td style="white-space:nowrap;font-size:.82rem">${perFmt}</td>
       <td>${recFmt||'—'}</td>
       <td>${envFmt||'—'}</td>
       <td>${esc(r.servidor)||''}</td>
@@ -10014,7 +10033,7 @@ function abrirModalRelatorio(id) {
   const titleEl = document.getElementById('rel-modal-title');
   _relOcVinculo = null;
   // Limpar campos
-  ['rel-edit-id','rel-monitorado','rel-servidor','rel-data-recebimento','rel-data-envio','rel-obs'].forEach(fid => {
+  ['rel-edit-id','rel-monitorado','rel-servidor','rel-data-recebimento','rel-data-envio','rel-periodo-inicio','rel-periodo-fim','rel-obs'].forEach(fid => {
     const el = document.getElementById(fid); if (el) el.value = '';
   });
   document.getElementById('rel-tipo').value = '';
@@ -10034,6 +10053,8 @@ function abrirModalRelatorio(id) {
       document.getElementById('rel-servidor').value   = r.servidor || '';
       document.getElementById('rel-data-recebimento').value = r.dataRecebimento || '';
       document.getElementById('rel-data-envio').value       = r.dataEnvio || '';
+      document.getElementById('rel-periodo-inicio').value   = r.periodoInicio || '';
+      document.getElementById('rel-periodo-fim').value      = r.periodoFim || '';
       document.getElementById('rel-obs').value               = r.obs || '';
       _relOcVinculo = r.ocorrenciaId || null;
       if (titleEl) titleEl.textContent = '✏️ Editar Relatório';
@@ -10052,6 +10073,8 @@ function salvarRelatorio() {
   const servidor        = document.getElementById('rel-servidor').value.trim();
   const dataRecebimento = document.getElementById('rel-data-recebimento').value;
   const dataEnvio       = document.getElementById('rel-data-envio').value;
+  const periodoInicio   = document.getElementById('rel-periodo-inicio').value;
+  const periodoFim      = document.getElementById('rel-periodo-fim').value;
   const obs             = document.getElementById('rel-obs').value.trim();
 
   if (!tipo)            return _mostrarToast('⚠️ Selecione o tipo de relatório.', 'erro');
@@ -10059,12 +10082,28 @@ function salvarRelatorio() {
   if (!servidor)        return _mostrarToast('⚠️ Informe o servidor responsável.', 'erro');
   if (!dataRecebimento) return _mostrarToast('⚠️ Informe a data de recebimento.', 'erro');
   if (!dataEnvio)       return _mostrarToast('⚠️ Informe a data de envio.', 'erro');
+  if (!periodoInicio || !periodoFim) return _mostrarToast('⚠️ Informe o período do relatório (início e fim).', 'erro');
+  if (periodoFim < periodoInicio)    return _mostrarToast('⚠️ O fim do período não pode ser anterior ao início.', 'erro');
 
   const dados = getRelatorios();
   const lista = dados.registros || [];
   const editId = document.getElementById('rel-edit-id').value;
 
-  const obj = { tipo, monitorado, servidor, dataRecebimento, dataEnvio, obs, ocorrenciaId: _relOcVinculo || null };
+  // ── ALERTA (não bloqueante) de período já coberto p/ este monitorado ──
+  const _norm = s => (s||'').trim().toLowerCase();
+  const _fmtBR = s => (s||'').split('-').reverse().join('/');
+  const dups = lista.filter(r => r.id !== editId
+      && _norm(r.monitorado) === _norm(monitorado)
+      && r.periodoInicio && r.periodoFim
+      && r.periodoInicio <= periodoFim && r.periodoFim >= periodoInicio);
+  if (dups.length) {
+    const msg = `⚠️ ATENÇÃO — já existe relatório para "${monitorado}" cobrindo período que se sobrepõe a este:\n\n`
+      + dups.map(r => `•  ${_fmtBR(r.periodoInicio)}  a  ${_fmtBR(r.periodoFim)}   —   por ${r.servidor || '(servidor não informado)'}`).join('\n')
+      + `\n\nIsto é apenas um ALERTA — você PODE registrar mesmo assim.\nDeseja continuar com o registro?`;
+    if (!confirm(msg)) return;
+  }
+
+  const obj = { tipo, monitorado, servidor, dataRecebimento, dataEnvio, periodoInicio, periodoFim, obs, ocorrenciaId: _relOcVinculo || null };
 
   if (editId) {
     const idx = lista.findIndex(x => x.id === editId);
@@ -10165,6 +10204,7 @@ function exportarRelatorioExcel() {
     'Nº':                    i + 1,
     'Tipo':                  r.tipo||'',
     'Monitorado':            r.monitorado||'',
+    'Período':               (r.periodoInicio && r.periodoFim) ? ((r.periodoInicio||'').split('-').reverse().join('/')+' a '+(r.periodoFim||'').split('-').reverse().join('/')) : '',
     'Data Recebimento':      (r.dataRecebimento||'').split('-').reverse().join('/'),
     'Data Envio Comunicação':(r.dataEnvio||'').split('-').reverse().join('/'),
     'Servidor Responsável':  r.servidor||'',
