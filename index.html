@@ -6731,6 +6731,16 @@ let filtroCrit = "";
 let filtroJur = "";
 
 /* ─── LOGIN / LOGOUT ─────────────────────────────────── */
+/* Salva a sessão para restaurar no F5 sem novo login. Guarda o objeto
+   completo do usuário (já sem campos de senha vindos de cme_validate_login),
+   removendo por garantia qualquer resíduo sensível. */
+function _salvarSessao(usuario) {
+  const { senha, senhaSalt, senhaVersao, primeiroLogin, ...limpo } = usuario || {};
+  try {
+    localStorage.setItem('cme_sessao', JSON.stringify({ ...limpo, loginAt: Date.now() }));
+  } catch (e) { console.warn('[CME] não foi possível salvar a sessão:', e.message); }
+}
+
 async function fazerLogin() {
   const u = document.getElementById("input-user").value.trim().toLowerCase();
   const p = document.getElementById("input-pass").value;
@@ -6814,12 +6824,7 @@ async function fazerLogin() {
   }
 
   usuarioAtual = usuario;
-  localStorage.setItem('cme_sessao', JSON.stringify({
-    usuario:  usuario.usuario,
-    nivel:    usuario.nivel,
-    nome:     usuario.nome,
-    loginAt:  Date.now()
-  }));
+  _salvarSessao(usuario);
   addLog(`Login: ${usuario.nome} (${usuario.nivel})`);
   iniciarApp();
 }
@@ -6866,12 +6871,7 @@ async function definirPrimeiraSenha() {
 
   // Fazer login normalmente
   usuarioAtual = eu;
-  localStorage.setItem('cme_sessao', JSON.stringify({
-    usuario: eu.usuario,
-    nivel:   eu.nivel,
-    nome:    eu.nome,
-    loginAt: Date.now()
-  }));
+  _salvarSessao(eu);
   addLog(`Primeiro login — senha definida: ${eu.nome}`);
 
   document.getElementById('primeiro-login-screen').style.display = 'none';
@@ -15880,14 +15880,17 @@ function r2_iconeArquivo(nome) {
       const s = JSON.parse(sessaoSalva);
       const TIMEOUT_SESSAO = 8 * 60 * 60 * 1000; // 8 horas
       const sessaoExpirada = s.loginAt && (Date.now() - s.loginAt) > TIMEOUT_SESSAO;
-      if (!sessaoExpirada) {
-        const userSalvo = getUsuarios().find(u => u.usuario === s.usuario && u.nivel === s.nivel);
-        if (userSalvo) {
-          usuarioAtual = userSalvo;
-          overlay.style.display = 'none';
-          iniciarApp();
-          return; // Entra direto, sem mostrar login
-        }
+      if (!sessaoExpirada && s.usuario) {
+        // Prefere o registro fresco se a lista de usuários estiver em cache
+        // (admin/subgerente); no F5 comum a lista não está carregada, então
+        // usa o snapshot completo salvo na própria sessão.
+        const lista = _cache.hasOwnProperty('usuarios') ? _cache['usuarios'] : null;
+        const userFresco = lista ? lista.find(u => u.usuario === s.usuario && u.nivel === s.nivel) : null;
+        const { loginAt, ...snapshot } = s;
+        usuarioAtual = userFresco || snapshot;
+        overlay.style.display = 'none';
+        iniciarApp();
+        return; // Entra direto, sem mostrar login
       }
     } catch(e) { /* sessão inválida */ }
     localStorage.removeItem('cme_sessao');
