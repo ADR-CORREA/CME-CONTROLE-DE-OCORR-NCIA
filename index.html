@@ -14244,74 +14244,75 @@ function imprimirModeloMulti() {
   // ── Parser do textarea ────────────────────────────────────────────────────
   const linhas = ta.value.split('\n');
   let bodyHtml  = '';
-  let skipInst  = true; // pula o bloco institucional embutido nos Termos
+  let skipInst  = true; // pula o bloco institucional embutido nos Termos (o timbrado já vem do HTML)
   let instCount = 0;
-  let _inAss    = false;
 
-  const IS_TITULO = /^(RELATÓRIO SOCIAL|MPU —|OFÍCIO N[°º])/;
-  const IS_CAMPO  = /^(Processo n[°º]|Classe:|Órgão Julgador:|Assunto:|Vítima:|Réu:|Requerente|Requerido|Nome da vítima:|Nome:|NOME:|Ação:|AÇÃO:|Agressor:|AGRESSOR:|NÚMERO DE PROCESSO:|CPF:|Vítima na condição)/;
-  const IS_LINHA  = /^_{10,}/;
-  const IS_ASS_CARGO = /(CRESS|CRP|OAB) n[°º]|Central de Monitor|CME\/IAPEN|\(Vítima\)$/;
-  const IS_LOCAL_DATA = /^(Macapá|Macapa).*\d{4}\.?$/;
-  const IS_RODAPE_INST = /^(GOVERNO DO ESTADO|SECRETARIA DE ESTADO|INSTITUTO DE ADMIN|CENTRAL DE MONIT)/;
+  const IS_TITULO       = /^(RELATÓRIO SOCIAL|MPU —|OFÍCIO N[°º])/;
+  const IS_CAMPO        = /^(Processo n[°º]|Classe:|Órgão Julgador:|Assunto:|Vítima:|Réu:|Requerente|Requerido|Nome da vítima:|Nome:|NOME:|Ação:|AÇÃO:|Agressor:|AGRESSOR:|NÚMERO DE PROCESSO:|CPF:|Vítima na condição)/;
+  const IS_DIVISORIA    = /^_{50,}$/;   // divisória de seção (≈60 _) — NÃO é assinatura
+  const IS_SIGLINHA     = /^_{8,49}$/;  // linha de assinatura (≈40 _)
+  const IS_LOCAL_DATA   = /^(Macapá|Macapa).*\d{4}\.?$/;
+  const IS_RODAPE_INST  = /^(GOVERNO DO ESTADO|SECRETARIA DE ESTADO|INSTITUTO DE ADMIN|CENTRAL DE MONIT)/;
   const IS_TITULO_TERMO = /^TERMO DE |^OFÍCIO N[°º]/;
+  const IS_CONSELHO     = /(CRESS|CRP|OAB) n[°º]|Central de Monitor|CME\/IAPEN/;
 
-  for (const l of linhas) {
-    // Pular cabeçalho institucional dos Termos UPR
+  for (let i = 0; i < linhas.length; i++) {
+    const l = linhas[i];
+
+    // Pular cabeçalho institucional embutido nos Termos (o timbrado vem do HTML)
     if (skipInst) {
       if (IS_RODAPE_INST.test(l)) { continue; }
-      if (IS_LINHA.test(l)) {
+      if (IS_DIVISORIA.test(l)) {
         instCount++;
-        // Após 2 linhas separadoras do cabeçalho, começa o conteúdo real
-        if (instCount <= 2) { continue; }
+        if (instCount <= 2) { continue; } // pula as 2 divisórias do cabeçalho
         skipInst = false;
         bodyHtml += '<p class="linha-tit"></p>\n';
         continue;
       }
-      // Se encontrou título do documento sem header institucional, para de pular
       if (IS_TITULO.test(l) || IS_TITULO_TERMO.test(l)) { skipInst = false; }
     }
 
-    const le = esc(l);
     if (!l.trim()) { bodyHtml += '<div class="spacer"></div>\n'; continue; }
-    if (IS_TITULO_TERMO.test(l) || IS_TITULO.test(l)) {
-      bodyHtml += `<h2 class="titulo-doc">${le}</h2>\n`; continue;
-    }
-    if (l === 'É o relatório.') { bodyHtml += `<p class="e-relatorio">${le}</p>\n`; continue; }
-    if (IS_CAMPO.test(l))       { bodyHtml += `<p class="campo-id">${le}</p>\n`; continue; }
-    if (IS_LINHA.test(l)) {
-      if (!_inAss) {
-        _inAss = true;
-        bodyHtml += `<div class="ass-bloco">\n`;
-        if (assImgCapturada) {
-          bodyHtml += `<img src="${assImgCapturada}" class="ass-img">\n`;
-        } else {
-          bodyHtml += `<div class="ass-linha">________________________________</div>\n`;
-        }
+    const le = esc(l);
+
+    // Bloco de assinatura: linha curta de underscores (≈40) + nome/qualificação seguintes.
+    // Agrupamos as linhas seguintes para renderizar cada assinatura junta e centralizada,
+    // colocando a imagem capturada apenas no bloco do TÉCNICO (não no da vítima).
+    if (IS_SIGLINHA.test(l)) {
+      const grupo = [];
+      let j = i + 1;
+      while (j < linhas.length && linhas[j].trim()
+             && !IS_SIGLINHA.test(linhas[j]) && !IS_DIVISORIA.test(linhas[j])
+             && !IS_LOCAL_DATA.test(linhas[j])) {
+        grupo.push(linhas[j]); j++;
       }
-      continue; // não renderiza a linha de underscores
+      const ehTecnico = grupo.some(g => IS_CONSELHO.test(g));
+      bodyHtml += '<div class="ass-bloco">\n';
+      if (ehTecnico && assImgCapturada) {
+        bodyHtml += `<img src="${assImgCapturada}" class="ass-img">\n`;
+      } else {
+        bodyHtml += '<div class="ass-linha">________________________________</div>\n';
+      }
+      grupo.forEach(g => { bodyHtml += `<p class="ass-cargo">${esc(g)}</p>\n`; });
+      bodyHtml += '</div>\n';
+      i = j - 1; // continua após o grupo de assinatura
+      continue;
     }
-    if (_inAss || IS_ASS_CARGO.test(l)) {
-      if (!_inAss) { _inAss = true; bodyHtml += `<div class="ass-bloco">\n`; }
-      bodyHtml += `<p class="ass-cargo">${le}</p>\n`; continue;
-    }
-    if (IS_LOCAL_DATA.test(l))  {
-      if (_inAss) { bodyHtml += `</div>\n`; _inAss = false; } // fecha bloco antes da data
-      bodyHtml += `<p class="local-data">${le}</p>\n`; continue;
-    }
-    if (/^(Ao Excelentíssimo|Juízo da |Assunto:|Ref\.:)/.test(l)) {
-      bodyHtml += `<p class="campo-id">${le}</p>\n`; continue;
-    }
-    if (/^(Senhor|Senhorita|Senhora)\(a\)/.test(l)) {
-      bodyHtml += `<p class="corpo-esp">${le}</p>\n`; continue;
-    }
-    // Abertura formal (MM. Juiz)
-    if (/^MM\. Juiz/.test(l)) { bodyHtml += `<p class="corpo-esp">${le}</p>\n`; continue; }
-    // Parágrafos normais
+
+    // Divisória de seção (linha longa de underscores)
+    if (IS_DIVISORIA.test(l)) { bodyHtml += '<p class="linha-tit"></p>\n'; continue; }
+
+    if (IS_TITULO_TERMO.test(l) || IS_TITULO.test(l)) { bodyHtml += `<h2 class="titulo-doc">${le}</h2>\n`; continue; }
+    if (l === 'É o relatório.')  { bodyHtml += `<p class="e-relatorio">${le}</p>\n`; continue; }
+    if (l === 'Atenciosamente,') { bodyHtml += `<p class="corpo-esp">${le}</p>\n`; continue; }
+    if (IS_CAMPO.test(l))        { bodyHtml += `<p class="campo-id">${le}</p>\n`; continue; }
+    if (IS_LOCAL_DATA.test(l))   { bodyHtml += `<p class="local-data">${le}</p>\n`; continue; }
+    if (/^(Ao Excelentíssimo|Juízo da |Ref\.:)/.test(l)) { bodyHtml += `<p class="campo-id">${le}</p>\n`; continue; }
+    if (/^(Senhor|Senhorita|Senhora)\(a\)/.test(l)) { bodyHtml += `<p class="corpo-esp">${le}</p>\n`; continue; }
+    if (/^MM\. Juiz/.test(l))     { bodyHtml += `<p class="corpo-esp">${le}</p>\n`; continue; }
+    if (/^\s*\(\s*[Xx]?\s*\)/.test(l)) { bodyHtml += `<p class="corpo" style="text-indent:0">${le}</p>\n`; continue; } // marcadores ( ) / (X)
     bodyHtml += `<p class="corpo">${le}</p>\n`;
   }
-
-  if (_inAss) { bodyHtml += `</div>\n`; } // garante fechamento do bloco
 
   const agora = new Date();
   const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
