@@ -1878,6 +1878,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
       <div class="sub-tabs">
         <div class="sub-tab"        id="rel-stab-recebidos" onclick="mudarSubAbaRel('recebidos')">📥 Recebidos<span id="rel-rec-count" style="color:#e67e22;font-weight:700"></span></div>
         <div class="sub-tab active" id="rel-stab-lista"      onclick="mudarSubAbaRel('lista')">📄 Relatórios</div>
+        <div class="sub-tab"        id="rel-stab-aguardando" onclick="mudarSubAbaRel('aguardando')">⏳ Aguardando<span id="rel-aguard-count" style="color:#e67e22;font-weight:700"></span></div>
         <div class="sub-tab"        id="rel-stab-arquivadas" onclick="mudarSubAbaRel('arquivadas')">📁 Arquivadas</div>
         <div class="sub-tab"        id="rel-stab-gerador"    onclick="mudarSubAbaRel('gerador')">⚡ Gerador de Violações</div>
       </div>
@@ -1931,6 +1932,22 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <div style="margin-top:10px;font-size:.85rem;color:#666" id="rel-count-label"></div>
         </div>
       </div>
+      <div class="sub-panel" id="rel-panel-aguardando">
+        <div class="table-toolbar">
+          <div style="font-weight:600;color:var(--az1)">⏳ Enviados — aguardando a Comunicação Processual enviar</div>
+        </div>
+        <div class="est-section-title" id="rel-aguard-count-label">Aguardando</div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th>Nº</th><th>Tipo</th><th>Monitorado</th><th>Período</th><th>Servidor</th>
+              <th>Dt. Recebimento</th><th>Enviado em</th><th>Situação</th>
+            </tr></thead>
+            <tbody id="tbody-rel-aguardando"></tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="sub-panel" id="rel-panel-arquivadas">
         <div class="table-toolbar">
           <div style="font-weight:600;color:var(--az1)">📁 Relatórios enviados pela Comunicação Processual</div>
@@ -9984,7 +10001,7 @@ function toggleCamposRelatorio() {
 
 function renderizarRelatorio() {
   const dados = getRelatorios();
-  let lista = (dados.registros || []).filter(r => !r.comEnviadoEm).slice().sort((a,b) => (b.criadoEm||'').localeCompare(a.criadoEm||''));
+  let lista = (dados.registros || []).filter(r => !r.comEnviadoEm && !r.aguardandoCom).slice().sort((a,b) => (b.criadoEm||'').localeCompare(a.criadoEm||''));
 
   if (_relFiltro) {
     lista = lista.filter(r =>
@@ -10205,9 +10222,24 @@ function enviarRelParaCom(idx) {
   o.encComEm = new Date().toISOString();
   _histOc(o, 'Relatório confeccionado e enviado à Comunicação');
   salvarStore('ocorrencias', ocs);
+  // Marca o(s) relatório(s) vinculado(s) como AGUARDANDO a Comunicação enviar
+  _relMarcarPorOcorrencia(o.id, { aguardandoCom: new Date().toISOString() });
   renderizarRelRecebidos();
+  if (typeof renderizarRelAguardando === 'function') renderizarRelAguardando();
+  if (typeof renderizarRelatorio === 'function') renderizarRelatorio();
   atualizarBadgeCom();
-  _mostrarToast('✅ Enviado para a Comunicação!', 'sucesso');
+  _mostrarToast('✅ Enviado para a Comunicação! Aguardando a COM enviar.', 'sucesso');
+}
+
+// Sincroniza o(s) registro(s) de relatório vinculado(s) a uma ocorrência
+function _relMarcarPorOcorrencia(ocId, fields) {
+  if (ocId == null) return;
+  const dados = getRelatorios();
+  let mudou = false;
+  (dados.registros||[]).forEach(r => {
+    if (r.ocorrenciaId != null && String(r.ocorrenciaId) === String(ocId)) { Object.assign(r, fields); mudou = true; }
+  });
+  if (mudou) salvarStore('relatorios', dados);
 }
 
 function exportarRelatorioExcel() {
@@ -10243,12 +10275,13 @@ function mudarSubAbaCom(aba) {
 
 // Navegação sub-abas Relatório
 function mudarSubAbaRel(aba) {
-  ['recebidos','lista','arquivadas','gerador'].forEach(a => {
+  ['recebidos','lista','aguardando','arquivadas','gerador'].forEach(a => {
     document.getElementById('rel-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('rel-panel-' + a)?.classList.toggle('active', a === aba);
   });
   if (aba === 'recebidos')  renderizarRelRecebidos();
   if (aba === 'lista')      renderizarRelatorio();
+  if (aba === 'aguardando') renderizarRelAguardando();
   if (aba === 'arquivadas') renderizarRelArquivadas();
   if (aba === 'gerador')    rv_inicializar();
 }
@@ -10360,6 +10393,38 @@ function exportarComArquivadosExcel() {
 }
 
 // ── Relatório → Arquivadas ──────────────────────────────
+function renderizarRelAguardando() {
+  const lista = (getRelatorios().registros||[]).filter(r => r.aguardandoCom && !r.comEnviadoEm)
+    .sort((a,b) => (b.aguardandoCom||'').localeCompare(a.aguardandoCom||''));
+  const cnt = document.getElementById('rel-aguard-count');
+  if (cnt) cnt.textContent = lista.length ? ` (${lista.length})` : '';
+  const lbl = document.getElementById('rel-aguard-count-label');
+  if (lbl) lbl.textContent = `Aguardando Comunicação — ${lista.length} registro${lista.length!==1?'s':''}`;
+  const tbody = document.getElementById('tbody-rel-aguardando');
+  if (!tbody) return;
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#888">Nenhum relatório aguardando a Comunicação.</td></tr>';
+    return;
+  }
+  const ocs = getOcorrencias();
+  tbody.innerHTML = lista.map((r,i) => {
+    const per = (r.periodoInicio && r.periodoFim)
+      ? `${(r.periodoInicio||'').split('-').reverse().join('/')} a ${(r.periodoFim||'').split('-').reverse().join('/')}` : '—';
+    const oc = r.ocorrenciaId != null ? ocs.find(o => String(o.id)===String(r.ocorrenciaId)) : null;
+    const sit = oc ? (_etapaOc(oc)==='arquivado' ? '✅ COM enviou' : '⏳ Na Comunicação') : '⏳ Aguardando';
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${esc(r.tipo)||''}</td>
+      <td>${esc(r.monitorado)||''}</td>
+      <td style="white-space:nowrap;font-size:.82rem">${per}</td>
+      <td>${esc(r.servidor)||''}</td>
+      <td>${(r.dataRecebimento||'').split('-').reverse().join('/')}</td>
+      <td>${(r.aguardandoCom||'').replace('T',' ').slice(0,16)}</td>
+      <td style="color:#e67e22;font-weight:600">${sit}</td>
+    </tr>`;
+  }).join('');
+}
+
 function renderizarRelArquivadas() {
   const fMon    = (document.getElementById('rel-a-monitorado')?.value||'').toLowerCase().trim();
   const fSrv    = (document.getElementById('rel-a-servidor')?.value||'').toLowerCase().trim();
@@ -10568,6 +10633,7 @@ function salvarComOcorrencia() {
   ocs[idx].arquivadaPorComunicacao = true;
   ocs[idx].etapa = 'arquivado';
   ocs[idx].comEnviadoEm = new Date().toISOString();
+  _relMarcarPorOcorrencia(ocs[idx].id, { comEnviadoEm: new Date().toISOString() });
   ocs[idx].comObs = document.getElementById('com-oc-obs').value.trim();
   _histOc(ocs[idx], 'PRODOC enviado pela Comunicação — caso arquivado');
   salvarStore('ocorrencias', ocs);
@@ -11932,6 +11998,7 @@ function salvarComunicacao() {
     ocs[idx].arquivadaPorComunicacao = true;
     ocs[idx].etapa = 'arquivado';
     ocs[idx].comEnviadoEm = new Date().toISOString();
+    _relMarcarPorOcorrencia(ocs[idx].id, { comEnviadoEm: new Date().toISOString() });
   }
   salvarStore('ocorrencias', ocs);
   fecharModal('modal-comunicacao');
