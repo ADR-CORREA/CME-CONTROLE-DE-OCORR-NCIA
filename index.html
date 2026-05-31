@@ -9984,7 +9984,7 @@ function toggleCamposRelatorio() {
 
 function renderizarRelatorio() {
   const dados = getRelatorios();
-  let lista = (dados.registros || []).slice().sort((a,b) => (b.criadoEm||'').localeCompare(a.criadoEm||''));
+  let lista = (dados.registros || []).filter(r => !r.comEnviadoEm).slice().sort((a,b) => (b.criadoEm||'').localeCompare(a.criadoEm||''));
 
   if (_relFiltro) {
     lista = lista.filter(r =>
@@ -10021,7 +10021,8 @@ function renderizarRelatorio() {
       <td>${esc(r.servidor)||''}</td>
       <td>${esc(r.obs)||'—'}</td>
       <td style="white-space:nowrap">
-        <button class="btn-sm btn-outline" onclick="verRelatorio('${r.id}')" title="Visualizar">👁</button>
+        <button class="btn-sm" onclick="marcarRelatorioEnviado('${r.id}')" title="Marcar como enviado — vai para Arquivadas" style="background:#16A34A;color:#fff;border:none;border-radius:5px;padding:4px 9px;cursor:pointer;font-size:.78rem;font-weight:600">📤 Enviado</button>
+        <button class="btn-sm btn-outline" onclick="verRelatorio('${r.id}')" title="Visualizar" style="margin-left:4px">👁</button>
         <button class="btn-sm btn-outline" onclick="abrirModalRelatorio('${r.id}')" style="margin-left:4px">✏️</button>
         <button class="btn-sm btn-danger"  onclick="excluirRelatorio('${r.id}')" style="margin-left:4px">🗑️</button>
       </td>
@@ -10124,6 +10125,19 @@ function salvarRelatorio() {
   if (document.getElementById('rel-panel-recebidos')?.classList.contains('active')) renderizarRelRecebidos();
   _relOcVinculo = null;
   _mostrarToast('✅ Relatório salvo!', 'sucesso');
+}
+
+function marcarRelatorioEnviado(id) {
+  const dados = getRelatorios();
+  const r = (dados.registros||[]).find(x => x.id === id);
+  if (!r) return;
+  if (!confirm(`Marcar o relatório de "${r.monitorado||''}" como ENVIADO?\n\nEle sai desta lista e vai para a aba "Arquivadas".`)) return;
+  r.comEnviadoEm = new Date().toISOString();
+  if (!r.comEnviadoPor) r.comEnviadoPor = usuarioAtual?.nome || usuarioAtual?.usuario || '';
+  salvarStore('relatorios', dados);
+  renderizarRelatorio();
+  if (typeof renderizarRelArquivadas === 'function') renderizarRelArquivadas();
+  _mostrarToast('📤 Relatório enviado e arquivado!', 'sucesso');
 }
 
 function excluirRelatorio(id) {
