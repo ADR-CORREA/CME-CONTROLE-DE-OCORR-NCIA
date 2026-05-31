@@ -1982,8 +1982,8 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr>
-              <th>Nº</th><th>Tipo</th><th>Monitorado</th><th>Servidor</th>
-              <th>Dt. Recebimento</th><th>Dt. Envio Com.</th><th>Enviado pela Com. em</th><th>Ações</th>
+              <th>Nº</th><th>Tipo</th><th>Monitorado</th><th>Período</th><th>Servidor</th>
+              <th>Dt. Recebimento</th><th>Dt. Envio Com.</th><th>Arquivado em</th><th>Ações</th>
             </tr></thead>
             <tbody id="tbody-rel-arquivadas"></tbody>
           </table>
@@ -10383,13 +10383,14 @@ function renderizarRelArquivadas() {
   const tbody = document.getElementById('tbody-rel-arquivadas');
   if (!tbody) return;
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#888">Nenhum relatório encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:#888">Nenhum relatório encontrado.</td></tr>';
     return;
   }
   tbody.innerHTML = lista.map((r,i) => `<tr>
     <td>${i+1}</td>
     <td>${esc(r.tipo)||''}</td>
     <td>${esc(r.monitorado)||''}</td>
+    <td style="white-space:nowrap;font-size:.82rem">${(r.periodoInicio && r.periodoFim) ? ((r.periodoInicio||'').split('-').reverse().join('/')+' a '+(r.periodoFim||'').split('-').reverse().join('/')) : '—'}</td>
     <td>${esc(r.servidor)||''}</td>
     <td>${(r.dataRecebimento||'').split('-').reverse().join('/')}</td>
     <td>${(r.dataEnvio||'').split('-').reverse().join('/')}</td>
