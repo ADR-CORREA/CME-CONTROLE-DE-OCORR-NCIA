@@ -16063,9 +16063,12 @@ function rv_gerarSelecionados(modo = 'html') {
   const idxAss = parseInt(document.getElementById('rv-assinante')?.value);
   const idxGer = parseInt(document.getElementById('rv-gerente')?.value);
   const infoAss = isNaN(idxAss) ? null : us[idxAss] || null;
-  const infoGer = isNaN(idxGer) ? null : us[idxGer] || null;
+  let infoGer = isNaN(idxGer) ? null : us[idxGer] || null;
 
   if (!infoAss) { _mostrarToast('Selecione o servidor assinante.', 'erro'); return; }
+
+  // Co-assinatura automática do gerente (se nenhum foi escolhido manualmente)
+  if (!infoGer) infoGer = _rvCoassinar(infoAss, us);
 
   if (modo === 'word') {
     (async () => {
@@ -16141,6 +16144,18 @@ function _rvFmtCpf(c){ const d=String(c||'').replace(/\D/g,''); if(!d)return '';
 function _rvParseDurMin(s){ s=String(s||'').trim(); if(!s||s==='nan')return 0; const d=(s.match(/(\d+)\s*d/)||[0,0])[1]*1440; const h=(s.match(/(\d+)\s*h/)||[0,0])[1]*60; const m=(s.match(/(\d+)\s*min/)||[0,0])[1]*1; return (+d)+(+h)+(+m); }
 function _rvFmtOcorreu(v){ if(!v||String(v).trim().toLowerCase()==='nan')return ''; const dias=['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado','Domingo']; let s=String(v).trim(); s=s.replace(/^(\d{2})\/(\d{2})\/(\d{4})(.*)$/,'$3-$2-$1$4').replace(/^(\d{4}-\d{2}-\d{2}) /,'$1T'); const dt=new Date(s); if(isNaN(dt))return String(v); const dd=String(dt.getDate()).padStart(2,'0'),mm=String(dt.getMonth()+1).padStart(2,'0'),hh=String(dt.getHours()).padStart(2,'0'),mi=String(dt.getMinutes()).padStart(2,'0'); const dow=dt.getDay(); return `${dd}/${mm}/${dt.getFullYear()} (${dias[dow===0?6:dow-1]}) ${hh}:${mi}`; }
 
+function _rvParseDate(v){ if(!v||String(v).trim().toLowerCase()==='nan')return null; let s=String(v).trim(); s=s.replace(/^(\d{2})\/(\d{2})\/(\d{4})(.*)$/,'$3-$2-$1$4').replace(/^(\d{4}-\d{2}-\d{2}) /,'$1T'); const dt=new Date(s); return isNaN(dt)?null:dt; }
+function _rvDataBR(dt){ return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`; }
+// Co-assinatura automática do gerente (réplica do interface.py)
+function _rvGetGerente(us){ return (us||[]).find(u => /gerente/i.test(u.cargo||'') && !/subgerente/i.test(u.cargo||'')) || null; }
+function _rvCoassinar(infoAss, us){
+  const cargo = String(infoAss && infoAss.cargo || '').toLowerCase();
+  if (cargo.includes('subgerente')) return null;            // subgerente assina sozinho
+  const ger = _rvGetGerente(us);
+  if (ger && infoAss && infoAss.nome === ger.nome) return null; // o próprio gerente assina sozinho
+  return ger;                                                // demais: leva o gerente junto (null se não houver)
+}
+
 async function rv_gerarDocx(grupo, infoAss, infoGer){
   const Z=window.JSZip; if(!Z) throw new Error('JSZip não carregado');
   _rvDrawId=1;
@@ -16163,7 +16178,9 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
   body.push(dado('PROCESSO Nº',proc||'XXX')); body.push(dado('VARA',vara||'XXX')); body.push(dado('COMARCA',comarca||'XXX'));
   body.push(secao('DADOS DA MONITORAÇÃO'));
   body.push(_rvPara([_ar('DATA DE INÍCIO: ',{b:true}),_ar('XXX          '),_ar('DATA DE TÉRMINO: ',{b:true}),_ar('XXX')],{after:8,line:16.5}));
-  body.push(_rvPara([_ar('Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos dos deveres e obrigações do monitorado, gerados pelo sistema de monitoração eletrônica no período de ___ a ___.')],{jc:'both',after:0,line:16.5}));
+  const _dtsOc = grupo.map(x=>_rvParseDate(x.ocorreu)).filter(Boolean).sort((a,b)=>a-b);
+  const _periodoOc = _dtsOc.length ? `${_rvDataBR(_dtsOc[0])} a ${_rvDataBR(_dtsOc[_dtsOc.length-1])}` : '___ a ___';
+  body.push(_rvPara([_ar('Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos dos deveres e obrigações do monitorado, gerados pelo sistema de monitoração eletrônica no período de '+_periodoOc+'.')],{jc:'both',after:0,line:16.5}));
   // Resumo quantitativo
   const cont={}; grupo.forEach(x=>{const t=String(x.tipo||''); cont[t]=(cont[t]||0)+1;});
   const contArr=Object.entries(cont).sort((a,b)=>b[1]-a[1]); const totalV=contArr.reduce((s,e)=>s+e[1],0);
