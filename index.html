@@ -16134,9 +16134,9 @@ function _rvParseImg(src){
 }
 function _rvEmuW(im,inches){ const w=Math.round(inches*914400); return {w, h:Math.round(w*(im.h/im.w||1))}; }
 // runs / parágrafos OOXML
-function _rvRPr(o){ o=o||{}; let s='<w:rPr>'; if(o.font)s+=`<w:rFonts w:ascii="${o.font}" w:hAnsi="${o.font}" w:cs="${o.font}"/>`; if(o.b)s+='<w:b/>'; if(o.i)s+='<w:i/>'; if(o.u)s+='<w:u w:val="single"/>'; const sz=_RVHP(o.size||11); s+=`<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/>`; s+='</w:rPr>'; return s; }
+function _rvRPr(o){ o=o||{}; let s='<w:rPr>'; if(o.font)s+=`<w:rFonts w:ascii="${o.font}" w:hAnsi="${o.font}" w:cs="${o.font}"/>`; if(o.b)s+='<w:b/>'; if(o.i)s+='<w:i/>'; const sz=_RVHP(o.size||11); s+=`<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/>`; if(o.u)s+='<w:u w:val="single"/>'; s+='</w:rPr>'; return s; }
 function _rvRun(t,o){ return `<w:r>${_rvRPr(o)}<w:t xml:space="preserve">${_rvEsc(t)}</w:t></w:r>`; }
-function _rvPPr(o){ o=o||{}; let s='<w:pPr>'; if(o.jc)s+=`<w:jc w:val="${o.jc}"/>`; let sp=''; if(o.before!=null)sp+=` w:before="${_RVPT(o.before)}"`; if(o.after!=null)sp+=` w:after="${_RVPT(o.after)}"`; if(o.line!=null)sp+=` w:line="${_RVPT(o.line)}" w:lineRule="exact"`; if(sp)s+=`<w:spacing${sp}/>`; if(o.indent)s+=`<w:ind w:firstLine="${_RVCM(o.indent)}"/>`; s+='</w:pPr>'; return s; }
+function _rvPPr(o){ o=o||{}; let s='<w:pPr>'; let sp=''; if(o.before!=null)sp+=` w:before="${_RVPT(o.before)}"`; if(o.after!=null)sp+=` w:after="${_RVPT(o.after)}"`; if(o.line!=null)sp+=` w:line="${_RVPT(o.line)}" w:lineRule="exact"`; if(sp)s+=`<w:spacing${sp}/>`; if(o.indent)s+=`<w:ind w:firstLine="${_RVCM(o.indent)}"/>`; if(o.jc)s+=`<w:jc w:val="${o.jc}"/>`; s+='</w:pPr>'; return s; }
 function _rvPara(runs,o){ return `<w:p>${_rvPPr(o)}${Array.isArray(runs)?runs.join(''):runs}</w:p>`; }
 function _rvEmpty(){ return '<w:p/>'; }
 let _rvDrawId=1;
@@ -16243,11 +16243,11 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
     .map((l,i)=>_rvPara([_rvRun(l,{b:true,font:A,size:10})],{jc:'center',after:0,line:13})).join('');
   const cCme = imCme?_rvImgRun('rIdHc',_rvEmuW(imCme,0.75)):_rvRun('');
   const cIap = imIap?_rvImgRun('rIdHi',_rvEmuW(imIap,0.85)):_rvRun('');
-  const hdrTbl=`<w:tbl><w:tblPr><w:tblW w:w="9639" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/><w:insideH w:val="none"/><w:insideV w:val="none"/></w:tblBorders></w:tblPr><w:tblGrid><w:gridCol w:w="1418"/><w:gridCol w:w="6803"/><w:gridCol w:w="1418"/></w:tblGrid><w:tr>`+
+  const hdrTbl=`<w:tbl><w:tblPr><w:tblW w:w="9639" w:type="dxa"/><w:tblBorders><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/><w:insideH w:val="none"/><w:insideV w:val="none"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="1418"/><w:gridCol w:w="6803"/><w:gridCol w:w="1418"/></w:tblGrid><w:tr>`+
     `<w:tc><w:tcPr><w:tcW w:w="1418" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr><w:p>${cCme}</w:p></w:tc>`+
     `<w:tc><w:tcPr><w:tcW w:w="6803" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr>${hdrTxt}</w:tc>`+
     `<w:tc><w:tcPr><w:tcW w:w="1418" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr><w:p>${cIap}</w:p></w:tc></w:tr></w:tbl><w:p/>`;
-  const headerXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">${hdrTbl}</w:hdr>`;
+  const headerXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">${hdrTbl}</w:hdr>`;
 
   // ───────── RODAPÉ (endereço + nº de página) ─────────
   const ftEnd=['CENTRAL DE MONITORAMENTO ELETRÔNICO – CME','Av. Machado de Assis, 372 – Centro – CEP: 68900-066, Macapá-AP','E-mail: cme@iapen.ap.gov.br / Telefone: (96) 98415-2844']
@@ -16256,7 +16256,7 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
   const footerXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">${ftEnd}${ftPag}</w:ftr>`;
 
   // ───────── document.xml ─────────
-  const documentXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body.join('')}${sectPr}</w:body></w:document>`;
+  const documentXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body.join('')}${sectPr}</w:body></w:document>`;
 
   // ───────── styles / settings / content types / rels ─────────
   const stylesXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>`;
