@@ -2514,11 +2514,22 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
               </div>
               <div class="form-field">
                 <label>Cargo</label>
-                <input type="text" id="multi-cargo" placeholder="Ex: Assistente Social" oninput="salvarPerfilMultiTecnico(); gerarModeloMulti()">
+                <input type="text" id="multi-cargo" placeholder="Ex: Assistente Social, Psicólogo(a)" oninput="_multiAutoConselho(); salvarPerfilMultiTecnico(); gerarModeloMulti()">
               </div>
-              <div class="form-field">
-                <label>CRESS nº</label>
-                <input type="text" id="multi-cress" placeholder="Ex: 487/AP" oninput="salvarPerfilMultiTecnico(); gerarModeloMulti()">
+              <div class="form-grid">
+                <div class="form-field">
+                  <label>Conselho</label>
+                  <select id="multi-conselho" onchange="salvarPerfilMultiTecnico(); gerarModeloMulti()">
+                    <option value="CRESS">CRESS (Assistente Social)</option>
+                    <option value="CRP">CRP (Psicólogo[a])</option>
+                    <option value="OAB">OAB (Advogado[a])</option>
+                    <option value="">— sem conselho —</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label>Registro nº</label>
+                  <input type="text" id="multi-cress" placeholder="Ex: 487/AP" oninput="salvarPerfilMultiTecnico(); gerarModeloMulti()">
+                </div>
               </div>
               <div class="form-field">
                 <label>Município / UF</label>
@@ -13124,11 +13135,14 @@ function renderizarModelos() {
   const perfil = carregarStore('multi_perfil_' + (usuarioAtual?.usuario || 'default'), null);
   if (perfil) {
     const cargo = document.getElementById('multi-cargo');
+    const cons  = document.getElementById('multi-conselho');
     const cress = document.getElementById('multi-cress');
     const mun   = document.getElementById('multi-municipio');
     if (cargo && perfil.cargo)     cargo.value = perfil.cargo;
+    if (cons  && perfil.conselho != null && perfil.conselho !== '') cons.value = perfil.conselho;
     if (cress && perfil.cress)     cress.value = perfil.cress;
     if (mun   && perfil.municipio) mun.value   = perfil.municipio;
+    if (cargo && perfil.cargo && !(perfil.conselho)) _multiAutoConselho();
   }
 }
 
@@ -13801,10 +13815,23 @@ function _mFmtData(val) {
 function salvarPerfilMultiTecnico() {
   const perfil = {
     cargo:     _mV('multi-cargo'),
+    conselho:  _mV('multi-conselho'),
     cress:     _mV('multi-cress'),
     municipio: _mV('multi-municipio'),
   };
   salvarStore('multi_perfil_' + (usuarioAtual?.usuario || 'default'), perfil);
+}
+// Sugere o conselho a partir do cargo digitado (Psicólogo→CRP, Advogado→OAB,
+// Assistente Social→CRESS). Só ajusta automaticamente; o usuário pode trocar.
+function _multiAutoConselho() {
+  const cargo = _mV('multi-cargo').toLowerCase();
+  const sel = document.getElementById('multi-conselho');
+  if (!sel) return;
+  let c = null;
+  if (/psic[oó]log/.test(cargo))                 c = 'CRP';
+  else if (/advog|jur[ií]dic|procurador/.test(cargo)) c = 'OAB';
+  else if (/assistente social|servi[cç]o social/.test(cargo)) c = 'CRESS';
+  if (c) sel.value = c;
 }
 
 function gerarModeloMulti() {
@@ -13815,9 +13842,13 @@ function gerarModeloMulti() {
   const tecnico  = _mV('multi-tecnico')  || '[NOME DO(A) TÉCNICO(A)]';
   const cargo    = _mV('multi-cargo')    || '[CARGO]';
   const cress    = _mV('multi-cress')    || '___/AP';
+  const conselho = _mV('multi-conselho');               // CRESS | CRP | OAB | '' (sem conselho)
   const mun      = _mV('multi-municipio')|| 'Macapá/AP';
   const dataDoc  = _mFmtData(_mV('multi-data'));
   const _linha   = (n=48) => '_'.repeat(n);
+  // Linha de qualificação na assinatura — usa o conselho correto da equipe
+  // multidisciplinar (Assistente Social=CRESS, Psicólogo=CRP, Jurídico=OAB).
+  const _regLinha = conselho ? `${cargo} – ${conselho} nº ${cress}` : cargo;
 
   // Mostrar/ocultar campos condicionais
   const isRel       = modelo === 'rel-social-1' || modelo === 'rel-social-2';
@@ -13835,8 +13866,8 @@ function gerarModeloMulti() {
 
 ${_linha(40)}
 ${tecnico}
-${cargo} – CRESS nº ${cress}
-Central de Monitoração Eletrônica – CME/IAPEN`;
+${_regLinha}
+Central de Monitoramento Eletrônico – CME/IAPEN`;
 
   const _assinaturaVitimaTec = () =>
 `${mun}, ${dataDoc}.
@@ -13849,8 +13880,8 @@ ${vitima}
 
 ${_linha(40)}
 ${tecnico}
-${cargo} – CRESS nº ${cress}
-Central de Monitoração Eletrônica – CME/IAPEN`;
+${_regLinha}
+Central de Monitoramento Eletrônico – CME/IAPEN`;
 
   let texto = '';
 
@@ -14103,11 +14134,13 @@ Após atendimento realizado, a vítima manifestou:
 
 Encaminhamos a presente informação para conhecimento e providências cabíveis.
 
+Atenciosamente,
+
 
 ${_linha(40)}
 ${tecnico}
-${cargo} – CRESS nº ${cress}
-Central de Monitoração Eletrônica – CME/IAPEN`;
+${_regLinha}
+Central de Monitoramento Eletrônico – CME/IAPEN`;
 
   } else if (modelo === 'upr-ausencia') {
     const cpf = _mV('multi-cpf-vitima') || '___.___.___-__';
@@ -14218,7 +14251,7 @@ function imprimirModeloMulti() {
   const IS_TITULO = /^(RELATÓRIO SOCIAL|MPU —|OFÍCIO N[°º])/;
   const IS_CAMPO  = /^(Processo n[°º]|Classe:|Órgão Julgador:|Assunto:|Vítima:|Réu:|Requerente|Requerido|Nome da vítima:|Nome:|NOME:|Ação:|AÇÃO:|Agressor:|AGRESSOR:|NÚMERO DE PROCESSO:|CPF:|Vítima na condição)/;
   const IS_LINHA  = /^_{10,}/;
-  const IS_ASS_CARGO = /CRESS n[°º]|Central de Monitoraç|CME\/IAPEN|\(Vítima\)$/;
+  const IS_ASS_CARGO = /(CRESS|CRP|OAB) n[°º]|Central de Monitor|CME\/IAPEN|\(Vítima\)$/;
   const IS_LOCAL_DATA = /^(Macapá|Macapa).*\d{4}\.?$/;
   const IS_RODAPE_INST = /^(GOVERNO DO ESTADO|SECRETARIA DE ESTADO|INSTITUTO DE ADMIN|CENTRAL DE MONIT)/;
   const IS_TITULO_TERMO = /^TERMO DE |^OFÍCIO N[°º]/;
