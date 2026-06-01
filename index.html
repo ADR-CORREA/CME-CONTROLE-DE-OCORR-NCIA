@@ -15416,6 +15416,29 @@ const R2_PROCESSO_CATEGORIAS = [
   },
 ];
 
+/* ── Botões de ação dos arquivos — SVG embutido ──────────────────
+   Antes usavam emoji (👁️⬇️✏️🗑️) convertidos para ícone por um script
+   externo; em alguns navegadores/estados isso falhava e os botões
+   ficavam em branco. Agora o SVG vai direto no HTML, sempre visível. */
+const _R2_SVG = {
+  ver:    '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+  baixar: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
+  editar: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  excluir:'<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/>'
+};
+function _r2BtnAcao(k, bg, cor, onclick, titulo) {
+  return `<button class="r2-acao-icone" title="${titulo}" onclick="${onclick}"`
+    + ` style="background:${bg};color:${cor};display:inline-flex;align-items:center;justify-content:center;margin-left:4px">`
+    + `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">${_R2_SVG[k]}</svg></button>`;
+}
+function r2_botoesAcao(ek, nome, nivelAdmin) {
+  const n = String(nome).replace(/'/g, "&#39;");
+  return _r2BtnAcao('ver',     '#f0fdf4', '#166534', `r2_visualizarArquivo('${ek}','${n}')`, 'Visualizar')
+    +    _r2BtnAcao('baixar',  '#e8f4fd', '#1F4E78', `r2_baixarArquivo('${ek}','${n}')`,    'Baixar')
+    +    _r2BtnAcao('editar',  '#fef9c3', '#713f12', `r2_abrirRename('${ek}','${n}')`,      'Renomear')
+    + (nivelAdmin ? _r2BtnAcao('excluir', '#fdecea', '#c62828', `r2_confirmarDelete('${ek}','${n}')`, 'Excluir') : '');
+}
+
 /* ── Listar arquivos ──────────────────────────────────────────── */
 async function r2_carregarArquivos() {
   const tbody = document.getElementById('r2-tabela-body');
@@ -15531,10 +15554,7 @@ function r2_renderizarProcesso(arquivos) {
               <span style="color:#888;white-space:nowrap;font-size:.78rem">${r2_formatarBytes(f.tamanho)}</span>
               <span style="color:#999;white-space:nowrap;font-size:.78rem">${f.usuario||'—'}</span>
               <span style="color:#aaa;white-space:nowrap;font-size:.75rem">${dt}</span>
-              <button class="r2-acao-icone" style="background:#f0fdf4;color:#166534" onclick="r2_visualizarArquivo('${ek}','${nomeLimpo.replace(/'/g,"&#39;")}')" title="Visualizar">👁️</button>
-              <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78" onclick="r2_baixarArquivo('${ek}','${nomeLimpo.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
-              <button class="r2-acao-icone" style="background:#fef9c3;color:#713f12" onclick="r2_abrirRename('${ek}','${nomeLimpo.replace(/'/g,"&#39;")}')" title="Renomear">✏️</button>
-              ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828" onclick="r2_confirmarDelete('${ek}','${nomeLimpo.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
+              ${r2_botoesAcao(ek, nomeLimpo, nivelAdmin)}
             </div>`;
           }).join('') : `<div style="padding:8px 14px;color:#bbb;font-size:.82rem;font-style:italic">Nenhum documento anexado.</div>`}
         </div>
@@ -15557,10 +15577,7 @@ function r2_renderizarProcesso(arquivos) {
             <span style="color:#888;font-size:.78rem">${r2_formatarBytes(f.tamanho)}</span>
             <span style="color:#999;font-size:.78rem">${f.usuario||'—'}</span>
             <span style="color:#aaa;font-size:.75rem">${dt}</span>
-            <button class="r2-acao-icone" style="background:#f0fdf4;color:#166534" onclick="r2_visualizarArquivo('${ek}','${nomeShow.replace(/'/g,"&#39;")}')" title="Visualizar">👁️</button>
-            <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78" onclick="r2_baixarArquivo('${ek}','${nomeShow.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
-            <button class="r2-acao-icone" style="background:#fef9c3;color:#713f12" onclick="r2_abrirRename('${ek}','${nomeShow.replace(/'/g,"&#39;")}')" title="Renomear">✏️</button>
-            ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828" onclick="r2_confirmarDelete('${ek}','${nomeShow.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
+            ${r2_botoesAcao(ek, nomeShow, nivelAdmin)}
           </div>`;
         }).join('')}
       </div>
@@ -15619,14 +15636,7 @@ function r2_linhaArquivo(f, nivelAdmin) {
     <td style="padding:9px 8px;color:#555;white-space:nowrap">${f.usuario || '—'}</td>
     <td style="padding:9px 8px;color:#777;white-space:nowrap;font-size:.81rem">${data_env}</td>
     <td style="padding:9px 8px;text-align:center;white-space:nowrap">
-      <button class="r2-acao-icone" style="background:#f0fdf4;color:#166534"
-              onclick="r2_visualizarArquivo('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Visualizar">👁️</button>
-      <button class="r2-acao-icone" style="background:#e8f4fd;color:#1F4E78;margin-left:4px"
-              onclick="r2_baixarArquivo('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Baixar">⬇️</button>
-      <button class="r2-acao-icone" style="background:#fef9c3;color:#713f12;margin-left:4px"
-              onclick="r2_abrirRename('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Renomear">✏️</button>
-      ${nivelAdmin ? `<button class="r2-acao-icone" style="background:#fdecea;color:#c62828;margin-left:4px"
-            onclick="r2_confirmarDelete('${ek}','${f.nome.replace(/'/g,"&#39;")}')" title="Excluir">🗑️</button>` : ''}
+      ${r2_botoesAcao(ek, f.nome, nivelAdmin)}
     </td>
   </tr>`;
 }
