@@ -2678,13 +2678,20 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
             <!-- Nº Ofício + Data -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
               <div class="form-field">
-                <label>Nº do Ofício <span style="font-weight:400;color:#94a3b8">(automático)</span></label>
-                <div style="display:flex;gap:6px">
-                  <input type="text" id="com-of-numero" oninput="com_atualizarAvisoNumero();com_atualizarPreview()"
-                    style="flex:1;min-width:0;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
-                    placeholder="ex: 1165">
-                  <button type="button" onclick="com_sugerirNumero(true)" title="Pegar o próximo número disponível"
-                    style="background:#eef2ff;color:#1d4ed8;border:1px solid #c7d2fe;border-radius:6px;padding:0 10px;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap">↻ próximo</button>
+                <label>Nº do Ofício <span style="font-weight:400;color:#94a3b8">(clique para escolher um anterior)</span></label>
+                <div id="com-of-num-wrap" style="position:relative">
+                  <div style="display:flex;gap:6px">
+                    <input type="text" id="com-of-numero" autocomplete="off"
+                      onclick="com_abrirListaNumeros()" oninput="com_atualizarAvisoNumero();com_atualizarPreview()"
+                      style="flex:1;min-width:0;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
+                      placeholder="ex: 1165">
+                    <button type="button" onclick="com_numeroAnterior()" title="Ir para um número anterior já enviado"
+                      style="background:#fff1f2;color:#be123c;border:1px solid #fecdd3;border-radius:6px;padding:0 9px;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap">↺ anterior</button>
+                    <button type="button" onclick="com_sugerirNumero(true)" title="Pegar o próximo número disponível"
+                      style="background:#eef2ff;color:#1d4ed8;border:1px solid #c7d2fe;border-radius:6px;padding:0 9px;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap">↻ próximo</button>
+                  </div>
+                  <!-- Dropdown: números já enviados (em vermelho) -->
+                  <div id="com-of-num-lista" style="display:none;position:absolute;z-index:30;left:0;right:0;top:calc(100% + 3px);background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.14);max-height:240px;overflow:auto"></div>
                 </div>
               </div>
               <div class="form-field">
@@ -17623,6 +17630,51 @@ function com_atualizarAvisoNumero() {
   }
 }
 function com_esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ─── Seleção de número anterior (lista dos já enviados, em vermelho) ── */
+function com_numerosUsados() {
+  const ano = com_anoForm();
+  return com_getOficios().registros.filter(r => r.ano === ano).sort((a, b) => b.numero - a.numero);
+}
+function com_abrirListaNumeros() {
+  const box = document.getElementById('com-of-num-lista');
+  if (!box) return;
+  const usados = com_numerosUsados();
+  if (!usados.length) {
+    box.innerHTML = '<div style="padding:9px 11px;color:#94a3b8;font-size:.8rem">Nenhum ofício gerado neste ano ainda.</div>';
+  } else {
+    box.innerHTML = '<div style="padding:6px 11px;font-size:.72rem;color:#64748b;border-bottom:1px solid #f1f5f9;background:#f8fafc">Números já enviados — clique para selecionar:</div>'
+      + usados.map(r => {
+          const quando = r.geradoEm ? new Date(r.geradoEm).toLocaleDateString('pt-BR') : (r.data || '');
+          return `<div onclick="com_selecionarNumero(${r.numero})" style="padding:8px 11px;cursor:pointer;border-bottom:1px solid #f8fafc;font-size:.8rem"
+            onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background=''">
+            <span style="color:#dc2626;font-weight:800">${r.numero}/${r.ano}</span>
+            <span style="color:#64748b"> — ${com_esc(r.monitorado || '—')}${quando ? ' · ' + quando : ''}</span>
+          </div>`;
+        }).join('');
+  }
+  box.style.display = 'block';
+}
+function com_fecharListaNumeros() { const b = document.getElementById('com-of-num-lista'); if (b) b.style.display = 'none'; }
+function com_selecionarNumero(n) {
+  const el = document.getElementById('com-of-numero');
+  if (el) el.value = n;
+  com_fecharListaNumeros();
+  com_atualizarAvisoNumero();
+  com_atualizarPreview();
+}
+function com_numeroAnterior() {
+  const el = document.getElementById('com-of-numero');
+  const atual = parseInt((el?.value || '').replace(/\D/g, '')) || com_proximoNumero(com_anoForm());
+  const anterior = com_numerosUsados().map(r => r.numero).find(n => n < atual);
+  if (anterior != null) com_selecionarNumero(anterior);
+  else _mostrarToast('Não há ofício anterior gerado neste ano.', 'erro');
+}
+// Fecha o dropdown ao clicar fora dele
+document.addEventListener('click', e => {
+  const box = document.getElementById('com-of-num-lista');
+  if (box && box.style.display === 'block' && !e.target.closest('#com-of-num-wrap')) box.style.display = 'none';
+});
 
 /* ─── Abas internas: Gerar / Consultar ──────────────────────── */
 function com_mudarView(v) {
