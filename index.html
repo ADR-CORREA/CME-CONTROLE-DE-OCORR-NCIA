@@ -17829,7 +17829,7 @@ function com_gerarOficio() {
   };
 
   const paragsHtml = paragrafos
-    .map(p => `<p style="text-align:justify;text-indent:1.25cm;margin:0 0 22pt 0;line-height:1.5;font-size:12pt">${escP(p)}</p>`)
+    .map(p => `<p style="text-align:justify;text-indent:1.25cm;margin:0;line-height:1.5;font-size:12pt">${escP(p)}</p>`)
     .join('\n');
 
   // Logos a partir das variáveis globais B64 (mesma abordagem do gerador de Plantão)
@@ -17871,13 +17871,14 @@ function com_gerarOficio() {
   .conteudo { flex: 1; display: flex; flex-direction: column; }
 
   /* ── Parágrafos do ofício ── */
-  .of-num       { text-align: right; font-weight: bold; margin: 0 0 20px 0; }
+  .of-num       { text-align: left; font-weight: bold; margin: 0 0 4px 0; }
+  .data-topo    { text-align: right; margin: 0 0 22px 0; }
   .dest-titulo  { margin: 0; }
-  .dest-nome    { font-weight: bold; margin: 0 0 18px 0; }
-  .ref-assunto  { margin: 0 0 16px 0; }
-  .ref-processo { margin: 0 0 26px 0; }
-  .saudacao     { margin: 0 0 26px 0; text-indent: 1.25cm; }
-  .sem-mais     { margin: 32px 0 18px 0; text-indent: 1.25cm; }
+  .dest-nome    { font-weight: bold; margin: 0 0 12px 0; }
+  .ref-assunto  { margin: 0 0 4px 0; }
+  .ref-processo { margin: 0 0 34px 0; }
+  .saudacao     { margin: 0 0 22px 0; text-indent: 1.25cm; }
+  .sem-mais     { margin: 0 0 34px 0; text-indent: 1.25cm; }
   .respeitosamente { margin: 0; text-indent: 1.25cm; }
 
   /* ── Área de assinatura ──────────────────────────────
@@ -17952,6 +17953,7 @@ function com_gerarOficio() {
 <div class="conteudo">
 
   <p class="of-num">Of&#237;cio n&#176; <strong>${esc(numFmt)}</strong></p>
+  <p class="data-topo">Macap&#225;/AP, ${esc(dataLonga)}.</p>
 
   <p class="dest-titulo">A Sua Excel&#234;ncia o (a) Senhor (a)</p>
   <p class="dest-nome">${esc(dest)}.</p>
@@ -17968,12 +17970,11 @@ function com_gerarOficio() {
 
   <!-- margin-top:auto posiciona a assinatura em ~80% da folha -->
   <div class="ass-area">
-    <p class="data-ext">Macap&#225;/AP, ${esc(dataLonga)}.</p>
     <div class="ass-bloco">
       ${assImgCapturada ? `<img class="ass-img" src="${assImgCapturada}" alt="Assinatura">` : ''}
       <p class="ass-nome">${esc(signat)}</p>
       <p class="ass-cargo">${esc(cargo)}</p>
-      ${decreto ? `<p class="ass-dec">Decreto n&#176; ${esc(decreto)}</p>` : ''}
+      ${(['gerencia','admin'].includes(usuarioAtual?.nivel) && decreto) ? `<p class="ass-dec">Decreto n&#176; ${esc(decreto)}</p>` : ''}
     </div>
   </div>
 
@@ -19524,9 +19525,12 @@ async function _comGerarPDFExec() {
     doc.rect(mL, y, tw, 0.4, 'F');
     y += 14;
 
-    // ── Número do ofício (sem data aqui — data vai antes da assinatura) ──
+    // ── Número do ofício (esquerda) + data logo abaixo (direita) ──
     doc.setFont('times', 'bold'); doc.setFontSize(12); doc.setTextColor(0);
-    if (numFmt) { doc.text(`Ofício nº ${numFmt}`, 210 - mR, y, { align: 'right' }); y += 14; }
+    if (numFmt) { doc.text(`Ofício nº ${numFmt}`, mL, y); y += 6; }
+    doc.setFont('times', 'normal');
+    if (dataLonga) { doc.text(`Macapá/AP, ${dataLonga}.`, 210 - mR, y, { align: 'right' }); }
+    y += 14;
 
     // ── Destinatário ─────────────────────────────────────────────
     if (dest) {
@@ -19586,7 +19590,8 @@ async function _comGerarPDFExec() {
     const ABNT_INDENT = 12.5; // 1,25 cm — recuo ABNT na primeira linha de cada parágrafo
 
     // ── Auto-compressão: garante que o corpo cabe em 1 página ─
-    let lineH = 6, paraSpacing = 11, emptyLineH = 6;
+    // paraSpacing baixo: parágrafos do corpo "colados" (só com recuo)
+    let lineH = 6, paraSpacing = 2, emptyLineH = 6;
     {
       const _yAssinEst = mT + (pageH - mT - mB) * 0.80;
       const _encerH    = 38; // estimativa: 8 + semMais + Respeitosamente
@@ -19648,23 +19653,18 @@ async function _comGerarPDFExec() {
     }
 
     // ── Encerramento ─────────────────────────────────────────────
-    y += 8;
+    y += 2; // "Sem mais" colado ao corpo
     if (y > pageH - mB - 55) { doc.addPage(); y = mT; }
     doc.setFont('times', 'normal'); doc.setFontSize(12); doc.setTextColor(0);
     const semMaisLines = doc.splitTextToSize('Sem mais, esta CME se coloca à disposição para eventuais esclarecimentos.', tw - ABNT_INDENT);
-    doc.text(semMaisLines, mL + ABNT_INDENT, y); y += semMaisLines.length * 5.5 + 6;
+    doc.text(semMaisLines, mL + ABNT_INDENT, y); y += semMaisLines.length * 5.5 + 14; // mais espaço antes de "Respeitosamente,"
     doc.text('Respeitosamente,', mL + ABNT_INDENT, y); y += 6;
 
     // ── Empurra assinatura para ~80% da área útil da folha A4 ────
     const yAssin = mT + (pageH - mT - mB) * 0.80;
     if (y < yAssin) y = yAssin;
 
-    // ── Data (local e data — antes da assinatura, à direita) ─────
-    if (dataLonga) {
-      doc.setFont('times', 'normal'); doc.setFontSize(12);
-      doc.text(`Macapá/AP, ${dataLonga}.`, 210 - mR, y, { align: 'right' });
-      y += 10;
-    }
+    // (a data agora vai no topo, logo abaixo do número do ofício)
 
     // ── Assinatura ───────────────────────────────────────────────
     if (y > pageH - mB - 35) { doc.addPage(); y = mT; }
@@ -19700,7 +19700,7 @@ async function _comGerarPDFExec() {
     if (signat) { doc.text(signat, assC, y, { align: 'center' }); y += 5; }
     doc.setFont('times', 'normal'); doc.setFontSize(10);
     if (cargo)  { doc.text(cargo,  assC, y, { align: 'center' }); y += 4; }
-    if (decreto){ doc.setFontSize(10); doc.text(`Decreto nº ${decreto}`, assC, y, { align: 'center' }); }
+    if (decreto && ['gerencia','admin'].includes(usuarioAtual?.nivel)) { doc.setFontSize(10); doc.text(`Decreto nº ${decreto}`, assC, y, { align: 'center' }); }
 
     // ── Numeração de página (só se mais de 1 página) ─────────────
     const totalPag = doc.internal.getNumberOfPages();
