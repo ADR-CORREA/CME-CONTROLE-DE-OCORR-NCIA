@@ -4141,6 +4141,22 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           style="padding:8px 18px;border:none;border-bottom:2px solid transparent;background:none;font-weight:500;color:#94a3b8;cursor:pointer;margin-bottom:-2px;border-radius:6px 6px 0 0;font-size:.9rem">🔗 Cruzamento</button>
         <button id="estat-tab-excel" onclick="estat_mudarModo('excel')"
           style="padding:8px 18px;border:none;border-bottom:2px solid transparent;background:none;font-weight:500;color:#94a3b8;cursor:pointer;margin-bottom:-2px;border-radius:6px 6px 0 0;font-size:.9rem">📊 Gerador Excel</button>
+        <button id="estat-tab-prod" onclick="estat_mudarModo('produtividade')"
+          style="padding:8px 18px;border:none;border-bottom:2px solid transparent;background:none;font-weight:500;color:#94a3b8;cursor:pointer;margin-bottom:-2px;border-radius:6px 6px 0 0;font-size:.9rem">🏆 Produtividade</button>
+      </div>
+
+      <!-- MODO: Produtividade -->
+      <div id="estat-modo-produtividade" style="display:none">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+          <label style="font-size:.85rem;color:#475569;font-weight:600">Período:</label>
+          <select id="prod-ano" onchange="prod_render()" style="padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:.88rem">
+            <option value="">Todos os anos</option>
+          </select>
+          <button class="btn-secondary" onclick="prod_render()">🔄 Atualizar</button>
+          <span style="font-size:.78rem;color:#94a3b8">Conta os registros criados em cada setor, por servidor.</span>
+        </div>
+        <div id="prod-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
+        <div id="prod-tabela" style="overflow-x:auto"></div>
       </div>
 
       <!-- MODO: Monitorados -->
@@ -21057,6 +21073,8 @@ function estat_mudarModo(modo) {
   document.getElementById('estat-modo-cruzamento').style.display   = modo === 'cruzamento'   ? '' : 'none';
   const _excelEl = document.getElementById('estat-modo-excel');
   if (_excelEl) _excelEl.style.display = modo === 'excel' ? '' : 'none';
+  const _prodEl = document.getElementById('estat-modo-produtividade');
+  if (_prodEl) _prodEl.style.display = modo === 'produtividade' ? '' : 'none';
 
   // Botão importar (visível só nas abas de dados)
   document.getElementById('estat-import-label').style.display = modo === 'monitorados'  ? '' : 'none';
@@ -21064,13 +21082,14 @@ function estat_mudarModo(modo) {
   document.getElementById('estat-btn-export').style.display   = 'none';
 
   // Tabs visuais
-  ['mon','psi','cruz','excel'].forEach(t => {
+  ['mon','psi','cruz','excel','prod'].forEach(t => {
     const tab = document.getElementById(`estat-tab-${t}`);
     if (!tab) return;
     const ativo = (t === 'mon'   && modo === 'monitorados')  ||
                   (t === 'psi'   && modo === 'psicossocial') ||
                   (t === 'cruz'  && modo === 'cruzamento')   ||
-                  (t === 'excel' && modo === 'excel');
+                  (t === 'excel' && modo === 'excel')        ||
+                  (t === 'prod'  && modo === 'produtividade');
     tab.style.borderBottomColor = ativo ? '#4f46e5' : 'transparent';
     tab.style.color     = ativo ? '#4f46e5' : '#94a3b8';
     tab.style.fontWeight = ativo ? '600' : '500';
@@ -21082,11 +21101,129 @@ function estat_mudarModo(modo) {
     psicossocial: _psiDados.length   ? `${_psiDados.length} atendimentos carregados`  : 'Importe o arquivo psicossocial_CME.xlsx',
     cruzamento:   'Cruzamento Monitorados × Psicossocial',
     excel:        'Gerador de Estatísticas Excel — Sistema Akiles',
+    produtividade:'Produtividade por setor e por servidor',
   };
   document.getElementById('estat-subtitle').textContent = subtitles[modo] || '';
 
   // Ao entrar no cruzamento, atualiza automaticamente
   if (modo === 'cruzamento') cruz_atualizar();
+  if (modo === 'produtividade') prod_render();
+}
+
+/* ═══════════════════════ DASHBOARD DE PRODUTIVIDADE ════════════════════
+   Conta os registros criados em cada setor, atribuídos ao servidor que os
+   criou. A atribuição usa o campo de autor de cada módulo (geradoPor /
+   criadoPor / responsavel / profissional). Registros cujo autor não bate
+   com nenhum servidor cadastrado entram em "Não identificado". */
+const PROD_METRICS = [
+  { key:'oficios',    setor:'Comunicação',  label:'Ofícios',      store:'oficios',      arr:'registros',    who:'geradoPor',  tipo:'nome',    dataF:'geradoEm', cor:'#1F4E78' },
+  { key:'relatorios', setor:'Relatório',    label:'Relatórios',   store:'relatorios',   arr:'registros',    who:'criadoPor',  tipo:'usuario', dataF:'criadoEm', cor:'#7B0000' },
+  { key:'triagem',    setor:'Triagem',      label:'Triagens',     store:'triagem',      arr:'atendimentos', who:'criadoPor',  tipo:'usuario', dataF:'criadoEm', cor:'#0B6E4F' },
+  { key:'psi',        setor:'Psicossocial', label:'Atendimentos', store:'psicossocial', arr:'atendimentos', who:'profissional', tipo:'nome',  dataF:'criadoEm', cor:'#6A1B9A' },
+  { key:'gerencia',   setor:'Gerência',     label:'Demandas',     store:'gerencia',     arr:'demandas',     who:'responsavel', tipo:'nome',   dataF:'criadoEm', cor:'#B45309' },
+];
+
+function _prodAno(rec, m) {
+  const d = rec[m.dataF] || rec.criadoEm || rec.geradoEm || rec.data || '';
+  const mm = String(d).match(/(\d{4})/);
+  return mm ? mm[1] : '';
+}
+function _prodNorm(s){ return String(s||'').trim().toLowerCase(); }
+function _prodMatch(rec, m, u) {
+  const who = _prodNorm(rec[m.who]);
+  if (!who) return false;
+  if (m.tipo === 'usuario') return who === _prodNorm(u.usuario);
+  const nome = _prodNorm(u.nome);
+  if (!nome) return false;
+  return who === nome || who.includes(nome) || nome.includes(who);
+}
+
+function prod_render() {
+  const usuarios = getUsuarios().filter(u => u.usuario !== 'admin' || true); // inclui todos
+  // Carrega os arrays de cada setor
+  const dados = {};
+  const anosSet = new Set();
+  PROD_METRICS.forEach(m => {
+    const store = carregarStore(m.store, null);
+    const arr = (store && Array.isArray(store[m.arr])) ? store[m.arr] : [];
+    dados[m.key] = arr;
+    arr.forEach(r => { const a = _prodAno(r, m); if (a) anosSet.add(a); });
+  });
+
+  // Popular filtro de anos
+  const anos = [...anosSet].sort((a,b)=>b-a);
+  const selAno = document.getElementById('prod-ano');
+  const anoSel = selAno?.value || '';
+  if (selAno && selAno.options.length !== anos.length + 1) {
+    selAno.innerHTML = '<option value="">Todos os anos</option>' + anos.map(a=>`<option value="${a}">${a}</option>`).join('');
+    selAno.value = anos.includes(anoSel) ? anoSel : '';
+  }
+  const filtroAno = selAno?.value || '';
+
+  // Matriz: usuario.usuario → { metricKey: count }; + "Não identificado"
+  const matriz = {}; const totSetor = {}; const naoIdent = {};
+  usuarios.forEach(u => matriz[u.usuario] = {});
+  PROD_METRICS.forEach(m => {
+    totSetor[m.key] = 0; naoIdent[m.key] = 0;
+    dados[m.key].forEach(rec => {
+      if (filtroAno && _prodAno(rec, m) !== filtroAno) return;
+      totSetor[m.key]++;
+      const u = usuarios.find(us => _prodMatch(rec, m, us));
+      if (u) matriz[u.usuario][m.key] = (matriz[u.usuario][m.key]||0) + 1;
+      else naoIdent[m.key]++;
+    });
+  });
+
+  // Cards por setor
+  const totalGeral = PROD_METRICS.reduce((s,m)=>s+totSetor[m.key], 0);
+  const cards = document.getElementById('prod-cards');
+  if (cards) {
+    cards.innerHTML = PROD_METRICS.map(m => `
+      <div style="background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e2e8f0;border-top:3px solid ${m.cor}">
+        <div style="font-size:1.7rem;font-weight:800;color:${m.cor}">${totSetor[m.key]}</div>
+        <div style="font-size:.72rem;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-top:2px">${m.setor}</div>
+        <div style="font-size:.74rem;color:#94a3b8">${m.label}</div>
+      </div>`).join('')
+      + `<div style="background:#1e293b;border-radius:10px;padding:14px 16px;color:#fff">
+           <div style="font-size:1.7rem;font-weight:800">${totalGeral}</div>
+           <div style="font-size:.72rem;opacity:.8;text-transform:uppercase;letter-spacing:.05em;margin-top:2px">Total geral</div>
+           <div style="font-size:.74rem;opacity:.7">todos os setores</div>
+         </div>`;
+  }
+
+  // Tabela por servidor
+  const linhas = usuarios.map(u => {
+    const counts = PROD_METRICS.map(m => matriz[u.usuario][m.key] || 0);
+    const total = counts.reduce((a,b)=>a+b,0);
+    return { u, counts, total };
+  }).filter(r => r.total > 0).sort((a,b)=>b.total - a.total);
+
+  const totNaoId = PROD_METRICS.reduce((s,m)=>s+naoIdent[m.key],0);
+  const tabela = document.getElementById('prod-tabela');
+  if (tabela) {
+    if (!linhas.length && !totNaoId) {
+      tabela.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:30px;font-size:.9rem">Nenhum registro no período.</div>';
+      return;
+    }
+    const th = (t,al='left')=>`<th style="text-align:${al};padding:9px 12px;font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;color:#64748b;border-bottom:2px solid #e2e8f0;white-space:nowrap">${t}</th>`;
+    const td = (t,al='left',bold=false)=>`<td style="text-align:${al};padding:9px 12px;font-size:.86rem;border-bottom:1px solid #f1f5f9;${bold?'font-weight:800':''};white-space:nowrap">${t}</td>`;
+    let html = `<table style="width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0">
+      <thead><tr>${th('Servidor')}${PROD_METRICS.map(m=>th(m.label,'center')).join('')}${th('Total','center')}</tr></thead><tbody>`;
+    linhas.forEach(({u,counts,total}) => {
+      const cor = _NIVEL_COR?.[u.nivel] || '#64748b';
+      html += `<tr onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+        ${td(`<span style="font-weight:600;color:#1e293b">${esc(u.nome)}</span><br><span style="font-size:.72rem;color:${cor};font-weight:600">${(_NIVEL_NOME?.[u.nivel]||u.nivel||'').toUpperCase()}</span>`)}
+        ${counts.map(c=>td(c||'<span style="color:#cbd5e1">·</span>','center')).join('')}
+        ${td(total,'center',true)}</tr>`;
+    });
+    if (totNaoId) {
+      html += `<tr style="background:#fffbeb"><td style="padding:9px 12px;font-size:.84rem;color:#92400e;font-style:italic">Não identificado <span style="font-size:.72rem">(autor não cadastrado)</span></td>
+        ${PROD_METRICS.map(m=>td(naoIdent[m.key]||'<span style="color:#cbd5e1">·</span>','center')).join('')}
+        ${td(totNaoId,'center',true)}</tr>`;
+    }
+    html += '</tbody></table>';
+    tabela.innerHTML = html;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════
