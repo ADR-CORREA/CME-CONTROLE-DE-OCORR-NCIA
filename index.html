@@ -2557,6 +2557,17 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
       <!-- Sub-panel Comunicação -->
       <div id="mod-panel-comunicacao" style="display:none">
 
+        <!-- Abas internas: Gerar Ofício / Consultar -->
+        <div style="display:flex;gap:8px;margin:14px 0 4px;border-bottom:2px solid #e2e8f0;padding-bottom:0">
+          <button id="com-tab-gerar" onclick="com_mudarView('gerar')"
+            style="background:none;border:none;border-bottom:3px solid #1F4E78;color:#1F4E78;font-weight:700;font-size:.9rem;cursor:pointer;padding:8px 14px;margin-bottom:-2px">✍️ Gerar Ofício</button>
+          <button id="com-tab-consultar" onclick="com_mudarView('consultar')"
+            style="background:none;border:none;border-bottom:3px solid transparent;color:#94a3b8;font-weight:600;font-size:.9rem;cursor:pointer;padding:8px 14px;margin-bottom:-2px">🔎 Consultar Ofícios</button>
+        </div>
+
+        <!-- ═══════════════ VIEW: GERAR ═══════════════ -->
+        <div id="com-view-gerar">
+
         <!-- ═══ SEÇÃO BUSCA DE DOCS DO MONITORADO ═══════════════ -->
         <div style="background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin:14px 0 10px">
 
@@ -2637,7 +2648,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
             <!-- Modelo -->
             <div class="form-field">
               <label>Modelo de Ofício</label>
-              <select id="com-of-modelo" onchange="_comTextoBloqueado=false;_comCorpoEditado=false;_comRestaurarCorpo();com_atualizarCampos();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+              <select id="com-of-modelo" onchange="_comTextoBloqueado=false;_comCorpoEditado=false;_comRestaurarCorpo();com_atualizarCampos();com_sugerirNumero();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
                 <option value="">Selecione o modelo...</option>
               </select>
             </div>
@@ -2667,17 +2678,23 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
             <!-- Nº Ofício + Data -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
               <div class="form-field">
-                <label>Nº do Ofício</label>
-                <input type="text" id="com-of-numero" oninput="com_atualizarPreview()"
-                  style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
-                  placeholder="ex: 1092">
+                <label>Nº do Ofício <span style="font-weight:400;color:#94a3b8">(automático)</span></label>
+                <div style="display:flex;gap:6px">
+                  <input type="text" id="com-of-numero" oninput="com_atualizarAvisoNumero();com_atualizarPreview()"
+                    style="flex:1;min-width:0;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
+                    placeholder="ex: 1165">
+                  <button type="button" onclick="com_sugerirNumero(true)" title="Pegar o próximo número disponível"
+                    style="background:#eef2ff;color:#1d4ed8;border:1px solid #c7d2fe;border-radius:6px;padding:0 10px;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap">↻ próximo</button>
+                </div>
               </div>
               <div class="form-field">
                 <label>Data do Ofício</label>
-                <input type="date" id="com-of-data" oninput="com_atualizarPreview()"
+                <input type="date" id="com-of-data" oninput="com_atualizarAvisoNumero();com_atualizarPreview()"
                   style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
               </div>
             </div>
+            <!-- Alerta: número já utilizado -->
+            <div id="com-of-num-aviso" style="display:none;margin:-4px 0 8px;padding:8px 11px;background:#fef2f2;border:1px solid #fecaca;border-radius:7px;font-size:.78rem;color:#991b1b;line-height:1.45"></div>
 
             <!-- Nome + Processo -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -2777,6 +2794,27 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           </div><!-- /preview col -->
 
         </div><!-- /grid -->
+        </div><!-- /com-view-gerar -->
+
+        <!-- ═══════════════ VIEW: CONSULTAR ═══════════════ -->
+        <div id="com-view-consultar" style="display:none">
+          <div style="background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);margin-top:14px">
+            <div style="font-weight:700;color:var(--az1);font-size:.95rem;margin-bottom:12px;border-bottom:1px solid #e0e6ed;padding-bottom:8px">
+              🔎 Consultar Ofícios Gerados
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+              <input id="com-consulta-busca" type="text" oninput="com_renderConsulta()"
+                placeholder="Buscar por nº do ofício, monitorado ou processo..."
+                style="flex:1;min-width:220px;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:.88rem;outline:none">
+              <select id="com-consulta-ano" onchange="com_renderConsulta()"
+                style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:.88rem">
+                <option value="">Todos os anos</option>
+              </select>
+              <span id="com-consulta-count" style="font-size:.8rem;color:#64748b"></span>
+            </div>
+            <div id="com-consulta-lista" style="max-height:560px;overflow:auto"></div>
+          </div>
+        </div><!-- /com-view-consultar -->
       </div><!-- /mod-panel-comunicacao -->
 
       <!-- Sub-panel Jurídico -->
@@ -13852,7 +13890,7 @@ function mudarSubAbaModelos(aba) {
     const panel = document.getElementById('mod-panel-' + a);
     if (panel) panel.style.display = a === aba ? 'block' : 'none';
   });
-  if (aba === 'comunicacao') com_init();
+  if (aba === 'comunicacao') { com_init(); com_sugerirNumero(); com_atualizarAvisoNumero(); }
   if (aba === 'juridico-mod') jur_init();
 }
 
@@ -17497,6 +17535,183 @@ function com_atualizarCampos() {
     </div></div>`;
 }
 
+/* ═══════════ NUMERAÇÃO AUTOMÁTICA DE OFÍCIOS ═══════════════════
+   Registro persistente (sincroniza entre PCs via store 'oficios').
+   A numeração reinicia a cada ano; 2026 começa em 1165. */
+const COM_OFICIO_BASE = { 2026: 1165 }; // semente inicial por ano (ano não listado começa em 1)
+
+function com_getOficios() {
+  const o = carregarStore('oficios', null);
+  return (o && Array.isArray(o.registros)) ? o : { registros: [] };
+}
+function com_salvarOficios(o) { salvarStore('oficios', o); }
+
+function com_anoForm() {
+  const d = document.getElementById('com-of-data')?.value || '';
+  return /^\d{4}/.test(d) ? parseInt(d.slice(0,4)) : new Date().getFullYear();
+}
+function com_proximoNumero(ano) {
+  ano = parseInt(ano) || new Date().getFullYear();
+  const regs = com_getOficios().registros.filter(r => r.ano === ano);
+  if (regs.length) return Math.max(...regs.map(r => r.numero)) + 1;
+  return COM_OFICIO_BASE[ano] || 1;
+}
+function com_registroDe(numero, ano) {
+  numero = parseInt(String(numero).replace(/\D/g, '')); ano = parseInt(ano);
+  if (!numero) return null;
+  return com_getOficios().registros.find(r => r.numero === numero && r.ano === ano) || null;
+}
+function com_registrarOficio(dados) {
+  const o = com_getOficios();
+  const i = o.registros.findIndex(r => r.numero === dados.numero && r.ano === dados.ano);
+  if (i >= 0) o.registros[i] = { ...o.registros[i], ...dados };
+  else o.registros.push(dados);
+  com_salvarOficios(o);
+}
+/* Chamado ao gerar o ofício (ambos os fluxos). Upsert por (numero, ano):
+   reusar o mesmo número apenas atualiza o registro, não consome outro. */
+function com_registrarGerado(numero, dataStr, modelo, extras) {
+  numero = parseInt(String(numero).replace(/\D/g, ''));
+  if (!numero) return;
+  const ano = (dataStr && /^\d{4}/.test(dataStr)) ? parseInt(dataStr.slice(0,4)) : new Date().getFullYear();
+  com_registrarOficio({
+    numero, ano,
+    data:        dataStr || '',
+    monitorado:  extras.nomeMon || '',
+    processo:    extras.processo || '',
+    destinatario:extras.dest || '',
+    comarca:     document.getElementById('com-of-comarca')?.value || '',
+    vara:        document.getElementById('com-of-vara')?.value || '',
+    modelo:      modelo?.id || '',
+    assunto:     modelo?.assunto || '',
+    signatario:  extras.signat || '',
+    geradoPor:   usuarioAtual?.nome || '?',
+    geradoEm:    new Date().toISOString()
+  });
+  com_atualizarAvisoNumero();
+}
+
+/* Sugere o próximo número no campo, se estiver vazio (não sobrescreve digitação) */
+function com_sugerirNumero(forcar) {
+  const el = document.getElementById('com-of-numero');
+  if (!el) return;
+  if (forcar || !el.value.trim()) {
+    el.value = String(com_proximoNumero(com_anoForm()));
+    com_atualizarAvisoNumero();
+    com_atualizarPreview();
+  }
+}
+/* Mostra/oculta o alerta de "número já utilizado" abaixo do campo */
+function com_atualizarAvisoNumero() {
+  const aviso = document.getElementById('com-of-num-aviso');
+  const el    = document.getElementById('com-of-numero');
+  if (!aviso || !el) return;
+  const numero = el.value.trim();
+  const ano    = com_anoForm();
+  const reg    = numero ? com_registroDe(numero, ano) : null;
+  if (reg) {
+    const quando = reg.geradoEm ? new Date(reg.geradoEm).toLocaleString('pt-BR') : (reg.data || '');
+    aviso.innerHTML = `⚠️ <strong>Ofício nº ${reg.numero}/${reg.ano} já foi gerado</strong>`
+      + ` em ${quando} por ${reg.geradoPor || '?'}`
+      + (reg.monitorado ? ` — monitorado: <strong>${com_esc(reg.monitorado)}</strong>` : '')
+      + `. Gerar de novo vai <u>substituir</u> esse registro (não consome novo número).`;
+    aviso.style.display = 'block';
+    el.style.borderColor = '#dc2626';
+  } else {
+    aviso.style.display = 'none';
+    el.style.borderColor = '#cbd5e1';
+  }
+}
+function com_esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ─── Abas internas: Gerar / Consultar ──────────────────────── */
+function com_mudarView(v) {
+  const ehGerar = v === 'gerar';
+  const vg = document.getElementById('com-view-gerar');
+  const vc = document.getElementById('com-view-consultar');
+  if (vg) vg.style.display = ehGerar ? '' : 'none';
+  if (vc) vc.style.display = ehGerar ? 'none' : '';
+  const tg = document.getElementById('com-tab-gerar'), tc = document.getElementById('com-tab-consultar');
+  if (tg && tc) {
+    tg.style.borderBottomColor = ehGerar ? '#1F4E78' : 'transparent';
+    tg.style.color = ehGerar ? '#1F4E78' : '#94a3b8';
+    tg.style.fontWeight = ehGerar ? '700' : '600';
+    tc.style.borderBottomColor = ehGerar ? 'transparent' : '#1F4E78';
+    tc.style.color = ehGerar ? '#94a3b8' : '#1F4E78';
+    tc.style.fontWeight = ehGerar ? '600' : '700';
+  }
+  if (!ehGerar) com_renderConsulta();
+}
+
+function com_renderConsulta() {
+  const lista = document.getElementById('com-consulta-lista');
+  if (!lista) return;
+  const termo  = (document.getElementById('com-consulta-busca')?.value || '').trim().toLowerCase();
+  const anoSel = document.getElementById('com-consulta-ano')?.value || '';
+  let regs = com_getOficios().registros.slice();
+
+  // Popular o filtro de anos (uma vez ou quando mudar)
+  const anos = [...new Set(regs.map(r => r.ano))].sort((a, b) => b - a);
+  const selAno = document.getElementById('com-consulta-ano');
+  if (selAno && selAno.options.length !== anos.length + 1) {
+    selAno.innerHTML = '<option value="">Todos os anos</option>' + anos.map(a => `<option value="${a}">${a}</option>`).join('');
+    selAno.value = anoSel;
+  }
+
+  if (anoSel) regs = regs.filter(r => String(r.ano) === anoSel);
+  if (termo) regs = regs.filter(r =>
+    String(r.numero).includes(termo) ||
+    (r.monitorado || '').toLowerCase().includes(termo) ||
+    (r.processo || '').toLowerCase().includes(termo) ||
+    (r.destinatario || '').toLowerCase().includes(termo) ||
+    (r.assunto || '').toLowerCase().includes(termo));
+  regs.sort((a, b) => b.ano - a.ano || b.numero - a.numero);
+
+  const countEl = document.getElementById('com-consulta-count');
+  if (countEl) countEl.textContent = `${regs.length} ofício(s)`;
+  if (!regs.length) {
+    lista.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:30px;font-size:.88rem">Nenhum ofício encontrado.</div>';
+    return;
+  }
+  lista.innerHTML = regs.map(r => {
+    const quando = r.geradoEm ? new Date(r.geradoEm).toLocaleString('pt-BR') : (r.data || '');
+    return `<div style="border:1px solid #e2e8f0;border-left:4px solid #1F4E78;border-radius:8px;padding:11px 14px;margin-bottom:9px;background:#fff">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+        <div style="min-width:0;flex:1">
+          <div style="font-weight:800;color:#1F4E78;font-size:.95rem">Ofício nº ${r.numero}/${r.ano} <span style="font-weight:500;color:#64748b;font-size:.8rem">— ${com_esc(r.assunto || '')}</span></div>
+          <div style="font-size:.82rem;color:#334155;margin-top:3px"><strong>Monitorado:</strong> ${com_esc(r.monitorado || '—')} &nbsp;·&nbsp; <strong>Proc.:</strong> ${com_esc(r.processo || '—')}</div>
+          <div style="font-size:.8rem;color:#64748b;margin-top:2px">${com_esc(r.destinatario || '')}</div>
+          <div style="font-size:.74rem;color:#94a3b8;margin-top:4px">Gerado por ${com_esc(r.geradoPor || '?')} em ${quando}</div>
+        </div>
+        <button onclick="com_reusarNumero(${r.numero}, ${r.ano})"
+          style="background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;border-radius:7px;padding:6px 12px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap">↩️ Reusar nº ${r.numero}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* Reabre um número já usado (p/ refazer um doc errado): preenche o
+   formulário com os dados salvos e volta para a aba Gerar. */
+function com_reusarNumero(numero, ano) {
+  const reg = com_registroDe(numero, ano);
+  _comTextoBloqueado = false; _comCorpoEditado = false;
+  com_mudarView('gerar');
+  const setV = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+  setV('com-of-numero', numero);
+  if (reg) {
+    if (reg.data) setV('com-of-data', reg.data);
+    setV('com-of-nome', reg.monitorado);
+    setV('com-of-processo', reg.processo);
+    if (reg.comarca) { setV('com-of-comarca', reg.comarca); try { com_atualizarVaras(); } catch (e) {} }
+    if (reg.vara) setV('com-of-vara', reg.vara);
+    setV('com-of-destinatario', reg.destinatario);
+    if (reg.modelo) { setV('com-of-modelo', reg.modelo); try { com_atualizarCampos(); } catch (e) {} }
+  }
+  com_atualizarAvisoNumero();
+  com_atualizarPreview();
+  _mostrarToast(`↩️ Número ${numero}/${ano} carregado para refazer. Revise os campos e gere novamente.`, 'sucesso');
+}
+
 /* ─── Gerador ────────────────────────────────────────────────── */
 function com_gerarOficio() {
   const modeloId   = document.getElementById('com-of-modelo').value;
@@ -17596,9 +17811,9 @@ function com_gerarOficio() {
   .dest-nome    { font-weight: bold; margin: 0 0 18px 0; }
   .ref-assunto  { margin: 0 0 16px 0; }
   .ref-processo { margin: 0 0 26px 0; }
-  .saudacao     { margin: 0 0 26px 0; }
-  .sem-mais     { margin: 32px 0 18px 0; }
-  .respeitosamente { margin: 0; }
+  .saudacao     { margin: 0 0 26px 0; text-indent: 1.25cm; }
+  .sem-mais     { margin: 32px 0 18px 0; text-indent: 1.25cm; }
+  .respeitosamente { margin: 0; text-indent: 1.25cm; }
 
   /* ── Área de assinatura ──────────────────────────────
      margin-top:auto num flex-column empurra este bloco
@@ -17708,19 +17923,22 @@ function com_gerarOficio() {
 
 <div class="no-print" style="text-align:center;margin-top:20px">
   <button class="btn-imp" onclick="window.print()">🖨️ Imprimir / Salvar como PDF</button>
-  <p style="font-size:9pt;color:#777;margin-top:6px">No di&#225;logo de impress&#227;o, escolha <strong>"Salvar como PDF"</strong>.<br>Desative <em>Cabe&#231;alhos e rodap&#233;s</em> do navegador para resultado mais limpo.</p>
+  <p style="font-size:9pt;color:#777;margin-top:6px">Revise o documento acima. Quando estiver certo, clique no botão para <strong>"Salvar como PDF"</strong>.<br>Desative <em>Cabe&#231;alhos e rodap&#233;s</em> do navegador para resultado mais limpo.</p>
 </div>
 
-<script>window.onload=function(){var b=document.body;var phPx=914,pwPx=604;var p=b.style.width;b.style.width=pwPx+'px';var h=b.scrollHeight;b.style.width=p;if(h>phPx){b.style.zoom=((phPx*0.97)/h).toFixed(4);}setTimeout(function(){window.print();},750);};<\/script>
+<script>window.onload=function(){var b=document.body;var phPx=914,pwPx=604;var p=b.style.width;b.style.width=pwPx+'px';var h=b.scrollHeight;b.style.width=p;if(h>phPx){b.style.zoom=((phPx*0.97)/h).toFixed(4);}};<\/script>
 </body>
 </html>`;
+
+  // Registra o ofício na numeração (sincroniza entre PCs) antes de abrir
+  try { com_registrarGerado(numero, dataOficio, modelo, { dest, nomeMon, processo, signat }); } catch(e) { console.warn('[CME] registro de ofício falhou:', e); }
 
   const blob    = new Blob([doc], {type:'text/html;charset=utf-8'});
   const blobUrl = URL.createObjectURL(blob);
   const win     = window.open(blobUrl, '_blank');
   if (!win) { _mostrarToast('⚠️ Popup bloqueado! Permita popups para este site.', 'erro'); return; }
-  setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
-  _mostrarToast('🖨️ Ofício aberto! Escolha "Salvar como PDF" na impressora.', 'sucesso');
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+  _mostrarToast('📄 Ofício aberto na tela. Revise e clique em "Salvar como PDF" quando quiser.', 'sucesso');
 }
 
 /* ─── Preview / Limpar / Copiar ────────────────────────────── */
@@ -19276,10 +19494,10 @@ async function _comGerarPDFExec() {
       doc.text(processo + '.', mL + doc.getTextWidth(pnLbl), y); y += 14;
     }
 
-    // ── Saudação ─────────────────────────────────────────────────
+    // ── Saudação (com recuo ABNT 1,25 cm, igual ao corpo) ────────
     if (saudacao) {
       doc.setFont('times', 'normal'); doc.setFontSize(12); doc.setTextColor(0);
-      doc.text(saudacao, mL, y); y += 14;
+      doc.text(saudacao, mL + 12.5, y); y += 14;
     }
 
     // ── Corpo (do modelo — SEM ler preview textarea, evita duplicação) ──
@@ -19368,9 +19586,9 @@ async function _comGerarPDFExec() {
     y += 8;
     if (y > pageH - mB - 55) { doc.addPage(); y = mT; }
     doc.setFont('times', 'normal'); doc.setFontSize(12); doc.setTextColor(0);
-    const semMaisLines = doc.splitTextToSize('Sem mais, esta CME se coloca à disposição para eventuais esclarecimentos.', tw);
-    doc.text(semMaisLines, mL, y); y += semMaisLines.length * 5.5 + 6;
-    doc.text('Respeitosamente,', mL, y); y += 6;
+    const semMaisLines = doc.splitTextToSize('Sem mais, esta CME se coloca à disposição para eventuais esclarecimentos.', tw - ABNT_INDENT);
+    doc.text(semMaisLines, mL + ABNT_INDENT, y); y += semMaisLines.length * 5.5 + 6;
+    doc.text('Respeitosamente,', mL + ABNT_INDENT, y); y += 6;
 
     // ── Empurra assinatura para ~80% da área útil da folha A4 ────
     const yAssin = mT + (pageH - mT - mB) * 0.80;
@@ -19473,19 +19691,27 @@ async function _comGerarPDFExec() {
       finalBytes = await merged.save();
     }
 
-    // ── Download ──
+    // ── Abrir na tela (sem download automático) ──
     const num  = document.getElementById('com-of-numero').value || 'oficio';
-    const nome = document.getElementById('com-of-nome').value.split(' ')[0].toLowerCase() || 'doc';
     const blob = new Blob([finalBytes], { type: 'application/pdf' });
-    const a    = document.createElement('a');
-    a.href     = URL.createObjectURL(blob);
-    a.download = `oficio-${num}-${nome}.pdf`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    const blobUrl = URL.createObjectURL(blob);
+    const win  = window.open(blobUrl, '_blank');
+    if (!win) { _mostrarToast('⚠️ Popup bloqueado! Permita popups para visualizar o PDF.', 'erro'); }
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
+
+    // Registra o ofício na numeração
+    try {
+      const _modelo = COM_MODELOS.find(m => m.id === modeloId);
+      com_registrarGerado(num, document.getElementById('com-of-data').value, _modelo, {
+        dest: document.getElementById('com-of-destinatario').value.trim(),
+        nomeMon, processo,
+        signat: document.getElementById('com-of-signatario').value.trim()
+      });
+    } catch(e) { console.warn('[CME] registro de ofício falhou:', e); }
 
     const msg = pdfAnexos.length
-      ? `✅ PDF gerado: ofício + ${pdfAnexos.length} anexo(s)!`
-      : '✅ PDF gerado com sucesso!';
+      ? `📄 PDF aberto na tela: ofício + ${pdfAnexos.length} anexo(s). Baixe se quiser.`
+      : '📄 PDF aberto na tela. Revise e baixe se quiser.';
     _mostrarToast(msg, 'sucesso');
 
   } catch(e) {
@@ -19726,6 +19952,9 @@ function com_limparOficio() {
   const mm   = String(hoje.getMonth()+1).padStart(2,'0');
   const dataEl = document.getElementById('com-of-data');
   if (dataEl) dataEl.value = `${hoje.getFullYear()}-${mm}-${dd}`;
+  // Sugere o próximo número para o novo ofício
+  com_sugerirNumero(true);
+  com_atualizarAvisoNumero();
 }
 
 function com_copiarOficio() {
