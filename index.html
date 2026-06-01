@@ -2694,7 +2694,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
                       style="background:#eef2ff;color:#1d4ed8;border:1px solid #c7d2fe;border-radius:6px;padding:0 9px;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap">↻ próximo</button>
                   </div>
                   <!-- Dropdown: números já enviados (em vermelho) -->
-                  <div id="com-of-num-lista" style="display:none;position:absolute;z-index:30;left:0;right:0;top:calc(100% + 3px);background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.14);max-height:240px;overflow:auto"></div>
+                  <div id="com-of-num-lista" style="display:none;position:absolute;z-index:30;left:0;right:0;top:calc(100% + 3px);background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.14);max-height:300px;overflow:auto"></div>
                 </div>
               </div>
               <div class="form-field">
@@ -17683,20 +17683,36 @@ function com_numerosUsados() {
 function com_abrirListaNumeros() {
   const box = document.getElementById('com-of-num-lista');
   if (!box) return;
-  const usados = com_numerosUsados();
-  if (!usados.length) {
-    box.innerHTML = '<div style="padding:9px 11px;color:#94a3b8;font-size:.8rem">Nenhum ofício gerado neste ano ainda.</div>';
-  } else {
-    box.innerHTML = '<div style="padding:6px 11px;font-size:.72rem;color:#64748b;border-bottom:1px solid #f1f5f9;background:#f8fafc">Números já enviados — clique para selecionar:</div>'
-      + usados.map(r => {
-          const quando = r.geradoEm ? new Date(r.geradoEm).toLocaleDateString('pt-BR') : (r.data || '');
-          return `<div onclick="com_selecionarNumero(${r.numero})" style="padding:8px 11px;cursor:pointer;border-bottom:1px solid #f8fafc;font-size:.8rem"
-            onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background=''">
-            <span style="color:#dc2626;font-weight:800">${r.numero}/${r.ano}</span>
-            <span style="color:#64748b"> — ${com_esc(r.monitorado || '—')}${quando ? ' · ' + quando : ''}</span>
-          </div>`;
-        }).join('');
+  const ano    = com_anoForm();
+  const regs   = com_getOficios().registros.filter(r => r.ano === ano);
+  const usados = new Map(regs.map(r => [r.numero, r])); // numero → registro
+  const base   = COM_OFICIO_BASE[ano] || 1;
+  const maxU   = usados.size ? Math.max(...usados.keys()) : base - 1;
+  const inicio = base;
+  const fim    = Math.max(maxU + 12, base + 17); // mostra usados + ~12 disponíveis à frente
+  const atual  = parseInt((document.getElementById('com-of-numero')?.value || '').replace(/\D/g, ''));
+
+  let chips = '';
+  for (let n = inicio; n <= fim; n++) {
+    const reg     = usados.get(n);
+    const ehUsado = !!reg;
+    const ehAtual = n === atual;
+    const titulo  = ehUsado ? `Já utilizado — ${com_esc(reg.monitorado || '—')}` : 'Disponível';
+    const bg      = ehAtual ? '#eff6ff' : '#fff';
+    chips += `<div onclick="com_selecionarNumero(${n})" title="${titulo}"
+      style="position:relative;cursor:pointer;text-align:center;padding:8px 3px;border-radius:7px;font-size:.8rem;font-weight:700;
+             border:1px solid ${ehAtual ? '#1d4ed8' : '#e5e9f0'};background:${bg};color:${ehUsado ? '#991b1b' : '#334155'}"
+      onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='${bg}'">
+      ${n}${ehUsado ? '<span style="position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;background:#dc2626;box-shadow:0 0 0 1px #fff"></span>' : ''}
+    </div>`;
   }
+  box.innerHTML = `
+    <div style="padding:7px 11px;font-size:.72rem;color:#64748b;border-bottom:1px solid #f1f5f9;background:#f8fafc;display:flex;gap:14px;align-items:center;position:sticky;top:0">
+      <span><b>Ano ${ano}</b></span>
+      <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block"></span> usado</span>
+      <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;border:1px solid #cbd5e1;display:inline-block"></span> disponível</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:8px">${chips}</div>`;
   box.style.display = 'block';
 }
 function com_fecharListaNumeros() { const b = document.getElementById('com-of-num-lista'); if (b) b.style.display = 'none'; }
@@ -17779,11 +17795,26 @@ function com_renderConsulta() {
           <div style="font-size:.8rem;color:#64748b;margin-top:2px">${com_esc(r.destinatario || '')}</div>
           <div style="font-size:.74rem;color:#94a3b8;margin-top:4px">Gerado por ${com_esc(r.geradoPor || '?')} em ${quando}</div>
         </div>
-        <button onclick="com_reusarNumero(${r.numero}, ${r.ano})"
-          style="background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;border-radius:7px;padding:6px 12px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap">↩️ Reusar nº ${r.numero}</button>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          <button onclick="com_reusarNumero(${r.numero}, ${r.ano})"
+            style="background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;border-radius:7px;padding:6px 12px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap">↩️ Reusar nº ${r.numero}</button>
+          <button onclick="com_excluirOficio(${r.numero}, ${r.ano})"
+            style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:7px;padding:6px 12px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap">🗑️ Excluir</button>
+        </div>
       </div>
     </div>`;
   }).join('');
+}
+
+/* Exclui o registro de um ofício da consulta (libera o número para reuso) */
+function com_excluirOficio(numero, ano) {
+  if (!confirm(`Excluir o registro do ofício nº ${numero}/${ano} da consulta?\n\nIsso libera o número para reuso. O documento que você já gerou/enviou não é afetado.`)) return;
+  const o = com_getOficios();
+  o.registros = o.registros.filter(r => !(r.numero === numero && r.ano === ano));
+  com_salvarOficios(o);
+  com_renderConsulta();
+  com_atualizarAvisoNumero();
+  _mostrarToast(`🗑️ Registro do ofício ${numero}/${ano} excluído.`, 'sucesso');
 }
 
 /* Reabre um número já usado (p/ refazer um doc errado): preenche o
