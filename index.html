@@ -3861,6 +3861,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         <div style="display:flex;gap:8px;align-items:center">
           <button class="btn-secondary" onclick="r2_abrirAuditoria()" title="Log de acessos">📋 Auditoria</button>
           <button class="btn-secondary" onclick="r2_abrirPainelRisco()" title="Painel de risco geral">📊 Painel</button>
+          <button class="btn-secondary" onclick="r2_verificarNomesParecidos()" title="Monitorados com sobrenome em comum (risco de mistura)">🔎 Nomes parecidos</button>
           <button class="btn-secondary" onclick="r2_abrirConfig()" title="Configurar conexão">⚙️ Configurar</button>
           <label class="btn-secondary" style="cursor:pointer;display:flex;align-items:center;gap:6px" title="Importar pasta ZIP do Google Drive">
             📦 Importar Drive
@@ -4056,6 +4057,40 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
                   style="background:#f0f0f0;border:none;border-radius:7px;padding:8px 18px;cursor:pointer;font-size:.9rem">Cancelar</button>
                 <button onclick="r2_confirmarRename()"
                   style="background:#1F4E78;color:#fff;border:none;border-radius:7px;padding:8px 20px;cursor:pointer;font-size:.9rem;font-weight:600">Salvar</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODAL: Mover documento para outro monitorado -->
+          <div id="r2-modal-mover" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+            <div style="background:#fff;border-radius:12px;padding:24px 28px;min-width:440px;max-width:580px;box-shadow:0 8px 32px rgba(0,0,0,.2);max-height:88vh;display:flex;flex-direction:column">
+              <div style="font-weight:700;font-size:1rem;margin-bottom:14px;color:#1F4E78">➡️ Mover documento para outro monitorado</div>
+              <div style="font-size:.8rem;color:#666;margin-bottom:4px">Documento:</div>
+              <div id="r2-mover-arq" style="font-size:.86rem;color:#374151;background:#f5f5f5;padding:8px 12px;border-radius:6px;margin-bottom:6px;word-break:break-all"></div>
+              <div style="font-size:.8rem;color:#888;margin-bottom:14px">De: <strong id="r2-mover-origem" style="color:#b91c1c"></strong></div>
+              <label style="font-size:.82rem;font-weight:600;color:#374151;display:block;margin-bottom:6px">Mover para o monitorado:</label>
+              <input id="r2-mover-busca" type="text" placeholder="Digite o nome do monitorado de destino..."
+                style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid #cbd5e1;border-radius:7px;font-size:.9rem;margin-bottom:8px"
+                oninput="r2_filtrarDestino(this.value)">
+              <div id="r2-mover-lista" style="border:1px solid #e2e8f0;border-radius:8px;max-height:240px;overflow:auto;margin-bottom:10px"></div>
+              <div id="r2-mover-status" style="font-size:.83rem;min-height:18px;margin-bottom:10px;color:#475569"></div>
+              <div style="font-size:.74rem;color:#94a3b8;margin-bottom:10px">🔒 O arquivo é copiado para o destino e <strong>só então</strong> removido da origem — nunca se perde.</div>
+              <div style="display:flex;gap:10px;justify-content:flex-end">
+                <button onclick="document.getElementById('r2-modal-mover').style.display='none'"
+                  style="background:#f0f0f0;border:none;border-radius:7px;padding:8px 18px;cursor:pointer;font-size:.9rem">Fechar</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODAL: Nomes parecidos (detector de risco de mistura) -->
+          <div id="r2-modal-similares" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+            <div style="background:#fff;border-radius:12px;padding:24px 28px;min-width:480px;max-width:680px;box-shadow:0 8px 32px rgba(0,0,0,.2);max-height:88vh;display:flex;flex-direction:column">
+              <div style="font-weight:700;font-size:1rem;margin-bottom:6px;color:#1F4E78">🔎 Monitorados com nomes parecidos</div>
+              <div style="font-size:.8rem;color:#64748b;margin-bottom:14px">Grupos que compartilham o mesmo sobrenome — pontos de atenção para mistura de documentos. Revise cada um.</div>
+              <div id="r2-similares-lista" style="overflow:auto;flex:1"></div>
+              <div style="display:flex;justify-content:flex-end;margin-top:12px">
+                <button onclick="document.getElementById('r2-modal-similares').style.display='none'"
+                  style="background:#f0f0f0;border:none;border-radius:7px;padding:8px 18px;cursor:pointer;font-size:.9rem">Fechar</button>
               </div>
             </div>
           </div>
@@ -14948,6 +14983,122 @@ async function r2_confirmarRename() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   MOVER DOCUMENTO PARA OUTRO MONITORADO (corrige misturas)
+   Copia para o destino → confirma → só então apaga da origem.
+   Nunca apaga antes de garantir a cópia. ════════════════════ */
+let _r2MoverKey = '', _r2MoverNome = '', _r2MoverOrigem = '', _r2MoverPasta = '';
+function _r2NormNome(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
+
+function r2_abrirMover(key, nome) {
+  _r2MoverKey = key; _r2MoverNome = nome;
+  _r2MoverOrigem = r2_state.monitorado || '';
+  _r2MoverPasta  = r2_state.pasta || '';
+  document.getElementById('r2-mover-arq').textContent = nome;
+  document.getElementById('r2-mover-origem').textContent = _r2MoverOrigem + (_r2MoverPasta ? '  ·  ' + _r2MoverPasta : '');
+  document.getElementById('r2-mover-busca').value = '';
+  document.getElementById('r2-mover-status').textContent = '';
+  document.getElementById('r2-modal-mover').style.display = 'flex';
+  r2_filtrarDestino('');
+  setTimeout(() => document.getElementById('r2-mover-busca').focus(), 80);
+}
+
+function r2_filtrarDestino(termo) {
+  const lista = document.getElementById('r2-mover-lista');
+  if (!lista) return;
+  const t = _r2NormNome(termo);
+  let mons = (r2_state.monitorados || []).filter(m => m.nome !== _r2MoverOrigem);
+  if (t) mons = mons.filter(m => _r2NormNome(m.nome).includes(t));
+  mons = mons.slice(0, 80);
+  if (!mons.length) { lista.innerHTML = '<div style="padding:11px;color:#94a3b8;font-size:.82rem">Nenhum monitorado encontrado.</div>'; return; }
+  lista.innerHTML = mons.map(m => `<div onclick="r2_executarMover('${String(m.nome).replace(/'/g,"&#39;")}')"
+    style="padding:9px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:.85rem"
+    onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">${esc(m.nome)}</div>`).join('');
+}
+
+async function r2_executarMover(destino) {
+  if (!_r2MoverKey || !destino) return;
+  if (_r2NormNome(destino) === _r2NormNome(_r2MoverOrigem)) { _mostrarToast('O destino é o mesmo monitorado.', 'erro'); return; }
+  if (!confirm(`Mover o documento:\n\n"${_r2MoverNome}"\n\nDe:   ${_r2MoverOrigem}\nPara: ${destino}\nPasta: ${_r2MoverPasta}\n\nO arquivo será COPIADO para o destino e só então removido da origem.\nConfirmar?`)) return;
+
+  const status = document.getElementById('r2-mover-status');
+  const setS = (t, c) => { if (status) { status.textContent = t; status.style.color = c || '#475569'; } };
+  const keyOrigem = _r2MoverKey, nomeArq = _r2MoverNome;
+  try {
+    // 1) Baixar
+    setS('⏳ 1/3 — Baixando o arquivo da origem…', '#1d4ed8');
+    const res  = await r2_api('GET', `/download?key=${encodeURIComponent(keyOrigem)}`);
+    const blob = await res.blob();
+    if (!blob || !blob.size) throw new Error('o arquivo de origem veio vazio — nada foi alterado');
+
+    // 2) Copiar para o destino
+    setS(`⏳ 2/3 — Copiando para "${destino}"…`, '#1d4ed8');
+    const up = await r2_api('POST', '/upload', {
+      'X-Monitorado': destino,
+      'X-Pasta':      _r2MoverPasta,
+      'X-Filename':   encodeURIComponent(nomeArq),
+      'Content-Type': blob.type || 'application/octet-stream',
+    }, blob);
+    if (!up || !up.ok || !up.key) throw new Error('a cópia para o destino não foi confirmada — origem mantida');
+
+    // 3) Só agora remove da origem
+    setS('⏳ 3/3 — Removendo da origem…', '#1d4ed8');
+    await r2_api('DELETE', `/delete?key=${encodeURIComponent(keyOrigem)}`);
+
+    addLog(`R2: MOVEU "${nomeArq}" — ${_r2MoverOrigem} → ${destino} (${_r2MoverPasta})`);
+    setS('✅ Movido com sucesso!', '#16a34a');
+    _mostrarToast(`✅ "${nomeArq}" movido para ${destino}.`, 'sucesso');
+    setTimeout(() => { document.getElementById('r2-modal-mover').style.display = 'none'; }, 1000);
+    await r2_carregarArquivos();
+    try { await r2_atualizarContagens(r2_state.monitorado); } catch (e) {}
+  } catch (e) {
+    setS(`❌ ${e.message}`, '#dc2626');
+    _mostrarToast(`⚠️ Erro ao mover: ${e.message}. O arquivo ORIGINAL foi mantido.`, 'erro');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   DETECTOR DE NOMES PARECIDOS — agrupa monitorados que
+   compartilham o mesmo sobrenome (risco de mistura de docs).
+   ══════════════════════════════════════════════════════════ */
+const _R2_CONECTIVOS = new Set(['de','da','do','das','dos','e']);
+function _r2Sobrenome(nome) {
+  const palavras = _r2NormNome(nome).split(' ').filter(p => p && !_R2_CONECTIVOS.has(p) && p.length > 1);
+  return palavras.slice(-2).join(' '); // os 2 últimos nomes (sobrenome composto)
+}
+async function r2_verificarNomesParecidos() {
+  const lista = document.getElementById('r2-similares-lista');
+  document.getElementById('r2-modal-similares').style.display = 'flex';
+  lista.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8">⏳ Carregando monitorados…</div>';
+  try {
+    if (!r2_state.monitorados || !r2_state.monitorados.length) await _r2CarregarTodosSilencioso();
+    const mons = r2_state.monitorados || [];
+    const grupos = {};
+    mons.forEach(m => {
+      const sob = _r2Sobrenome(m.nome);
+      if (!sob || sob.split(' ').length < 2) return; // exige sobrenome composto p/ reduzir falso-positivo
+      (grupos[sob] = grupos[sob] || []).push(m.nome);
+    });
+    const pares = Object.entries(grupos).filter(([, arr]) => arr.length >= 2).sort((a,b)=>b[1].length-a[1].length);
+    if (!pares.length) {
+      lista.innerHTML = '<div style="padding:20px;text-align:center;color:#16a34a;font-size:.9rem">✅ Nenhum grupo de sobrenome compartilhado encontrado entre os monitorados.</div>';
+      return;
+    }
+    lista.innerHTML = `<div style="font-size:.8rem;color:#64748b;margin-bottom:10px">${pares.length} grupo(s) com sobrenome em comum:</div>`
+      + pares.map(([sob, arr]) => `
+      <div style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:10px 13px;margin-bottom:9px">
+        <div style="font-weight:700;color:#92400e;font-size:.82rem;text-transform:uppercase;margin-bottom:6px">Sobrenome: ${esc(sob)} <span style="font-weight:500">(${arr.length})</span></div>
+        ${arr.map(n => `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:3px 0;font-size:.86rem;color:#334155">
+            <span>👤 ${esc(n)}</span>
+            <button onclick="document.getElementById('r2-modal-similares').style.display='none';r2_selecionarMonitorado('${String(n).replace(/'/g,"&#39;")}')"
+              style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;padding:3px 10px;font-size:.74rem;font-weight:600;cursor:pointer;white-space:nowrap">abrir pasta</button>
+          </div>`).join('')}
+      </div>`).join('');
+  } catch (e) {
+    lista.innerHTML = `<div style="padding:20px;color:#dc2626">Erro: ${esc(e.message)}</div>`;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
    FICHA DO MONITORADO
    ══════════════════════════════════════════════════════════ */
 async function r2_abrirFicha() {
@@ -15474,6 +15625,7 @@ const _R2_SVG = {
   ver:    '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
   baixar: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
   editar: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  mover:  '<path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M15 19l3 3 3-3"/><path d="M19 9l3 3-3 3"/><path d="M2 12h20"/><path d="M12 2v20"/>',
   excluir:'<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/>'
 };
 function _r2BtnAcao(k, bg, cor, onclick, titulo) {
@@ -15486,6 +15638,7 @@ function r2_botoesAcao(ek, nome, nivelAdmin) {
   return _r2BtnAcao('ver',     '#f0fdf4', '#166534', `r2_visualizarArquivo('${ek}','${n}')`, 'Visualizar')
     +    _r2BtnAcao('baixar',  '#e8f4fd', '#1F4E78', `r2_baixarArquivo('${ek}','${n}')`,    'Baixar')
     +    _r2BtnAcao('editar',  '#fef9c3', '#713f12', `r2_abrirRename('${ek}','${n}')`,      'Renomear')
+    +    _r2BtnAcao('mover',   '#eef2ff', '#4338ca', `r2_abrirMover('${ek}','${n}')`,       'Mover para outro monitorado')
     + (nivelAdmin ? _r2BtnAcao('excluir', '#fdecea', '#c62828', `r2_confirmarDelete('${ek}','${n}')`, 'Excluir') : '');
 }
 
