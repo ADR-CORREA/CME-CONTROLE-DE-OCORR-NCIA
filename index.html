@@ -17875,10 +17875,10 @@ function com_gerarOficio() {
   .data-topo    { text-align: right; margin: 0 0 22px 0; }
   .dest-titulo  { margin: 0; }
   .dest-nome    { font-weight: bold; margin: 0 0 12px 0; }
-  .ref-assunto  { margin: 0 0 4px 0; }
-  .ref-processo { margin: 0 0 34px 0; }
+  .ref-assunto  { margin: 0; }
+  .ref-processo { margin: 0 0 36px 0; }
   .saudacao     { margin: 0 0 22px 0; text-indent: 1.25cm; }
-  .sem-mais     { margin: 0 0 34px 0; text-indent: 1.25cm; }
+  .sem-mais     { margin: 0 0 44px 0; text-indent: 1.25cm; }
   .respeitosamente { margin: 0; text-indent: 1.25cm; }
 
   /* ── Área de assinatura ──────────────────────────────
@@ -19538,7 +19538,7 @@ async function _comGerarPDFExec() {
       doc.text('A Sua Excelência o (a) Senhor (a)', mL, y); y += 5;
       doc.setFont('times', 'bold');
       const destLines = doc.splitTextToSize(dest + '.', tw);
-      doc.text(destLines, mL, y); y += destLines.length * 6 + 12;
+      doc.text(destLines, mL, y); y += destLines.length * 6 + 9;
     }
 
     // ── Assunto / Processo ───────────────────────────────────────
@@ -19553,14 +19553,14 @@ async function _comGerarPDFExec() {
       const assLines = doc.splitTextToSize(modelo.assunto + '.', tw - assLblW);
       doc.text(assLines[0], mL + assLblW, y);
       if (assLines.length > 1) { y += 6; doc.text(assLines.slice(1).join(' '), mL, y); }
-      y += 12;
+      y += 6; // Assunto colado ao Processo (sem espaçamento entre eles)
     }
     if (processo) {
       doc.setFont('times', 'bold'); doc.setFontSize(12);
       const pnLbl = 'Processo nº: ';
       doc.text(pnLbl, mL, y);
       doc.setFont('times', 'normal');
-      doc.text(processo + '.', mL + doc.getTextWidth(pnLbl), y); y += 14;
+      doc.text(processo + '.', mL + doc.getTextWidth(pnLbl) + 1.2, y); y += 18; // espaço maior antes da saudação
     }
 
     // ── Saudação (com recuo ABNT 1,25 cm, igual ao corpo) ────────
@@ -19590,8 +19590,8 @@ async function _comGerarPDFExec() {
     const ABNT_INDENT = 12.5; // 1,25 cm — recuo ABNT na primeira linha de cada parágrafo
 
     // ── Auto-compressão: garante que o corpo cabe em 1 página ─
-    // paraSpacing baixo: parágrafos do corpo "colados" (só com recuo)
-    let lineH = 6, paraSpacing = 2, emptyLineH = 6;
+    // paraSpacing mínimo: parágrafos do corpo "colados" (só com recuo)
+    let lineH = 6, paraSpacing = 1, emptyLineH = 6;
     {
       const _yAssinEst = mT + (pageH - mT - mB) * 0.80;
       const _encerH    = 38; // estimativa: 8 + semMais + Respeitosamente
@@ -19657,7 +19657,7 @@ async function _comGerarPDFExec() {
     if (y > pageH - mB - 55) { doc.addPage(); y = mT; }
     doc.setFont('times', 'normal'); doc.setFontSize(12); doc.setTextColor(0);
     const semMaisLines = doc.splitTextToSize('Sem mais, esta CME se coloca à disposição para eventuais esclarecimentos.', tw - ABNT_INDENT);
-    doc.text(semMaisLines, mL + ABNT_INDENT, y); y += semMaisLines.length * 5.5 + 14; // mais espaço antes de "Respeitosamente,"
+    doc.text(semMaisLines, mL + ABNT_INDENT, y); y += semMaisLines.length * 5.5 + 22; // bem mais espaço antes de "Respeitosamente,"
     doc.text('Respeitosamente,', mL + ABNT_INDENT, y); y += 6;
 
     // ── Empurra assinatura para ~80% da área útil da folha A4 ────
