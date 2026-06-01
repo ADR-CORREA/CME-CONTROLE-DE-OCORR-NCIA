@@ -4085,8 +4085,9 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <!-- MODAL: Nomes parecidos (detector de risco de mistura) -->
           <div id="r2-modal-similares" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
             <div style="background:#fff;border-radius:12px;padding:24px 28px;min-width:480px;max-width:680px;box-shadow:0 8px 32px rgba(0,0,0,.2);max-height:88vh;display:flex;flex-direction:column">
-              <div style="font-weight:700;font-size:1rem;margin-bottom:6px;color:#1F4E78">🔎 Monitorados com nomes parecidos</div>
-              <div style="font-size:.8rem;color:#64748b;margin-bottom:14px">Grupos que compartilham o mesmo sobrenome — pontos de atenção para mistura de documentos. Revise cada um.</div>
+              <div style="font-weight:700;font-size:1rem;margin-bottom:6px;color:#1F4E78">🔎 Verificação de misturas de documentos</div>
+              <div style="font-size:.8rem;color:#64748b;margin-bottom:12px">Monitorados com o mesmo sobrenome (risco de mistura). Use o botão abaixo para varrer os arquivos automaticamente.</div>
+              <button onclick="r2_escanearForaDoLugar()" style="background:#1F4E78;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:.85rem;font-weight:700;cursor:pointer;margin-bottom:12px;align-self:flex-start">🔎 Escanear arquivos fora do lugar (automático)</button>
               <div id="r2-similares-lista" style="overflow:auto;flex:1"></div>
               <div style="display:flex;justify-content:flex-end;margin-top:12px">
                 <button onclick="document.getElementById('r2-modal-similares').style.display='none'"
@@ -15096,6 +15097,120 @@ async function r2_verificarNomesParecidos() {
   } catch (e) {
     lista.innerHTML = `<div style="padding:20px;color:#dc2626">Erro: ${esc(e.message)}</div>`;
   }
+}
+
+/* Discriminadores de um membro = tokens do nome que NÃO são o sobrenome do
+   grupo nem conectivos (ex.: "lucivan" em "Lucivan Barbosa Guimaraes"). */
+function _r2Discriminadores(nome, sobrenome) {
+  const sob = new Set(sobrenome.split(' '));
+  return _r2NormNome(nome).split(' ').filter(p => p && p.length >= 4 && !sob.has(p) && !_R2_CONECTIVOS.has(p));
+}
+
+/* SCANNER AUTOMÁTICO: varre as pastas de cada grupo de mesmo sobrenome e
+   sinaliza arquivos cujo NOME indica outro membro do grupo (provável mistura).
+   Apenas detecta — a correção é revisável (botão por arquivo / em lote). */
+let _r2Suspeitos = [];
+async function r2_escanearForaDoLugar() {
+  const lista = document.getElementById('r2-similares-lista');
+  document.getElementById('r2-modal-similares').style.display = 'flex';
+  lista.innerHTML = '<div style="padding:20px;text-align:center;color:#1d4ed8">⏳ Preparando…</div>';
+  try {
+    if (!r2_state.monitorados || !r2_state.monitorados.length) await _r2CarregarTodosSilencioso();
+    const mons = r2_state.monitorados || [];
+    const grupos = {};
+    mons.forEach(m => { const s = _r2Sobrenome(m.nome); if (s && s.split(' ').length >= 2) (grupos[s] = grupos[s] || []).push(m); });
+    const ativos = Object.entries(grupos).filter(([, g]) => g.length >= 2);
+    const totalPastas = ativos.reduce((s, [, g]) => s + g.length, 0);
+
+    if (!ativos.length) { lista.innerHTML = '<div style="padding:20px;text-align:center;color:#16a34a">✅ Nenhum grupo de sobrenome compartilhado — nada a verificar.</div>'; return; }
+
+    const suspeitos = [];
+    let scanned = 0;
+    for (const [sob, grupo] of ativos) {
+      const disc = {};
+      grupo.forEach(m => disc[m.nome] = _r2Discriminadores(m.nome, sob));
+      for (const membro of grupo) {
+        scanned++;
+        lista.innerHTML = `<div style="padding:20px;text-align:center;color:#1d4ed8">⏳ Escaneando pastas… (${scanned}/${totalPastas})<br><span style="font-size:.8rem;color:#94a3b8">${esc(membro.nome)}</span></div>`;
+        let arqs = [];
+        try { const r = await r2_api('GET', `/list?monitorado=${encodeURIComponent(membro.nome)}`); arqs = r.arquivos || []; } catch (e) { continue; }
+        for (const a of arqs) {
+          if (!a.nome || a.nome === '.keep') continue;
+          const fn = _r2NormNome(a.nome);
+          const meu = (disc[membro.nome] || []).some(d => fn.includes(d));
+          for (const outro of grupo) {
+            if (outro.nome === membro.nome) continue;
+            const bate = (disc[outro.nome] || []).some(d => fn.includes(d));
+            if (bate && !meu) { suspeitos.push({ key: a.key, nome: a.nome, origem: membro.nome, destino: outro.nome, pasta: a.pasta || '' }); break; }
+          }
+        }
+      }
+    }
+
+    _r2Suspeitos = suspeitos;
+    if (!suspeitos.length) {
+      lista.innerHTML = '<div style="padding:20px;text-align:center;color:#16a34a;font-size:.9rem">✅ Nenhum arquivo suspeito de mistura encontrado<br><span style="font-size:.8rem;color:#94a3b8">(verificação baseada no nome do arquivo)</span></div>';
+      return;
+    }
+    lista.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <div style="font-weight:700;color:#b91c1c;font-size:.86rem">⚠️ ${suspeitos.length} arquivo(s) possivelmente na pasta errada</div>
+        <button onclick="r2_moverTodosSugeridos()" style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:.8rem;font-weight:700;cursor:pointer">➡️ Mover todos (${suspeitos.length})</button>
+      </div>
+      <div style="font-size:.76rem;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:7px 10px;margin-bottom:10px">⚠️ Revise antes de mover: um documento pode citar outra pessoa legitimamente (ex.: a vítima).</div>`
+      + suspeitos.map((s, i) => `<div id="r2-susp-${i}" style="border:1px solid #fecaca;background:#fef2f2;border-radius:8px;padding:9px 12px;margin-bottom:7px">
+          <div style="font-size:.84rem;color:#334155;word-break:break-all">📄 ${esc(s.nome)}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">
+            <div style="font-size:.78rem;color:#64748b">em <strong style="color:#b91c1c">${esc(s.origem)}</strong> → provável: <strong style="color:#16a34a">${esc(s.destino)}</strong></div>
+            <button onclick="r2_moverSugerido(${i})" style="background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:6px;padding:4px 11px;font-size:.76rem;font-weight:700;cursor:pointer;white-space:nowrap">➡️ Mover</button>
+          </div>
+        </div>`).join('');
+  } catch (e) {
+    lista.innerHTML = `<div style="padding:20px;color:#dc2626">Erro no scan: ${esc(e.message)}</div>`;
+  }
+}
+
+/* Move 1 suspeito (com segurança: copia → confirma → apaga origem) */
+async function _r2MoverSeguro(s) {
+  const res = await r2_api('GET', `/download?key=${encodeURIComponent(s.key)}`);
+  const blob = await res.blob();
+  if (!blob || !blob.size) throw new Error('arquivo de origem veio vazio');
+  const up = await r2_api('POST', '/upload', {
+    'X-Monitorado': s.destino, 'X-Pasta': s.pasta || 'Docs do monitorado',
+    'X-Filename': encodeURIComponent(s.nome), 'Content-Type': blob.type || 'application/octet-stream',
+  }, blob);
+  if (!up || !up.ok || !up.key) throw new Error('cópia não confirmada — origem mantida');
+  await r2_api('DELETE', `/delete?key=${encodeURIComponent(s.key)}`);
+  addLog(`R2: MOVEU (verificação) "${s.nome}" — ${s.origem} → ${s.destino}`);
+}
+async function r2_moverSugerido(i) {
+  const s = _r2Suspeitos[i]; if (!s) return;
+  if (!confirm(`Mover "${s.nome}"\n\nDe:   ${s.origem}\nPara: ${s.destino}\n\nConfirmar?`)) return;
+  const el = document.getElementById('r2-susp-' + i);
+  try {
+    await _r2MoverSeguro(s);
+    if (el) { el.style.background = '#f0fdf4'; el.style.borderColor = '#86efac'; el.innerHTML = `<div style="font-size:.84rem;color:#166534">✅ "${esc(s.nome)}" movido para ${esc(s.destino)}</div>`; }
+    _mostrarToast('✅ Arquivo movido.', 'sucesso');
+    try { await r2_carregarArquivos(); } catch (e) {}
+  } catch (e) {
+    _mostrarToast(`⚠️ Erro: ${e.message}. Original mantido.`, 'erro');
+  }
+}
+async function r2_moverTodosSugeridos() {
+  if (!_r2Suspeitos.length) return;
+  if (!confirm(`Mover ${_r2Suspeitos.length} arquivo(s) para a pasta sugerida?\n\nCada arquivo é COPIADO para o destino e só então removido da origem (nunca se perde).\n\n⚠️ Confira a lista antes — um doc pode citar outra pessoa legitimamente.\n\nContinuar?`)) return;
+  let ok = 0, fail = 0;
+  for (let i = 0; i < _r2Suspeitos.length; i++) {
+    const s = _r2Suspeitos[i]; const el = document.getElementById('r2-susp-' + i);
+    if (el && el.dataset.done) continue;
+    try {
+      await _r2MoverSeguro(s);
+      ok++; if (el) { el.dataset.done = '1'; el.style.background = '#f0fdf4'; el.style.borderColor = '#86efac'; el.innerHTML = `<div style="font-size:.84rem;color:#166534">✅ "${esc(s.nome)}" → ${esc(s.destino)}</div>`; }
+    } catch (e) {
+      fail++; if (el) { el.style.borderColor = '#fca5a5'; el.insertAdjacentHTML('beforeend', `<div style="color:#dc2626;font-size:.76rem;margin-top:3px">❌ ${esc(e.message)} — original mantido</div>`); }
+    }
+  }
+  _mostrarToast(`Concluído: ${ok} movido(s), ${fail} falha(s).`, fail ? 'erro' : 'sucesso');
+  try { await r2_carregarArquivos(); } catch (e) {}
 }
 
 /* ══════════════════════════════════════════════════════════
