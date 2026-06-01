@@ -17657,6 +17657,7 @@ function com_registrarGerado(numero, dataStr, modelo, extras) {
     cargo:       extras.cargo || '',
     decreto:     extras.decreto || '',
     campos:      extras.campos || null,
+    assinatura:  usuarioAtual?.assinatura || '',   // imagem da assinatura do signatário (p/ visualização fiel)
     geradoPor:   usuarioAtual?.nome || '?',
     geradoEm:    new Date().toISOString()
   });
@@ -17885,7 +17886,9 @@ function com_gerarOficio(ov) {
   const signat     = ov ? (ov.signatario || '')     : _f('com-of-signatario').value.trim();
   const cargo      = (ov ? (ov.cargo || '') : (_f('com-of-cargo')?.value || '')).trim() || 'Coordenador(a) da CME/IAPEN-AP';
   const decreto    = ov ? (ov.decreto || '')        : _f('com-of-decreto').value.trim();
-  const assImgCapturada = usuarioAtual?.assinatura || null;
+  // Na visualização usa a assinatura salva no registro (a do signatário original);
+  // ao gerar, usa a do usuário logado.
+  const assImgCapturada = ov ? (ov.assinatura || null) : (usuarioAtual?.assinatura || null);
 
   if (!ov) {
     if (!modeloId)  return _mostrarToast('⚠️ Selecione o modelo de ofício.','erro');
