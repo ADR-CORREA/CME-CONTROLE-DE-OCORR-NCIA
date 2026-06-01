@@ -17652,6 +17652,11 @@ function com_registrarGerado(numero, dataStr, modelo, extras) {
     modelo:      modelo?.id || '',
     assunto:     modelo?.assunto || '',
     signatario:  extras.signat || '',
+    // Campos extras para reconstruir o documento na visualização:
+    saudacao:    extras.saudacao || '',
+    cargo:       extras.cargo || '',
+    decreto:     extras.decreto || '',
+    campos:      extras.campos || null,
     geradoPor:   usuarioAtual?.nome || '?',
     geradoEm:    new Date().toISOString()
   });
@@ -17812,6 +17817,8 @@ function com_renderConsulta() {
           <div style="font-size:.74rem;color:#94a3b8;margin-top:4px">Gerado por ${com_esc(r.geradoPor || '?')} em ${quando}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          <button onclick="com_visualizarOficio(${r.numero}, ${r.ano})"
+            style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:7px;padding:6px 12px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap">👁️ Visualizar</button>
           <button onclick="com_reusarNumero(${r.numero}, ${r.ano})"
             style="background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;border-radius:7px;padding:6px 12px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap">↩️ Reusar nº ${r.numero}</button>
           <button onclick="com_excluirOficio(${r.numero}, ${r.ano})"
@@ -17831,6 +17838,14 @@ function com_excluirOficio(numero, ano) {
   com_renderConsulta();
   com_atualizarAvisoNumero();
   _mostrarToast(`🗑️ Registro do ofício ${numero}/${ano} excluído.`, 'sucesso');
+}
+
+/* Visualiza o ofício já gerado, remontando o documento a partir do
+   registro salvo (não altera o formulário nem re-registra). */
+function com_visualizarOficio(numero, ano) {
+  const reg = com_registroDe(numero, ano);
+  if (!reg) return _mostrarToast('Registro do ofício não encontrado.', 'erro');
+  com_gerarOficio(reg);
 }
 
 /* Reabre um número já usado (p/ refazer um doc errado): preenche o
@@ -17856,36 +17871,46 @@ function com_reusarNumero(numero, ano) {
 }
 
 /* ─── Gerador ────────────────────────────────────────────────── */
-function com_gerarOficio() {
-  const modeloId   = document.getElementById('com-of-modelo').value;
-  const dest       = document.getElementById('com-of-destinatario').value.trim();
-  const numero     = document.getElementById('com-of-numero').value.trim();
-  const dataOficio = document.getElementById('com-of-data').value;
-  const nomeMon    = document.getElementById('com-of-nome').value.trim();
-  const processo   = document.getElementById('com-of-processo').value.trim();
-  const saudacao   = document.getElementById('com-of-saudacao').value;
-  const signat     = document.getElementById('com-of-signatario').value.trim();
-  const cargo      = (document.getElementById('com-of-cargo')?.value || '').trim() || 'Coordenador(a) da CME/IAPEN-AP';
-  const decreto    = document.getElementById('com-of-decreto').value.trim();
+function com_gerarOficio(ov) {
+  // ov = registro salvo (visualização): gera a partir dos dados guardados,
+  // sem ler o formulário e sem re-registrar o ofício.
+  const _f = id => document.getElementById(id);
+  const modeloId   = ov ? (ov.modelo || '')        : _f('com-of-modelo').value;
+  const dest       = ov ? (ov.destinatario || '')  : _f('com-of-destinatario').value.trim();
+  const numero     = ov ? String(ov.numero || '')  : _f('com-of-numero').value.trim();
+  const dataOficio = ov ? (ov.data || '')           : _f('com-of-data').value;
+  const nomeMon    = ov ? (ov.monitorado || '')     : _f('com-of-nome').value.trim();
+  const processo   = ov ? (ov.processo || '')       : _f('com-of-processo').value.trim();
+  const saudacao   = ov ? (ov.saudacao || 'Senhor (a) Juiz (a),') : _f('com-of-saudacao').value;
+  const signat     = ov ? (ov.signatario || '')     : _f('com-of-signatario').value.trim();
+  const cargo      = (ov ? (ov.cargo || '') : (_f('com-of-cargo')?.value || '')).trim() || 'Coordenador(a) da CME/IAPEN-AP';
+  const decreto    = ov ? (ov.decreto || '')        : _f('com-of-decreto').value.trim();
   const assImgCapturada = usuarioAtual?.assinatura || null;
 
-  if (!modeloId)  return _mostrarToast('⚠️ Selecione o modelo de ofício.','erro');
-  if (!dest)      return _mostrarToast('⚠️ Selecione comarca e vara.','erro');
-  if (!numero)    return _mostrarToast('⚠️ Informe o número do ofício.','erro');
-  if (!nomeMon)   return _mostrarToast('⚠️ Informe o nome do monitorado.','erro');
-  if (!processo)  return _mostrarToast('⚠️ Informe o número do processo.','erro');
+  if (!ov) {
+    if (!modeloId)  return _mostrarToast('⚠️ Selecione o modelo de ofício.','erro');
+    if (!dest)      return _mostrarToast('⚠️ Selecione comarca e vara.','erro');
+    if (!numero)    return _mostrarToast('⚠️ Informe o número do ofício.','erro');
+    if (!nomeMon)   return _mostrarToast('⚠️ Informe o nome do monitorado.','erro');
+    if (!processo)  return _mostrarToast('⚠️ Informe o número do processo.','erro');
+  }
 
   const modelo = COM_MODELOS.find(m => m.id === modeloId);
-  if (!modelo) return;
+  if (!modelo) return _mostrarToast('⚠️ Modelo do ofício não encontrado.','erro');
 
-  // Coletar campos dinâmicos
-  const campos = { nome_monitorado: nomeMon };
-  modelo.campos.forEach(c => {
-    const el  = document.getElementById('com-of-campo-' + c.id);
-    let val   = el ? el.value.trim() : '';
-    if (c.tipo === 'date' && val) val = com_fmtData(val);
-    campos[c.id] = val;
-  });
+  // Coletar campos dinâmicos (do registro salvo na visualização, ou do form)
+  let campos;
+  if (ov) {
+    campos = ov.campos || { nome_monitorado: nomeMon };
+  } else {
+    campos = { nome_monitorado: nomeMon };
+    modelo.campos.forEach(c => {
+      const el  = document.getElementById('com-of-campo-' + c.id);
+      let val   = el ? el.value.trim() : '';
+      if (c.tipo === 'date' && val) val = com_fmtData(val);
+      campos[c.id] = val;
+    });
+  }
 
   const paragrafos = modelo.corpo(campos);
 
@@ -18075,7 +18100,7 @@ function com_gerarOficio() {
 </html>`;
 
   // Registra o ofício na numeração (sincroniza entre PCs) antes de abrir
-  try { com_registrarGerado(numero, dataOficio, modelo, { dest, nomeMon, processo, signat }); } catch(e) { console.warn('[CME] registro de ofício falhou:', e); }
+  if (!ov) { try { com_registrarGerado(numero, dataOficio, modelo, { dest, nomeMon, processo, signat, saudacao, cargo, decreto, campos }); } catch(e) { console.warn('[CME] registro de ofício falhou:', e); } }
 
   const blob    = new Blob([doc], {type:'text/html;charset=utf-8'});
   const blobUrl = URL.createObjectURL(blob);
