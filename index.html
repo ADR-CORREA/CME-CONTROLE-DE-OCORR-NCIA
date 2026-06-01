@@ -6629,6 +6629,11 @@ function salvarUsuarios(u) {
   if (window._db && window._sessionHash && window._sessionUser) {
     window._db.rpc('cme_save_usuarios', { p_username: window._sessionUser, p_hash: window._sessionHash, p_usuarios: JSON.parse(JSON.stringify(u)) })
       .then(({ error }) => { if (error) { console.error('[CME] Erro ao salvar usuários:', error); _mostrarToast('⚠️ Erro ao salvar usuários: ' + error.message, 'erro'); } });
+  } else if (window._db) {
+    // Sem credenciais de sessão (ex.: estado inesperado) — não dá para persistir.
+    // Avisa em vez de falhar em silêncio (o que parecia "travar" o cadastro).
+    console.warn('[CME] salvarUsuarios sem credenciais de sessão — alteração não persistida.');
+    _mostrarToast('⚠️ Sessão sem credenciais para salvar. Faça login novamente para gerenciar usuários.', 'erro');
   }
 }
 
@@ -6737,7 +6742,14 @@ let filtroJur = "";
 function _salvarSessao(usuario) {
   const { senha, senhaSalt, senhaVersao, primeiroLogin, ...limpo } = usuario || {};
   try {
-    localStorage.setItem('cme_sessao', JSON.stringify({ ...limpo, loginAt: Date.now() }));
+    localStorage.setItem('cme_sessao', JSON.stringify({
+      ...limpo,
+      // Credenciais de sessão para os RPCs autenticados (gerenciar usuários etc.)
+      // continuarem funcionando após F5, sem precisar logar de novo.
+      _su: window._sessionUser || null,
+      _sh: window._sessionHash || null,
+      loginAt: Date.now()
+    }));
   } catch (e) { console.warn('[CME] não foi possível salvar a sessão:', e.message); }
 }
 
@@ -9111,7 +9123,7 @@ function removerUsuario(loginId) {
   const us  = getUsuarios();
   const idx = us.findIndex(x => x.usuario === loginId);
   if (idx === -1) { _mostrarToast('Usuário não encontrado.', 'erro'); return; }
-  addLog(`Removeu usuário ${us[idx].nome} (${usuarioAtual.nome})`);
+  addLog(`Removeu usuário ${us[idx].nome} (${usuarioAtual?.nome || '?'})`);
   us.splice(idx, 1);
   salvarUsuarios(us);
   renderizarUsers();
@@ -9464,7 +9476,7 @@ function criarUsuario() {
   hashSenhaPBKDF2(pass).then(({ hash, salt }) => {
     us.push({ usuario: user.toLowerCase(), senha: hash, senhaSalt: salt, senhaVersao: 3, nome, cargo, nivel, primeiroLogin: true });
     salvarUsuarios(us);
-    addLog(`Criou usuário ${nome} (${usuarioAtual.nome})`);
+    addLog(`Criou usuário ${nome} (${usuarioAtual?.nome || '?'})`);
     msg.className = "sys-alert success"; msg.textContent = `✅ "${nome}" criado! Ele definirá a própria senha no 1º acesso.`;
     document.getElementById("new-name").value  = "";
     document.getElementById("new-user").value  = "";
@@ -15881,15 +15893,25 @@ function r2_iconeArquivo(nome) {
       const TIMEOUT_SESSAO = 8 * 60 * 60 * 1000; // 8 horas
       const sessaoExpirada = s.loginAt && (Date.now() - s.loginAt) > TIMEOUT_SESSAO;
       if (!sessaoExpirada && s.usuario) {
+        // Repõe as credenciais de sessão para os RPCs autenticados (gerenciar
+        // usuários, salvar, etc.) voltarem a funcionar após o F5.
+        const { loginAt, _su, _sh, ...snapshot } = s;
+        if (_su) window._sessionUser = _su;
+        if (_sh) window._sessionHash = _sh;
         // Prefere o registro fresco se a lista de usuários estiver em cache
-        // (admin/subgerente); no F5 comum a lista não está carregada, então
-        // usa o snapshot completo salvo na própria sessão.
+        // (admin/subgerente); senão usa o snapshot salvo na própria sessão.
         const lista = _cache.hasOwnProperty('usuarios') ? _cache['usuarios'] : null;
         const userFresco = lista ? lista.find(u => u.usuario === s.usuario && u.nivel === s.nivel) : null;
-        const { loginAt, ...snapshot } = s;
         usuarioAtual = userFresco || snapshot;
         overlay.style.display = 'none';
         iniciarApp();
+        // Recarrega a lista completa de usuários (admin/subgerente) agora que
+        // temos as credenciais — evita o painel cair no USUARIOS_PADRAO.
+        if (['admin','subgerente'].includes(usuarioAtual.nivel) && window._db && _su && _sh) {
+          window._db.rpc('cme_get_usuarios', { p_username: _su, p_hash: _sh })
+            .then(({ data }) => { if (data) { _cache['usuarios'] = data; if (document.getElementById('panel-admin')?.classList.contains('active')) renderizarUsers(); } })
+            .catch(() => {});
+        }
         return; // Entra direto, sem mostrar login
       }
     } catch(e) { /* sessão inválida */ }
