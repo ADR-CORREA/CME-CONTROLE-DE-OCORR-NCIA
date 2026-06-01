@@ -2728,7 +2728,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
               <select id="com-of-saudacao" onchange="com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
                 <option>Senhor Juiz,</option>
                 <option>Senhora Juíza,</option>
-                <option selected>Senhor(a) Juiz(a),</option>
+                <option selected>Senhor (a) Juiz (a),</option>
                 <option>Senhor,</option>
                 <option>Senhora,</option>
               </select>
@@ -18053,7 +18053,7 @@ function com_atualizarPreview() {
   const dataOficio = document.getElementById('com-of-data')?.value || '';
   const nomeMon    = document.getElementById('com-of-nome')?.value.trim() || '';
   const processo   = document.getElementById('com-of-processo')?.value.trim() || '';
-  const saudacao   = document.getElementById('com-of-saudacao')?.value || 'Senhor(a) Juiz(a),';
+  const saudacao   = document.getElementById('com-of-saudacao')?.value || 'Senhor (a) Juiz (a),';
   const signat     = document.getElementById('com-of-signatario')?.value.trim() || '';
   const cargo      = (document.getElementById('com-of-cargo')?.value || '').trim() || 'Coordenador(a) da CME/IAPEN-AP';
   const decreto    = document.getElementById('com-of-decreto')?.value.trim() || '';
