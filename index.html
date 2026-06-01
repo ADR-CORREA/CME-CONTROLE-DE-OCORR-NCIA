@@ -17874,11 +17874,11 @@ function com_gerarOficio() {
   .of-num       { text-align: left; font-weight: bold; margin: 0 0 4px 0; }
   .data-topo    { text-align: right; margin: 0 0 22px 0; }
   .dest-titulo  { margin: 0; }
-  .dest-nome    { font-weight: bold; margin: 0 0 12px 0; }
+  .dest-nome    { font-weight: bold; margin: 0 0 8px 0; }
   .ref-assunto  { margin: 0; }
   .ref-processo { margin: 0 0 36px 0; }
   .saudacao     { margin: 0 0 22px 0; text-indent: 1.25cm; }
-  .sem-mais     { margin: 0 0 44px 0; text-indent: 1.25cm; }
+  .sem-mais     { margin: 0 0 22px 0; text-indent: 1.25cm; }
   .respeitosamente { margin: 0; text-indent: 1.25cm; }
 
   /* ── Área de assinatura ──────────────────────────────
@@ -17959,7 +17959,7 @@ function com_gerarOficio() {
   <p class="dest-nome">${esc(dest)}.</p>
 
   <p class="ref-assunto"><strong>Assunto:</strong> ${esc(modelo.assunto)}.</p>
-  <p class="ref-processo"><strong>Processo n&#176;:</strong> ${esc(processo)}.</p>
+  <p class="ref-processo"><strong>Processo n&#176;.</strong> ${esc(processo)}</p>
 
   <p class="saudacao">${esc(saudacao)}</p>
 
@@ -19538,7 +19538,7 @@ async function _comGerarPDFExec() {
       doc.text('A Sua Excelência o (a) Senhor (a)', mL, y); y += 5;
       doc.setFont('times', 'bold');
       const destLines = doc.splitTextToSize(dest + '.', tw);
-      doc.text(destLines, mL, y); y += destLines.length * 6 + 9;
+      doc.text(destLines, mL, y); y += destLines.length * 6 + 5;
     }
 
     // ── Assunto / Processo ───────────────────────────────────────
@@ -19557,10 +19557,10 @@ async function _comGerarPDFExec() {
     }
     if (processo) {
       doc.setFont('times', 'bold'); doc.setFontSize(12);
-      const pnLbl = 'Processo nº: ';
+      const pnLbl = 'Processo nº. ';
       doc.text(pnLbl, mL, y);
       doc.setFont('times', 'normal');
-      doc.text(processo + '.', mL + doc.getTextWidth(pnLbl) + 1.2, y); y += 18; // espaço maior antes da saudação
+      doc.text(processo, mL + doc.getTextWidth(pnLbl) + 1.2, y); y += 18; // espaço maior antes da saudação
     }
 
     // ── Saudação (com recuo ABNT 1,25 cm, igual ao corpo) ────────
@@ -19653,11 +19653,11 @@ async function _comGerarPDFExec() {
     }
 
     // ── Encerramento ─────────────────────────────────────────────
-    y += 2; // "Sem mais" colado ao corpo
+    y += 0; // "Sem mais" bem próximo do "Em anexo..." (corpo)
     if (y > pageH - mB - 55) { doc.addPage(); y = mT; }
     doc.setFont('times', 'normal'); doc.setFontSize(12); doc.setTextColor(0);
     const semMaisLines = doc.splitTextToSize('Sem mais, esta CME se coloca à disposição para eventuais esclarecimentos.', tw - ABNT_INDENT);
-    doc.text(semMaisLines, mL + ABNT_INDENT, y); y += semMaisLines.length * 5.5 + 22; // bem mais espaço antes de "Respeitosamente,"
+    doc.text(semMaisLines, mL + ABNT_INDENT, y); y += semMaisLines.length * 5.5 + 10; // espaço moderado antes de "Respeitosamente,"
     doc.text('Respeitosamente,', mL + ABNT_INDENT, y); y += 6;
 
     // ── Empurra assinatura para ~80% da área útil da folha A4 ────
