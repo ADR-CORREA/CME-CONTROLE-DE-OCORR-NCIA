@@ -6944,17 +6944,26 @@ async function definirPrimeiraSenha() {
   erro.style.display = 'none';
 
   const { hash, salt } = await hashSenhaPBKDF2(nova);
-  const usuarios = getUsuarios();
-  const eu       = usuarios.find(u => (u.usuario||'').toLowerCase() === (_usuarioPrimeiroLogin.usuario||'').toLowerCase());
-  if (!eu) return mostrarErro('Erro: usuário não encontrado.');
 
-  eu.senha         = hash;
-  eu.senhaSalt     = salt;
-  eu.senhaVersao   = 3;
-  eu.primeiroLogin = false;
-  salvarUsuarios(usuarios);
+  // Atualiza a senha direto no servidor (funciona para o próprio usuário, sem
+  // depender da lista local — que não é carregada para níveis não-admin — nem
+  // de privilégio de admin). p_hash_atual = hash da senha temporária do admin
+  // (guardado em window._sessionHash durante o login).
+  if (!window._db || !window._sessionUser || !window._sessionHash) {
+    return mostrarErro('Sessão inválida. Faça login novamente.');
+  }
+  let ok = false;
+  try {
+    const { data } = await window._db.rpc('cme_update_senha', {
+      p_username: window._sessionUser, p_hash_atual: window._sessionHash, p_novo_hash: hash, p_novo_salt: salt
+    });
+    ok = !!data;
+  } catch (e) { console.error('[CME] definirPrimeiraSenha:', e); }
+  if (!ok) return mostrarErro('Não foi possível salvar a senha. Tente novamente.');
 
-  // Fazer login normalmente
+  window._sessionHash = hash;
+  const { senha, senhaSalt, ...limpo } = _usuarioPrimeiroLogin;
+  const eu = { ...limpo, primeiroLogin: false };
   usuarioAtual = eu;
   _salvarSessao(eu);
   addLog(`Primeiro login — senha definida: ${eu.nome}`);
@@ -9563,7 +9572,10 @@ function criarUsuario() {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Criando...'; }
   msg.className = "sys-alert"; msg.textContent = "";
   hashSenhaPBKDF2(pass).then(({ hash, salt }) => {
-    us.push({ usuario: user.toLowerCase(), senha: hash, senhaSalt: salt, senhaVersao: 3, nome, cargo, nivel, primeiroLogin: true });
+    // primeiroLogin:false — o usuário entra direto com a senha definida pelo
+    // admin (pode trocá-la depois em "Alterar minha senha"). Antes era true e
+    // a tela de 1º acesso falhava para níveis não-admin ("usuário não encontrado").
+    us.push({ usuario: user.toLowerCase(), senha: hash, senhaSalt: salt, senhaVersao: 3, nome, cargo, nivel, primeiroLogin: false });
     salvarUsuarios(us);
     addLog(`Criou usuário ${nome} (${usuarioAtual?.nome || '?'})`);
     msg.className = "sys-alert success"; msg.textContent = `✅ "${nome}" criado! Ele definirá a própria senha no 1º acesso.`;
@@ -9610,20 +9622,39 @@ async function alterarMinhaSenha() {
     msg.className = "sys-alert error"; msg.textContent = erroForca; return;
   }
 
-  const usuarios = getUsuarios();
-  const eu = usuarios.find(u => (u.usuario||'').toLowerCase() === (usuarioAtual.usuario||'').toLowerCase());
-  if (!eu) { msg.className = "sys-alert error"; msg.textContent = "Usuário não encontrado."; return; }
+  const username = (usuarioAtual.usuario || '').toLowerCase();
+  if (!window._db) { msg.className = "sys-alert error"; msg.textContent = "Sem conexão com o servidor."; return; }
 
-  const senhaOk = await verificarSenhaUsuario(senhaAtual, eu);
-  if (!senhaOk) {
-    msg.className = "sys-alert error"; msg.textContent = "Senha atual incorreta."; return;
-  }
+  // Calcula o hash da senha ATUAL com o salt do usuário (vindo do servidor)
+  let hashAtual = null;
+  try {
+    const { data: info } = await window._db.rpc('cme_get_login_info', { p_username: username });
+    if (info?.senhaVersao === 3 && info?.senhaSalt) {
+      hashAtual = (await hashSenhaPBKDF2(senhaAtual, info.senhaSalt)).hash;
+    } else {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(_SHA_SALT + senhaAtual));
+      hashAtual = _bytesToHex(buf);
+    }
+  } catch (e) { console.error('[CME] alterarMinhaSenha get_login_info:', e); }
+  if (!hashAtual) { msg.className = "sys-alert error"; msg.textContent = "Erro ao verificar a senha atual."; return; }
 
+  // Atualiza no servidor: o RPC valida a senha atual (p_hash_atual) server-side
   const { hash, salt } = await hashSenhaPBKDF2(senhaNova);
-  eu.senha       = hash;
-  eu.senhaSalt   = salt;
-  eu.senhaVersao = 3;
-  salvarUsuarios(usuarios);
+  let ok = false;
+  try {
+    const { data } = await window._db.rpc('cme_update_senha', {
+      p_username: username, p_hash_atual: hashAtual, p_novo_hash: hash, p_novo_salt: salt
+    });
+    ok = !!data;
+  } catch (e) { console.error('[CME] alterarMinhaSenha update_senha:', e); }
+  if (!ok) { msg.className = "sys-alert error"; msg.textContent = "Senha atual incorreta."; return; }
+
+  window._sessionHash = hash; // mantém a sessão válida com a nova senha
+  // Atualiza o cache local, se carregado (admin/subgerente)
+  if (_cache['usuarios']) {
+    const u = _cache['usuarios'].find(x => (x.usuario||'').toLowerCase() === username);
+    if (u) { u.senha = hash; u.senhaSalt = salt; u.senhaVersao = 3; }
+  }
   addLog(`Senha alterada: ${usuarioAtual.nome}`);
   msg.className = "sys-alert success"; msg.textContent = "✅ Senha alterada com sucesso!";
   document.getElementById('alt-senha-atual').value = '';
