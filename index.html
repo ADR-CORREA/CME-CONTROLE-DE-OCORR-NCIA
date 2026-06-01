@@ -14547,6 +14547,21 @@ async function _obterTokenSessao() {
   return null;
 }
 
+/* Garante um token de sessão válido antes de chamar o Worker. Se o token
+   expirou (caso comum agora que a sessão persiste no F5 por horas), reemite
+   um novo usando as credenciais da sessão. Sem isso, ao expirar o token o
+   app caía no token legado — que pode estar rotacionado — e TODAS as ações
+   de arquivo (visualizar, renomear, excluir) passavam a falhar. */
+let _r2RenovandoToken = null; // evita reemissões simultâneas
+async function _garantirTokenSessao() {
+  if (_r2SessionToken()) return;                       // ainda válido
+  if (!window._sessionUser || !window._sessionHash) return; // sem credenciais
+  if (!_r2RenovandoToken) {
+    _r2RenovandoToken = _obterTokenSessao().finally(() => { _r2RenovandoToken = null; });
+  }
+  try { await _r2RenovandoToken; } catch (e) {}
+}
+
 /* ── Config: carregar / salvar ────────────────────────────────── */
 function r2_carregarConfig() {
   // Valores padrão já configurados — todos os usuários conectam automaticamente
@@ -14585,6 +14600,7 @@ function r2_fecharConfig() {
 /* ── API helper ───────────────────────────────────────────────── */
 async function r2_api(method, path, headers = {}, body = null) {
   if (!r2_state.url || !r2_state.token) throw new Error('R2 não configurado.');
+  await _garantirTokenSessao(); // renova o token de sessão do Worker se tiver expirado
   const base = r2_state.url.replace(/\/$/, '');
   const res = await fetch(base + path, {
     method,
@@ -15939,6 +15955,9 @@ function r2_iconeArquivo(nome) {
         const { loginAt, _su, _sh, ...snapshot } = s;
         if (_su) window._sessionUser = _su;
         if (_sh) window._sessionHash = _sh;
+        // Reemite o token de sessão do Worker (arquivos R2) — sem isso, ao
+        // expirar, as ações de arquivo (ver/renomear/excluir) param de funcionar.
+        if (_su && _sh && typeof _obterTokenSessao === 'function') { try { _obterTokenSessao(); } catch (e) {} }
         // Prefere o registro fresco se a lista de usuários estiver em cache
         // (admin/subgerente); senão usa o snapshot salvo na própria sessão.
         const lista = _cache.hasOwnProperty('usuarios') ? _cache['usuarios'] : null;
