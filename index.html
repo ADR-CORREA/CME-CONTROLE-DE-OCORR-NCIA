@@ -6637,6 +6637,31 @@ function salvarUsuarios(u) {
   }
 }
 
+/* ── TRAVA DE SEGURANÇA contra sobrescrita da lista de usuários ──────
+   Só permitimos cadastrar/editar/excluir DEPOIS que a lista completa foi
+   confirmadamente carregada do servidor (cme_get_usuarios). Isso evita que,
+   logo após um F5 (enquanto a lista ainda carrega), uma lista incompleta /
+   padrão sobrescreva os usuários reais no banco. */
+let _usuariosCarregados = false;
+function _marcarUsuariosCarregados() { _usuariosCarregados = true; }
+function _usuariosProntos() {
+  if (!window._db) return true;          // modo local: não há banco para sobrescrever
+  return _usuariosCarregados === true;   // exige carga confirmada do servidor
+}
+function _recarregarUsuariosAdmin() {
+  if (window._db && window._sessionHash && window._sessionUser) {
+    window._db.rpc('cme_get_usuarios', { p_username: window._sessionUser, p_hash: window._sessionHash })
+      .then(({ data }) => {
+        if (data) {
+          _cache['usuarios'] = data;
+          _usuariosCarregados = true;
+          if (document.getElementById('panel-admin')?.classList.contains('active')) renderizarUsers();
+        }
+      })
+      .catch(() => {});
+  }
+}
+
 /* ── Reset de senha via console do navegador ──────────────────────
    Uso: await _resetarSenha('subgerente', 'NovaSenha@123')
    Requer acesso físico ao PC (console F12). Salva direto no Supabase.
@@ -6791,7 +6816,7 @@ async function fazerLogin() {
         // Admin/subgerente: carregar lista de usuários para o painel
         if (['admin', 'subgerente'].includes(usuario.nivel)) {
           const { data: lista } = await window._db.rpc('cme_get_usuarios', { p_username: u, p_hash: hash });
-          if (lista) _cache['usuarios'] = lista;
+          if (lista) { _cache['usuarios'] = lista; _marcarUsuariosCarregados(); }
         }
 
         // Auto-migração v2 → PBKDF2 v3 (transparente para o usuário)
@@ -9119,6 +9144,11 @@ function alterarNivel(idx, novoNivel) {
 }
 
 function removerUsuario(loginId) {
+  if (!_usuariosProntos()) {
+    _mostrarToast('⏳ A lista de usuários ainda está carregando do servidor. Aguarde alguns segundos e tente de novo.', 'erro');
+    _recarregarUsuariosAdmin();
+    return;
+  }
   if (!confirm("Remover este usuário?")) return;
   const us  = getUsuarios();
   const idx = us.findIndex(x => x.usuario === loginId);
@@ -9138,7 +9168,7 @@ async function abrirModalEditarUsuario(loginId) {
   if (window._db && window._sessionHash && window._sessionUser) {
     try {
       const { data } = await window._db.rpc('cme_get_usuarios', { p_username: window._sessionUser, p_hash: window._sessionHash });
-      if (data) _cache['usuarios'] = data;
+      if (data) { _cache['usuarios'] = data; _marcarUsuariosCarregados(); }
     } catch(e) { /* usa cache existente se falhar */ }
   }
 
@@ -9203,6 +9233,11 @@ function editUser_removerAss() {
 async function salvarEdicaoUsuario() {
   const msg     = document.getElementById('edit-user-msg');
   const loginId = document.getElementById('edit-user-idx').value; // login do usuário em edição
+  if (!_usuariosProntos()) {
+    msg.innerHTML = '<div class="sys-alert error">⏳ A lista de usuários ainda está carregando do servidor. Aguarde alguns segundos e tente de novo.</div>';
+    _recarregarUsuariosAdmin();
+    return;
+  }
   try {
   const us = getUsuarios();
   const u  = us.find(x => x.usuario === loginId);
@@ -9459,6 +9494,12 @@ function criarUsuario() {
   const cargo = (document.getElementById("new-cargo")?.value || '').trim();
   const nivel = document.getElementById("new-role").value;
   const msg   = document.getElementById("admin-msg");
+  if (!_usuariosProntos()) {
+    msg.className = "sys-alert error";
+    msg.textContent = "⏳ A lista de usuários ainda está carregando do servidor. Aguarde alguns segundos e tente de novo.";
+    _recarregarUsuariosAdmin();
+    return;
+  }
   if (!nome || !user || !pass) {
     msg.className = "sys-alert error"; msg.textContent = "Preencha nome, login e senha."; return;
   }
@@ -15909,7 +15950,7 @@ function r2_iconeArquivo(nome) {
         // temos as credenciais — evita o painel cair no USUARIOS_PADRAO.
         if (['admin','subgerente'].includes(usuarioAtual.nivel) && window._db && _su && _sh) {
           window._db.rpc('cme_get_usuarios', { p_username: _su, p_hash: _sh })
-            .then(({ data }) => { if (data) { _cache['usuarios'] = data; if (document.getElementById('panel-admin')?.classList.contains('active')) renderizarUsers(); } })
+            .then(({ data }) => { if (data) { _cache['usuarios'] = data; _marcarUsuariosCarregados(); if (document.getElementById('panel-admin')?.classList.contains('active')) renderizarUsers(); } })
             .catch(() => {});
         }
         return; // Entra direto, sem mostrar login
