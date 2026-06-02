@@ -19521,6 +19521,7 @@ function jur_gerarPDF() {
 /* ── Busca de Documentos do Monitorado ──────────────────────── */
 let _comDocsCache     = [];   // arquivos listados do monitorado atual
 let _comBuscaTimer    = null; // debounce para autocomplete
+let _comMonitoradoSel = '';   // nome do monitorado selecionado na busca (âncora p/ extração do nome)
 
 async function com_onBuscaInput(valor) {
   clearTimeout(_comBuscaTimer);
@@ -19605,6 +19606,7 @@ async function com_buscarMonitorado(modoSugestao = false) {
 
 async function com_selecionarMonitorado(nome) {
   if (!r2_state.url || !r2_state.token) await r2_carregarConfig();
+  _comMonitoradoSel = nome || '';   // guarda p/ ancorar a extração do nome
   const painel   = document.getElementById('com-docs-painel');
   const nomeEl   = document.getElementById('com-docs-monitorado-nome');
   const listaEl  = document.getElementById('com-docs-lista');
@@ -19899,7 +19901,7 @@ async function com_extrairComIA() {
     const resp = await fetch(`${r2_state.url}/extrair-campos`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${_workerToken()}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texto: textoGeral, comarcas: comarcasList, varas: varasList }),
+      body: JSON.stringify({ texto: textoGeral, comarcas: comarcasList, varas: varasList, monitorado: _comMonitoradoSel }),
     });
     if (!resp.ok) throw new Error(`Erro HTTP ${resp.status}`);
 
