@@ -7675,7 +7675,7 @@ function excluirOcorrenciaArquivada(id) {
 
 /* ─── JURÍDICO ───────────────────────────────────────── */
 function renderizarJuridico() {
-  let ocs = getOcorrencias().filter(o => o.prodoc === "SIM");
+  let ocs = getOcorrencias().filter(o => o.prodoc === "SIM" && !o.juridicoOculto);
   if (filtroJur) {
     ocs = ocs.filter(o => (o.monitorado||"").toLowerCase().includes(filtroJur.toLowerCase()) ||
       String(o.id).includes(filtroJur));
@@ -7713,11 +7713,24 @@ function renderizarJuridico() {
       <td>${v180}</td>
       <td style="font-weight:700">${aut}</td>
       <td><span class="badge ${sc==='AUTORIZADO'?'badge-ok':sc==='DESVINCULADO'?'badge-comunicado':'badge-neutro'}">${sc}</span></td>
-      <td>${usuarioAtual?.nivel !== 'plantao' ? `<button class="btn-edit" onclick="abrirModalJuridico(${idx})">✏ Atualizar</button>` : '—'}</td>
+      <td>${usuarioAtual?.nivel !== 'plantao' ? `<button class="btn-edit" onclick="abrirModalJuridico(${idx})">✏ Atualizar</button> <button class="btn-danger" onclick="removerDoJuridico(${idx})" title="Remover desta aba (mantém em Ocorrências)" style="margin-left:4px">🗑️ Excluir</button>` : '—'}</td>
     </tr>`;
   }).join("");
 }
 function filtrarJuridico(v) { filtroJur = v; renderizarJuridico(); }
+
+/* Remove o caso APENAS da aba Ocorrências Jurídicas (flag não-destrutivo).
+   A ocorrência permanece na aba Ocorrências e seus arquivos não são tocados. */
+async function removerDoJuridico(idx) {
+  const oc = getOcorrencias()[idx];
+  if (!oc) return;
+  if (!confirm(`Remover "${oc.monitorado || '#' + oc.id}" da aba Ocorrências Jurídicas?\n\nO registro permanece na aba Ocorrências (não é apagado).`)) return;
+  const id = oc.id;
+  const arr = (await _ocorrenciasFrescas()).map(o => o.id === id ? { ...o, juridicoOculto: true } : o);
+  salvarStore('ocorrencias', arr);
+  addLog(`Removeu #${id} da aba Jurídico (${usuarioAtual?.nome || ''})`);
+  renderizarJuridico();
+}
 
 /* ═══════════════════════════════════════════════════════════
    MÓDULO: SEM COMUNICAÇÃO (sub-aba Jurídico)
