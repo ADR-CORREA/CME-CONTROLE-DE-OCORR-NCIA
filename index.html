@@ -1298,6 +1298,17 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         </div>
       </div>
 
+      <!-- Guarnição de serviço hoje (escala automática dos plantões) -->
+      <div id="dash-plantao-hoje" style="display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,#eff6ff,#f8fafc);border:1px solid #bfdbfe;border-left:5px solid #1d4ed8;border-radius:12px;padding:14px 18px;margin-bottom:16px">
+        <span style="font-size:1.7rem;line-height:1">🛡️</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.74rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Guarnição de serviço hoje</div>
+          <div style="font-size:1.4rem;font-weight:800;color:#1F4E78;line-height:1.2">Plantão: <span id="dash-plantao-nome">—</span></div>
+          <div style="font-size:.76rem;color:#94a3b8" id="dash-plantao-data"></div>
+        </div>
+        <span id="dash-plantao-chip" style="font-size:.8rem;font-weight:800;color:#fff;background:#1d4ed8;border-radius:20px;padding:5px 14px;white-space:nowrap">—</span>
+      </div>
+
       <div class="dash-alertas" id="dash-alertas" style="display:none"></div>
 
       <div class="section-title">Status de Prazo — Ocorrências Ativas</div>
@@ -7184,6 +7195,7 @@ function atualizarTudo() {
 
 /* ─── DASHBOARD ──────────────────────────────────────── */
 function atualizarDashboard() {
+  try { _dashRenderPlantaoHoje(); } catch(e) { console.warn('plantão hoje', e); }
   const ocs = getOcorrencias();
   let ok=0, at=0, ve=0, vd=0, com=0, prot=0;
   let protSemProd=0, cautSemProd=0, protVenc=0;
@@ -8906,6 +8918,23 @@ function getPlantaoParaData(dataStr) {
   const diffDias = Math.round((data - ref) / 86400000);
   const idx = ((3 + diffDias) % 5 + 5) % 5;
   return PLANTOES[idx];
+}
+
+/* Banner do Dashboard: guarnição/plantão de serviço hoje (usa a escala automática) */
+const PLANTAO_CORES = { ALFA:'#16a34a', BRAVO:'#2563eb', CHARLIE:'#d97706', DELTA:'#7c3aed', ECHO:'#dc2626' };
+function _dashRenderPlantaoHoje() {
+  const hoje = new Date();
+  const iso  = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+  const p    = getPlantaoParaData(iso);
+  const cor  = PLANTAO_CORES[p] || '#1d4ed8';
+  const nomeEl = document.getElementById('dash-plantao-nome');
+  const dataEl = document.getElementById('dash-plantao-data');
+  const chipEl = document.getElementById('dash-plantao-chip');
+  const boxEl  = document.getElementById('dash-plantao-hoje');
+  if (nomeEl) nomeEl.textContent = p;
+  if (dataEl) dataEl.textContent = hoje.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+  if (chipEl) { chipEl.textContent = p; chipEl.style.background = cor; }
+  if (boxEl)  boxEl.style.borderLeftColor = cor;
 }
 
 function atualizarPlantaoOcorrencia() {
