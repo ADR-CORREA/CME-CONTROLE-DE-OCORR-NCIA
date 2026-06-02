@@ -20078,7 +20078,7 @@ async function _comGerarPDFExec() {
     let dataLonga = '';
     if (dataVal) {
       const [yr, mo, dy] = dataVal.split('-');
-      dataLonga = `${parseInt(dy)} de ${meses[parseInt(mo)-1]} de ${yr}`;
+      dataLonga = `${String(parseInt(dy)).padStart(2,'0')} de ${meses[parseInt(mo)-1]} de ${yr}`;
     }
     const ano    = dataVal ? dataVal.split('-')[0] : String(new Date().getFullYear());
     const numFmt = numero ? `${numero}/${ano} – CME/IAPEN` : '';
@@ -20139,7 +20139,7 @@ async function _comGerarPDFExec() {
       doc.setFont('times', 'bold'); doc.setFontSize(12);
       const pnLbl = 'Processo nº. ';
       doc.text(pnLbl, mL, y);
-      doc.setFont('times', 'normal');
+      // número também em negrito (mantém 'times','bold')
       doc.text(processo, mL + doc.getTextWidth(pnLbl) + 1.2, y); y += 18; // espaço maior antes da saudação
     }
 
@@ -20169,28 +20169,10 @@ async function _comGerarPDFExec() {
     doc.setFont('times', 'normal'); doc.setFontSize(12); doc.setTextColor(0);
     const ABNT_INDENT = 12.5; // 1,25 cm — recuo ABNT na primeira linha de cada parágrafo
 
-    // ── Auto-compressão: garante que o corpo cabe em 1 página ─
-    // paraSpacing mínimo: parágrafos do corpo "colados" (só com recuo)
-    let lineH = 6, paraSpacing = 1, emptyLineH = 6;
-    {
-      const _yAssinEst = mT + (pageH - mT - mB) * 0.80;
-      const _encerH    = 38; // estimativa: 8 + semMais + Respeitosamente
-      const _avail     = _yAssinEst - y - _encerH;
-      let _totH = 0;
-      for (const _p of paragrafosCorpo) {
-        if (!_p.trim()) { _totH += emptyLineH; continue; }
-        const _fs = doc.splitTextToSize(_p.trim(), tw - ABNT_INDENT);
-        const _rt = _fs[0] ? _p.trim().substring(_fs[0].trimEnd().length).trim() : '';
-        const _rl = _rt ? doc.splitTextToSize(_rt, tw).length : 0;
-        _totH += (1 + _rl) * lineH + paraSpacing;
-      }
-      if (_totH > _avail && _avail > 10) {
-        const _ratio = Math.max(0.60, _avail / _totH);
-        lineH       = Math.round(lineH       * _ratio * 10) / 10;
-        paraSpacing = Math.round(paraSpacing * _ratio * 10) / 10;
-        emptyLineH  = Math.round(emptyLineH  * _ratio * 10) / 10;
-      }
-    }
+    // ── Espaçamento 1,5 entre linhas (padrão de documento) ───────
+    // 12pt × 1,5 = 18pt ≈ 6,35 mm. SEM auto-compressão: o corpo mantém o
+    // 1,5 e flui para a próxima página se necessário (já há numeração).
+    const lineH = 6.35, paraSpacing = 2, emptyLineH = 6.35;
     // ──────────────────────────────────────────────────────────
 
     for (const p of paragrafosCorpo) {
