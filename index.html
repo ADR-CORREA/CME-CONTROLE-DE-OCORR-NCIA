@@ -2629,6 +2629,15 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
             </div>
           </div>
 
+          <!-- Anexar documento de fora do sistema, SEM gerar/ler com IA -->
+          <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <label style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1d4ed8;border:1px dashed #93c5fd;border-radius:7px;padding:7px 12px;font-size:.82rem;font-weight:700;cursor:pointer">
+              📎 Anexar documento do computador (sem IA)
+              <input type="file" id="com-anexo-file" multiple style="display:none" onchange="com_anexarSemIA(this)">
+            </label>
+            <span style="font-size:.74rem;color:#64748b">Anexa ao PDF final sem ler nem extrair dados com IA.</span>
+          </div>
+
           <!-- Docs carregados (anexos prontos) -->
           <div id="com-anexos-lista" style="margin-top:8px">
             <div style="color:#94a3b8;font-size:.8rem;text-align:center;padding:4px">Nenhum documento carregado.</div>
@@ -17477,6 +17486,7 @@ const COM_COMARCAS = [
   ]},
   { nome:'Macapá', varas:[
     '1ª Vara de Execução Penal de Macapá',
+    '2ª Vara de Execução Penal de Macapá',
     'Juizado de Violência Doméstica e Familiar contra a Mulher - 1ª Vara',
     'Juizado de Violência Doméstica e Familiar contra a Mulher - 2ª Vara',
     'Juizado Especial Cível - 5ª Vara - Norte',
@@ -17575,14 +17585,14 @@ const COM_MODELOS = [
       {id:'data_doc',        label:'Data do documento de referência', tipo:'date'},
     ],
     corpo:c=>[
-      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônico – CME vem informar que <b>${c.nome_monitorado}</b> foi vinculado(a) ao sistema de Monitoramento Eletrônico na data do dia ${c.data_vinculacao}, em cumprimento ao ${c.doc_referencia}, datado de ${c.data_doc}.`,
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônico – CME vem informar que <b>${c.nome_monitorado}</b> foi vinculado (a) ao sistema de Monitoramento Eletrônico na data do dia <b>${c.data_vinculacao}</b>, em cumprimento ao ${c.doc_referencia}, datado de ${c.data_doc}.`,
       `Em anexo segue o Termo de Guarda e Responsabilidade e o expediente acima citado.`,
     ]},
   { id:'vinc-dpp', cat:'Vinculação', nome:'Vinculação — Botão do Pânico (DPP)',
     assunto:'Vinculação no Sistema de Monitoração Eletrônica',
     campos:[{id:'data_vinculacao', label:'Data da vinculação', tipo:'date'}],
     corpo:c=>[
-      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME, informo que <b>${c.nome_monitorado}</b> foi vinculado(a) na Central de Monitoramento para uso do "Botão do Pânico", na data do dia ${c.data_vinculacao}, em cumprimento à Decisão contida nos Autos.`,
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME, informo que <b>${c.nome_monitorado}</b> foi vinculado (a) na Central de Monitoramento para uso do "Botão do Pânico", na data do dia <b>${c.data_vinculacao}</b>, em cumprimento à Decisão contida nos Autos.`,
       `Em anexo segue o Termo de Guarda e Responsabilidade e o expediente acima citado.`,
     ]},
   { id:'vinc-trab-externo', cat:'Vinculação', nome:'Vinculação — Trabalho Externo (VEP)',
@@ -17592,14 +17602,14 @@ const COM_MODELOS = [
       {id:'proc_admin', label:'Nº do Processo Administrativo (UFAE/IAPEN)', tipo:'text', placeholder:'ex: 0019/2026'},
     ],
     corpo:c=>[
-      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônico – CME vem informar que <b>${c.nome_monitorado}</b> foi vinculado(a) no sistema de Monitoramento Eletrônico na data do dia ${c.data_vinculacao}, em cumprimento ao Processo Administrativo n° ${c.proc_admin} - UFAE/IAPEN - Autorização de saída para o trabalho externo.`,
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônico – CME vem informar que <b>${c.nome_monitorado}</b> foi vinculado (a) no sistema de Monitoramento Eletrônico na data do dia <b>${c.data_vinculacao}</b>, em cumprimento ao Processo Administrativo n° ${c.proc_admin} - UFAE/IAPEN - Autorização de saída para o trabalho externo.`,
       `Em anexo segue o Termo de Guarda e Responsabilidade e o expediente acima citado.`,
     ]},
   { id:'vinc-desvincul-dpp', cat:'Vinculação', nome:'Vinculação e Desvinculação — Botão do Pânico (DPP)',
     assunto:'Vinculação no Sistema de Monitoração Eletrônica – DPP Botão do Pânico',
     campos:[{id:'data_vinculacao', label:'Data do recebimento do DPP', tipo:'date'}],
     corpo:c=>[
-      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME, informo que <b>${c.nome_monitorado}</b> recebeu o Dispositivo de Proteção Preventiva - DPP, denominado "Botão do Pânico", desta Central de Monitoramento na data do dia ${c.data_vinculacao}, em cumprimento à Decisão contida nos Autos.`,
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME, informo que <b>${c.nome_monitorado}</b> recebeu o Dispositivo de Proteção Preventiva - DPP, denominado "Botão do Pânico", desta Central de Monitoramento na data do dia <b>${c.data_vinculacao}</b>, em cumprimento à Decisão contida nos Autos.`,
       `Em anexo segue o Termo de Guarda e Responsabilidade e o expediente acima citado.`,
     ]},
   /* ── DESVINCULAÇÃO ────────────────────────────────────────── */
@@ -17610,7 +17620,7 @@ const COM_MODELOS = [
       {id:'data_decisao',   label:'Data da decisão judicial', tipo:'date'},
     ],
     corpo:c=>[
-      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME vem informar que <b>${c.nome_monitorado}</b> foi desvinculado(a) do sistema de Monitoramento Eletrônico na data do dia ${c.data_desvincul}, em cumprimento à Decisão contida nos Autos, datada de ${c.data_decisao}.`,
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME vem informar que <b>${c.nome_monitorado}</b> foi desvinculado (a) do sistema de Monitoramento Eletrônico na data do dia <b>${c.data_desvincul}</b>, em cumprimento à Decisão contida nos Autos, datada de ${c.data_decisao}.`,
       `Em anexo segue o Termo de Desvinculação e o expediente acima citado.`,
     ]},
   { id:'desvincul-entrada-iapen', cat:'Desvinculação', nome:'Desvinculação — Entrada no IAPEN (VEP)',
@@ -17621,7 +17631,7 @@ const COM_MODELOS = [
       {id:'data_mandado',   label:'Data do Mandado de Prisão',    tipo:'date'},
     ],
     corpo:c=>[
-      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME vem informar que <b>${c.nome_monitorado}</b> foi desvinculado(a) do sistema de Monitoramento Eletrônico na data do dia ${c.data_desvincul}, por ter dado entrada no IAPEN, em cumprimento ao Mandado de Prisão n° ${c.num_mandado}, datado de ${c.data_mandado}.`,
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME vem informar que <b>${c.nome_monitorado}</b> foi desvinculado (a) do sistema de Monitoramento Eletrônico na data do dia <b>${c.data_desvincul}</b>, por ter dado entrada no IAPEN, em cumprimento ao Mandado de Prisão n° ${c.num_mandado}, datado de ${c.data_mandado}.`,
       `Em anexo segue o Relatório de Listagem de Eventos de Monitorados e o expediente acima citado.`,
     ]},
   { id:'desvincul-trab-externo', cat:'Desvinculação', nome:'Desvinculação — Revogação de Trabalho Externo (VEP)',
@@ -17631,7 +17641,7 @@ const COM_MODELOS = [
       {id:'data_revogacao', label:'Data da revogação',     tipo:'date'},
     ],
     corpo:c=>[
-      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônico – CME, vem informar que <b>${c.nome_monitorado}</b> foi desvinculado(a) do Sistema de Monitoramento Eletrônico na data do dia ${c.data_desvincul}, devido a Revogação da concessão de trabalho externo, datada de ${c.data_revogacao}.`,
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônico – CME, vem informar que <b>${c.nome_monitorado}</b> foi desvinculado (a) do Sistema de Monitoramento Eletrônico na data do dia <b>${c.data_desvincul}</b>, devido a Revogação da concessão de trabalho externo, datada de ${c.data_revogacao}.`,
       `Em anexo segue o Relatório de Listagem de Eventos de Monitorados e o expediente acima citado.`,
     ]},
   { id:'desvincul-dpp', cat:'Desvinculação', nome:'Desvinculação — Botão do Pânico (DPP)',
@@ -17641,7 +17651,7 @@ const COM_MODELOS = [
       {id:'data_decisao',   label:'Data da decisão judicial',  tipo:'date'},
     ],
     corpo:c=>[
-      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME vem informar que foi desvinculado(a) do Dispositivo de Proteção Preventiva "Botão do Pânico" <b>${c.nome_monitorado}</b>, na data do dia ${c.data_desvincul}, em cumprimento à Decisão contida nos Autos, datada de ${c.data_decisao}.`,
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME vem informar que foi desvinculado (a) do Dispositivo de Proteção Preventiva "Botão do Pânico" <b>${c.nome_monitorado}</b>, na data do dia <b>${c.data_desvincul}</b>, em cumprimento à Decisão contida nos Autos, datada de ${c.data_decisao}.`,
       `Em anexo segue o Relatório de Utilização de Dispositivos, o Relatório de Listagem de Eventos de Monitorados e o expediente acima citado.`,
     ]},
   { id:'desvincul-aus-comun', cat:'Desvinculação', nome:'Desvinculação + Ausência de Comunicação + Ressarcimento',
@@ -17654,7 +17664,7 @@ const COM_MODELOS = [
     ],
     corpo:c=>[
       `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônica – CME, informa que <b>${c.nome_monitorado}</b> instalou dispositivo de monitoramento eletrônico em ${c.data_instalacao}.`,
-      `Após uma análise feita em seu cadastro, foi verificado que seu equipamento se encontrava sem comunicação desde o dia ${c.data_sem_comun} e sem localização desde ${c.data_sem_local}, e considerando que o requerido deu nova entrada neste Instituto, procedemos com a desvinculação no dia ${c.data_desvincul}, pois sua monitoração perdeu eficácia e seu cadastro ativo estava apenas gerando custos para o Estado.`,
+      `Após uma análise feita em seu cadastro, foi verificado que seu equipamento se encontrava sem comunicação desde o dia ${c.data_sem_comun} e sem localização desde ${c.data_sem_local}, e considerando que o requerido deu nova entrada neste Instituto, procedemos com a desvinculação no dia <b>${c.data_desvincul}</b>, pois sua monitoração perdeu eficácia e seu cadastro ativo estava apenas gerando custos para o Estado.`,
       `Desta forma, solicita que o monitorado seja intimado para realizar a devolução do dispositivo ou seu ressarcimento.`,
     ]},
   /* ── AUSÊNCIA DE COMUNICAÇÃO ──────────────────────────────── */
@@ -17802,7 +17812,7 @@ function com_fmtDataLonga(s) {
   const meses = ['janeiro','fevereiro','março','abril','maio','junho',
                   'julho','agosto','setembro','outubro','novembro','dezembro'];
   const [y,m,d] = s.split('-');
-  return `${parseInt(d)} de ${meses[parseInt(m)-1]} de ${y}`;
+  return `${String(parseInt(d)).padStart(2,'0')} de ${meses[parseInt(m)-1]} de ${y}`;
 }
 function com_gerarDestinatario(comarca, vara) {
   if (!comarca || !vara) return '';
@@ -17848,6 +17858,7 @@ function _cmeComboInit(selectId) {
 
   const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
   const origDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+  const allowFree = (selectId === 'com-of-vara'); // a vara aceita valor digitado livremente (além de escolher)
 
   function syncInputFromSelect() {
     const v = origDesc.get.call(sel);
@@ -17904,6 +17915,21 @@ function _cmeComboInit(selectId) {
     sel.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
+  /* Commit de valor livre (só vara): se o texto não bate com nenhuma opção, vira uma opção custom */
+  function commitFree() {
+    if (!allowFree) return;
+    const v = inp.value.trim();
+    if (!v) { origDesc.set.call(sel, ''); return; }
+    const match = Array.from(sel.options).find(o => o.value && norm(o.textContent) === norm(v));
+    if (match) { if (origDesc.get.call(sel) !== match.value) pick(match.value, match.textContent); return; }
+    let custom = Array.from(sel.options).find(o => o.dataset && o.dataset.custom === '1');
+    if (!custom) { custom = document.createElement('option'); custom.dataset.custom = '1'; sel.appendChild(custom); }
+    custom.value = v; custom.textContent = v;
+    origDesc.set.call(sel, v);
+    drop.style.display = 'none';
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
   function openDrop() { renderDrop(inp.value); drop.style.display = 'block'; }
   function closeDrop() { drop.style.display = 'none'; }
 
@@ -17943,9 +17969,13 @@ function _cmeComboInit(selectId) {
       const hi = Array.from(items).find(el => el._hi);
       if (hi) pick(hi.dataset.value, hi.textContent);
       else if (items.length === 1) pick(items[0].dataset.value, items[0].textContent);
+      else if (allowFree && inp.value.trim()) commitFree();
     }
     else if (e.key === 'Escape') { closeDrop(); syncInputFromSelect(); }
   });
+
+  // Valor livre (vara): ao sair do campo, comita o texto digitado se não bater com opção
+  if (allowFree) inp.addEventListener('blur', () => setTimeout(commitFree, 150));
 
   document.addEventListener('click', e => { if (!wrap.contains(e.target)) closeDrop(); }, true);
 }
@@ -18492,7 +18522,7 @@ function com_gerarOficio(ov) {
   <p class="dest-nome">${esc(dest)}.</p>
 
   <p class="ref-assunto"><strong>Assunto:</strong> ${esc(modelo.assunto)}.</p>
-  <p class="ref-processo"><strong>Processo n&#176;.</strong> ${esc(processo)}</p>
+  <p class="ref-processo"><strong>Processo n&#176;. ${esc(processo)}</strong></p>
 
   <p class="saudacao">${esc(saudacao)}</p>
 
@@ -18795,6 +18825,20 @@ async function com_processarArquivos(files) {
     }
     com_renderizarAnexos();
   }
+}
+
+/* Anexa arquivos do computador SEM ler/OCR/IA — só entram como anexo do PDF final */
+function com_anexarSemIA(input) {
+  const files = [...(input.files || [])];
+  input.value = '';
+  if (!files.length) return;
+  for (const file of files) {
+    const id   = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+    const tipo = (file.name.split('.').pop() || '').toLowerCase();
+    _comAnexos.push({ id, file, nome: file.name, tipo, tamanho: file.size, texto: '', status: 'ok', semIA: true });
+  }
+  com_renderizarAnexos();
+  _mostrarToast(`📎 ${files.length} documento(s) anexado(s) (sem IA).`, 'sucesso');
 }
 
 /* Renderiza a lista de arquivos anexados */
