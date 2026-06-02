@@ -20159,12 +20159,12 @@ async function _comGerarPDFExec() {
         campos[c.id] = val;
       });
     }
-    const stripTags = s => String(s).replace(/<\/?(b|i)>/g, '');
-    // Se usuário editou o corpo manualmente, usa o textarea; caso contrário usa o modelo
+    // Se usuário editou o corpo manualmente, usa o textarea (texto plano);
+    // caso contrário usa o modelo MANTENDO as tags <b> (negrito de nome/datas).
     const corpoTaPDF = document.getElementById('com-of-corpo');
     const paragrafosCorpo = (_comCorpoEditado && corpoTaPDF?.value.trim())
       ? corpoTaPDF.value.trim().split('\n').filter(l => l.trim())
-      : (modelo ? modelo.corpo(campos).map(stripTags) : []);
+      : (modelo ? modelo.corpo(campos) : []);
 
     doc.setFont('times', 'normal'); doc.setFontSize(12); doc.setTextColor(0);
     const ABNT_INDENT = 12.5; // 1,25 cm — recuo ABNT na primeira linha de cada parágrafo
@@ -20175,44 +20175,69 @@ async function _comGerarPDFExec() {
     const lineH = 6.35, paraSpacing = 2, emptyLineH = 6.35;
     // ──────────────────────────────────────────────────────────
 
+    // Quebra o parágrafo (com <b>..</b>) em PALAVRAS; cada palavra é uma lista de
+    // trechos {t,b} (pode ter parte negrito e parte normal juntas, sem espaço — ex.: "09/06/2026," ).
+    const _parseWords = (p) => {
+      const words = []; let curWord = []; let curRun = ''; let bold = false;
+      const flushRun  = () => { if (curRun) { curWord.push({ t: curRun, b: bold }); curRun = ''; } };
+      const flushWord = () => { flushRun(); if (curWord.length) { words.push(curWord); curWord = []; } };
+      for (const part of String(p).split(/(<\/?b>)/i)) {
+        if (/^<b>$/i.test(part))  { flushRun(); bold = true;  continue; }
+        if (/^<\/b>$/i.test(part)) { flushRun(); bold = false; continue; }
+        if (!part) continue;
+        let i = 0;
+        while (i < part.length) {
+          const ws = part.slice(i).match(/^\s+/);
+          if (ws) { flushWord(); i += ws[0].length; continue; }
+          const nonws = part.slice(i).match(/^\S+/)[0];
+          curRun += nonws; i += nonws.length;
+        }
+        flushRun(); // fecha o trecho no limite da tag, mas mantém a mesma palavra
+      }
+      flushWord();
+      return words;
+    };
+    const _runW  = (r)  => { doc.setFont('times', r.b ? 'bold' : 'normal'); return doc.getTextWidth(r.t); };
+    const _wordW = (wd) => wd.reduce((a, r) => a + _runW(r), 0);
+    doc.setFont('times', 'normal'); const _spW = doc.getTextWidth(' ');
+
     for (const p of paragrafosCorpo) {
-      if (!p.trim()) { y += emptyLineH; continue; }
+      if (!String(p).replace(/<\/?b>/gi, '').trim()) { y += emptyLineH; continue; }
+      const palavras = _parseWords(p);
+      if (!palavras.length) { y += emptyLineH; continue; }
 
-      // Primeira linha com recuo; demais com largura total (ABNT)
-      const firstSplit = doc.splitTextToSize(p.trim(), tw - ABNT_INDENT);
-      const firstLine  = firstSplit[0];
-      const restText   = p.trim().substring(firstLine.trimEnd().length).trim();
-      const restLines  = restText ? doc.splitTextToSize(restText, tw) : [];
+      // Quebra de linha bold-aware: 1ª linha com recuo ABNT, demais com largura total
+      const lines = []; let cur = []; let curW = 0;
+      let avail = tw - ABNT_INDENT;
+      for (const wd of palavras) {
+        const w = _wordW(wd);
+        const add = (cur.length ? _spW : 0) + w;
+        if (cur.length && curW + add > avail) {
+          lines.push({ words: cur, indent: lines.length === 0 });
+          cur = [wd]; curW = w; avail = tw;
+        } else { cur.push(wd); curW += add; }
+      }
+      if (cur.length) lines.push({ words: cur, indent: lines.length === 0 });
 
-      // Estrutura unificada: { text, x, avW, last }
-      const allLines = [
-        { text: firstLine, x: mL + ABNT_INDENT, avW: tw - ABNT_INDENT, last: !restText },
-        ...restLines.map((l, i) => ({ text: l, x: mL, avW: tw, last: i === restLines.length - 1 }))
-      ];
-
-      for (const line of allLines) {
+      for (let li = 0; li < lines.length; li++) {
+        const line = lines[li];
         if (y > pageH - mB - lineH) { doc.addPage(); y = mT; }
-        if (line.last) {
-          doc.text(line.text, line.x, y); // última linha: alinhada à esquerda
-        } else {
-          // Justificação manual: distribui espaço extra entre as palavras
-          const words = line.text.trim().split(/\s+/).filter(w => w.length > 0);
-          if (words.length <= 1) {
-            doc.text(line.text, line.x, y);
-          } else {
-            const totalWordW = words.reduce((acc, w) => acc + doc.getTextWidth(w), 0);
-            const spaceW = (line.avW - totalWordW) / (words.length - 1);
-            let xPos = line.x;
-            for (const word of words) {
-              doc.text(word, xPos, y);
-              xPos += doc.getTextWidth(word) + spaceW;
-            }
-          }
+        const x0        = mL + (line.indent ? ABNT_INDENT : 0);
+        const lineAvail = tw - (line.indent ? ABNT_INDENT : 0);
+        const isLast    = (li === lines.length - 1);
+        const gaps      = line.words.length - 1;
+        const wordsW    = line.words.reduce((a, wd) => a + _wordW(wd), 0);
+        const spaceW    = (!isLast && gaps > 0) ? (lineAvail - wordsW) / gaps : _spW; // justifica (menos a última linha)
+        let xx = x0;
+        for (const wd of line.words) {
+          for (const r of wd) { doc.setFont('times', r.b ? 'bold' : 'normal'); doc.text(r.t, xx, y); xx += doc.getTextWidth(r.t); }
+          xx += spaceW;
         }
         y += lineH;
       }
       y += paraSpacing; // espaço entre parágrafos (ABNT)
     }
+    doc.setFont('times', 'normal');
 
     // ── Encerramento ─────────────────────────────────────────────
     y += 0; // "Sem mais" bem próximo do "Em anexo..." (corpo)
