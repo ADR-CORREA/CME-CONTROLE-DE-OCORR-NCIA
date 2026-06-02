@@ -13805,7 +13805,7 @@ function baixarModeloPDF() {
 
   const meses = ['janeiro','fevereiro','mar\u00e7o','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   const agora = new Date();
-  const dataExtenso = `Macap\u00e1 \u2013 AP, ${agora.getDate()} de ${meses[agora.getMonth()]} de ${agora.getFullYear()}`;
+  const dataExtenso = `Macap\u00e1 \u2013 AP, ${String(agora.getDate()).padStart(2,'0')} de ${meses[agora.getMonth()]} de ${agora.getFullYear()}`;
   const dataHoraLog = agora.toLocaleString('pt-BR');
 
   const docHtml = `<!DOCTYPE html>
@@ -14078,7 +14078,7 @@ function _mFmtData(val) {
   if (!val) return '____';
   const [y,m,d] = val.split('-');
   const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-  return `${parseInt(d)} de ${meses[parseInt(m)-1]} de ${y}`;
+  return `${String(parseInt(d)).padStart(2,'0')} de ${meses[parseInt(m)-1]} de ${y}`;
 }
 function salvarPerfilMultiTecnico() {
   const perfil = {
@@ -19245,7 +19245,7 @@ function jur_gerarTexto() {
     if (!v) return '____ de __________ de ______';
     const [y,m,d] = v.split('-');
     const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-    return `${parseInt(d)} de ${meses[parseInt(m)-1]} de ${y}`;
+    return `${String(parseInt(d)).padStart(2,'0')} de ${meses[parseInt(m)-1]} de ${y}`;
   };
 
   const modelos = {
@@ -19330,7 +19330,7 @@ function jur_gerarDoc() {
   let dataLonga = '';
   if (dataVal) {
     const [y,m,d] = dataVal.split('-');
-    dataLonga = `${parseInt(d)} de ${meses[parseInt(m)-1]} de ${y}`;
+    dataLonga = `${String(parseInt(d)).padStart(2,'0')} de ${meses[parseInt(m)-1]} de ${y}`;
   }
   const ano    = dataVal ? dataVal.split('-')[0] : String(new Date().getFullYear());
   const numFmt = numero ? `${numero}/${ano} - CME/IAPEN` : '';
@@ -19392,7 +19392,7 @@ ${dest ? `<p style="font-size:12pt;margin:0 0 2pt 0">A Sua Excel&#234;ncia o (a)
 <p style="font-size:12pt;font-weight:bold;margin:0 0 14pt 0">${esc(dest)}.</p>` : ''}
 
 <!-- ══ REFERÊNCIA ════════════════════════════════════════════════ -->
-${processo ? `<p style="font-size:12pt;margin:0 0 18pt 0"><b>Processo n&#176;:</b> ${esc(processo)}.</p>` : ''}
+${processo ? `<p style="font-size:12pt;margin:0 0 18pt 0"><b>Processo n&#176;: ${esc(processo)}.</b></p>` : ''}
 
 <!-- ══ CORPO ═════════════════════════════════════════════════════ -->
 ${paragsHtml}
