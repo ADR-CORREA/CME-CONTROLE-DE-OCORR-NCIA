@@ -1309,6 +1309,11 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         <span id="dash-plantao-chip" style="font-size:.8rem;font-weight:800;color:#fff;background:#1d4ed8;border-radius:20px;padding:5px 14px;white-space:nowrap">—</span>
       </div>
 
+      <!-- Painel PESSOAL (servidores) — preenchido por _dashRenderPessoal() -->
+      <div id="dash-pessoal" style="display:none"></div>
+
+      <!-- Painel OPERACIONAL (gerência/admin) -->
+      <div id="dash-operacional">
       <div class="dash-alertas" id="dash-alertas" style="display:none"></div>
 
       <div class="section-title">Status de Prazo — Ocorrências Ativas</div>
@@ -1350,6 +1355,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
       <div class="section-title" style="margin-top:24px">Visão dos Setores</div>
       <div class="dash-sectors" id="dash-sectors"></div>
+      </div><!-- /dash-operacional -->
     </div>
 
     <!-- ─── CRÍTICOS ─── -->
@@ -7087,12 +7093,12 @@ function fazerLogout() {
 // ── Mapa de abas permitidas por nível ─────────────────────
 const TABS_POR_NIVEL = {
   plantao:    ['dashboard', 'criticos', 'ocorrencias', 'links', 'modelos', 'arquivos'],
-  comunicacao: ['comunicacao', 'links', 'modelos', 'arquivos'],
-  relatorio:  ['relatorio', 'links', 'modelos', 'arquivos'],
-  juridico:   ['criticos', 'ocorrencias', 'juridico', 'links', 'modelos', 'arquivos'],
-  estoque:    ['estoque', 'links', 'arquivos'],
-  triagem:       ['triagem', 'links', 'arquivos'],
-  psicossocial:  ['psicossocial', 'links', 'modelos', 'arquivos'],
+  comunicacao: ['dashboard', 'comunicacao', 'links', 'modelos', 'arquivos'],
+  relatorio:  ['dashboard', 'relatorio', 'links', 'modelos', 'arquivos'],
+  juridico:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'links', 'modelos', 'arquivos'],
+  estoque:    ['dashboard', 'estoque', 'links', 'arquivos'],
+  triagem:       ['dashboard', 'triagem', 'links', 'arquivos'],
+  psicossocial:  ['dashboard', 'psicossocial', 'links', 'modelos', 'arquivos'],
   gerencia:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
                'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'gerencia', 'arquivos', 'estatisticas'],
   admin:      ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
@@ -7196,6 +7202,7 @@ function atualizarTudo() {
 /* ─── DASHBOARD ──────────────────────────────────────── */
 function atualizarDashboard() {
   try { _dashRenderPlantaoHoje(); } catch(e) { console.warn('plantão hoje', e); }
+  try { _dashAplicarModoPessoal(); } catch(e) { console.warn('dash modo pessoal', e); }
   const ocs = getOcorrencias();
   let ok=0, at=0, ve=0, vd=0, com=0, prot=0;
   let protSemProd=0, cautSemProd=0, protVenc=0;
@@ -8935,6 +8942,115 @@ function _dashRenderPlantaoHoje() {
   if (dataEl) dataEl.textContent = hoje.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
   if (chipEl) { chipEl.textContent = p; chipEl.style.background = cor; }
   if (boxEl)  boxEl.style.borderLeftColor = cor;
+}
+
+/* ═══════ DASHBOARD PESSOAL (por servidor) — gerência/admin veem o operacional ═══════ */
+const _DASH_NIVEL_LABEL = { plantao:'Operador / Plantão', comunicacao:'Comunicação', relatorio:'Relatório', juridico:'Jurídico', estoque:'Estoque', triagem:'Triagem', psicossocial:'Psicossocial', gerencia:'Gerência', admin:'Administrador' };
+const _DASH_ATALHOS = {
+  plantao:      [['🚨 Casos Críticos','criticos'],['📋 Ocorrências','ocorrencias'],['📝 Modelos','modelos'],['📁 Arquivos','arquivos']],
+  comunicacao:  [['📡 Comunicação','comunicacao'],['📝 Modelos','modelos'],['📁 Arquivos','arquivos']],
+  relatorio:    [['📋 Relatório','relatorio'],['📝 Modelos','modelos'],['📁 Arquivos','arquivos']],
+  juridico:     [['⚖️ Jurídico','juridico'],['🚨 Críticos','criticos'],['📋 Ocorrências','ocorrencias'],['📝 Modelos','modelos']],
+  triagem:      [['⚡ Triagem','triagem'],['📁 Arquivos','arquivos']],
+  psicossocial: [['💜 Psicossocial','psicossocial'],['📝 Modelos','modelos'],['📁 Arquivos','arquivos']],
+  estoque:      [['📦 Estoque','estoque'],['📁 Arquivos','arquivos']],
+};
+
+function _dashMinhaProdutividade(u) {
+  const anoAtual = String(new Date().getFullYear());
+  const mesAtual = new Date().toISOString().slice(0,7);
+  return PROD_METRICS.map(m => {
+    const store = carregarStore(m.store, null);
+    const arr = (store && Array.isArray(store[m.arr])) ? store[m.arr] : [];
+    let ano = 0, mes = 0;
+    arr.forEach(rec => {
+      if (!_prodMatch(rec, m, u)) return;
+      if (_prodAno(rec, m) === anoAtual) ano++;
+      const d = String(rec[m.dataF] || rec.criadoEm || rec.geradoEm || rec.data || '');
+      if (d.slice(0,7) === mesAtual) mes++;
+    });
+    return { label:m.label, setor:m.setor, cor:m.cor, ano, mes };
+  });
+}
+
+function _dashPendenciasPessoal(nivel) {
+  const out = [];
+  try {
+    const ocs = getOcorrencias();
+    if (nivel === 'comunicacao') {
+      out.push({ label:'Aguardando PRODOC', valor: ocs.filter(o=>o.prodoc!=='SIM' && _etapaOc(o)==='comunicacao').length, aba:'comunicacao' });
+    } else if (nivel === 'relatorio') {
+      out.push({ label:'Casos a confeccionar', valor: ocs.filter(o=>_etapaOc(o)==='relatorio').length, aba:'relatorio' });
+    } else if (nivel === 'juridico') {
+      out.push({ label:'Em acompanhamento', valor: ocs.filter(o=>o.prodoc==='SIM' && calcStatusCaso(o)==='EM ACOMPANHAMENTO').length, aba:'juridico' });
+    } else if (nivel === 'plantao') {
+      let crit = 0;
+      ocs.forEach(o => { const s = calcStatus(o.dataAlerta,o.tipo,o.medida,o.prodoc); if (['🔴 VENCIDO','🟠 VENCENDO','🟡 ATENÇÃO'].includes(s)) crit++; });
+      out.push({ label:'Casos críticos agora', valor: crit, alerta: crit>0, aba:'criticos' });
+    }
+  } catch(e) { console.warn('pendências pessoal', e); }
+  return out;
+}
+
+function _dashRenderPessoal() {
+  const el = document.getElementById('dash-pessoal');
+  if (!el || !usuarioAtual) return;
+  const nivel = usuarioAtual.nivel;
+  const primeiro = (usuarioAtual.nome || '').split(' ')[0] || usuarioAtual.usuario;
+  const setorLabel = _DASH_NIVEL_LABEL[nivel] || nivel;
+
+  const prod = _dashMinhaProdutividade(usuarioAtual);
+  const totalAno = prod.reduce((s,p)=>s+p.ano,0);
+  const totalMes = prod.reduce((s,p)=>s+p.mes,0);
+  const prodAtivo = prod.filter(p=>p.ano>0);
+  const pend = _dashPendenciasPessoal(nivel);
+  const atalhos = _DASH_ATALHOS[nivel] || [];
+
+  const card = (cor,num,titulo,sub,onclick) =>
+    `<div ${onclick?`onclick="${onclick}" style="cursor:pointer;`:'style="'}background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e2e8f0;border-top:3px solid ${cor}">
+       <div style="font-size:1.7rem;font-weight:800;color:${cor}">${num}</div>
+       <div style="font-size:.74rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-top:2px">${titulo}</div>
+       ${sub?`<div style="font-size:.72rem;color:#94a3b8">${sub}</div>`:''}
+     </div>`;
+
+  let html = `
+    <div style="background:linear-gradient(90deg,#1e3a5f,#1F4E78);color:#fff;border-radius:12px;padding:16px 20px;margin-bottom:18px">
+      <div style="font-size:1.25rem;font-weight:800">Olá, ${esc(primeiro)} 👋</div>
+      <div style="font-size:.82rem;opacity:.85;margin-top:2px">Seu painel — Setor: <strong>${esc(setorLabel)}</strong></div>
+    </div>`;
+
+  if (pend.length) {
+    html += `<div class="section-title">Pendências do meu setor</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:6px">
+        ${pend.map(p=>card(p.alerta?'#dc2626':'#1d4ed8', p.valor, p.label, 'clique para abrir', `mudarAba('${p.aba}')`)).join('')}
+      </div>`;
+  }
+
+  html += `<div class="section-title" style="margin-top:18px">Minha produtividade</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px">
+      ${card('#0B6E4F', totalMes, 'Este mês', 'registros meus')}
+      ${card('#1F4E78', totalAno, 'No ano', 'registros meus')}
+      ${prodAtivo.map(p=>card(p.cor, p.ano, p.label, p.setor+' · ano')).join('')}
+    </div>
+    ${(!totalAno)?`<div style="color:#94a3b8;font-size:.84rem;margin-top:8px">Nenhum registro atribuído a você ainda neste ano.</div>`:''}`;
+
+  if (atalhos.length) {
+    html += `<div class="section-title" style="margin-top:18px">Atalhos</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        ${atalhos.map(([txt,aba])=>`<button class="btn-secondary" onclick="mudarAba('${aba}')">${txt}</button>`).join('')}
+      </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function _dashAplicarModoPessoal() {
+  const oper = document.getElementById('dash-operacional');
+  const pess = document.getElementById('dash-pessoal');
+  const ehGestor = ['gerencia','admin'].includes(usuarioAtual?.nivel);
+  if (oper) oper.style.display = ehGestor ? '' : 'none';
+  if (pess) pess.style.display = ehGestor ? 'none' : 'block';
+  if (!ehGestor) { try { _dashRenderPessoal(); } catch(e){ console.warn('dash pessoal', e); } }
 }
 
 function atualizarPlantaoOcorrencia() {
