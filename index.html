@@ -305,6 +305,8 @@ input:focus, select:focus, textarea:focus {
 }
 .admin-only { display: none; }
 .gerencia-only { display: none; }
+/* Botões da barra de Arquivos visíveis só para admin (os demais veem só + Monitorado e Importar pasta) */
+body:not(.is-admin) .arq-admin-only { display: none !important; }
 
 /* ═══════════════════════════════════════════════════════
    REDESIGN — Tema escuro (topo + nav horizontal no topo)
@@ -3859,15 +3861,15 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <div class="dash-update">Documentos por monitorado — armazenamento em nuvem (Cloudflare R2)</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn-secondary" onclick="r2_abrirAuditoria()" title="Log de acessos">📋 Auditoria</button>
-          <button class="btn-secondary" onclick="r2_abrirPainelRisco()" title="Painel de risco geral">📊 Painel</button>
-          <button class="btn-secondary" onclick="r2_verificarNomesParecidos()" title="Monitorados com sobrenome em comum (risco de mistura)">🔎 Nomes parecidos</button>
-          <button class="btn-secondary" onclick="r2_abrirConfig()" title="Configurar conexão">⚙️ Configurar</button>
+          <button class="btn-secondary arq-admin-only" onclick="r2_abrirAuditoria()" title="Log de acessos">📋 Auditoria</button>
+          <button class="btn-secondary arq-admin-only" onclick="r2_abrirPainelRisco()" title="Painel de risco geral">📊 Painel</button>
+          <button class="btn-secondary arq-admin-only" onclick="r2_verificarNomesParecidos()" title="Monitorados com sobrenome em comum (risco de mistura)">🔎 Nomes parecidos</button>
+          <button class="btn-secondary arq-admin-only" onclick="r2_abrirConfig()" title="Configurar conexão">⚙️ Configurar</button>
           <label class="btn-secondary" style="cursor:pointer;display:flex;align-items:center;gap:6px" title="Importar pasta ZIP do Google Drive">
-            📦 Importar Drive
+            📦 Importar pasta
             <input type="file" id="r2-zip-input" accept=".zip" style="display:none" onchange="r2_importarZip(this)">
           </label>
-          <label class="btn-secondary" style="cursor:pointer;display:flex;align-items:center;gap:6px" title="Conferir o ZIP do Drive (gabarito) contra o R2 e corrigir divergências">
+          <label class="btn-secondary arq-admin-only" style="cursor:pointer;display:flex;align-items:center;gap:6px" title="Conferir o ZIP do Drive (gabarito) contra o R2 e corrigir divergências">
             🔄 Reconciliar Drive
             <input type="file" id="r2-recon-input" accept=".zip" multiple style="display:none" onchange="r2_reconciliarDrive(this)">
           </label>
@@ -7077,6 +7079,8 @@ function iniciarApp() {
   document.getElementById("app").style.display = "block";
 
   const nivel = usuarioAtual.nivel;
+  // Marca o body p/ revelar os botões .arq-admin-only só ao admin (os demais veem só + Monitorado e Importar pasta)
+  document.body.classList.toggle('is-admin', nivel === 'admin');
   document.getElementById("user-display").textContent = usuarioAtual.nome;
   document.getElementById("user-avatar").textContent = usuarioAtual.nome.charAt(0).toUpperCase();
 
