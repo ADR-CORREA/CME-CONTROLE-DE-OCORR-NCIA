@@ -4760,7 +4760,6 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
               <option value="Descarregamento de bateria">Descarregamento de bateria</option>
               <option value="Zona de Exclusão (permanência)">Zona de Exclusão (permanência)</option>
               <option value="Zona de Exclusão (passagem rápida)">Zona de Exclusão (passagem rápida)</option>
-              <option value="Zona de Inclusão (saída)">Zona de Inclusão (saída)</option>
               <option value="DPP Acionado">DPP Acionado</option>
               <option value="Aproximação DPP">Aproximação DPP</option>
             </select>
@@ -7170,14 +7169,19 @@ function atualizarDashboard() {
   });
   // Jurídico
   const jurOcs = ocs.filter(o => o.prodoc === "SIM");
-  let jurAcomp=0, jurProx=0, jurAut=0, jurDesv=0;
+  let jurAcomp=0, jurProx=0, jurAut=0, jurDesv=0, jur60=0, jur180=0;
   jurOcs.forEach(oc => {
     const sc = calcStatusCaso(oc);
     if (sc === "EM ACOMPANHAMENTO") jurAcomp++;
     if (sc === "AUTORIZADO") jurAut++;
     if (sc === "DESVINCULADO") jurDesv++;
+    const jur = oc.juridico || {};
+    const ativo = jur.desvinculado !== "SIM" && jur.interrompido !== "SIM";
     const dp = oc.prodocData ? Math.floor((new Date()-new Date(oc.prodocData))/86400000) : 0;
+    const dv = oc.dataAlerta ? Math.floor((new Date()-new Date(oc.dataAlerta))/86400000) : 0;
     if (dp >= 30 && dp < 60) jurProx++;
+    if (ativo && dp >= 60)  jur60++;   // 60 dias após a comunicação (via 60)
+    if (ativo && dv >= 180) jur180++;  // 180 dias desde a violação/export Akiles (via 180)
   });
   // Atualizar KPIs
   const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
@@ -7190,7 +7194,7 @@ function atualizarDashboard() {
 
   // ── Gráficos SVG, cards de setores e centro de alertas ──
   try { _dashGraficos(ocs, {ok:ok,at:at,ve:ve,vd:vd,com:com}); } catch(e){ console.warn('dash graficos', e); }
-  try { _dashSetores(ocs, {jurAcomp:jurAcomp,jurProx:jurProx,jurAut:jurAut,jurDesv:jurDesv}); } catch(e){ console.warn('dash setores', e); }
+  try { _dashSetores(ocs, {jurAcomp:jurAcomp,jurProx:jurProx,jurAut:jurAut,jurDesv:jurDesv,jur60:jur60,jur180:jur180}); } catch(e){ console.warn('dash setores', e); }
   try { _dashAlertas(ocs, vd); } catch(e){ console.warn('dash alertas', e); }
 }
 
@@ -7318,7 +7322,7 @@ function _dashSetores(ocs, jm){
   const gerVenc=ger.filter(g=>g.status!=='concluida' && g.prazo && String(g.prazo).slice(0,10)<todayK).length;
 
   box.innerHTML=[
-    _dSecCard('⚖️','Jurídico','#4338CA',[['Em acompanhamento',jm.jurAcomp,false],['Próx. prazo (30–60d)',jm.jurProx,false],['OFC vencidos',ofcVenc,ofcVenc>0],['Sem comunicação (7d+)',semComCrit,semComCrit>0]]),
+    _dSecCard('⚖️','Jurídico','#4338CA',[['Em acompanhamento',jm.jurAcomp,false],['Próx. prazo (30–60d)',jm.jurProx,false],['60 dias (pós-comunicação)',jm.jur60,false],['180 dias (Akiles)',jm.jur180,false],['OFC vencidos',ofcVenc,ofcVenc>0],['Sem comunicação (7d+)',semComCrit,semComCrit>0]]),
     _dSecCard('📡','Comunicação','#0891B2',[['Aguardando PRODOC',aguard,false],['Já comunicados',comunicados,false]]),
     _dSecCard('📋','Relatório','#1D4ED8',[['No mês',relMes,false],['Em confecção',relConf,false]]),
     _dSecCard('📦','Estoque','#B45309',[['Itens zerados',zer,zer>0],['Abaixo do mínimo',baixo,baixo>0],['Equipamentos (un.)',totEq,false]]),
@@ -12102,8 +12106,11 @@ function filtrarComunicacao(val) {
 }
 
 function renderizarComunicacao() {
-  // Sub-aba Ocorrências: não mostra as já arquivadas (PRODOC enviado)
-  const ocs = getOcorrencias().filter(o => !o.arquivadaPorComunicacao);
+  // Sub-aba Ocorrências: SÓ mostra casos que o setor de Relatório já enviou para a Comunicação
+  // (etapa 'comunicacao'). Ocorrências novas/no Plantão (etapa null) e as que estão no Relatório
+  // (etapa 'relatorio') NÃO aparecem aqui. As arquivadas (PRODOC enviado) viram etapa 'arquivado'
+  // e também ficam de fora. Mesma regra do contador atualizarBadgeCom().
+  const ocs = getOcorrencias().filter(o => _etapaOc(o) === 'comunicacao');
   let filtrados = ocs;
   if (_comFiltro) {
     filtrados = ocs.filter(o =>
