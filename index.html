@@ -1223,7 +1223,13 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
     </div>
     <div class="form-group">
       <label>Senha</label>
-      <input type="password" id="input-pass" placeholder="Digite sua senha" autocomplete="current-password">
+      <div style="position:relative">
+        <input type="password" id="input-pass" placeholder="Digite sua senha" autocomplete="current-password" style="padding-right:42px">
+        <button type="button" id="toggle-pass" onclick="alternarVerSenha()" aria-label="Mostrar senha" title="Mostrar senha" tabindex="-1"
+          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;color:#64748b">
+          <svg id="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
     </div>
     <button class="btn-login" onclick="fazerLogin()">Entrar no Sistema</button>
     <div class="login-error" id="login-error">Usuário ou senha incorretos. Tente novamente.</div>
@@ -6883,6 +6889,19 @@ function _salvarSessao(usuario) {
   } catch (e) { console.warn('[CME] não foi possível salvar a sessão:', e.message); }
 }
 
+function alternarVerSenha() {
+  const inp  = document.getElementById('input-pass');
+  const icon = document.getElementById('icon-eye');
+  const btn  = document.getElementById('toggle-pass');
+  if (!inp) return;
+  const mostrar = inp.type === 'password';
+  inp.type = mostrar ? 'text' : 'password';
+  if (btn) { const t = mostrar ? 'Ocultar senha' : 'Mostrar senha'; btn.title = t; btn.setAttribute('aria-label', t); }
+  if (icon) icon.innerHTML = mostrar
+    ? '<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/>'
+    : '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>';
+}
+
 async function fazerLogin() {
   const u = document.getElementById("input-user").value.trim().toLowerCase();
   const p = document.getElementById("input-pass").value;
@@ -7173,7 +7192,7 @@ function atualizarDashboard() {
   });
   // Jurídico
   const jurOcs = ocs.filter(o => o.prodoc === "SIM");
-  let jurAcomp=0, jurProx=0, jurAut=0, jurDesv=0, jur60=0, jur180=0;
+  let jurAcomp=0, jurProx=0, jurAut=0, jurDesv=0, jur60=0;
   jurOcs.forEach(oc => {
     const sc = calcStatusCaso(oc);
     if (sc === "EM ACOMPANHAMENTO") jurAcomp++;
@@ -7182,10 +7201,8 @@ function atualizarDashboard() {
     const jur = oc.juridico || {};
     const ativo = jur.desvinculado !== "SIM" && jur.interrompido !== "SIM";
     const dp = oc.prodocData ? Math.floor((new Date()-new Date(oc.prodocData))/86400000) : 0;
-    const dv = oc.dataAlerta ? Math.floor((new Date()-new Date(oc.dataAlerta))/86400000) : 0;
     if (dp >= 30 && dp < 60) jurProx++;
-    if (ativo && dp >= 60)  jur60++;   // 60 dias após a comunicação (via 60)
-    if (ativo && dv >= 180) jur180++;  // 180 dias desde a violação/export Akiles (via 180)
+    if (ativo && dp >= 60)  jur60++;   // 60 dias após a comunicação (via 60 - PRODOC enviado)
   });
   // Atualizar KPIs
   const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
@@ -7198,7 +7215,7 @@ function atualizarDashboard() {
 
   // ── Gráficos SVG, cards de setores e centro de alertas ──
   try { _dashGraficos(ocs, {ok:ok,at:at,ve:ve,vd:vd,com:com}); } catch(e){ console.warn('dash graficos', e); }
-  try { _dashSetores(ocs, {jurAcomp:jurAcomp,jurProx:jurProx,jurAut:jurAut,jurDesv:jurDesv,jur60:jur60,jur180:jur180}); } catch(e){ console.warn('dash setores', e); }
+  try { _dashSetores(ocs, {jurAcomp:jurAcomp,jurProx:jurProx,jurAut:jurAut,jurDesv:jurDesv,jur60:jur60}); } catch(e){ console.warn('dash setores', e); }
   try { _dashAlertas(ocs, vd); } catch(e){ console.warn('dash alertas', e); }
 }
 
@@ -7304,6 +7321,7 @@ function _dashSetores(ocs, jm){
   const todayK=new Date().toISOString().slice(0,10), monthK=todayK.slice(0,7);
   const sc=(getSemCom().monitorados)||[];
   const semComCrit=sc.filter(m=>m.situacao!=='desvinculado' && (Number(m.diasSemCom)||0)>=7).length;
+  const jur180=sc.filter(m=>m.situacao!=='desvinculado' && _diasSemComAtual(m)>=180).length; // ≥180 dias sem comunicação (Akiles) — mesma base do KPI sc-kpi-180d
   const ofc=(getOFC().registros)||[];
   const ofcVenc=ofc.filter(r=>(r.status||'')!=='Concluído' && r.prazoFinal && String(r.prazoFinal).slice(0,10)<todayK).length;
   const aguard=ocs.filter(o=>o.prodoc!=='SIM' && _etapaOc(o)==='comunicacao').length;
@@ -7326,7 +7344,7 @@ function _dashSetores(ocs, jm){
   const gerVenc=ger.filter(g=>g.status!=='concluida' && g.prazo && String(g.prazo).slice(0,10)<todayK).length;
 
   box.innerHTML=[
-    _dSecCard('⚖️','Jurídico','#4338CA',[['Em acompanhamento',jm.jurAcomp,false],['Próx. prazo (30–60d)',jm.jurProx,false],['60 dias (pós-comunicação)',jm.jur60,false],['180 dias (Akiles)',jm.jur180,false],['OFC vencidos',ofcVenc,ofcVenc>0],['Sem comunicação (7d+)',semComCrit,semComCrit>0]]),
+    _dSecCard('⚖️','Jurídico','#4338CA',[['Em acompanhamento',jm.jurAcomp,false],['Próx. prazo (30–60d)',jm.jurProx,false],['60 dias (pós-comunicação)',jm.jur60,false],['180 dias (Akiles)',jur180,jur180>0],['OFC vencidos',ofcVenc,ofcVenc>0],['Sem comunicação (7d+)',semComCrit,semComCrit>0]]),
     _dSecCard('📡','Comunicação','#0891B2',[['Aguardando PRODOC',aguard,false],['Já comunicados',comunicados,false]]),
     _dSecCard('📋','Relatório','#1D4ED8',[['No mês',relMes,false],['Em confecção',relConf,false]]),
     _dSecCard('📦','Estoque','#B45309',[['Itens zerados',zer,zer>0],['Abaixo do mínimo',baixo,baixo>0],['Equipamentos (un.)',totEq,false]]),
@@ -18740,7 +18758,7 @@ async function com_processarArquivos(files) {
             for (let p = 1; p <= maxPag; p++) {
               try {
                 const page     = await pdfDoc.getPage(p);
-                const viewport = page.getViewport({ scale: 1.5 });
+                const viewport = page.getViewport({ scale: 2.2 });
                 const canvas   = document.createElement('canvas');
                 canvas.width   = viewport.width;
                 canvas.height  = viewport.height;
@@ -19874,13 +19892,14 @@ async function com_extrairComIA() {
     // Garante que URL e token estão carregados mesmo sem visitar a aba Arquivos
     if (!r2_state.url || !r2_state.token) r2_carregarConfig();
 
-    // Envia lista de comarcas para a IA retornar nome exato
+    // Envia lista de comarcas E de varas para a IA escolher o nome EXATO da lista
     const comarcasList = COM_COMARCAS.map(c => c.nome);
+    const varasList = [...new Set(COM_COMARCAS.flatMap(c => c.varas))];
 
     const resp = await fetch(`${r2_state.url}/extrair-campos`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${_workerToken()}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texto: textoGeral, comarcas: comarcasList }),
+      body: JSON.stringify({ texto: textoGeral, comarcas: comarcasList, varas: varasList }),
     });
     if (!resp.ok) throw new Error(`Erro HTTP ${resp.status}`);
 
