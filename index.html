@@ -356,12 +356,18 @@ body:not(.is-admin) .arq-admin-only { display: none !important; }
 .r2-pasta-card {
   background: #fff;
   border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  padding: 28px 20px;
+  border-radius: 14px;
+  padding: 48px 28px;
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   cursor: pointer;
   transition: border-color .2s, box-shadow .2s;
 }
+.r2-pasta-card > div:first-child { font-size: 2.6rem !important; }
 .r2-pasta-card:hover {
   border-color: #1F4E78;
   box-shadow: 0 4px 14px rgba(31,78,120,.12);
@@ -4008,7 +4014,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
           <!-- Pastas do monitorado -->
           <div id="r2-pastas-view" style="display:none">
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:760px">
               <div class="r2-pasta-card" onclick="r2_abrirPasta('Processo')">
                 <div style="font-size:2rem;margin-bottom:8px">🗂️</div>
                 <div style="font-weight:600;font-size:1rem">Processo</div>
