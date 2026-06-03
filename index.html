@@ -17975,6 +17975,19 @@ function com_fmtDataLonga(s) {
   const [y,m,d] = s.split('-');
   return `${String(parseInt(d)).padStart(2,'0')} de ${meses[parseInt(m)-1]} de ${y}`;
 }
+
+/* Padroniza o NEGRITO do corpo de QUALQUER modelo de ofício: remove negrito manual e
+   re-aplica em (1) nome do monitorado e (2) datas dd/mm/aaaa. Vale p/ todos os modelos. */
+function _comNegritoCorpo(p, nome) {
+  let s = String(p).replace(/<\/?b>/gi, '');            // zera negrito manual p/ padronizar
+  s = s.replace(/(\d{2}\/\d{2}\/\d{4})/g, '<b>$1</b>'); // datas em negrito
+  const nm = String(nome || '').trim();
+  if (nm.length >= 3) {
+    const escRe = nm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    s = s.replace(new RegExp(escRe, 'g'), '<b>' + nm + '</b>'); // nome do monitorado em negrito
+  }
+  return s;
+}
 function com_gerarDestinatario(comarca, vara) {
   if (!comarca || !vara) return '';
   let prep = 'da';
@@ -18533,7 +18546,7 @@ function com_gerarOficio(ov) {
     });
   }
 
-  const paragrafos = modelo.corpo(campos);
+  const paragrafos = modelo.corpo(campos).map(p => _comNegritoCorpo(p, nomeMon));
 
   // Número e data formatados
   const ano       = dataOficio ? dataOficio.split('-')[0] : String(new Date().getFullYear());
@@ -20323,9 +20336,10 @@ async function _comGerarPDFExec() {
     // Se usuário editou o corpo manualmente, usa o textarea (texto plano);
     // caso contrário usa o modelo MANTENDO as tags <b> (negrito de nome/datas).
     const corpoTaPDF = document.getElementById('com-of-corpo');
-    const paragrafosCorpo = (_comCorpoEditado && corpoTaPDF?.value.trim())
+    const _corpoRaw = (_comCorpoEditado && corpoTaPDF?.value.trim())
       ? corpoTaPDF.value.trim().split('\n').filter(l => l.trim())
       : (modelo ? modelo.corpo(campos) : []);
+    const paragrafosCorpo = _corpoRaw.map(p => _comNegritoCorpo(p, nomeMon));
 
     doc.setFont('times', 'normal'); doc.setFontSize(12); doc.setTextColor(0);
     const ABNT_INDENT = 12.5; // 1,25 cm — recuo ABNT na primeira linha de cada parágrafo
