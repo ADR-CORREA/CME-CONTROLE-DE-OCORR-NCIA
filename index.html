@@ -307,6 +307,8 @@ input:focus, select:focus, textarea:focus {
 .gerencia-only { display: none; }
 /* Botões da barra de Arquivos visíveis só para admin (os demais veem só + Monitorado e Importar pasta) */
 body:not(.is-admin) .arq-admin-only { display: none !important; }
+/* Produtividade de IA (ler doc + preencher modelo): só admin / gerência / subgerência */
+body:not(.is-ia) .ia-only { display: none !important; }
 
 /* ═══════════════════════════════════════════════════════
    REDESIGN — Tema escuro (topo + nav horizontal no topo)
@@ -2213,7 +2215,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
       <!-- Sub-panel Plantão -->
       <div id="mod-panel-plantao" style="display:block">
         <!-- ═══ BUSCA DE DOCS COM IA — PLANTÃO ══════════════════ -->
-        <div style="background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin:14px 0 10px">
+        <div class="ia-only" style="background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin:14px 0 10px">
           <div style="font-weight:700;color:#1e40af;font-size:.93rem;margin-bottom:12px">
             🔍 Buscar Documentos do Monitorado
             <span style="font-weight:400;font-size:.75rem;color:#64748b;margin-left:8px">Pesquise pelo nome, selecione os docs e a IA preenche o formulário</span>
@@ -2379,7 +2381,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
       <!-- Sub-panel Equipe Multidisciplinar -->
       <div id="mod-panel-multi" style="display:none">
         <!-- ═══ BUSCA DE DOCS COM IA — MULTI ════════════════════ -->
-        <div style="background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin:14px 0 10px">
+        <div class="ia-only" style="background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin:14px 0 10px">
           <div style="font-weight:700;color:#1e40af;font-size:.93rem;margin-bottom:12px">
             🔍 Buscar Documentos do Monitorado
             <span style="font-weight:400;font-size:.75rem;color:#64748b;margin-left:8px">Pesquise pelo nome, selecione os docs e a IA preenche o formulário</span>
@@ -2605,6 +2607,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         <!-- ═══ SEÇÃO BUSCA DE DOCS DO MONITORADO ═══════════════ -->
         <div style="background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin:14px 0 10px">
 
+          <div class="ia-only">
           <!-- Cabeçalho -->
           <div style="font-weight:700;color:#1e40af;font-size:.93rem;margin-bottom:12px">
             🔍 Buscar Documentos do Monitorado
@@ -2651,6 +2654,8 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
               </button>
             </div>
           </div>
+
+          </div><!-- /ia-only: fim da busca+extração com IA -->
 
           <!-- Anexar documento de fora do sistema, SEM gerar/ler com IA -->
           <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -2871,7 +2876,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
       <div id="mod-panel-juridico-mod" style="display:none">
 
         <!-- ═══ BUSCA DE DOCS COM IA — JURÍDICO ═════════════════ -->
-        <div style="background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin:14px 0 10px">
+        <div class="ia-only" style="background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin:14px 0 10px">
           <div style="font-weight:700;color:#1e40af;font-size:.93rem;margin-bottom:12px">
             🔍 Buscar Documentos do Monitorado
             <span style="font-weight:400;font-size:.75rem;color:#64748b;margin-left:8px">Pesquise pelo nome, selecione os docs e a IA preenche o formulário</span>
@@ -7137,6 +7142,8 @@ function iniciarApp() {
   const nivel = usuarioAtual.nivel;
   // Marca o body p/ revelar os botões .arq-admin-only só ao admin (os demais veem só + Monitorado e Importar pasta)
   document.body.classList.toggle('is-admin', nivel === 'admin');
+  // Revela a produtividade de IA (.ia-only: ler doc + preencher modelo) só p/ gestão
+  document.body.classList.toggle('is-ia', ['admin', 'gerencia', 'subgerente'].includes(nivel));
   document.getElementById("user-display").textContent = usuarioAtual.nome;
   document.getElementById("user-avatar").textContent = usuarioAtual.nome.charAt(0).toUpperCase();
 
