@@ -2725,7 +2725,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
                 <div id="com-of-num-wrap" style="position:relative">
                   <div style="display:flex;gap:6px">
                     <input type="text" id="com-of-numero" autocomplete="off"
-                      onclick="com_abrirListaNumeros()" oninput="com_atualizarAvisoNumero();com_atualizarPreview()"
+                      onclick="com_abrirListaNumeros()" oninput="_comNumeroManual=true;com_atualizarAvisoNumero();com_atualizarPreview()"
                       style="flex:1;min-width:0;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
                       placeholder="ex: 1165">
                     <button type="button" onclick="com_numeroAnterior()" title="Ir para um número anterior já enviado"
@@ -16632,6 +16632,7 @@ function r2_iconeArquivo(nome) {
           if (document.getElementById('panel-triagem')?.classList.contains('active')) {
             renderizarTriagem();
           }
+          if (chave === 'oficios') com_sincronizarNumeroRemoto();
         }
       })
       .subscribe();
@@ -18238,6 +18239,7 @@ function com_atualizarCampos() {
    Registro persistente (sincroniza entre PCs via store 'oficios').
    A numeração reinicia a cada ano; 2026 começa em 1165. */
 const COM_OFICIO_BASE = { 2026: 1165 }; // semente inicial por ano (ano não listado começa em 1)
+let _comNumeroManual = false; // true quando o usuário digita/escolhe um número à mão (não deixa auto-avançar)
 
 function com_getOficios() {
   const o = carregarStore('oficios', null);
@@ -18302,8 +18304,35 @@ function com_sugerirNumero(forcar) {
   if (!el) return;
   if (forcar || !el.value.trim()) {
     el.value = String(com_proximoNumero(com_anoForm()));
+    _comNumeroManual = false; // número automático → segue auto-avançando se outro PC gerar
     com_atualizarAvisoNumero();
     com_atualizarPreview();
+  }
+}
+/* Realtime: outro PC gerou um ofício. Se a Comunicação está aberta e o número que
+   este usuário vê foi tomado por OUTRA pessoa logada, avança automático (ou avisa). */
+function com_sincronizarNumeroRemoto() {
+  const panel = document.getElementById('panel-comunicacao');
+  if (!panel || !panel.classList.contains('active')) return;
+  const el = document.getElementById('com-of-numero');
+  if (!el) return;
+  com_atualizarAvisoNumero();
+  const lista = document.getElementById('com-of-num-lista');
+  if (lista && lista.style.display === 'block') com_abrirListaNumeros();
+  const cur = parseInt((el.value || '').replace(/\D/g, ''));
+  if (!cur) return;
+  const reg = com_registroDe(cur, com_anoForm());
+  if (!reg) return;                                                // número ainda livre
+  if ((reg.geradoPor || '') === (usuarioAtual?.nome || '')) return; // fui eu mesmo (posso regerar)
+  if (!_comNumeroManual) {
+    const novo = com_proximoNumero(com_anoForm());
+    el.value = String(novo);
+    _comNumeroManual = false;
+    com_atualizarAvisoNumero();
+    com_atualizarPreview();
+    _mostrarToast(`ℹ️ Ofício nº ${cur} foi usado por ${reg.geradoPor}. Avançado para o ${novo}.`, 'erro');
+  } else {
+    _mostrarToast(`⚠️ Ofício nº ${cur} acabou de ser usado por ${reg.geradoPor}. Escolha outro número.`, 'erro');
   }
 }
 /* Mostra/oculta o alerta de "número já utilizado" abaixo do campo */
@@ -18373,6 +18402,7 @@ function com_fecharListaNumeros() { const b = document.getElementById('com-of-nu
 function com_selecionarNumero(n) {
   const el = document.getElementById('com-of-numero');
   if (el) el.value = n;
+  _comNumeroManual = true; // escolha manual de um número específico
   com_fecharListaNumeros();
   com_atualizarAvisoNumero();
   com_atualizarPreview();
@@ -18510,7 +18540,7 @@ function com_gerarOficio(ov) {
   const _f = id => document.getElementById(id);
   const modeloId   = ov ? (ov.modelo || '')        : _f('com-of-modelo').value;
   const dest       = ov ? (ov.destinatario || '')  : _f('com-of-destinatario').value.trim();
-  const numero     = ov ? String(ov.numero || '')  : _f('com-of-numero').value.trim();
+  let numero       = ov ? String(ov.numero || '')  : _f('com-of-numero').value.trim();
   const dataOficio = ov ? (ov.data || '')           : _f('com-of-data').value;
   const nomeMon    = ov ? (ov.monitorado || '')     : _f('com-of-nome').value.trim();
   const processo   = ov ? (ov.processo || '')       : _f('com-of-processo').value.trim();
@@ -18528,6 +18558,22 @@ function com_gerarOficio(ov) {
     if (!numero)    return _mostrarToast('⚠️ Informe o número do ofício.','erro');
     if (!nomeMon)   return _mostrarToast('⚠️ Informe o nome do monitorado.','erro');
     if (!processo)  return _mostrarToast('⚠️ Informe o número do processo.','erro');
+
+    // Anti-corrida: se OUTRA pessoa logada gerou esse número enquanto você preenchia,
+    // oferece avançar para o próximo livre (evita dois ofícios com o mesmo número).
+    const _regConc = com_registroDe(numero, com_anoForm());
+    if (_regConc && (_regConc.geradoPor || '') !== (usuarioAtual?.nome || '')) {
+      const _novo = com_proximoNumero(com_anoForm());
+      const usarNovo = confirm(`O ofício nº ${numero} acabou de ser gerado por ${_regConc.geradoPor}.\n\n`
+        + `OK = usar o próximo número livre (${_novo}).\n`
+        + `Cancelar = manter o ${numero} (vai SUBSTITUIR o registro de ${_regConc.geradoPor}).`);
+      if (usarNovo) {
+        numero = String(_novo);
+        const _elN = _f('com-of-numero'); if (_elN) _elN.value = numero;
+        _comNumeroManual = false;
+        com_atualizarAvisoNumero();
+      }
+    }
   }
 
   const modelo = COM_MODELOS.find(m => m.id === modeloId);
@@ -20238,7 +20284,23 @@ async function _comGerarPDFExec() {
     let y = mT;
 
     // ── Coletar dados do formulário ──────────────────────────────
-    const numero   = (document.getElementById('com-of-numero')?.value   || '').trim();
+    let numero     = (document.getElementById('com-of-numero')?.value   || '').trim();
+    // Anti-corrida: se OUTRA pessoa logada tomou esse número enquanto você preenchia,
+    // oferece avançar para o próximo livre (evita dois ofícios com o mesmo número).
+    if (numero) {
+      const _regC = com_registroDe(numero, com_anoForm());
+      if (_regC && (_regC.geradoPor || '') !== (usuarioAtual?.nome || '')) {
+        const _nv = com_proximoNumero(com_anoForm());
+        if (confirm(`O ofício nº ${numero} acabou de ser gerado por ${_regC.geradoPor}.\n\n`
+          + `OK = usar o próximo número livre (${_nv}).\n`
+          + `Cancelar = manter o ${numero} (vai SUBSTITUIR o registro de ${_regC.geradoPor}).`)) {
+          numero = String(_nv);
+          const _eN = document.getElementById('com-of-numero'); if (_eN) _eN.value = numero;
+          _comNumeroManual = false;
+          com_atualizarAvisoNumero();
+        }
+      }
+    }
     const dataVal  = document.getElementById('com-of-data')?.value      || '';
     const nomeMon  = (document.getElementById('com-of-nome')?.value     || '').trim();
     const processo = (document.getElementById('com-of-processo')?.value || '').trim();
