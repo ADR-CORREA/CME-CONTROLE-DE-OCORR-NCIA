@@ -7154,7 +7154,7 @@ function iniciarApp() {
   // Pré-carrega monitorados em background após login — busca instantânea quando abrir Arquivos
   setTimeout(() => {
     r2_carregarConfig();
-    if (r2_state.url && r2_state.token) _r2MonFetchSilencioso();
+    if (r2_state.url && r2_state.token) _r2CarregarTodosSilencioso();
   }, 2000);
 }
 
@@ -17984,7 +17984,8 @@ function _comNegritoCorpo(p, nome) {
   const nm = String(nome || '').trim();
   if (nm.length >= 3) {
     const escRe = nm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    s = s.replace(new RegExp(escRe, 'g'), '<b>' + nm + '</b>'); // nome do monitorado em negrito
+    // Fronteira por \p{L}\p{N}: evita negrito no meio de palavra (ex.: sobrenome curto dentro de outra palavra)
+    s = s.replace(new RegExp('(?<![\\p{L}\\p{N}])' + escRe + '(?![\\p{L}\\p{N}])', 'gu'), '<b>' + nm + '</b>'); // nome do monitorado em negrito
   }
   return s;
 }
