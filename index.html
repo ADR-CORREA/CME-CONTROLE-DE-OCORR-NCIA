@@ -353,33 +353,55 @@ body:not(.is-admin) .arq-admin-only { display: none !important; }
 .nav-tab.active svg { opacity: 1; }
 
 /* ═══════════════════════════════════════════════════════
-   TEMA ESCURO DO DASHBOARD — ligado só na aba Dashboard (body.td).
-   Outras abas ficam intactas (claras). Topo e menu já são escuros.
+   TEMA ESCURO GLOBAL (body.dk) — aplicado a todas as abas.
+   Vira as variáveis semânticas + corrige cores fixas (inline/classe).
+   MODAIS ficam claros (reset das variáveis) p/ legibilidade e segurança.
+   Topo e menu já eram escuros. Geração de PDF é HTML separado (não afetado).
 ═══════════════════════════════════════════════════════ */
-body.td{ background:#0A1120 !important; }
-body.td #panel-dashboard{ color:#E6EDF8; }
-body.td #panel-dashboard .dash-title{ color:#EAF0FA; }
-body.td #panel-dashboard .dash-update{ color:#8FA0BC; }
-body.td #panel-dashboard .section-title{ color:#8FA0BC; border-bottom-color:#22314B; }
-body.td #panel-dashboard .kpi-card{ background:#111C30; box-shadow:0 6px 20px rgba(0,0,0,.3); }
-body.td #panel-dashboard .kpi-num{ color:#EAF0FA; }
-body.td #panel-dashboard .kpi-label{ color:#8FA0BC; }
-body.td #dash-plantao-hoje{ background:#111C30 !important; border-color:#22314B !important; border-left-color:#3B82F6 !important; }
-body.td #dash-plantao-hoje *[style*="color:#1F4E78"]{ color:#EAF0FA !important; }
-body.td #dash-plantao-nome{ color:#EAF0FA !important; }
-body.td #dash-plantao-data{ color:#8FA0BC !important; }
-body.td #panel-dashboard .dash-alertas{ background:#16223A !important; border-color:#2C3D5C !important; border-left-color:#FBBF24 !important; }
-body.td #panel-dashboard .dash-alertas.ok{ background:#0C2018 !important; border-color:#14402E !important; }
-body.td #panel-dashboard .dchart-card{ background:#111C30 !important; border-color:#22314B !important; color:#D9E2F2; box-shadow:0 6px 20px rgba(0,0,0,.3); }
-body.td #panel-dashboard .dchart-title{ color:#8FA0BC !important; }
-body.td #panel-dashboard .dchart-card *[style*="color:#0"],
-body.td #panel-dashboard .dchart-card *[style*="color:#1"],
-body.td #panel-dashboard .dchart-card *[style*="color:#33"],
-body.td #panel-dashboard .dchart-card *[style*="color:#47"]{ color:#D9E2F2 !important; }
-body.td #panel-dashboard .dash-card{ background:#111C30; }
-body.td #panel-dashboard .dash-card-body{ color:#EAF0FA; }
-body.td #panel-dashboard .dash-row{ border-bottom-color:#22314B; }
-body.td #panel-dashboard .dash-row .label{ color:#D9E2F2; }
+body.dk{
+  --cz4:#0A1120; --cz1:#E6EDF8; --cz2:#90A1BD; --cz3:#22314B; --br:#111C30;
+  --az5:#13233B; --vd3:#10271C; --am3:#291F08; --lr3:#291607; --vm3:#291313; --rx3:#1E1430;
+  background:#0A1120 !important;
+}
+body.dk .modal-overlay, body.dk .modal-box{ --br:#FFFFFF; --cz1:#0F172A; --cz2:#64748B; --cz3:#E2E8F0; --cz4:#F1F5F9; }
+body.dk .topbar{ color:#EAF0FA; }
+body.dk .btn-logout{ color:#EAF0FA !important; border-color:rgba(255,255,255,.2) !important; }
+body.dk .btn-login, body.dk .btn-refresh, body.dk .dash-card-header{ color:#fff !important; }
+body.dk .main [style*="background:#fff"], body.dk .main [style*="background: #fff"], body.dk .main [style*="background:#ffffff"],
+body.dk .main [style*="background:#f8fa"], body.dk .main [style*="background:#f9fa"], body.dk .main [style*="background:#f8faff"],
+body.dk .main [style*="background:#f1f5"], body.dk .main [style*="background:#fafbfc"], body.dk .main [style*="background:#f0f"],
+body.dk .main [style*="background:#eff"], body.dk .main [style*="background:#fef"], body.dk .main [style*="background:#fff7"]{ background:#131F35 !important; }
+body.dk .main [style*="color:var(--az2)"], body.dk .main [style*="color:var(--az3)"],
+body.dk .main [style*="color:#1e40af"], body.dk .main [style*="color:#1d4ed8"], body.dk .main [style*="color:#2563eb"], body.dk .main [style*="color:#1e3a8a"], body.dk .main [style*="color:#1f4e78"]{ color:#7CB0FF !important; }
+body.dk .main [style*="color:var(--az1)"], body.dk .main [style*="color:#1a1a2e"], body.dk .main [style*="color:#0f172a"], body.dk .main [style*="color:#334155"], body.dk .main [style*="color:#475569"],
+body.dk .main [style*="color:#1f2937"], body.dk .main [style*="color:#1e293b"], body.dk .main [style*="color:#0f2742"], body.dk .main [style*="color:#111"], body.dk .main [style*="color:#222"], body.dk .main [style*="color:#333"]{ color:#D9E2F2 !important; }
+body.dk input:not([type=checkbox]):not([type=radio]), body.dk select, body.dk textarea{ background:#0E1A2E !important; color:#E6EDF8 !important; border-color:#2C3D5C !important; }
+body.dk input::placeholder, body.dk textarea::placeholder{ color:#6B7C99 !important; }
+body.dk table th{ color:#90A1BD !important; }
+body.dk table td, body.dk table th{ border-color:#22314B !important; }
+body.dk .section-title{ color:#90A1BD !important; border-bottom-color:#22314B !important; }
+body.dk .dash-title{ color:#EAF0FA !important; }
+body.dk .dash-update{ color:#90A1BD !important; }
+body.dk .kpi-card{ background:#111C30 !important; box-shadow:0 6px 20px rgba(0,0,0,.3) !important; }
+body.dk .kpi-num{ color:#EAF0FA !important; }
+body.dk .kpi-label{ color:#90A1BD !important; }
+body.dk .dchart-card{ background:#131F35 !important; border-color:#22314B !important; color:#D9E2F2 !important; }
+body.dk .dchart-title{ color:#90A1BD !important; }
+body.dk .dash-alertas{ background:#16223A !important; border-color:#2C3D5C !important; border-left-color:#FBBF24 !important; }
+body.dk .dash-alertas.ok{ background:#0C2018 !important; border-color:#14402E !important; }
+body.dk .dash-card{ background:#131F35 !important; }
+body.dk .dash-card-body{ color:#E6EDF8 !important; }
+body.dk .dash-row{ border-bottom-color:#22314B !important; }
+body.dk .dash-row .label{ color:#D9E2F2 !important; }
+body.dk #dash-plantao-hoje{ background:#111C30 !important; border-color:#22314B !important; border-left-color:#3B82F6 !important; }
+body.dk #dash-plantao-hoje *[style*="color:#1F4E78"]{ color:#EAF0FA !important; }
+body.dk #dash-plantao-nome{ color:#EAF0FA !important; }
+body.dk #dash-plantao-data{ color:#90A1BD !important; }
+body.dk .r2-mon-item{ color:#CDD9EC !important; }
+body.dk .r2-mon-item:hover{ background:#1A2740 !important; }
+body.dk .r2-mon-item.active{ background:#1D4ED8 !important; color:#fff !important; }
+body.dk .r2-pasta-card{ background:#131F35 !important; border-color:#2C3D5C !important; color:#D9E2F2 !important; }
+body.dk .r2-pasta-card:hover{ border-color:#3B82F6 !important; }
 
 /* R2 FILE MANAGER */
 .r2-pasta-card {
@@ -7191,6 +7213,7 @@ function iniciarApp() {
   const nivel = usuarioAtual.nivel;
   // Marca o body p/ revelar os botões .arq-admin-only só ao admin (os demais veem só + Monitorado e Importar pasta)
   document.body.classList.toggle('is-admin', nivel === 'admin');
+  document.body.classList.add('dk'); // tema escuro global (pós-login)
   document.getElementById("user-display").textContent = usuarioAtual.nome;
   document.getElementById("user-avatar").textContent = usuarioAtual.nome.charAt(0).toUpperCase();
   // Carrega a assinatura própria do servidor (cadastrada por ele no store)
@@ -7231,7 +7254,6 @@ function mudarAba(aba) {
   if (tabs[map[aba]]) tabs[map[aba]].classList.add("active");
   const panel = document.getElementById("panel-" + aba);
   if (panel) panel.classList.add("active");
-  document.body.classList.toggle('td', aba === 'dashboard'); // tema escuro só na aba Dashboard
   if (aba === "dashboard") atualizarDashboard();
   if (aba === "criticos") renderizarCriticos();
   if (aba === "ocorrencias") { marcarOcVisto(); renderizarOcorrencias(); }
