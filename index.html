@@ -9586,7 +9586,18 @@ function _normalizarAssinatura(srcDataUrl) {
         var octx = out.getContext('2d');
         octx.fillStyle = '#fff'; octx.fillRect(0, 0, out.width, out.height);
         octx.drawImage(cv, sx, sy, cw, ch, 0, 0, out.width, out.height);
-        resolve(out.toDataURL('image/jpeg', 0.92));
+        // TRANSPARÊNCIA: o papel vira transparente e só o traço da caneta fica opaco,
+        // então no documento aparece SÓ a assinatura, sem o "quadrado" do papel.
+        var oi = octx.getImageData(0, 0, out.width, out.height), od = oi.data;
+        for (var j = 0; j < od.length; j += 4) {
+          var lum = od[j] * 0.299 + od[j + 1] * 0.587 + od[j + 2] * 0.114;
+          var alpha = 255 - lum;                          // claro(papel)->0, escuro(tinta)->255
+          alpha = alpha < 24 ? 0 : (alpha > 235 ? 255 : alpha);
+          od[j] = 20; od[j + 1] = 20; od[j + 2] = 40;     // cor do traço (quase preto, leve azul)
+          od[j + 3] = alpha;
+        }
+        octx.putImageData(oi, 0, 0);
+        resolve(out.toDataURL('image/png'));
       } catch (e) { resolve(srcDataUrl); }
     };
     img.onerror = function() { resolve(srcDataUrl); };
