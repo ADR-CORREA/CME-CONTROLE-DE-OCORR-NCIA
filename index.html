@@ -1267,6 +1267,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         <div class="avatar" id="user-avatar">P</div>
         <span id="user-display">Usuário</span>
       </div>
+      <button class="btn-logout" onclick="ass_abrirMinha()" title="Cadastrar ou atualizar a minha assinatura" style="margin-right:6px">✍️ Minha assinatura</button>
       <button class="btn-logout" onclick="fazerLogout()">Sair</button>
     </div>
   </div>
@@ -5159,11 +5160,14 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
       <!-- Painel: Upload -->
       <div id="ass-panel-upload" style="display:none">
-        <p style="font-size:.82rem;color:#888;margin:0 0 8px 0">Faça upload de uma imagem de assinatura (PNG ou JPG com fundo branco ou transparente):</p>
-        <label class="btn-secondary" style="cursor:pointer;display:inline-block">
-          📎 Selecionar imagem
-          <input type="file" id="ass-file-input" accept="image/*" style="display:none" onchange="ass_carregarImagem(this)">
-        </label>
+        <p style="font-size:.82rem;color:#888;margin:0 0 8px 0">Envie uma <b>foto</b> ou imagem da assinatura. Pode ser foto comum no papel — depois clique em <b>📸 Limpar foto</b> para deixar o fundo branco e o traço nítido.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <label class="btn-secondary" style="cursor:pointer;display:inline-block">
+            📎 Selecionar / tirar foto
+            <input type="file" id="ass-file-input" accept="image/*" capture="environment" style="display:none" onchange="ass_carregarImagem(this)">
+          </label>
+          <button type="button" class="btn-secondary" onclick="ass_limparFoto()" title="Clareia o papel para branco e mantém só o traço da caneta">📸 Limpar foto</button>
+        </div>
       </div>
 
       <!-- Preview -->
@@ -7160,6 +7164,8 @@ function iniciarApp() {
   document.body.classList.toggle('is-admin', nivel === 'admin');
   document.getElementById("user-display").textContent = usuarioAtual.nome;
   document.getElementById("user-avatar").textContent = usuarioAtual.nome.charAt(0).toUpperCase();
+  // Carrega a assinatura própria do servidor (cadastrada por ele no store)
+  try { const _a = _getAssinaturaDe(usuarioAtual.usuario); if (_a) usuarioAtual.assinatura = _a; } catch (e) {}
 
   const nivelLabel = {
     admin:'ADMINISTRADOR', gerencia:'GERÊNCIA', juridico:'JURÍDICO',
@@ -9692,12 +9698,103 @@ async function salvarEdicaoUsuario() {
   }
 }
 
+/* ── Assinatura: store próprio + limpeza de foto ─────────────────────────
+   Permite que o PRÓPRIO servidor cadastre a sua assinatura (guardada no store,
+   sem precisar de admin) e limpa fotos de assinatura tiradas no papel. ────── */
+function _assMap() { const m = carregarStore('assinaturas', {}); return (m && typeof m === 'object') ? m : {}; }
+function _getAssinaturaDe(usuario) {
+  if (!usuario) return null;
+  const m = _assMap();
+  if (m[usuario]) return m[usuario];
+  try { const u = getUsuarios().find(x => x.usuario === usuario); if (u && u.assinatura) return u.assinatura; } catch (e) {}
+  return null;
+}
+function _salvarAssinaturaStore(usuario, dataUrl) {
+  if (!usuario) return;
+  const m = Object.assign({}, _assMap());
+  if (dataUrl) m[usuario] = dataUrl; else delete m[usuario];
+  salvarStore('assinaturas', m);
+}
+
+/* Limpa uma FOTO de assinatura no papel: corrige iluminação (achata sombra e
+   textura do papel para branco) e mantém só o traço escuro da caneta. */
+function _limparFotoAssinatura(srcDataUrl) {
+  return new Promise(function (resolve) {
+    const img = new Image();
+    img.onload = function () {
+      try {
+        const W = img.naturalWidth || 600, H = img.naturalHeight || 200;
+        const sc = W > 1200 ? 1200 / W : 1;
+        const w = Math.max(1, Math.round(W * sc)), h = Math.max(1, Math.round(H * sc));
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        const ctx = cv.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        // estima o fundo (papel/iluminação) com um blur forte
+        const bgCv = document.createElement('canvas'); bgCv.width = w; bgCv.height = h;
+        const bgCtx = bgCv.getContext('2d');
+        bgCtx.filter = 'blur(' + Math.max(6, Math.round(w / 12)) + 'px)';
+        bgCtx.drawImage(cv, 0, 0);
+        const src = ctx.getImageData(0, 0, w, h), bg = bgCtx.getImageData(0, 0, w, h);
+        const s = src.data, b = bg.data;
+        const lo = 0.55, hi = 0.92; // razão pixel/fundo: <lo => preto (tinta), >hi => branco (papel)
+        for (let i = 0; i < s.length; i += 4) {
+          const ratio = ((s[i] / (b[i] || 1)) + (s[i + 1] / (b[i + 1] || 1)) + (s[i + 2] / (b[i + 2] || 1))) / 3;
+          let v = (ratio - lo) / (hi - lo); v = v < 0 ? 0 : (v > 1 ? 1 : v);
+          const g = Math.round(v * 255);
+          s[i] = s[i + 1] = s[i + 2] = g; s[i + 3] = 255;
+        }
+        ctx.putImageData(src, 0, 0);
+        resolve(cv.toDataURL('image/jpeg', 0.95));
+      } catch (e) { resolve(srcDataUrl); }
+    };
+    img.onerror = function () { resolve(srcDataUrl); };
+    img.src = srcDataUrl;
+  });
+}
+
+/* Botão "📸 Limpar foto": processa a imagem do preview e atualiza o preview. */
+function ass_limparFoto() {
+  const el = document.getElementById('ass-preview-img');
+  const src = el && el.src;
+  if (!src || src === window.location.href) { _mostrarToast('Selecione ou tire uma foto primeiro.', 'erro'); return; }
+  _mostrarToast('🧽 Limpando a foto...', 'sucesso');
+  _limparFotoAssinatura(src).then(function (limpa) {
+    el.src = limpa;
+    document.getElementById('ass-preview-wrap').style.display = 'block';
+    _mostrarToast('✅ Foto limpa. Confira o preview e salve.', 'sucesso');
+  });
+}
+
+/* Autoatendimento: o próprio servidor cadastra/atualiza a sua assinatura. */
+let _assSelfMode = false;
+function ass_abrirMinha() {
+  if (!usuarioAtual) return;
+  _assSelfMode = true; _assIdx = null;
+  const atual = _getAssinaturaDe(usuarioAtual.usuario);
+  document.getElementById('ass-servidor-nome').textContent = 'Minha assinatura — ' + usuarioAtual.nome;
+  document.getElementById('ass-preview-nome').textContent  = usuarioAtual.nome;
+  document.getElementById('ass-preview-cargo').textContent = usuarioAtual.cargo || '';
+  document.getElementById('ass-btn-remover').style.display = atual ? 'inline-flex' : 'none';
+  document.getElementById('ass-msg').innerHTML = '';
+  ass_mudarAba('upload');
+  ass_limpar();
+  if (atual) {
+    document.getElementById('ass-preview-img').src = atual;
+    document.getElementById('ass-preview-wrap').style.display = 'block';
+  } else {
+    document.getElementById('ass-preview-wrap').style.display = 'none';
+  }
+  abrirModal('modal-assinatura');
+  setTimeout(function () { ass_iniciarCanvas(); }, 100);
+}
+
 /* ── ASSINATURA DO SERVIDOR ──────────────────────────────── */
 let _assIdx = null;
 let _assDesenhando = false;
 let _assUltimoX = 0, _assUltimoY = 0;
 
 function abrirModalAssinatura(idx) {
+  _assSelfMode = false;
   _assIdx = idx;
   const us = getUsuarios();
   const u  = us[idx];
@@ -9779,86 +9876,61 @@ function ass_carregarImagem(input) {
 
 function ass_salvar() {
   const aba = document.getElementById('ass-panel-draw').style.display !== 'none' ? 'draw' : 'upload';
-  let dataUrl;
+  let raw;
   if (aba === 'draw') {
     const canvas = document.getElementById('ass-canvas');
-    // Verificar se o canvas tem conteúdo
     const ctx = canvas.getContext('2d');
-    const px = ctx.getImageData(0,0,canvas.width,canvas.height).data;
-    const temConteudo = px.some(v => v !== 0);
-    if (!temConteudo) {
+    const px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    if (!px.some(v => v !== 0)) {
       document.getElementById('ass-msg').innerHTML = '<div class="sys-alert error">Desenhe a assinatura antes de salvar.</div>';
       return;
     }
-    // Recorta ao traço desenhado + fundo branco → JPEG sem bordas vazias
-    {
-      const _d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-      let _x0 = canvas.width, _x1 = 0, _y0 = canvas.height, _y1 = 0;
-      for (let _y = 0; _y < canvas.height; _y++) {
-        for (let _x = 0; _x < canvas.width; _x++) {
-          if (_d[(_y * canvas.width + _x) * 4 + 3] > 10) {
-            if (_x < _x0) _x0 = _x; if (_x > _x1) _x1 = _x;
-            if (_y < _y0) _y0 = _y; if (_y > _y1) _y1 = _y;
-          }
-        }
-      }
-      const _pad = 16;
-      const _cx = Math.max(0, _x0 - _pad);
-      const _cy = Math.max(0, _y0 - _pad);
-      const _cw = Math.min(canvas.width,  _x1 + _pad) - _cx;
-      const _ch = Math.min(canvas.height, _y1 + _pad) - _cy;
-      const _oCv = document.createElement('canvas');
-      _oCv.width  = (_cw > 0) ? _cw : canvas.width;
-      _oCv.height = (_ch > 0) ? _ch : canvas.height;
-      const _oCtx = _oCv.getContext('2d');
-      _oCtx.fillStyle = '#fff';
-      _oCtx.fillRect(0, 0, _oCv.width, _oCv.height);
-      if (_cw > 0 && _ch > 0) {
-        _oCtx.drawImage(canvas, _cx, _cy, _cw, _ch, 0, 0, _cw, _ch);
-      } else {
-        _oCtx.drawImage(canvas, 0, 0);
-      }
-      dataUrl = _oCv.toDataURL('image/jpeg', 0.95);
-    }
+    raw = canvas.toDataURL('image/png');
   } else {
-    const img = document.getElementById('ass-preview-img').src;
-    if (!img || img === window.location.href) {
+    raw = document.getElementById('ass-preview-img').src;
+    if (!raw || raw === window.location.href) {
       document.getElementById('ass-msg').innerHTML = '<div class="sys-alert error">Selecione uma imagem primeiro.</div>';
       return;
     }
-    // Composite sobre canvas branco → remove fundo transparente da imagem
-    const _preImg = document.getElementById('ass-preview-img');
-    const _w2 = _preImg.naturalWidth  || 600;
-    const _h2 = _preImg.naturalHeight || 200;
-    const _offCv2 = document.createElement('canvas');
-    _offCv2.width = _w2; _offCv2.height = _h2;
-    const _offCtx2 = _offCv2.getContext('2d');
-    _offCtx2.fillStyle = '#fff';
-    _offCtx2.fillRect(0, 0, _w2, _h2);
-    _offCtx2.drawImage(_preImg, 0, 0);
-    dataUrl = _offCv2.toDataURL('image/jpeg', 0.92);
   }
-  const us = getUsuarios();
-  us[_assIdx].assinatura = dataUrl;
-  salvarUsuarios(us);
-  // Atualizar usuário logado se for o mesmo
-  if (usuarioAtual && usuarioAtual.usuario === us[_assIdx].usuario) {
-    usuarioAtual.assinatura = dataUrl;
-  }
-  addLog(`Assinatura cadastrada: ${us[_assIdx].nome}`);
-  fecharModal('modal-assinatura');
-  renderizarUsers();
-  _mostrarToast('✅ Assinatura salva com sucesso!', 'sucesso');
+  // Normaliza SEMPRE (achata em branco, recorta, redimensiona, JPEG leve)
+  _normalizarAssinatura(raw).then(function (dataUrl) {
+    if (_assSelfMode) {
+      // O próprio servidor salvando — guarda no store (não exige admin)
+      _salvarAssinaturaStore(usuarioAtual.usuario, dataUrl);
+      usuarioAtual.assinatura = dataUrl;
+      addLog('Assinatura própria cadastrada: ' + usuarioAtual.nome);
+      fecharModal('modal-assinatura');
+      _mostrarToast('✅ Sua assinatura foi salva!', 'sucesso');
+      return;
+    }
+    // Admin salvando para um servidor
+    const us = getUsuarios();
+    us[_assIdx].assinatura = dataUrl;
+    salvarUsuarios(us);
+    _salvarAssinaturaStore(us[_assIdx].usuario, dataUrl);
+    if (usuarioAtual && usuarioAtual.usuario === us[_assIdx].usuario) usuarioAtual.assinatura = dataUrl;
+    addLog('Assinatura cadastrada: ' + us[_assIdx].nome);
+    fecharModal('modal-assinatura');
+    renderizarUsers();
+    _mostrarToast('✅ Assinatura salva com sucesso!', 'sucesso');
+  });
 }
 
 function ass_remover() {
-  if (!confirm('Remover a assinatura deste servidor?')) return;
+  if (!confirm('Remover a assinatura?')) return;
+  if (_assSelfMode) {
+    _salvarAssinaturaStore(usuarioAtual.usuario, null);
+    delete usuarioAtual.assinatura;
+    fecharModal('modal-assinatura');
+    _mostrarToast('Assinatura removida.', 'sucesso');
+    return;
+  }
   const us = getUsuarios();
   delete us[_assIdx].assinatura;
   salvarUsuarios(us);
-  if (usuarioAtual && usuarioAtual.usuario === us[_assIdx].usuario) {
-    delete usuarioAtual.assinatura;
-  }
+  _salvarAssinaturaStore(us[_assIdx].usuario, null);
+  if (usuarioAtual && usuarioAtual.usuario === us[_assIdx].usuario) delete usuarioAtual.assinatura;
   fecharModal('modal-assinatura');
   renderizarUsers();
   _mostrarToast('Assinatura removida.', 'sucesso');
