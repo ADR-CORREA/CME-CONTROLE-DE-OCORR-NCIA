@@ -16937,14 +16937,13 @@ function rv_gerarSelecionados(modo = 'html') {
       if (ok) _mostrarToast(`📝 ${ok} relatório(s) Word (.docx) gerado(s)!`, 'sucesso');
     })();
   } else {
-    // Gerar HTML numa janela para imprimir/PDF
+    // Gerar HTML para imprimir/PDF (nova aba; se o popup for bloqueado, baixa o arquivo)
     const html = rv_montarHtmlCompleto(selecionados, infoAss, infoGer, false);
-    const janela = window.open('', '_blank');
-    if (!janela) { _mostrarToast('⚠️ Popup bloqueado! Permita popups.', 'erro'); return; }
-    janela.document.write(html);
-    janela.document.close();
-    janela.focus();
-    _mostrarToast(`⚡ ${selecionados.length} relatório(s) gerado(s)! Escolha "Salvar como PDF".`, 'sucesso');
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const _okRv = _entregarDoc(blob, 'relatorio-visita.html');
+    _mostrarToast(_okRv
+      ? `⚡ ${selecionados.length} relatório(s) gerado(s)! Escolha "Salvar como PDF".`
+      : `⬇️ Popup bloqueado — relatório BAIXADO. Abra o arquivo e use "Salvar como PDF".`, 'sucesso');
   }
 }
 
