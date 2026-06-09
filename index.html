@@ -9549,14 +9549,55 @@ function _editUser_atualizarPreviewAss(src) {
   }
 }
 
+/* Normaliza a assinatura enviada (PNG/JPG, com ou sem transparência): achata sobre
+   fundo BRANCO, recorta as bordas vazias, limita a 600px de largura e devolve um
+   JPEG leve. Garante que QUALQUER imagem enviada renderize certo no doc e no PDF
+   (um PNG transparente cru pode sumir no PDF). Em caso de erro, devolve o original. */
+function _normalizarAssinatura(srcDataUrl) {
+  return new Promise(function(resolve) {
+    var img = new Image();
+    img.onload = function() {
+      try {
+        var w = img.naturalWidth || 600, h = img.naturalHeight || 200;
+        var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        var ctx = cv.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0);
+        // recorta bordas brancas (bbox do conteúdo)
+        var d = ctx.getImageData(0, 0, w, h).data;
+        var x0 = w, y0 = h, x1 = 0, y1 = 0;
+        for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+          var i = (y * w + x) * 4;
+          if (d[i] < 245 || d[i+1] < 245 || d[i+2] < 245) {
+            if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+          }
+        }
+        var sx = 0, sy = 0, cw = w, ch = h;
+        if (x1 > x0 && y1 > y0) { var p = 12; sx = Math.max(0, x0 - p); sy = Math.max(0, y0 - p); cw = Math.min(w, x1 + p) - sx; ch = Math.min(h, y1 + p) - sy; }
+        var scale = cw > 600 ? 600 / cw : 1;
+        var out = document.createElement('canvas');
+        out.width = Math.round(cw * scale); out.height = Math.round(ch * scale);
+        var octx = out.getContext('2d');
+        octx.fillStyle = '#fff'; octx.fillRect(0, 0, out.width, out.height);
+        octx.drawImage(cv, sx, sy, cw, ch, 0, 0, out.width, out.height);
+        resolve(out.toDataURL('image/jpeg', 0.92));
+      } catch (e) { resolve(srcDataUrl); }
+    };
+    img.onerror = function() { resolve(srcDataUrl); };
+    img.src = srcDataUrl;
+  });
+}
+
 function editUser_previewAss(input) {
   const file = input.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
-    _editAssNovaBase64 = e.target.result;
-    _editAssRemover    = false;
-    _editUser_atualizarPreviewAss(_editAssNovaBase64);
+    _normalizarAssinatura(e.target.result).then(function(jpeg) {
+      _editAssNovaBase64 = jpeg;
+      _editAssRemover    = false;
+      _editUser_atualizarPreviewAss(_editAssNovaBase64);
+    });
   };
   reader.readAsDataURL(file);
 }
