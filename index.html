@@ -352,6 +352,35 @@ body:not(.is-admin) .arq-admin-only { display: none !important; }
 }
 .nav-tab.active svg { opacity: 1; }
 
+/* ═══════════════════════════════════════════════════════
+   TEMA ESCURO DO DASHBOARD — ligado só na aba Dashboard (body.td).
+   Outras abas ficam intactas (claras). Topo e menu já são escuros.
+═══════════════════════════════════════════════════════ */
+body.td{ background:#0A1120 !important; }
+body.td #panel-dashboard{ color:#E6EDF8; }
+body.td #panel-dashboard .dash-title{ color:#EAF0FA; }
+body.td #panel-dashboard .dash-update{ color:#8FA0BC; }
+body.td #panel-dashboard .section-title{ color:#8FA0BC; border-bottom-color:#22314B; }
+body.td #panel-dashboard .kpi-card{ background:#111C30; box-shadow:0 6px 20px rgba(0,0,0,.3); }
+body.td #panel-dashboard .kpi-num{ color:#EAF0FA; }
+body.td #panel-dashboard .kpi-label{ color:#8FA0BC; }
+body.td #dash-plantao-hoje{ background:#111C30 !important; border-color:#22314B !important; border-left-color:#3B82F6 !important; }
+body.td #dash-plantao-hoje *[style*="color:#1F4E78"]{ color:#EAF0FA !important; }
+body.td #dash-plantao-nome{ color:#EAF0FA !important; }
+body.td #dash-plantao-data{ color:#8FA0BC !important; }
+body.td #panel-dashboard .dash-alertas{ background:#16223A !important; border-color:#2C3D5C !important; border-left-color:#FBBF24 !important; }
+body.td #panel-dashboard .dash-alertas.ok{ background:#0C2018 !important; border-color:#14402E !important; }
+body.td #panel-dashboard .dchart-card{ background:#111C30 !important; border-color:#22314B !important; color:#D9E2F2; box-shadow:0 6px 20px rgba(0,0,0,.3); }
+body.td #panel-dashboard .dchart-title{ color:#8FA0BC !important; }
+body.td #panel-dashboard .dchart-card *[style*="color:#0"],
+body.td #panel-dashboard .dchart-card *[style*="color:#1"],
+body.td #panel-dashboard .dchart-card *[style*="color:#33"],
+body.td #panel-dashboard .dchart-card *[style*="color:#47"]{ color:#D9E2F2 !important; }
+body.td #panel-dashboard .dash-card{ background:#111C30; }
+body.td #panel-dashboard .dash-card-body{ color:#EAF0FA; }
+body.td #panel-dashboard .dash-row{ border-bottom-color:#22314B; }
+body.td #panel-dashboard .dash-row .label{ color:#D9E2F2; }
+
 /* R2 FILE MANAGER */
 .r2-pasta-card {
   background: #fff;
@@ -7202,6 +7231,7 @@ function mudarAba(aba) {
   if (tabs[map[aba]]) tabs[map[aba]].classList.add("active");
   const panel = document.getElementById("panel-" + aba);
   if (panel) panel.classList.add("active");
+  document.body.classList.toggle('td', aba === 'dashboard'); // tema escuro só na aba Dashboard
   if (aba === "dashboard") atualizarDashboard();
   if (aba === "criticos") renderizarCriticos();
   if (aba === "ocorrencias") { marcarOcVisto(); renderizarOcorrencias(); }
