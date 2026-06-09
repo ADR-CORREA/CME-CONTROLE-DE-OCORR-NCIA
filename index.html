@@ -6526,6 +6526,25 @@ function carregarStore(chave, padrao) {
   return _cache.hasOwnProperty(chave) ? _cache[chave] : padrao;
 }
 
+/* Entrega um documento gerado: tenta abrir em nova aba; se o POPUP estiver
+   bloqueado (window.open retorna null), BAIXA o arquivo automaticamente —
+   garante a entrega do documento mesmo com bloqueador de popup ativo.
+   Retorna true se abriu em aba, false se teve de baixar. */
+function _entregarDoc(blob, nomeArquivo) {
+  const blobUrl = URL.createObjectURL(blob);
+  let win = null;
+  try { win = window.open(blobUrl, '_blank'); } catch (e) { win = null; }
+  if (win) { setTimeout(() => URL.revokeObjectURL(blobUrl), 120000); return true; }
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = nomeArquivo || 'documento';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
+  return false;
+}
+
 /* USUÁRIOS PADRÃO */
 /* USUARIOS_PADRAO — senhas armazenadas como SHA-256(salt+senha). Nunca altere os hashes manualmente. */
 const _SHA_SALT = 'cme_iapen_2026_'; // mantido apenas para migração de contas antigas
@@ -14129,11 +14148,10 @@ function baixarModeloPDF() {
 
   // Usar Blob URL em vez de document.write — garante que imagens base64 renderizem
   const blob = new Blob([docHtml], { type: 'text/html;charset=utf-8' });
-  const blobUrl = URL.createObjectURL(blob);
-  const win = window.open(blobUrl, '_blank');
-  if (!win) { _mostrarToast('⚠️ Popup bloqueado! Permita popups para este site.', 'erro'); return; }
-  setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
-  _mostrarToast('🖨️ Documento aberto! Escolha "Salvar como PDF" na impressora.', 'sucesso');
+  const _ok = _entregarDoc(blob, 'documento-cme.html');
+  _mostrarToast(_ok
+    ? '🖨️ Documento aberto! Escolha "Salvar como PDF" na impressora.'
+    : '⬇️ Popup bloqueado — documento BAIXADO. Abra o arquivo e use "Salvar como PDF".', 'sucesso');
 }
 
 
@@ -14821,11 +14839,10 @@ ${bodyHtml}
 </body></html>`;
 
   const blob2 = new Blob([docHtml], { type: 'text/html;charset=utf-8' });
-  const blobUrl2 = URL.createObjectURL(blob2);
-  const janela = window.open(blobUrl2, '_blank');
-  if (!janela) { _mostrarToast('⚠️ Popup bloqueado! Permita popups para este site.', 'erro'); return; }
-  setTimeout(() => URL.revokeObjectURL(blobUrl2), 30000);
-  _mostrarToast('🖨️ Documento aberto! Escolha "Salvar como PDF" na impressora.', 'sucesso');
+  const _ok2 = _entregarDoc(blob2, 'documento-cme.html');
+  _mostrarToast(_ok2
+    ? '🖨️ Documento aberto! Escolha "Salvar como PDF" na impressora.'
+    : '⬇️ Popup bloqueado — documento BAIXADO. Abra o arquivo e use "Salvar como PDF".', 'sucesso');
 }
 
 // Sincronizar logo da topbar com a do login (evita base64 duplicado/corrompido)
@@ -18784,11 +18801,10 @@ function com_gerarOficio(ov) {
   if (!ov) { try { com_registrarGerado(numero, dataOficio, modelo, { dest, nomeMon, processo, signat, saudacao, cargo, decreto, campos }); } catch(e) { console.warn('[CME] registro de ofício falhou:', e); } }
 
   const blob    = new Blob([doc], {type:'text/html;charset=utf-8'});
-  const blobUrl = URL.createObjectURL(blob);
-  const win     = window.open(blobUrl, '_blank');
-  if (!win) { _mostrarToast('⚠️ Popup bloqueado! Permita popups para este site.', 'erro'); return; }
-  setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-  _mostrarToast('📄 Ofício aberto na tela. Revise e clique em "Salvar como PDF" quando quiser.', 'sucesso');
+  const _okOf = _entregarDoc(blob, `oficio-${numero||'cme'}.html`);
+  _mostrarToast(_okOf
+    ? '📄 Ofício aberto na tela. Revise e clique em "Salvar como PDF" quando quiser.'
+    : '⬇️ Popup bloqueado — ofício BAIXADO. Abra o arquivo e use "Salvar como PDF".', 'sucesso');
 }
 
 /* ─── Preview / Limpar / Copiar ────────────────────────────── */
@@ -19776,11 +19792,10 @@ function jur_gerarPDF() {
 </body></html>`;
 
   const blob = new Blob([docHtml], { type: 'text/html;charset=utf-8' });
-  const blobUrl = URL.createObjectURL(blob);
-  const janela = window.open(blobUrl, '_blank');
-  if (!janela) { _mostrarToast('⚠️ Popup bloqueado! Permita popups para este site.', 'erro'); return; }
-  setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
-  _mostrarToast('🖨️ Documento aberto! Escolha "Salvar como PDF" na impressora.', 'sucesso');
+  const _okJur = _entregarDoc(blob, 'documento-cme.html');
+  _mostrarToast(_okJur
+    ? '🖨️ Documento aberto! Escolha "Salvar como PDF" na impressora.'
+    : '⬇️ Popup bloqueado — documento BAIXADO. Abra o arquivo e use "Salvar como PDF".', 'sucesso');
 }
 
 /* ── Busca de Documentos do Monitorado ──────────────────────── */
@@ -20584,10 +20599,7 @@ async function _comGerarPDFExec() {
     // ── Abrir na tela (sem download automático) ──
     const num  = document.getElementById('com-of-numero').value || 'oficio';
     const blob = new Blob([finalBytes], { type: 'application/pdf' });
-    const blobUrl = URL.createObjectURL(blob);
-    const win  = window.open(blobUrl, '_blank');
-    if (!win) { _mostrarToast('⚠️ Popup bloqueado! Permita popups para visualizar o PDF.', 'erro'); }
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
+    const _okPdf = _entregarDoc(blob, `oficio-${num}.pdf`);
 
     // Registra o ofício na numeração
     try {
@@ -20599,9 +20611,13 @@ async function _comGerarPDFExec() {
       });
     } catch(e) { console.warn('[CME] registro de ofício falhou:', e); }
 
-    const msg = pdfAnexos.length
-      ? `📄 PDF aberto na tela: ofício + ${pdfAnexos.length} anexo(s). Baixe se quiser.`
-      : '📄 PDF aberto na tela. Revise e baixe se quiser.';
+    const msg = _okPdf
+      ? (pdfAnexos.length
+          ? `📄 PDF aberto na tela: ofício + ${pdfAnexos.length} anexo(s). Baixe se quiser.`
+          : '📄 PDF aberto na tela. Revise e baixe se quiser.')
+      : (pdfAnexos.length
+          ? `⬇️ Popup bloqueado — PDF (ofício + ${pdfAnexos.length} anexo(s)) BAIXADO. Veja em Downloads.`
+          : '⬇️ Popup bloqueado — PDF BAIXADO. Veja em Downloads.');
     _mostrarToast(msg, 'sucesso');
 
   } catch(e) {
