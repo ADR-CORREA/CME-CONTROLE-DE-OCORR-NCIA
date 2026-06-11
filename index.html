@@ -20695,6 +20695,38 @@ async function com_extrairComIA() {
 
 /* ── Gerar PDF com Anexos ────────────────────────────────────── */
 /* ── Roteador: abre seletor de páginas se houver PDFs, senão gera direto ── */
+/* Converte um arquivo de imagem em bytes JPEG (normalizado, máx. 1600px),
+   para ser embutido como página no PDF final via pdf-lib (embedJpg). */
+function _comImagemParaJpegBytes(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const maxLado = 1600;
+          let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+          const escala = Math.min(1, maxLado / Math.max(w, h));
+          w = Math.max(1, Math.round(w * escala)); h = Math.max(1, Math.round(h * escala));
+          const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+          const ctx = cv.getContext('2d');
+          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = cv.toDataURL('image/jpeg', 0.85);
+          const bin = atob(dataUrl.split(',')[1]);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          resolve(bytes);
+        } catch (err) { reject(err); }
+      };
+      img.onerror = () => reject(new Error('imagem não decodificável'));
+      img.src = e.target.result;
+    };
+    r.onerror = () => reject(new Error('falha ao ler arquivo'));
+    r.readAsDataURL(file);
+  });
+}
+
 async function com_gerarPDFComAnexos() {
   const texto = document.getElementById('com-of-texto').value.trim();
   if (!texto) { _mostrarToast('⚠️ Preencha e visualize o ofício primeiro.', 'erro'); return; }
@@ -20995,9 +21027,10 @@ async function _comGerarPDFExec() {
 
     let finalBytes = doc.output('arraybuffer');
 
-    // ── Mesclar anexos PDF ──
+    // ── Mesclar anexos PDF e IMAGENS (cada imagem vira uma página A4) ──
     const pdfAnexos = _comAnexos.filter(a => a.tipo === 'pdf' && a.file);
-    if (pdfAnexos.length) {
+    const imgAnexos = _comAnexos.filter(a => /^(jpe?g|png|webp|gif|bmp)$/.test(a.tipo) && a.file);
+    if (pdfAnexos.length || imgAnexos.length) {
       await _carregarScriptSE(
         'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js', 'PDFLib');
       const { PDFDocument } = window.PDFLib;
@@ -21019,6 +21052,20 @@ async function _comGerarPDFExec() {
           pages.forEach(p => merged.addPage(p));
         } catch(e) { console.warn('Não foi possível incluir', anexo.nome, e.message); }
       }
+
+      // Imagens → converte cada uma em JPEG e adiciona como página A4 (retrato)
+      const A4W = 595.28, A4H = 841.89, margem = 36;   // pt (A4) e margem
+      for (const anexo of imgAnexos) {
+        try {
+          const jpegBytes = await _comImagemParaJpegBytes(anexo.file);
+          const img = await merged.embedJpg(jpegBytes);
+          const page = merged.addPage([A4W, A4H]);
+          const maxW = A4W - margem * 2, maxH = A4H - margem * 2;
+          const escala = Math.min(maxW / img.width, maxH / img.height, 1);
+          const w = img.width * escala, h = img.height * escala;
+          page.drawImage(img, { x: (A4W - w) / 2, y: (A4H - h) / 2, width: w, height: h });
+        } catch(e) { console.warn('Não foi possível incluir imagem', anexo.nome, e.message); }
+      }
       finalBytes = await merged.save();
     }
 
@@ -21037,12 +21084,13 @@ async function _comGerarPDFExec() {
       });
     } catch(e) { console.warn('[CME] registro de ofício falhou:', e); }
 
+    const _nAnex = pdfAnexos.length + imgAnexos.length;
     const msg = _okPdf
-      ? (pdfAnexos.length
-          ? `📄 PDF aberto na tela: ofício + ${pdfAnexos.length} anexo(s). Baixe se quiser.`
+      ? (_nAnex
+          ? `📄 PDF aberto na tela: ofício + ${_nAnex} anexo(s). Baixe se quiser.`
           : '📄 PDF aberto na tela. Revise e baixe se quiser.')
-      : (pdfAnexos.length
-          ? `⬇️ Popup bloqueado — PDF (ofício + ${pdfAnexos.length} anexo(s)) BAIXADO. Veja em Downloads.`
+      : (_nAnex
+          ? `⬇️ Popup bloqueado — PDF (ofício + ${_nAnex} anexo(s)) BAIXADO. Veja em Downloads.`
           : '⬇️ Popup bloqueado — PDF BAIXADO. Veja em Downloads.');
     _mostrarToast(msg, 'sucesso');
 
