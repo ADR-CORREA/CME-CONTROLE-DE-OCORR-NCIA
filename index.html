@@ -3129,6 +3129,16 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
       <!-- KPIs (gerados dinamicamente por renderizarUsers) -->
       <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px" id="admin-kpis"></div>
 
+      <!-- 🛡️ Backup de Segurança (R2) -->
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div style="font-weight:700;color:#0f2742">🛡️ Backup de Segurança (R2)</div>
+        <span style="font-size:.8rem;color:#64748b">Cópia diária automática de todas as stores, fora do Supabase.</span>
+        <div style="flex:1"></div>
+        <button onclick="admin_backupAgora(this)" style="background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:.85rem;font-weight:700;cursor:pointer">💾 Fazer backup agora</button>
+        <button onclick="admin_verBackups()" style="background:#fff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:8px;padding:8px 14px;font-size:.85rem;font-weight:600;cursor:pointer">📋 Ver backups</button>
+        <div id="admin-backup-status" style="width:100%;font-size:.78rem;color:#16a34a;margin-top:2px"></div>
+      </div>
+
       <!-- Grid principal -->
       <div style="display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start">
 
@@ -7261,6 +7271,9 @@ function iniciarApp() {
     r2_carregarConfig();
     if (r2_state.url && r2_state.token) _r2CarregarTodosSilencioso();
   }, 2000);
+
+  // Backup automático diário das stores no R2 (1x/dia, após o cache carregar)
+  setTimeout(() => { try { cme_backupAutoR2(); } catch (e) {} }, 60000);
 }
 
 /* ─── NAVEGAÇÃO ──────────────────────────────────────── */
@@ -23089,6 +23102,112 @@ async function r2_salvarEstat(tipo, dados, nome) {
       body: JSON.stringify({ tipo, dados, nome }),
     });
   } catch(e) { console.warn('R2 salvar:', e.message); }
+}
+
+/* ═══════════════ BACKUP AUTOMÁTICO DAS STORES NO R2 ═══════════════
+   Protege contra perda de dados no Supabase (ex.: sobrescrita por cache vazio).
+   Salva 1 snapshot por dia de TODAS as stores em _estat/backup-stores/ no R2,
+   mantendo histórico diário. Não recupera perdas anteriores, mas garante que,
+   a partir de agora, sempre haja uma cópia recuperável fora do Supabase. */
+function _cmeColetarStores() {
+  const stores = {};
+  Object.keys(_cache || {}).forEach(k => { if (_cache[k] != null) stores[k] = _cache[k]; });
+  return stores;
+}
+
+async function cme_backupAutoR2(forcar) {
+  try {
+    const hoje = new Date().toISOString().slice(0, 10);
+    if (!forcar && localStorage.getItem('cme_ultimo_backup_r2') === hoje) return false;
+    const stores = _cmeColetarStores();
+    // Proteção: só faz backup se as stores principais já estiverem carregadas
+    // (evita gravar um snapshot vazio/truncado por cache não-carregado).
+    if (!(stores.oficios || stores.ocorrencias || stores.relatorios)) return false;
+    const base = _r2Base(); const tok = _r2Token();
+    if (!base || !tok) return false;
+    const backup = { savedAt: new Date().toISOString(), por: (usuarioAtual && usuarioAtual.nome) || '?', stores };
+    const r = await fetch(`${base}/estat-salvar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tok}` },
+      body: JSON.stringify({ tipo: 'backup-stores', dados: [backup], nome: 'auto ' + hoje }),
+    });
+    if (r.ok) {
+      localStorage.setItem('cme_ultimo_backup_r2', hoje);
+      console.log('[CME] backup das stores salvo no R2 (' + Object.keys(stores).length + ' stores, ' + hoje + ').');
+      return true;
+    }
+    return false;
+  } catch (e) { console.warn('[CME] backup auto R2 falhou:', e.message); return false; }
+}
+
+/* Botão "Fazer backup agora" (painel Admin). */
+async function admin_backupAgora(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
+  const ok = await cme_backupAutoR2(true);
+  if (btn) { btn.disabled = false; btn.textContent = '💾 Fazer backup agora'; }
+  const st = document.getElementById('admin-backup-status');
+  if (ok) {
+    _mostrarToast('🛡️ Backup salvo no R2 com sucesso.', 'sucesso');
+    if (st) { st.style.color = '#16a34a'; st.textContent = '✅ Último backup: ' + new Date().toLocaleString('pt-BR') + '.'; }
+  } else {
+    _mostrarToast('⚠️ Não foi possível salvar o backup (verifique a conexão com o R2).', 'erro');
+    if (st) { st.style.color = '#dc2626'; st.textContent = '⚠️ Falha ao salvar o backup — tente novamente.'; }
+  }
+}
+
+/* Botão "Ver backups" (painel Admin). */
+async function admin_verBackups() {
+  const datas = await cme_listarBackupsR2();
+  if (!datas.length) { _mostrarToast('Nenhum backup encontrado ainda.', 'erro'); return; }
+  alert('Backups disponíveis no R2 (' + datas.length + '):\n\n' + datas.join('\n')
+    + '\n\nPara restaurar uma store de uma data, me avise — eu conduzo a restauração com segurança.');
+}
+
+/* Lista as datas de backup disponíveis no R2 (mais recente primeiro). */
+async function cme_listarBackupsR2() {
+  const base = _r2Base(); const tok = _r2Token();
+  if (!base || !tok) return [];
+  try {
+    const r = await fetch(`${base}/estat-snapshots?tipo=backup-stores`, { headers: { 'Authorization': `Bearer ${tok}` } });
+    const j = await r.json();
+    return (j.snapshots || []).map(s => s.date);
+  } catch (e) { return []; }
+}
+
+/* Carrega um backup do R2 (data YYYY-MM-DD; sem data = mais recente). Retorna { savedAt, por, stores }. */
+async function cme_carregarBackupR2(data) {
+  const base = _r2Base(); const tok = _r2Token();
+  if (!base || !tok) return null;
+  try {
+    const url = data ? `${base}/estat-carregar?tipo=backup-stores&data=${data}` : `${base}/estat-carregar?tipo=backup-stores`;
+    const r = await fetch(url, { headers: { 'Authorization': `Bearer ${tok}` } });
+    const j = await r.json();
+    return (j.dados && j.dados[0]) ? j.dados[0] : null;
+  } catch (e) { return null; }
+}
+
+/* Restaura UMA store a partir de um backup do R2.
+   modo 'merge' (padrão p/ listas com registros): une backup + atual sem perder nada.
+   Uso no console: await cme_restaurarStoreDeBackup('oficios','2026-06-12','merge') */
+async function cme_restaurarStoreDeBackup(chave, data, modo) {
+  const bk = await cme_carregarBackupR2(data);
+  if (!bk || !bk.stores || bk.stores[chave] == null) { console.warn('Backup ou chave não encontrada.'); return false; }
+  const doBackup = bk.stores[chave];
+  const atual = _cache[chave];
+  if ((modo || 'merge') === 'merge' && atual && Array.isArray(atual.registros) && doBackup && Array.isArray(doBackup.registros)) {
+    const m = new Map();
+    [...doBackup.registros, ...atual.registros].forEach(r => {
+      const id = (r && r.ano != null && r.numero != null) ? r.ano + '-' + r.numero : (r && r.id) || JSON.stringify(r);
+      m.set(id, { ...(m.get(id) || {}), ...r });
+    });
+    const fundido = { ...doBackup, ...atual, registros: [...m.values()] };
+    salvarStore(chave, fundido);
+    console.log('✅ Mesclado "' + chave + '": ' + fundido.registros.length + ' registros (backup ' + (bk.savedAt || data) + ').');
+    return true;
+  }
+  salvarStore(chave, doBackup);
+  console.log('✅ Restaurado "' + chave + '" (substituição) do backup ' + (bk.savedAt || data) + '.');
+  return true;
 }
 
 async function r2_carregarEstat(tipo) {
