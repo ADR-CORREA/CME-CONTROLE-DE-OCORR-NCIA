@@ -9459,7 +9459,7 @@ function renderizarUsers() {
       <div style="flex:1;min-width:0">
         <div style="font-weight:600;font-size:.88rem;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.nome)}</div>
         <div style="font-size:.73rem;color:#64748b;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          @${esc(u.usuario)}${u.cargo ? ' &nbsp;·&nbsp; ' + esc(u.cargo) : ''}
+          @${esc(u.usuario)}${(u.cargo && u.cargo.trim()) ? ' &nbsp;·&nbsp; ' + esc(u.cargo) : ' &nbsp;·&nbsp; <span style="color:#b45309;font-weight:700" title="Sem cargo cadastrado — aparece na assinatura dos documentos">⚠️ sem cargo</span>'}
         </div>
         <div style="margin-top:3px">${assTag}${plTag}</div>
       </div>
@@ -18729,6 +18729,33 @@ function com_reusarNumero(numero, ano) {
   _mostrarToast(`↩️ Número ${numero}/${ano} carregado para refazer. Revise os campos e gere novamente.`, 'sucesso');
 }
 
+/* ─── Cargo do signatário (consolidado) ───────────────────────────
+   Resolve o cargo que aparece sob a assinatura em QUALQUER documento.
+   Prioridade:
+     1) cargo digitado no formulário (ou salvo no registro do ofício);
+     2) cargo cadastrado do servidor que assina (busca pelo nome);
+     3) cargo do usuário logado, quando ele é o próprio signatário;
+     4) rótulo institucional genérico (último recurso).
+   Evita carimbar "Coordenador(a)" em quem não é coordenador. */
+function _normNomeAss(s){
+  return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .trim().toLowerCase().replace(/\s+/g,' ');
+}
+function _cargoSignatario(cargoDigitado, nomeSignat){
+  const c = String(cargoDigitado||'').trim();
+  if (c) return c;
+  const alvo = _normNomeAss(nomeSignat);
+  const us = (typeof getUsuarios === 'function' ? getUsuarios() : []) || [];
+  if (alvo) {
+    const u = us.find(x => _normNomeAss(x.nome) === alvo);
+    if (u && String(u.cargo||'').trim()) return String(u.cargo).trim();
+  }
+  const ehProprio = !alvo || alvo === _normNomeAss(usuarioAtual && usuarioAtual.nome);
+  if (ehProprio && String((usuarioAtual && usuarioAtual.cargo) || '').trim())
+    return String(usuarioAtual.cargo).trim();
+  return 'Coordenador(a) da CME/IAPEN-AP';
+}
+
 /* ─── Gerador ────────────────────────────────────────────────── */
 function com_gerarOficio(ov) {
   // ov = registro salvo (visualização): gera a partir dos dados guardados,
@@ -18742,7 +18769,7 @@ function com_gerarOficio(ov) {
   const processo   = ov ? (ov.processo || '')       : _f('com-of-processo').value.trim();
   const saudacao   = ov ? (ov.saudacao || 'Senhor (a) Juiz (a),') : _f('com-of-saudacao').value;
   const signat     = ov ? (ov.signatario || '')     : _f('com-of-signatario').value.trim();
-  const cargo      = (ov ? (ov.cargo || '') : (_f('com-of-cargo')?.value || '')).trim() || 'Coordenador(a) da CME/IAPEN-AP';
+  const cargo      = _cargoSignatario(ov ? (ov.cargo || '') : (_f('com-of-cargo')?.value || ''), signat);
   const decreto    = ov ? (ov.decreto || '')        : _f('com-of-decreto').value.trim();
   // Na visualização usa a assinatura salva no registro (a do signatário original);
   // ao gerar, usa a do usuário logado.
@@ -18778,7 +18805,7 @@ function com_gerarOficio(ov) {
   // Coletar campos dinâmicos (do registro salvo na visualização, ou do form)
   let campos;
   if (ov) {
-    campos = ov.campos || { nome_monitorado: nomeMon };
+    campos = Object.assign({ nome_monitorado: nomeMon }, ov.campos || {});
   } else {
     campos = { nome_monitorado: nomeMon };
     modelo.campos.forEach(c => {
@@ -18788,6 +18815,12 @@ function com_gerarOficio(ov) {
       campos[c.id] = val;
     });
   }
+  // Rede de segurança: nenhum campo do modelo pode renderizar "undefined"
+  // (ex.: ofício antigo salvo antes de o campo existir). Completa o que faltar.
+  if (modelo && Array.isArray(modelo.campos)) {
+    modelo.campos.forEach(c => { if (campos[c.id] == null) campos[c.id] = ''; });
+  }
+  if (campos.nome_monitorado == null) campos.nome_monitorado = nomeMon || '';
 
   const paragrafos = modelo.corpo(campos).map(p => _comNegritoCorpo(p, nomeMon));
 
@@ -19034,7 +19067,7 @@ function com_atualizarPreview() {
   const processo   = document.getElementById('com-of-processo')?.value.trim() || '';
   const saudacao   = document.getElementById('com-of-saudacao')?.value || 'Senhor (a) Juiz (a),';
   const signat     = document.getElementById('com-of-signatario')?.value.trim() || '';
-  const cargo      = (document.getElementById('com-of-cargo')?.value || '').trim() || 'Coordenador(a) da CME/IAPEN-AP';
+  const cargo      = _cargoSignatario(document.getElementById('com-of-cargo')?.value, signat);
   const decreto    = document.getElementById('com-of-decreto')?.value.trim() || '';
 
   const modelo = COM_MODELOS.find(m => m.id === modeloId);
@@ -19625,7 +19658,7 @@ function jur_gerarTexto() {
   const processo  = document.getElementById('jur-processo')?.value || '';
   const saudacao  = document.getElementById('jur-saudacao')?.value || 'Senhor(a) Juiz(a),';
   const signat    = document.getElementById('jur-signatario')?.value || '';
-  const cargo     = (document.getElementById('jur-cargo')?.value || '').trim() || 'Coordenador(a) da CME/IAPEN-AP';
+  const cargo     = _cargoSignatario(document.getElementById('jur-cargo')?.value, signat);
   const decreto   = document.getElementById('jur-decreto')?.value || '';
 
   if (!modelo) { document.getElementById('jur-texto').value = ''; return; }
@@ -19698,7 +19731,7 @@ function jur_gerarDoc() {
   const processo = (document.getElementById('jur-processo')?.value || '').trim();
   const dest     = (document.getElementById('jur-destinatario')?.value || '').trim();
   const signat   = (document.getElementById('jur-signatario')?.value || '').trim();
-  const cargo    = (document.getElementById('jur-cargo')?.value || '').trim() || 'Coordenador(a) da CME/IAPEN-AP';
+  const cargo    = _cargoSignatario(document.getElementById('jur-cargo')?.value, signat);
   const decreto  = (document.getElementById('jur-decreto')?.value || '').trim();
   const assImg   = usuarioAtual?.assinatura || null;
   const _jAgora = new Date(); const _jDataHora = _jAgora.toLocaleString('pt-BR');
@@ -20501,7 +20534,7 @@ async function _comGerarPDFExec() {
     const dest     = (document.getElementById('com-of-destinatario')?.value || '').trim();
     const saudacao = (document.getElementById('com-of-saudacao')?.value || '').trim();
     const signat   = (document.getElementById('com-of-signatario')?.value || '').trim();
-    const cargo    = (document.getElementById('com-of-cargo')?.value    || '').trim() || 'Coordenador(a) da CME/IAPEN-AP';
+    const cargo    = _cargoSignatario(document.getElementById('com-of-cargo')?.value, signat);
     const decreto  = (document.getElementById('com-of-decreto')?.value  || '').trim();
     const assImg   = usuarioAtual?.assinatura || null;
 
