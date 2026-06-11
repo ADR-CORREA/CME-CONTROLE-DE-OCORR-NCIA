@@ -2282,10 +2282,10 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
             <div style="flex:1"></div>
             <label style="background:#1d4ed8;color:#fff;border-radius:7px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap">
               ➕ Escolher imagem
-              <input type="file" accept="image/*" multiple style="display:none" onchange="_modAddAnexos(this.files); this.value='';">
+              <input type="file" accept="image/*" multiple style="display:none" onchange="_anexAdd('plantao', this.files); this.value='';">
             </label>
           </div>
-          <div id="mod-anexos-lista" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"></div>
+          <div id="anex-lista-plantao" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"></div>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px">
           <button class="btn-secondary" onclick="limparModelo()">🗑️ Limpar</button>
@@ -2453,6 +2453,18 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
             </div>
           </div>
           <div id="mul-ia-status" style="display:none;margin-top:8px;padding:8px 12px;border-radius:7px;font-size:.82rem;font-weight:600"></div>
+        </div>
+        <div id="anex-wrap-multi" style="background:#fff;border:1px dashed #93c5fd;border-radius:10px;padding:12px 14px;margin:12px 0 4px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="font-weight:700;color:#1e40af;font-size:.88rem">📎 Anexar imagem (foto)</div>
+            <span style="font-size:.74rem;color:#64748b">A imagem é convertida e anexada como página(s) no PDF do documento.</span>
+            <div style="flex:1"></div>
+            <label style="background:#1d4ed8;color:#fff;border-radius:7px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap">
+              ➕ Escolher imagem
+              <input type="file" accept="image/*" multiple style="display:none" onchange="_anexAdd('multi', this.files); this.value='';">
+            </label>
+          </div>
+          <div id="anex-lista-multi" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"></div>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px">
           <button class="btn-secondary" onclick="limparModeloMulti()">🗑️ Limpar</button>
@@ -2948,6 +2960,18 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         </div>
 
         <!-- Toolbar -->
+        <div id="anex-wrap-jur" style="background:#fff;border:1px dashed #93c5fd;border-radius:10px;padding:12px 14px;margin:12px 0 4px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="font-weight:700;color:#1e40af;font-size:.88rem">📎 Anexar imagem (foto)</div>
+            <span style="font-size:.74rem;color:#64748b">A imagem é convertida e anexada como página(s) no PDF do documento.</span>
+            <div style="flex:1"></div>
+            <label style="background:#1d4ed8;color:#fff;border-radius:7px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap">
+              ➕ Escolher imagem
+              <input type="file" accept="image/*" multiple style="display:none" onchange="_anexAdd('jur', this.files); this.value='';">
+            </label>
+          </div>
+          <div id="anex-lista-jur" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"></div>
+        </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px;flex-wrap:wrap">
           <button class="btn-secondary" onclick="jur_limpar()">🗑️ Limpar</button>
           <button class="btn-secondary" onclick="jur_copiar()">📋 Copiar Texto</button>
@@ -14082,13 +14106,14 @@ function copiarModelo() {
   });
 }
 
-/* ═══════════════════ ANEXOS DE IMAGEM (Plantão) ════════════════════
-   Imagens anexadas são normalizadas (JPEG, máx. 1600px) e, na geração
-   do PDF, viram página(s) de ANEXO ao final do documento. Assim a
-   imagem é automaticamente "convertida em PDF" junto ao doc. */
-let _modAnexos = []; // [{ nome, dataUrl }]
+/* ═══════════════════ ANEXOS DE IMAGEM — módulo reutilizável ═══════════════
+   Usado por Plantão, Equipe Multidisciplinar e Jurídico. As imagens são
+   normalizadas (JPEG, máx. 1600px) e, ao gerar o PDF, viram página(s) de
+   ANEXO ao final do documento — ou seja, a imagem é convertida em PDF
+   junto ao documento. ctx = 'plantao' | 'multi' | 'jur'. */
+const _anexStore = { plantao: [], multi: [], jur: [] };
 
-function _modConverterImagemParaJpegPadrao(srcDataUrl, cb) {
+function _anexNormalizar(srcDataUrl, cb) {
   try {
     const img = new Image();
     img.onload = function () {
@@ -14098,9 +14123,9 @@ function _modConverterImagemParaJpegPadrao(srcDataUrl, cb) {
         const escala = Math.min(1, maxLado / Math.max(w, h));
         w = Math.max(1, Math.round(w * escala)); h = Math.max(1, Math.round(h * escala));
         const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
-        const ctx = cv.getContext('2d');
-        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
-        ctx.drawImage(img, 0, 0, w, h);
+        const ctx2 = cv.getContext('2d');
+        ctx2.fillStyle = '#fff'; ctx2.fillRect(0, 0, w, h);
+        ctx2.drawImage(img, 0, 0, w, h);
         cb(cv.toDataURL('image/jpeg', 0.85));
       } catch (e) { cb(srcDataUrl); }
     };
@@ -14109,7 +14134,8 @@ function _modConverterImagemParaJpegPadrao(srcDataUrl, cb) {
   } catch (e) { cb(srcDataUrl); }
 }
 
-function _modAddAnexos(fileList) {
+function _anexAdd(ctx, fileList) {
+  const arr = _anexStore[ctx] || (_anexStore[ctx] = []);
   const files = Array.from(fileList || []);
   if (!files.length) return;
   let adicionou = 0;
@@ -14117,9 +14143,9 @@ function _modAddAnexos(fileList) {
     if (!/^image\//.test(f.type)) { _mostrarToast('⚠️ "' + f.name + '" não é imagem — ignorado.', 'erro'); return; }
     adicionou++;
     const r = new FileReader();
-    r.onload = e => _modConverterImagemParaJpegPadrao(e.target.result, dataUrl => {
-      _modAnexos.push({ nome: f.name || 'imagem', dataUrl });
-      _modRenderAnexos();
+    r.onload = e => _anexNormalizar(e.target.result, dataUrl => {
+      arr.push({ nome: f.name || 'imagem', dataUrl });
+      _anexRender(ctx);
     });
     r.onerror = () => _mostrarToast('⚠️ Falha ao ler "' + f.name + '".', 'erro');
     r.readAsDataURL(f);
@@ -14127,17 +14153,53 @@ function _modAddAnexos(fileList) {
   if (adicionou) _mostrarToast('📎 ' + adicionou + ' imagem(ns) anexada(s) — entram como anexo no PDF.', 'sucesso');
 }
 
-function _modRemoverAnexo(i) { _modAnexos.splice(i, 1); _modRenderAnexos(); }
+function _anexRemover(ctx, i) { (_anexStore[ctx] || []).splice(i, 1); _anexRender(ctx); }
+function _anexLimpar(ctx) { _anexStore[ctx] = []; _anexRender(ctx); }
 
-function _modRenderAnexos() {
-  const wrap = document.getElementById('mod-anexos-lista');
+function _anexRender(ctx) {
+  const wrap = document.getElementById('anex-lista-' + ctx);
   if (!wrap) return;
-  if (!_modAnexos.length) { wrap.innerHTML = ''; return; }
-  wrap.innerHTML = _modAnexos.map((a, i) =>
+  const arr = _anexStore[ctx] || [];
+  if (!arr.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = arr.map((a, i) =>
     `<div style="position:relative;width:84px;height:84px;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;background:#f1f5f9" title="${(a.nome||'').replace(/"/g,'')}">
       <img src="${a.dataUrl}" style="width:100%;height:100%;object-fit:cover">
-      <button onclick="_modRemoverAnexo(${i})" title="Remover" style="position:absolute;top:2px;right:2px;background:rgba(220,38,38,.92);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:.8rem;line-height:1;cursor:pointer;font-weight:700">×</button>
+      <button onclick="_anexRemover('${ctx}',${i})" title="Remover" style="position:absolute;top:2px;right:2px;background:rgba(220,38,38,.92);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:.8rem;line-height:1;cursor:pointer;font-weight:700">×</button>
     </div>`).join('');
+}
+
+function _anexCss() {
+  return '.anexo-page{page-break-before:always;break-before:page;display:flex;flex-direction:column;align-items:center;min-height:215mm;padding-top:4mm}'
+    + '.anexo-titulo{font-size:13pt;font-weight:bold;text-align:center;text-transform:uppercase;letter-spacing:.5px;margin:0 0 4px 0}'
+    + '.anexo-sub{font-size:10.5pt;text-align:center;color:#444;margin:0 0 12px 0}'
+    + '.anexo-img-box{flex:1;display:flex;align-items:center;justify-content:center;width:100%}'
+    + '.anexo-img{max-width:100%;max-height:190mm;object-fit:contain;border:1px solid #bbb}';
+}
+
+function _anexPaginasHtml(ctx, subtitulo) {
+  const arr = _anexStore[ctx] || [];
+  if (!arr.length) return '';
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const n = arr.length;
+  return arr.map((a, idx) => `
+<div class="anexo-page">
+  <div class="anexo-titulo">ANEXO${n > 1 ? ' ' + (idx + 1) : ''} – REGISTRO FOTOGRÁFICO</div>
+  ${subtitulo ? `<div class="anexo-sub">${esc(subtitulo)}</div>` : ''}
+  <div class="anexo-img-box"><img class="anexo-img" src="${a.dataUrl}" alt="anexo"></div>
+</div>`).join('');
+}
+
+/* Injeta o CSS de anexo (no <head>) e as páginas de anexo (antes de </body>)
+   num HTML de documento já montado. Não altera nada se não houver anexos. */
+function _anexInjetarNoHtml(docHtml, ctx, subtitulo) {
+  const arr = _anexStore[ctx] || [];
+  if (!arr.length) return docHtml;
+  const css = '<style>' + _anexCss() + '</style>';
+  const paginas = _anexPaginasHtml(ctx, subtitulo);
+  let out = docHtml;
+  out = out.includes('</head>') ? out.replace('</head>', css + '</head>') : (css + out);
+  out = out.includes('</body>') ? out.replace('</body>', paginas + '</body>') : (out + paginas);
+  return out;
 }
 
 function baixarModeloPDF() {
@@ -14233,17 +14295,6 @@ function baixarModeloPDF() {
   const agora = new Date();
   const dataExtenso = `Macap\u00e1 \u2013 AP, ${String(agora.getDate()).padStart(2,'0')} de ${meses[agora.getMonth()]} de ${agora.getFullYear()}`;
   const dataHoraLog = agora.toLocaleString('pt-BR');
-
-  // \u2500\u2500 P\u00e1ginas de ANEXO (imagens) \u2014 cada imagem vira uma p\u00e1gina no PDF \u2500\u2500
-  let anexosHtml = '';
-  if (Array.isArray(_modAnexos) && _modAnexos.length) {
-    anexosHtml = _modAnexos.map((a, idx) => `
-<div class="anexo-page">
-  <div class="anexo-titulo">ANEXO${_modAnexos.length > 1 ? ' ' + (idx + 1) : ''} \u2013 REGISTRO FOTOGR\u00c1FICO</div>
-  <div class="anexo-sub">${esc(assuntoTexto || assunto)}${monitorado ? ' \u2013 ' + esc(monitorado.toUpperCase()) : ''}</div>
-  <div class="anexo-img-box"><img class="anexo-img" src="${a.dataUrl}" alt="anexo"></div>
-</div>`).join('');
-  }
 
   const docHtml = `<!DOCTYPE html>
 <html lang="pt-BR"><head>
@@ -14370,21 +14421,6 @@ function baixarModeloPDF() {
   }
   .rodape p { margin: 2px 0; }
 
-  /* ── Páginas de ANEXO (imagens) ── */
-  .anexo-page {
-    page-break-before: always;
-    break-before: page;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 215mm;
-    padding-top: 4mm;
-  }
-  .anexo-titulo { font-size: 13pt; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: .5px; margin: 0 0 4px 0; }
-  .anexo-sub    { font-size: 10.5pt; text-align: center; color: #444; margin: 0 0 12px 0; }
-  .anexo-img-box { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; }
-  .anexo-img    { max-width: 100%; max-height: 190mm; object-fit: contain; border: 1px solid #bbb; }
-
   /* ── Botão de impressão (some no PDF) ── */
   .btn-imp {
     display: block; margin: 20px auto 0; padding: 10px 32px;
@@ -14434,7 +14470,7 @@ function baixarModeloPDF() {
   ${_assBlk}
 </div>
 </div>
-${anexosHtml}
+
 <div class="rodape">
   <p>Av. Machado de Assis, 372 \u2013 Centro, CEP 68900-066 \u2013 Macap\u00e1-AP</p>
   <p>cme@iapen.ap.gov.br &nbsp;|&nbsp; (96) 98415-2844</p>
@@ -14453,7 +14489,8 @@ ${anexosHtml}
 </body></html>`;
 
   // Usar Blob URL em vez de document.write — garante que imagens base64 renderizem
-  const blob = new Blob([docHtml], { type: 'text/html;charset=utf-8' });
+  const _subAnex = (assuntoTexto || assunto) + (monitorado ? ' – ' + monitorado.toUpperCase() : '');
+  const blob = new Blob([_anexInjetarNoHtml(docHtml, 'plantao', _subAnex)], { type: 'text/html;charset=utf-8' });
   const _ok = _entregarDoc(blob, 'documento-cme.html');
   _mostrarToast(_ok
     ? '🖨️ Documento aberto! Escolha "Salvar como PDF" na impressora.'
@@ -14482,7 +14519,7 @@ function limparModelo() {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
-  _modAnexos = []; _modRenderAnexos(); // limpa imagens anexadas
+  _anexLimpar('plantao'); // limpa imagens anexadas
   document.getElementById('mod-char-count').textContent = '0 caracteres';
 }
 
@@ -14914,6 +14951,7 @@ function limparModeloMulti() {
   if (mun) mun.value = 'Macapá/AP';
   const ta = document.getElementById('multi-texto');
   if (ta) ta.value = '';
+  _anexLimpar('multi'); // limpa imagens anexadas
   document.getElementById('multi-char-count').textContent = '0 caracteres';
   ['multi-row-rel','multi-row-mpu','multi-row-upr','multi-row-oficio-upr'].forEach(id => {
     const el = document.getElementById(id);
@@ -15145,7 +15183,7 @@ ${bodyHtml}
 <script>window.onload=function(){var b=document.body;var phPx=914,pwPx=604;var p=b.style.width;b.style.width=pwPx+'px';var h=b.scrollHeight;b.style.width=p;if(h>phPx){b.style.zoom=((phPx*0.97)/h).toFixed(4);}setTimeout(function(){window.print();},750);};<\/script>
 </body></html>`;
 
-  const blob2 = new Blob([docHtml], { type: 'text/html;charset=utf-8' });
+  const blob2 = new Blob([_anexInjetarNoHtml(docHtml, 'multi', tituloDoc)], { type: 'text/html;charset=utf-8' });
   const _ok2 = _entregarDoc(blob2, 'documento-cme.html');
   _mostrarToast(_ok2
     ? '🖨️ Documento aberto! Escolha "Salvar como PDF" na impressora.'
@@ -19872,6 +19910,7 @@ function jur_limpar() {
   const dd = String(hoje.getDate()).padStart(2,'0');
   const mm = String(hoje.getMonth()+1).padStart(2,'0');
   document.getElementById('jur-data').value = `${hoje.getFullYear()}-${mm}-${dd}`;
+  _anexLimpar('jur'); // limpa imagens anexadas
   jur_atualizarVaras();
 }
 
@@ -20165,7 +20204,8 @@ function jur_gerarPDF() {
 <script>window.onload=function(){var b=document.body;var phPx=914,pwPx=604;var p=b.style.width;b.style.width=pwPx+'px';var h=b.scrollHeight;b.style.width=p;if(h>phPx){b.style.zoom=((phPx*0.97)/h).toFixed(4);}setTimeout(function(){window.print();},750);};<\/script>
 </body></html>`;
 
-  const blob = new Blob([docHtml], { type: 'text/html;charset=utf-8' });
+  const _subJur = (document.getElementById('jur-nome')?.value || '').trim().toUpperCase();
+  const blob = new Blob([_anexInjetarNoHtml(docHtml, 'jur', _subJur)], { type: 'text/html;charset=utf-8' });
   const _okJur = _entregarDoc(blob, 'documento-cme.html');
   _mostrarToast(_okJur
     ? '🖨️ Documento aberto! Escolha "Salvar como PDF" na impressora.'
