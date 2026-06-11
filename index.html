@@ -2274,6 +2274,19 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           </div>
           <div id="pla-ia-status" style="display:none;margin-top:8px;padding:8px 12px;border-radius:7px;font-size:.82rem;font-weight:600"></div>
         </div>
+        <!-- ═══ ANEXAR IMAGEM (vira página de anexo no PDF) ═══ -->
+        <div id="mod-anexos-wrap" style="background:#fff;border:1px dashed #93c5fd;border-radius:10px;padding:12px 14px;margin:12px 0 4px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="font-weight:700;color:#1e40af;font-size:.88rem">📎 Anexar imagem (foto)</div>
+            <span style="font-size:.74rem;color:#64748b">A imagem é convertida e anexada como página(s) no PDF do documento.</span>
+            <div style="flex:1"></div>
+            <label style="background:#1d4ed8;color:#fff;border-radius:7px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap">
+              ➕ Escolher imagem
+              <input type="file" accept="image/*" multiple style="display:none" onchange="_modAddAnexos(this.files); this.value='';">
+            </label>
+          </div>
+          <div id="mod-anexos-lista" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"></div>
+        </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px">
           <button class="btn-secondary" onclick="limparModelo()">🗑️ Limpar</button>
           <button class="btn-secondary" onclick="copiarModelo()">📋 Copiar Texto</button>
@@ -14069,6 +14082,64 @@ function copiarModelo() {
   });
 }
 
+/* ═══════════════════ ANEXOS DE IMAGEM (Plantão) ════════════════════
+   Imagens anexadas são normalizadas (JPEG, máx. 1600px) e, na geração
+   do PDF, viram página(s) de ANEXO ao final do documento. Assim a
+   imagem é automaticamente "convertida em PDF" junto ao doc. */
+let _modAnexos = []; // [{ nome, dataUrl }]
+
+function _modConverterImagemParaJpegPadrao(srcDataUrl, cb) {
+  try {
+    const img = new Image();
+    img.onload = function () {
+      try {
+        const maxLado = 1600;
+        let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+        const escala = Math.min(1, maxLado / Math.max(w, h));
+        w = Math.max(1, Math.round(w * escala)); h = Math.max(1, Math.round(h * escala));
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        cb(cv.toDataURL('image/jpeg', 0.85));
+      } catch (e) { cb(srcDataUrl); }
+    };
+    img.onerror = function () { cb(srcDataUrl); }; // ex.: HEIC não decodificável → usa original
+    img.src = srcDataUrl;
+  } catch (e) { cb(srcDataUrl); }
+}
+
+function _modAddAnexos(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  let adicionou = 0;
+  files.forEach(f => {
+    if (!/^image\//.test(f.type)) { _mostrarToast('⚠️ "' + f.name + '" não é imagem — ignorado.', 'erro'); return; }
+    adicionou++;
+    const r = new FileReader();
+    r.onload = e => _modConverterImagemParaJpegPadrao(e.target.result, dataUrl => {
+      _modAnexos.push({ nome: f.name || 'imagem', dataUrl });
+      _modRenderAnexos();
+    });
+    r.onerror = () => _mostrarToast('⚠️ Falha ao ler "' + f.name + '".', 'erro');
+    r.readAsDataURL(f);
+  });
+  if (adicionou) _mostrarToast('📎 ' + adicionou + ' imagem(ns) anexada(s) — entram como anexo no PDF.', 'sucesso');
+}
+
+function _modRemoverAnexo(i) { _modAnexos.splice(i, 1); _modRenderAnexos(); }
+
+function _modRenderAnexos() {
+  const wrap = document.getElementById('mod-anexos-lista');
+  if (!wrap) return;
+  if (!_modAnexos.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = _modAnexos.map((a, i) =>
+    `<div style="position:relative;width:84px;height:84px;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;background:#f1f5f9" title="${(a.nome||'').replace(/"/g,'')}">
+      <img src="${a.dataUrl}" style="width:100%;height:100%;object-fit:cover">
+      <button onclick="_modRemoverAnexo(${i})" title="Remover" style="position:absolute;top:2px;right:2px;background:rgba(220,38,38,.92);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:.8rem;line-height:1;cursor:pointer;font-weight:700">×</button>
+    </div>`).join('');
+}
+
 function baixarModeloPDF() {
   const assunto    = document.getElementById('mod-assunto')?.value;
   if (!assunto) { _mostrarToast('⚠️ Selecione um assunto primeiro.', 'erro'); return; }
@@ -14162,6 +14233,17 @@ function baixarModeloPDF() {
   const agora = new Date();
   const dataExtenso = `Macap\u00e1 \u2013 AP, ${String(agora.getDate()).padStart(2,'0')} de ${meses[agora.getMonth()]} de ${agora.getFullYear()}`;
   const dataHoraLog = agora.toLocaleString('pt-BR');
+
+  // \u2500\u2500 P\u00e1ginas de ANEXO (imagens) \u2014 cada imagem vira uma p\u00e1gina no PDF \u2500\u2500
+  let anexosHtml = '';
+  if (Array.isArray(_modAnexos) && _modAnexos.length) {
+    anexosHtml = _modAnexos.map((a, idx) => `
+<div class="anexo-page">
+  <div class="anexo-titulo">ANEXO${_modAnexos.length > 1 ? ' ' + (idx + 1) : ''} \u2013 REGISTRO FOTOGR\u00c1FICO</div>
+  <div class="anexo-sub">${esc(assuntoTexto || assunto)}${monitorado ? ' \u2013 ' + esc(monitorado.toUpperCase()) : ''}</div>
+  <div class="anexo-img-box"><img class="anexo-img" src="${a.dataUrl}" alt="anexo"></div>
+</div>`).join('');
+  }
 
   const docHtml = `<!DOCTYPE html>
 <html lang="pt-BR"><head>
@@ -14288,6 +14370,21 @@ function baixarModeloPDF() {
   }
   .rodape p { margin: 2px 0; }
 
+  /* ── Páginas de ANEXO (imagens) ── */
+  .anexo-page {
+    page-break-before: always;
+    break-before: page;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 215mm;
+    padding-top: 4mm;
+  }
+  .anexo-titulo { font-size: 13pt; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: .5px; margin: 0 0 4px 0; }
+  .anexo-sub    { font-size: 10.5pt; text-align: center; color: #444; margin: 0 0 12px 0; }
+  .anexo-img-box { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; }
+  .anexo-img    { max-width: 100%; max-height: 190mm; object-fit: contain; border: 1px solid #bbb; }
+
   /* ── Botão de impressão (some no PDF) ── */
   .btn-imp {
     display: block; margin: 20px auto 0; padding: 10px 32px;
@@ -14337,7 +14434,7 @@ function baixarModeloPDF() {
   ${_assBlk}
 </div>
 </div>
-
+${anexosHtml}
 <div class="rodape">
   <p>Av. Machado de Assis, 372 \u2013 Centro, CEP 68900-066 \u2013 Macap\u00e1-AP</p>
   <p>cme@iapen.ap.gov.br &nbsp;|&nbsp; (96) 98415-2844</p>
@@ -14385,6 +14482,7 @@ function limparModelo() {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
+  _modAnexos = []; _modRenderAnexos(); // limpa imagens anexadas
   document.getElementById('mod-char-count').textContent = '0 caracteres';
 }
 
