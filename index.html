@@ -18321,6 +18321,18 @@ const COM_MODELOS = [
       `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônica – CME, informa que foi prorrogado a monitoração eletrônica de <b>${c.nomes_vinc}</b> em cumprimento à Decisão contida nos Autos.`,
       `Na oportunidade, informo que não será possível prorrogar a monitoração de <b>${c.nome_monitorado}</b>, devido a ${c.motivo_impossib}, e consequentemente, vinculação ao Sistema.`,
     ]},
+  { id:'comunica-descump', cat:'Informativo', nome:'Comunicação de Violação / Descumprimento de Medida',
+    assunto:'Comunicação de Descumprimento das Condições da Monitoração Eletrônica',
+    campos:[
+      {id:'tipo_descump',    label:'Tipo de violação / descumprimento', tipo:'text', placeholder:'ex: violação de zona de exclusão, rompimento da tornozeleira, ausência de recarga, descumprimento de recolhimento domiciliar'},
+      {id:'data_ocorrencia', label:'Data da ocorrência / constatação',   tipo:'date'},
+      {id:'descricao_fato',  label:'Descrição do fato',                   tipo:'textarea', placeholder:'Descreva a violação/descumprimento: o que ocorreu, alertas gerados, tentativas de contato, etc.'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônico – CME, comunico a Vossa Excelência o <b>DESCUMPRIMENTO/VIOLAÇÃO</b> das condições da monitoração eletrônica por parte do(a) monitorado(a) <b>${c.nome_monitorado}</b>${c.tipo_descump ? `, do tipo <b>${c.tipo_descump}</b>` : ''}${c.data_ocorrencia ? `, constatado em ${c.data_ocorrencia}` : ''}.`,
+      ...(c.descricao_fato ? [`Descrição da ocorrência: ${c.descricao_fato}`] : []),
+      `Os registros pertinentes encontram-se documentados nos sistemas desta Central e à disposição de Vossa Excelência. Diante do exposto, encaminho a presente comunicação para ciência e adoção das providências que entender cabíveis.`,
+    ]},
   /* ── OCORRÊNCIA (gerados automaticamente) ────────────────── */
   { id:'oc-prazo-vencido', cat:'Ocorrência', nome:'Prazo Vencido — Ausência de Contato com Monitorado',
     assunto:'Ausência de Contato — Prazo do POP Vencido',
