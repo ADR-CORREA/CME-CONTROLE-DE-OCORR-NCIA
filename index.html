@@ -4304,10 +4304,17 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
       <div id="estat-modo-produtividade" style="display:none">
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
           <label style="font-size:.85rem;color:#475569;font-weight:600">Período:</label>
-          <select id="prod-ano" onchange="prod_render()" style="padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:.88rem">
-            <option value="">Todos os anos</option>
+          <select id="prod-periodo" onchange="prod_onPeriodoChange()" style="padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:.88rem">
+            <option value="hoje">Hoje</option>
+            <option value="semana">Esta semana</option>
+            <option value="mes">Este mês</option>
+            <option value="ano">Este ano</option>
+            <option value="dia">Dia específico…</option>
+            <option value="tudo" selected>Tudo</option>
           </select>
+          <input type="date" id="prod-data" onchange="prod_render()" style="display:none;padding:6px 9px;border:1px solid #cbd5e1;border-radius:8px;font-size:.88rem">
           <button class="btn-secondary" onclick="prod_render()">🔄 Atualizar</button>
+          <span id="prod-periodo-label" style="font-size:.78rem;color:#1d4ed8;font-weight:600"></span>
           <span style="font-size:.78rem;color:#94a3b8">Conta os registros criados em cada setor, por servidor.</span>
         </div>
         <div id="prod-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
@@ -22397,6 +22404,59 @@ function _prodMatch(rec, m, u) {
   return who === nome || who.includes(nome) || nome.includes(who);
 }
 
+/* Converte a data de um registro (ISO, dd/mm/yyyy ou parseável) em Date (00:00). */
+function _prodParseData(rec, m) {
+  let d = rec[m.dataF] || rec.criadoEm || rec.geradoEm || rec.data || '';
+  if (!d) return null;
+  d = String(d);
+  let mm = d.match(/^(\d{4})-(\d{2})-(\d{2})/);          // ISO
+  if (mm) return new Date(+mm[1], +mm[2]-1, +mm[3]);
+  mm = d.match(/(\d{2})\/(\d{2})\/(\d{4})/);             // dd/mm/yyyy
+  if (mm) return new Date(+mm[3], +mm[2]-1, +mm[1]);
+  const t = Date.parse(d);
+  return isNaN(t) ? null : new Date(t);
+}
+
+/* Intervalo [ini, fim] do período selecionado. ini=null => sem filtro (Tudo). */
+function _prodIntervalo() {
+  const periodo = document.getElementById('prod-periodo')?.value || 'tudo';
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const fimDe = d => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
+  const fmt = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  if (periodo === 'hoje')   return { ini: hoje, fim: fimDe(hoje), label: 'Hoje — ' + fmt(hoje) };
+  if (periodo === 'semana') {
+    const ini = new Date(hoje); const seg = (ini.getDay()+6)%7;   // 0 = segunda-feira
+    ini.setDate(ini.getDate()-seg);
+    const fim = fimDe(new Date(ini.getFullYear(), ini.getMonth(), ini.getDate()+6));
+    return { ini, fim, label: 'Semana — ' + fmt(ini) + ' a ' + fmt(fim) };
+  }
+  if (periodo === 'mes') {
+    const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    const fim = fimDe(new Date(hoje.getFullYear(), hoje.getMonth()+1, 0));
+    const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    return { ini, fim, label: 'Mês — ' + meses[hoje.getMonth()] + '/' + hoje.getFullYear() };
+  }
+  if (periodo === 'ano') {
+    const ini = new Date(hoje.getFullYear(), 0, 1);
+    const fim = fimDe(new Date(hoje.getFullYear(), 11, 31));
+    return { ini, fim, label: 'Ano — ' + hoje.getFullYear() };
+  }
+  if (periodo === 'dia') {
+    const dv = document.getElementById('prod-data')?.value;
+    if (dv) { const p = dv.split('-').map(Number); const ini = new Date(p[0], p[1]-1, p[2]); return { ini, fim: fimDe(ini), label: 'Dia — ' + fmt(ini) }; }
+    return { ini: null, fim: null, label: '⚠️ Selecione um dia' };
+  }
+  return { ini: null, fim: null, label: 'Tudo (todos os períodos)' };
+}
+
+/* Mostra/oculta o campo de data quando "Dia específico" e re-renderiza. */
+function prod_onPeriodoChange() {
+  const sel = document.getElementById('prod-periodo');
+  const dt  = document.getElementById('prod-data');
+  if (dt) dt.style.display = (sel && sel.value === 'dia') ? '' : 'none';
+  prod_render();
+}
+
 function prod_render() {
   const usuarios = getUsuarios().filter(u => u.usuario !== 'admin' || true); // inclui todos
   // Carrega os arrays de cada setor
@@ -22409,15 +22469,10 @@ function prod_render() {
     arr.forEach(r => { const a = _prodAno(r, m); if (a) anosSet.add(a); });
   });
 
-  // Popular filtro de anos
-  const anos = [...anosSet].sort((a,b)=>b-a);
-  const selAno = document.getElementById('prod-ano');
-  const anoSel = selAno?.value || '';
-  if (selAno && selAno.options.length !== anos.length + 1) {
-    selAno.innerHTML = '<option value="">Todos os anos</option>' + anos.map(a=>`<option value="${a}">${a}</option>`).join('');
-    selAno.value = anos.includes(anoSel) ? anoSel : '';
-  }
-  const filtroAno = selAno?.value || '';
+  // Período selecionado → intervalo de datas [ini, fim]
+  const intervalo = _prodIntervalo();
+  const lblEl = document.getElementById('prod-periodo-label');
+  if (lblEl) lblEl.textContent = intervalo.label || '';
 
   // Matriz: usuario.usuario → { metricKey: count }; + "Não identificado"
   const matriz = {}; const totSetor = {}; const naoIdent = {};
@@ -22425,7 +22480,7 @@ function prod_render() {
   PROD_METRICS.forEach(m => {
     totSetor[m.key] = 0; naoIdent[m.key] = 0;
     dados[m.key].forEach(rec => {
-      if (filtroAno && _prodAno(rec, m) !== filtroAno) return;
+      if (intervalo.ini) { const _dt = _prodParseData(rec, m); if (!_dt || _dt < intervalo.ini || _dt > intervalo.fim) return; }
       totSetor[m.key]++;
       const u = usuarios.find(us => _prodMatch(rec, m, us));
       if (u) matriz[u.usuario][m.key] = (matriz[u.usuario][m.key]||0) + 1;
