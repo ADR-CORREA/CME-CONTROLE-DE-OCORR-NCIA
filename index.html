@@ -20805,6 +20805,34 @@ function _comImagemParaJpegBytes(file) {
   });
 }
 
+/* Normaliza um arquivo de imagem (redesenha em canvas → JPEG baseline) e
+   retorna { dataUrl, w, h }. JPEG de canvas é sempre aceito pelo jsPDF.addImage. */
+function _comImagemNormalizada(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const maxLado = 1600;
+          let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+          const escala = Math.min(1, maxLado / Math.max(w, h));
+          const cw = Math.max(1, Math.round(w * escala)), ch = Math.max(1, Math.round(h * escala));
+          const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+          const ctx = cv.getContext('2d');
+          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cw, ch);
+          ctx.drawImage(img, 0, 0, cw, ch);
+          resolve({ dataUrl: cv.toDataURL('image/jpeg', 0.85), w: cw, h: ch });
+        } catch (err) { reject(err); }
+      };
+      img.onerror = () => reject(new Error('imagem não decodificável'));
+      img.src = e.target.result;
+    };
+    r.onerror = () => reject(new Error('falha ao ler arquivo'));
+    r.readAsDataURL(file);
+  });
+}
+
 async function com_gerarPDFComAnexos() {
   const texto = document.getElementById('com-of-texto').value.trim();
   if (!texto) { _mostrarToast('⚠️ Preencha e visualize o ofício primeiro.', 'erro'); return; }
@@ -21103,12 +21131,29 @@ async function _comGerarPDFExec() {
       doc.text('Documento gerado em ' + dtGerado, cx, yRod + 14, { align: 'center' });
     }
 
+    // ── Imagens anexadas → páginas no próprio PDF do ofício (jsPDF.addImage) ──
+    const imgAnexos = _comAnexos.filter(a => /^(jpe?g|png|webp|gif|bmp)$/.test(a.tipo) && a.file);
+    let _imgOk = 0;
+    for (const anexo of imgAnexos) {
+      try {
+        const im = await _comImagemNormalizada(anexo.file);
+        doc.addPage();
+        const pw = 210, ph = 297, mg = 12;   // A4 em mm
+        const ratio = Math.min((pw - mg * 2) / im.w, (ph - mg * 2) / im.h);
+        const w = im.w * ratio, h = im.h * ratio;
+        doc.addImage(im.dataUrl, 'JPEG', (pw - w) / 2, (ph - h) / 2, w, h);
+        _imgOk++;
+      } catch(e) {
+        console.warn('Imagem não incluída', anexo.nome, e && e.message);
+        _mostrarToast('⚠️ Não consegui incluir a imagem "' + anexo.nome + '" no PDF.', 'erro');
+      }
+    }
+
     let finalBytes = doc.output('arraybuffer');
 
-    // ── Mesclar anexos PDF e IMAGENS (cada imagem vira uma página A4) ──
+    // ── Mesclar anexos PDF ──
     const pdfAnexos = _comAnexos.filter(a => a.tipo === 'pdf' && a.file);
-    const imgAnexos = _comAnexos.filter(a => /^(jpe?g|png|webp|gif|bmp)$/.test(a.tipo) && a.file);
-    if (pdfAnexos.length || imgAnexos.length) {
+    if (pdfAnexos.length) {
       await _carregarScriptSE(
         'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js', 'PDFLib');
       const { PDFDocument } = window.PDFLib;
@@ -21131,32 +21176,6 @@ async function _comGerarPDFExec() {
         } catch(e) { console.warn('Não foi possível incluir', anexo.nome, e.message); }
       }
 
-      // Imagens → cada uma vira uma página A4 (retrato).
-      // 1º tenta embutir os bytes originais (PNG/JPEG); se falhar, normaliza via canvas.
-      const A4W = 595.28, A4H = 841.89, margem = 36;   // pt (A4) e margem
-      for (const anexo of imgAnexos) {
-        try {
-          let img = null;
-          try {
-            const rawBuf = await anexo.file.arrayBuffer();
-            const head = new Uint8Array(rawBuf.slice(0, 4));
-            const isPng = head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4E && head[3] === 0x47;
-            img = isPng ? await merged.embedPng(rawBuf) : await merged.embedJpg(rawBuf);
-          } catch (_eNativo) {
-            // fallback: redesenha em canvas e exporta JPEG (corrige webp/heic/jpeg progressivo)
-            const jpegBytes = await _comImagemParaJpegBytes(anexo.file);
-            img = await merged.embedJpg(jpegBytes);
-          }
-          const page = merged.addPage([A4W, A4H]);
-          const maxW = A4W - margem * 2, maxH = A4H - margem * 2;
-          const escala = Math.min(maxW / img.width, maxH / img.height, 1);
-          const w = img.width * escala, h = img.height * escala;
-          page.drawImage(img, { x: (A4W - w) / 2, y: (A4H - h) / 2, width: w, height: h });
-        } catch(e) {
-          console.warn('Não foi possível incluir imagem', anexo.nome, e && e.message);
-          _mostrarToast('⚠️ Não consegui incluir a imagem "' + anexo.nome + '" no PDF.', 'erro');
-        }
-      }
       finalBytes = await merged.save();
     }
 
@@ -21175,7 +21194,7 @@ async function _comGerarPDFExec() {
       });
     } catch(e) { console.warn('[CME] registro de ofício falhou:', e); }
 
-    const _nAnex = pdfAnexos.length + imgAnexos.length;
+    const _nAnex = pdfAnexos.length + _imgOk;
     const msg = _okPdf
       ? (_nAnex
           ? `📄 PDF aberto na tela: ofício + ${_nAnex} anexo(s). Baixe se quiser.`
