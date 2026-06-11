@@ -2295,6 +2295,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
               <option>JUSTIFICATIVA DE SAÍDA DE ZONA</option>
               <option>JUSTIFICATIVA ATESTADO MÉDICO</option>
               <option>INSPEÇÃO DE TORNOZELEIRA</option>
+              <option>TERMO DE ROMPIMENTO DE TORNOZELEIRA</option>
               <option>TEMPO LIMITE AUSÊNCIA GPRS</option>
               <option>PERMUTA SERVIDOR/PLANTÃO</option>
               <option>INFORMATIVO – ENTREGA DE DECLARAÇÃO</option>
@@ -13736,11 +13737,12 @@ function gerarModelo() {
 
   // Mostrar/ocultar campos dinâmicos
   const camposTNZ         = ['TROCA/SUBSTITUIÇÃO DE TORNOZELEIRA'];
-  const camposTNZUnit     = ['VINCULAÇÃO','VINCULAÇÃO JVD','DESVINCULAÇÃO','INSPEÇÃO DE TORNOZELEIRA','TEMPO LIMITE AUSÊNCIA GPRS'];
+  const camposTNZUnit     = ['VINCULAÇÃO','VINCULAÇÃO JVD','DESVINCULAÇÃO','INSPEÇÃO DE TORNOZELEIRA','TEMPO LIMITE AUSÊNCIA GPRS','TERMO DE ROMPIMENTO DE TORNOZELEIRA'];
   const camposDPP         = ['VINCULAÇÃO – DPP'];
-  const camposZona        = ['JUSTIFICATIVA DE SAÍDA DE ZONA','JUSTIFICATIVA ATESTADO MÉDICO','ALTERAÇÃO ENDEREÇO/ZONA'];
+  const camposZona        = ['JUSTIFICATIVA DE SAÍDA DE ZONA','JUSTIFICATIVA ATESTADO MÉDICO','ALTERAÇÃO ENDEREÇO/ZONA','TERMO DE ROMPIMENTO DE TORNOZELEIRA'];
   const camposPermuta     = ['PERMUTA SERVIDOR/PLANTÃO'];
   const camposComparec    = ['COMPARECIMENTO NA CENTRAL'];
+  const camposCPF         = ['COMPARECIMENTO NA CENTRAL','TERMO DE ROMPIMENTO DE TORNOZELEIRA'];
 
   const setDisplay = (id, show) => {
     const el = document.getElementById(id);
@@ -13751,7 +13753,7 @@ function gerarModelo() {
   setDisplay('mod-row-dpp',       camposDPP.includes(assunto));
   setDisplay('mod-row-zona',      camposZona.includes(assunto));
   setDisplay('mod-row-permuta',   camposPermuta.includes(assunto));
-  setDisplay('mod-row-cpf',       camposComparec.includes(assunto));
+  setDisplay('mod-row-cpf',       camposCPF.includes(assunto));
   setDisplay('mod-row-motivo',    camposComparec.includes(assunto));
 
   if (!assunto) { document.getElementById('mod-texto').value = ''; return; }
@@ -13984,6 +13986,57 @@ Assinatura do Servidor
 
 _____________________________________________
 Assinatura do Monitorado (a)`,
+
+    'TERMO DE ROMPIMENTO DE TORNOZELEIRA': `
+TERMO DE CONSTATAÇÃO DE ROMPIMENTO DE TORNOZELEIRA ELETRÔNICA
+E DECLARAÇÃO DO(A) MONITORADO(A)
+
+Aos ${dataFmt}, na sede da Central de Monitoramento Eletrônico — CME/IAPEN-AP, perante o(a) servidor(a) abaixo identificado(a), foi constatada a situação de ROMPIMENTO/VIOLAÇÃO do dispositivo de monitoração eletrônica (tornozeleira) em uso pelo(a) monitorado(a) abaixo qualificado(a).
+
+I — IDENTIFICAÇÃO DO(A) MONITORADO(A)
+• NOME: ${monit}
+• CPF: ${cpf}
+• PROCESSO / ALVARÁ Nº: ${processo}
+• Nº DE SÉRIE DA TORNOZELEIRA: ${tnz}
+• DATA/HORA DA CONSTATAÇÃO: ${dataFmt}
+
+II — CONSTATAÇÃO TÉCNICA (preenchida pela CME)
+Registra-se que o equipamento apresentou rompimento/violação da cinta ou da integridade física do dispositivo, conforme verificação técnica desta Central, registro no sistema de monitoração e REGISTRO FOTOGRÁFICO que acompanha o presente termo.
+Descrição / circunstâncias da constatação: ${just}
+
+III — ADVERTÊNCIA DE DIREITOS
+O(A) monitorado(a) foi previamente informado(a) de que tem o DIREITO DE PERMANECER EM SILÊNCIO e de NÃO PRODUZIR PROVA CONTRA SI MESMO(A), bem como o direito de ser assistido(a) por advogado(a) ou defensor(a) público(a) (art. 5º, LXIII, da Constituição Federal). A manifestação a seguir, caso prestada, é LIVRE, ESPONTÂNEA e SEM QUALQUER COAÇÃO.
+
+IV — MANIFESTAÇÃO DO(A) MONITORADO(A) (assinalar)
+(   ) Declaro, de forma livre e espontânea, que RECONHEÇO o rompimento/violação do dispositivo acima descrito, ciente das consequências legais.
+(   ) Opto por PERMANECER EM SILÊNCIO / não prestar declaração neste ato.
+(   ) Reservo-me a prestar esclarecimentos posteriormente, acompanhado(a) de defesa.
+
+Observações do(a) monitorado(a): ___________________________________________
+_______________________________________________________________________________
+
+V — CIÊNCIA
+Declara o(a) monitorado(a) estar ciente de que o presente termo, o relatório técnico e o registro fotográfico serão encaminhados ao Juízo competente para as providências cabíveis.
+
+Macapá-AP, ${dataFmt}.
+
+
+_____________________________________________
+${monit}
+Monitorado(a) — CPF: ${cpf}
+
+
+_____________________________________________
+${servidor}
+Policial Penal — Plantão: ${plantao}
+Servidor(a) responsável pela constatação
+
+
+TESTEMUNHAS:
+
+1) ____________________________________   Nome / Matrícula: __________________
+
+2) ____________________________________   Nome / Matrícula: __________________`,
   };
 
   const corpo = templates[assunto] || '';
