@@ -2703,6 +2703,10 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
               </button>
               <span id="com-docs-sel-count" style="font-size:.78rem;color:#64748b"></span>
               <div style="flex:1"></div>
+              <button id="com-btn-anexar-simples" onclick="com_carregarSemIA()"
+                style="background:#fff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:7px;padding:7px 15px;font-size:.82rem;font-weight:700;cursor:pointer;margin-right:8px">
+                📎 Só Anexar (sem IA)
+              </button>
               <button id="com-btn-extrair-ia" onclick="com_carregarEExtrair()"
                 style="background:#1d4ed8;color:#fff;border:none;border-radius:7px;padding:7px 15px;font-size:.82rem;font-weight:700;cursor:pointer">
                 🤖 Carregar e Extrair com IA
@@ -20483,6 +20487,51 @@ async function com_processarUmArquivo(file) {
   await com_processarArquivos([file]);
 }
 
+/* Baixa os documentos selecionados do R2 e ANEXA sem ler/extrair com IA.
+   Só junta os arquivos ao PDF final (imagens viram página; PDFs são mesclados). */
+async function com_carregarSemIA() {
+  const checks = [...document.querySelectorAll('.com-doc-check:checked')];
+  if (!checks.length) { _mostrarToast('⚠️ Selecione pelo menos um documento.', 'erro'); return; }
+  if (!r2_state.url || !r2_state.token) await r2_carregarConfig();
+
+  const btn = document.getElementById('com-btn-anexar-simples');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Anexando...'; }
+
+  const erros = []; let n = 0;
+  for (const chk of checks) {
+    const key  = chk.dataset.key;
+    const nome = chk.dataset.nome || key.split('/').pop();
+    try {
+      const resp = await fetch(
+        `${r2_state.url}/download?key=${encodeURIComponent(key)}`,
+        { headers: { 'Authorization': `Bearer ${_workerToken()}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } }
+      );
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const file = new File([blob], nome, { type: blob.type || 'application/octet-stream' });
+      const id   = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+      const tipo = (nome.split('.').pop() || '').toLowerCase();
+      const anexo = { id, file, nome, tipo, tamanho: file.size, texto: '', status: 'ok', semIA: true };
+      // Conta páginas de PDF (para o seletor de páginas) — sem extrair texto/IA
+      if (tipo === 'pdf') {
+        try {
+          await _carregarScriptSE('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'pdfjsLib');
+          if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            anexo._totalPages = (await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise).numPages;
+          }
+        } catch (_e) {}
+      }
+      _comAnexos.push(anexo); n++;
+      com_renderizarAnexos();
+    } catch (e) { erros.push(nome); }
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = '📎 Só Anexar (sem IA)'; }
+  _mostrarToast(n ? `📎 ${n} documento(s) anexado(s) (sem IA). Use "📑 PDF com Anexos" para gerar.` : '⚠️ Nada foi anexado.', n ? 'sucesso' : 'erro');
+  if (erros.length) _mostrarToast(`⚠️ ${erros.length} arquivo(s) não baixaram.`, 'erro');
+}
+
 /* ── Helpers de matching comarca/vara ───────────────────────── */
 function _comNorm(s) {
   return String(s).toLowerCase()
@@ -21082,18 +21131,31 @@ async function _comGerarPDFExec() {
         } catch(e) { console.warn('Não foi possível incluir', anexo.nome, e.message); }
       }
 
-      // Imagens → converte cada uma em JPEG e adiciona como página A4 (retrato)
+      // Imagens → cada uma vira uma página A4 (retrato).
+      // 1º tenta embutir os bytes originais (PNG/JPEG); se falhar, normaliza via canvas.
       const A4W = 595.28, A4H = 841.89, margem = 36;   // pt (A4) e margem
       for (const anexo of imgAnexos) {
         try {
-          const jpegBytes = await _comImagemParaJpegBytes(anexo.file);
-          const img = await merged.embedJpg(jpegBytes);
+          let img = null;
+          try {
+            const rawBuf = await anexo.file.arrayBuffer();
+            const head = new Uint8Array(rawBuf.slice(0, 4));
+            const isPng = head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4E && head[3] === 0x47;
+            img = isPng ? await merged.embedPng(rawBuf) : await merged.embedJpg(rawBuf);
+          } catch (_eNativo) {
+            // fallback: redesenha em canvas e exporta JPEG (corrige webp/heic/jpeg progressivo)
+            const jpegBytes = await _comImagemParaJpegBytes(anexo.file);
+            img = await merged.embedJpg(jpegBytes);
+          }
           const page = merged.addPage([A4W, A4H]);
           const maxW = A4W - margem * 2, maxH = A4H - margem * 2;
           const escala = Math.min(maxW / img.width, maxH / img.height, 1);
           const w = img.width * escala, h = img.height * escala;
           page.drawImage(img, { x: (A4W - w) / 2, y: (A4H - h) / 2, width: w, height: h });
-        } catch(e) { console.warn('Não foi possível incluir imagem', anexo.nome, e.message); }
+        } catch(e) {
+          console.warn('Não foi possível incluir imagem', anexo.nome, e && e.message);
+          _mostrarToast('⚠️ Não consegui incluir a imagem "' + anexo.nome + '" no PDF.', 'erro');
+        }
       }
       finalBytes = await merged.save();
     }
