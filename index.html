@@ -17970,6 +17970,17 @@ const COM_MODELOS = [
       `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME, informo que <b>${c.nome_monitorado}</b> recebeu o Dispositivo de Proteção Preventiva - DPP, denominado "Botão do Pânico", desta Central de Monitoramento na data do dia <b>${c.data_vinculacao}</b>, em cumprimento à Decisão contida nos Autos.`,
       `Em anexo segue o Termo de Guarda e Responsabilidade e o expediente acima citado.`,
     ]},
+  { id:'vinc-atualiza-cadastro', cat:'Vinculação', nome:'Vinculação — Atualização do Cadastro (VEP)',
+    assunto:'Vinculação — Atualização do Cadastro',
+    campos:[
+      {id:'doc_referencia', label:'Documento de referência',          tipo:'text', placeholder:'ex: Alvará de Soltura nº 0026784-60.2017.8.03.0001'},
+      {id:'data_doc',       label:'Data de expedição do documento',    tipo:'date'},
+      {id:'regime',         label:'Regime / condições concedidas',     tipo:'text', placeholder:'ex: regime semiaberto harmonizado com monitoramento eletrônico domiciliar'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônica – CME, informo que foi realizada a atualização do cadastro de vinculação do monitorado <b>${c.nome_monitorado}</b>, conforme condições descritas no ${c.doc_referencia}, expedido em ${c.data_doc}, no qual concede ao monitorado ${c.regime}.`,
+      `Em anexo segue o Relatório de Listagem de Eventos de Monitorados e o expediente acima citado.`,
+    ]},
   /* ── DESVINCULAÇÃO ────────────────────────────────────────── */
   { id:'desvincul-decisao', cat:'Desvinculação', nome:'Desvinculação — Por Decisão Judicial',
     assunto:'Desvinculação do Sistema de Monitoração Eletrônica',
