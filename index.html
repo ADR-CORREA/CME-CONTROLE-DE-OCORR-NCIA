@@ -1169,7 +1169,7 @@ tr.row-critico-com td:first-child { border-left: 3px solid #c0392b; }
       var sp=document.createElement('span'); sp.className='cme-ic-wrap'; sp.innerHTML=h; frag.appendChild(sp);
       last=m.index+m[0].length; any=true;
     }
-    if(any){ if(last<t.length)frag.appendChild(document.createTextNode(t.slice(last))); node.parentNode.replaceChild(frag,node); }
+    if(any){ if(last<t.length)frag.appendChild(document.createTextNode(t.slice(last))); if(node.parentNode) node.parentNode.replaceChild(frag,node); }
   }
   function walk(node){
     if(!node)return;
