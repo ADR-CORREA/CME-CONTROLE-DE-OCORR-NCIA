@@ -6586,17 +6586,68 @@ function calcStatusCaso(oc) {
 /* ─── STORAGE: cache em memória + Supabase ───────────── */
 const _cache = {};
 
-function salvarStore(chave, valor) {
+/* ══ PROTEÇÃO ANTI-PERDA DE DADOS ════════════════════════════════
+   Stores de "lista" (registros que se acumulam com o tempo). Antes de
+   gravar, comparamos a contagem de registros com a que está NO SERVIDOR.
+   Se a gravação for ENCOLHER a lista de forma catastrófica (ex.: 76 → 1,
+   como no incidente de 11/06/2026 com os ofícios), ela é BLOQUEADA e o
+   cache é restaurado a partir do servidor. Bloqueia truncamento sem
+   atrapalhar exclusões normais (1 a 1). A contagem -1 = formato
+   inesperado → não arrisca bloquear, grava direto. */
+const _STORES_PROTEGIDAS = {
+  oficios:     v => (v && Array.isArray(v.registros))     ? v.registros.length     : -1,
+  relatorios:  v => (v && Array.isArray(v.registros))     ? v.registros.length     : -1,
+  ocorrencias: v => Array.isArray(v)                       ? v.length               : -1,
+  triagem:     v => (v && Array.isArray(v.atendimentos))   ? v.atendimentos.length  : -1,
+  gerencia:    v => (v && Array.isArray(v.demandas))       ? v.demandas.length      : -1,
+  estoque:     v => (v && Array.isArray(v.movimentacoes))  ? v.movimentacoes.length : -1,
+};
+
+function _upsertStoreDireto(chave, valor) {
+  return window._db.from('store')
+    .upsert({ key: 'cme_' + chave, value: valor, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+    .then(({ error }) => {
+      if (error) {
+        console.error('[CME] Erro ao salvar no Supabase:', chave, error);
+        _mostrarToast('⚠️ Erro ao salvar no banco: ' + error.message, 'erro');
+      }
+    });
+}
+
+async function _salvarStoreProtegido(chave, valor) {
+  const contar = _STORES_PROTEGIDAS[chave];
+  const nNovo = contar(valor);
+  if (nNovo < 0) { _upsertStoreDireto(chave, valor); return; } // formato inesperado → grava
+  try {
+    const { data, error } = await window._db.from('store')
+      .select('value').eq('key', 'cme_' + chave).maybeSingle();
+    if (!error && data && data.value != null) {
+      const nServ = contar(data.value);
+      if (nServ >= 3) {
+        const perda = nServ - nNovo;
+        // catastrófico: zera/quase-zera (≤1), OU perde mais de 3 registros e mais de 40% da lista
+        const catastrofico = nNovo <= 1 || (perda > 3 && perda / nServ > 0.4);
+        if (catastrofico) {
+          _cache[chave] = data.value;                 // desfaz o encolhimento local
+          _mostrarToast('🛡️ Proteção anti-perda: bloqueei uma gravação que apagaria ' + perda + ' de ' + nServ + ' registros de "' + chave + '". Os dados do servidor foram preservados — recarregue a página (F5) e tente de novo.', 'erro');
+          try { atualizarTudo(); } catch (e) {}
+          console.warn('[CME] 🛡️ Gravação BLOQUEADA em "' + chave + '": servidor tem ' + nServ + ' registros, tentaram gravar ' + nNovo + '.');
+          return;
+        }
+      }
+    }
+  } catch (e) { /* falha de rede na leitura → cai para o upsert normal abaixo */ }
+  _upsertStoreDireto(chave, valor);
+}
+
+function salvarStore(chave, valor, opts) {
   _cache[chave] = valor;
   if (window._db) {
-    window._db.from('store')
-      .upsert({ key: 'cme_' + chave, value: valor, updated_at: new Date().toISOString() }, { onConflict: 'key' })
-      .then(({ error }) => {
-        if (error) {
-          console.error('[CME] Erro ao salvar no Supabase:', chave, error);
-          _mostrarToast('⚠️ Erro ao salvar no banco: ' + error.message, 'erro');
-        }
-      });
+    if (_STORES_PROTEGIDAS[chave] && !(opts && opts.force)) {
+      _salvarStoreProtegido(chave, valor);
+    } else {
+      _upsertStoreDireto(chave, valor);
+    }
   }
 }
 
