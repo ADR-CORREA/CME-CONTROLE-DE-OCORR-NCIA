@@ -14055,8 +14055,6 @@ _______________________________________________________________________________
 V — CIÊNCIA
 Declara o(a) monitorado(a) estar ciente de que o presente termo, o relatório técnico e o registro fotográfico serão encaminhados ao Juízo competente para as providências cabíveis.
 
-Macapá-AP, ${dataFmt}.
-
 
 _____________________________________________
 ${monit}
@@ -14252,7 +14250,8 @@ function baixarModeloPDF() {
   // Corpo HTML
   let bodyHtml = '';
   let _inAss = false;
-  for (const l of corpoLinhas) {
+  for (let _i = 0; _i < corpoLinhas.length; _i++) {
+    const l = corpoLinhas[_i];
     const le = esc(l);
     if (!l.trim()) {
       if (_inAss) continue; // n\u00e3o adiciona espa\u00e7os dentro do bloco de assinatura
@@ -14260,7 +14259,28 @@ function baixarModeloPDF() {
     }
     if (l.startsWith('\u2022 '))  { bodyHtml += `<p class="bullet">${le}</p>\n`; continue; }
     if (l.startsWith('\u2610'))   { bodyHtml += `<p class="check">${le}</p>\n`;  continue; }
-    if (/^_{8,}/.test(l)) { continue; } // underscores do textarea: ignorar, a imagem j\u00e1 \u00e9 injetada abaixo
+    if (/^_{8,}$/.test(l.trim())) {
+      // Linha de traco. So vira bloco de assinatura se o grupo seguinte tiver
+      // um descritor (Monitorado / Policial Penal / Servidor / Assinatura / Plantao).
+      // A imagem da assinatura do usuario logado entra so no bloco do SERVIDOR.
+      const grupoAss = [];
+      let _j = _i + 1;
+      while (_j < corpoLinhas.length && corpoLinhas[_j].trim() && !/^_{8,}$/.test(corpoLinhas[_j].trim())) { grupoAss.push(corpoLinhas[_j].trim()); _j++; }
+      const _ehAss = grupoAss.some(g => /Monitorado|Policial Penal|Servidor\(a\) respons|Assinatura d|Plant.o:/i.test(g));
+      if (!_ehAss) { continue; } // traco comum (campo p/ preencher) — ignora
+      _i = _j - 1;
+      const _ehServ = grupoAss.some(g => /Policial Penal|Servidor\(a\) respons|Plant.o:/i.test(g));
+      if (_inAss) { bodyHtml += '</div>'; _inAss = false; }
+      bodyHtml += '<div class="ass-bloco">';
+      if (_ehServ && assImgCapturada) bodyHtml += '<img src="' + assImgCapturada + '" class="ass-img">';
+      bodyHtml += '<div class="ass-linha">________________________________</div>';
+      grupoAss.forEach((g, gi) => {
+        const cls = gi === 0 ? 'ass-meta' : (/^(Monitorado|Servidor\(a\) respons|Assinatura d)/.test(g) ? 'ass-meta-italic' : 'ass-meta-sub');
+        bodyHtml += '<p class="' + cls + '">' + esc(g) + '</p>';
+      });
+      bodyHtml += '</div>';
+      continue;
+    } // underscores do textarea: ignorar, a imagem j\u00e1 \u00e9 injetada abaixo
 
     const _ehLinhAss = /^(Servidor respons\u00e1vel|Respons\u00e1vel pelo registro|Policial Penal|Plant\u00e3o:|Assinatura d)/.test(l);
     if (_ehLinhAss) {
@@ -14406,6 +14426,8 @@ function baixarModeloPDF() {
   .ass-meta          { margin: 10pt 0 0 0; font-weight: bold; font-size: 11pt; text-align: center; }
   .ass-meta + .ass-meta { margin-top: 2px; }
   .ass-meta-italic   { margin: 2px 0; font-style: italic; font-size: 10pt; color: #555; text-align: center; }
+  .ass-meta-sub      { margin: 2px 0; font-size: 10.5pt; text-align: center; }
+  .ass-bloco + .ass-bloco { margin-top: 30pt; }
 
   /* ── Data por extenso ── */
   .data-extenso { margin-top: 0; margin-bottom: 14pt; text-align: right; font-size: 11pt; }
