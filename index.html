@@ -385,6 +385,9 @@ body.td #dash-plantao-hoje{ background:var(--cme-surface) !important; border-col
 body.td #dash-plantao-hoje *[style*="color:#1F4E78"]{ color:var(--cme-text) !important; }
 body.td #dash-plantao-nome{ color:var(--cme-text) !important; }
 body.td #dash-plantao-data{ color:var(--cme-text-muted) !important; }
+body.td #dash-estoque-disp{ background:var(--cme-surface) !important; border-color:var(--cme-border) !important; border-left-color:var(--cme-success) !important; }
+body.td #dash-estoque-disp *[style*="color:#1F4E78"]{ color:var(--cme-text) !important; }
+body.td #dash-estoque-disp *[style*="color:#64748b"], body.td #dash-estoque-disp *[style*="color:#94a3b8"]{ color:var(--cme-text-muted) !important; }
 body.td #panel-dashboard .dash-alertas{ background:var(--cme-elevated) !important; border-color:var(--cme-border) !important; border-left-color:var(--cme-warning) !important; }
 body.td #panel-dashboard .dash-alertas.ok{ background:rgba(63,185,80,.12) !important; border-color:rgba(63,185,80,.4) !important; border-left-color:var(--cme-success) !important; }
 body.td #panel-dashboard .dchart-card{ background:var(--cme-surface) !important; border-color:var(--cme-border) !important; color:var(--cme-text); box-shadow:none; }
@@ -1370,6 +1373,19 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <div style="font-size:.76rem;color:#94a3b8" id="dash-plantao-data"></div>
         </div>
         <span id="dash-plantao-chip" style="font-size:.8rem;font-weight:800;color:#fff;background:#1d4ed8;border-radius:20px;padding:5px 14px;white-space:nowrap">—</span>
+      </div>
+
+      <!-- Estoque disponível (Módulos de tornozeleira + DPP) — visível a todos os perfis -->
+      <div id="dash-estoque-disp" style="display:flex;align-items:center;gap:26px;flex-wrap:wrap;background:linear-gradient(90deg,#f0fdf4,#f8fafc);border:1px solid #bbf7d0;border-left:5px solid #16a34a;border-radius:12px;padding:14px 18px;margin-bottom:16px">
+        <div style="font-size:.74rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;min-width:128px">📦 Estoque disponível</div>
+        <div style="display:flex;align-items:center;gap:11px">
+          <span style="color:#16a34a;display:inline-flex"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49M7.76 16.24a6 6 0 0 1 0-8.49M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/></svg></span>
+          <div><div style="font-size:1.55rem;font-weight:800;color:#1F4E78;line-height:1;font-family:var(--font-mono)" id="dash-est-mod">—</div><div style="font-size:.72rem;color:#94a3b8">Módulos de tornozeleira</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:11px">
+          <span style="color:#16a34a;display:inline-flex"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6"/><circle cx="12" cy="16.5" r="1"/></svg></span>
+          <div><div style="font-size:1.55rem;font-weight:800;color:#1F4E78;line-height:1;font-family:var(--font-mono)" id="dash-est-dpp">—</div><div style="font-size:.72rem;color:#94a3b8">Dispositivos DPP</div></div>
+        </div>
       </div>
 
       <!-- Painel PESSOAL (servidores) — preenchido por _dashRenderPessoal() -->
@@ -3801,6 +3817,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <div class="est-kpi"><div class="est-kpi-num" id="psi-k-urgencia">0</div><div class="est-kpi-label">Urgências</div></div>
           <div class="est-kpi"><div class="est-kpi-num" id="psi-k-risco-alto">0</div><div class="est-kpi-label">Risco Alto</div></div>
           <div class="est-kpi"><div class="est-kpi-num" id="psi-k-proximo">0</div><div class="est-kpi-label">C/ Próx. Atend.</div></div>
+          <div class="est-kpi" style="border-left-color:#16a34a"><div class="est-kpi-num" id="psi-est-dpp" style="color:#16a34a">—</div><div class="est-kpi-label">📟 DPP disponíveis</div></div>
         </div>
 
         <!-- Filtros -->
@@ -7442,10 +7459,26 @@ function atualizarTudo() {
   atualizarBadgeOFC();
 }
 
+/* Estoque disponível (Módulos de tornozeleira + DPP) — alimenta o card do
+   Dashboard e o campo dentro do Psicossocial. Fonte: mesma do painel Estoque. */
+function _dashEstoqueDisp() {
+  let mod = 0, dpp = 0;
+  try {
+    const it = (getEstoque().itens) || {};
+    mod = it['Módulo eletrônico de monitoração'] || 0;
+    dpp = it['Dispositivo DPP'] || 0;
+  } catch (e) {}
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('dash-est-mod', mod);
+  set('dash-est-dpp', dpp);
+  set('psi-est-dpp', dpp); // campo dentro do Psicossocial
+}
+
 /* ─── DASHBOARD ──────────────────────────────────────── */
 function atualizarDashboard() {
   try { _dashRenderPlantaoHoje(); } catch(e) { console.warn('plantão hoje', e); }
   try { _dashAplicarModoPessoal(); } catch(e) { console.warn('dash modo pessoal', e); }
+  try { _dashEstoqueDisp(); } catch(e) {}
   const ocs = getOcorrencias();
   let ok=0, at=0, ve=0, vd=0, com=0, prot=0;
   let protSemProd=0, cautSemProd=0, protVenc=0;
@@ -23474,6 +23507,7 @@ function psi_lerArquivo(file) {
 
 /* ── Cards de resumo ─────────────────────────────────────────────── */
 function psi_renderizarCards() {
+  try { _dashEstoqueDisp(); } catch (e) {} // atualiza o campo "DPP disponíveis"
   const d = _psiFiltros._resultado || _psiDados;
   const total     = d.length;
   const mon       = d.filter(r => String(r[PSI_COLS.publico]||'').toLowerCase().includes('monitor')).length;
