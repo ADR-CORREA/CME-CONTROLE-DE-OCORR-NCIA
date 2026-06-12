@@ -18386,6 +18386,30 @@ const COM_MODELOS = [
       `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônica – CME, informo que foi realizada a atualização do cadastro de vinculação do monitorado <b>${c.nome_monitorado}</b>, conforme condições descritas no ${c.doc_referencia}, expedido em ${c.data_doc}, no qual concede ao monitorado ${c.regime}.`,
       `Em anexo segue o Relatório de Listagem de Eventos de Monitorados e o expediente acima citado.`,
     ]},
+  { id:'vinc-solicita-info-vitima', cat:'Vinculação', nome:'Vinculação + Solicita Informações Complementares da Vítima (JVD)',
+    assunto:'Vinculação no Sistema de Monitoração Eletrônica',
+    campos:[
+      {id:'data_vinculacao', label:'Data da vinculação', tipo:'date'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, a Central de Monitoramento Eletrônico – CME, por meio desta, vem informar que <b>${c.nome_monitorado}</b>, foi vinculado (a) do Sistema de Monitoramento Eletrônico na data do dia <b>${c.data_vinculacao}</b>.`,
+      `Encaminha, em anexo, o Termo de Vinculação e o expediente acima citado.`,
+      `Na oportunidade, solicita-se o encaminhamento de informações complementares referentes aos dados pessoais da vítima, tais como nome, endereço residencial e local do trabalho, a fim de viabilizar a definição da zona de exclusão e disponibilização do Botão do Pânico.`,
+      `Ressalta-se que a ausência dos dados acima supracitados compromete a efetividade do monitoramento eletrônico instalado.`,
+    ]},
+  { id:'encaminha-relatorios', cat:'Informativo', nome:'Encaminha Relatórios de Monitoração (vários monitorados)',
+    assunto:'Encaminha Relatórios de Monitoração Eletrônica',
+    campos:[
+      {id:'monitorados', label:'Monitorados — adicione quantos precisar (+)', tipo:'lista', placeholder:'Nome do monitorado'},
+    ],
+    corpo:c=>{
+      const lista = String(c.monitorados||'').split('\n').filter(Boolean);
+      return [
+        `Com os cumprimentos de estilo, sirvo-me do presente para encaminhar, por intermédio da Central de Monitoramento Eletrônico – CME, os Relatórios de Monitoração Eletrônica dos seguintes monitorados:`,
+        ...(lista.length ? lista : ['1. ____']),
+        `Sem mais para o momento, esta CME coloca-se à disposição para quaisquer esclarecimentos que se façam necessários.`,
+      ];
+    }},
   /* ── DESVINCULAÇÃO ────────────────────────────────────────── */
   { id:'desvincul-decisao', cat:'Desvinculação', nome:'Desvinculação — Por Decisão Judicial',
     assunto:'Desvinculação do Sistema de Monitoração Eletrônica',
@@ -18842,14 +18866,20 @@ function com_atualizarCampos() {
   const m   = COM_MODELOS.find(x => x.id === document.getElementById('com-of-modelo').value);
   const div = document.getElementById('com-of-campos-dinamicos');
   if (!m || !m.campos.length) { div.innerHTML = ''; return; }
-  const temTextarea = m.campos.some(c => c.tipo === 'textarea');
-  const cols = temTextarea ? '1fr' : (m.campos.length <= 2 ? '1fr '.repeat(m.campos.length).trim() : '1fr 1fr');
+  const temWide = m.campos.some(c => c.tipo === 'textarea' || c.tipo === 'lista');
+  const cols = temWide ? '1fr' : (m.campos.length <= 2 ? '1fr '.repeat(m.campos.length).trim() : '1fr 1fr');
   div.innerHTML = `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px">
     <div style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Campos do Modelo</div>
     <div style="display:grid;grid-template-columns:${cols};gap:10px">
     ${m.campos.map(c=>{
       const ph = c.placeholder ? `placeholder="${c.placeholder}"` : '';
       const baseStyle = 'width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box;font-family:var(--font-sans)';
+      if (c.tipo === 'lista') {
+        return `<div style="grid-column:1/-1"><label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:6px">${c.label}</label>
+          <div id="com-of-lista-${c.id}">${com_listaItemHtml(c.id, c.placeholder)}</div>
+          <button type="button" onclick="com_listaAdd('${c.id}')" style="margin-top:2px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">+ Adicionar monitorado</button>
+          <input type="hidden" id="com-of-campo-${c.id}"></div>`;
+      }
       const el = c.tipo === 'textarea'
         ? `<textarea id="com-of-campo-${c.id}" rows="4" ${ph} oninput="com_atualizarPreview()" style="${baseStyle};resize:vertical"></textarea>`
         : `<input type="${c.tipo}" id="com-of-campo-${c.id}" ${ph} oninput="com_atualizarPreview()" onchange="com_atualizarPreview()" style="${baseStyle}">`;
@@ -18857,6 +18887,35 @@ function com_atualizarCampos() {
       return `<div${isWide ? ' style="grid-column:1/-1"' : ''}><label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">${c.label}</label>${el}</div>`;
     }).join('')}
     </div></div>`;
+}
+
+/* ── Campo tipo "lista" (vários monitorados, com +/−) — usado em ofícios
+   que cobrem múltiplos monitorados (ex.: Encaminha Relatórios). Os nomes
+   são sincronizados num input oculto "com-of-campo-{id}" como lista
+   numerada, para os coletores de campo existentes funcionarem sem mudança. */
+function com_listaItemHtml(id, ph) {
+  const base = 'flex:1;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box;font-family:var(--font-sans)';
+  return `<div class="com-lista-item" style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+    <input type="text" placeholder="${ph || 'Nome do monitorado'}" oninput="com_listaSync('${id}')" style="${base}">
+    <button type="button" title="Remover" onclick="com_listaRemover(this,'${id}')" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;width:32px;height:32px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+  </div>`;
+}
+function com_listaAdd(id) {
+  const c = document.getElementById('com-of-lista-' + id);
+  if (c) { c.insertAdjacentHTML('beforeend', com_listaItemHtml(id)); com_listaSync(id); }
+}
+function com_listaRemover(btn, id) {
+  const c = document.getElementById('com-of-lista-' + id);
+  if (c && c.querySelectorAll('.com-lista-item').length > 1) btn.closest('.com-lista-item').remove();
+  com_listaSync(id);
+}
+function com_listaSync(id) {
+  const c = document.getElementById('com-of-lista-' + id);
+  if (!c) return;
+  const nomes = [...c.querySelectorAll('input')].map(i => i.value.trim()).filter(Boolean);
+  const hid = document.getElementById('com-of-campo-' + id);
+  if (hid) hid.value = nomes.map((n, i) => (i + 1) + '. ' + n).join('\n');
+  try { com_atualizarPreview(); } catch (e) {}
 }
 
 /* ═══════════ NUMERAÇÃO AUTOMÁTICA DE OFÍCIOS ═══════════════════
