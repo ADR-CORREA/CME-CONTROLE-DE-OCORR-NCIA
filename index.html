@@ -7046,7 +7046,27 @@ function _histOc(oc, acao) {
 }
 
 function getLogs() { return carregarStore("logs", []); }
-function addLog(msg) {
+/* ── AUDITORIA ESTRUTURADA (D1 via worker) ────────────────────────
+   Registra quem/quando/o quê num banco SEPARADO do Supabase — imune ao
+   tipo de incidente que zerou os ofícios, e sem o limite de 100 do
+   cme_logs. Fire-and-forget: nunca trava a UI e ignora erros de rede. */
+function auditar(opts) {
+  opts = opts || {};
+  try {
+    if (typeof r2_state === 'undefined' || !r2_state || !r2_state.url) return;
+    const body = JSON.stringify({
+      action:     opts.action     || 'log',
+      modulo:     opts.modulo      || 'Geral',
+      monitorado: opts.monitorado  || '',
+      alvo:       opts.alvo        || '',
+      detalhe:    opts.detalhe     || '',
+      usuario:    (typeof usuarioAtual !== 'undefined' && usuarioAtual && usuarioAtual.nome) || ''
+    });
+    r2_api('POST', '/audit-log', { 'Content-Type': 'application/json' }, body).catch(() => {});
+  } catch (e) {}
+}
+
+function addLog(msg, meta) {
   // Busca o estado atual dos logs direto do Supabase para evitar conflito entre PCs
   const entrada = { ts: new Date().toISOString(), msg };
   if (window._db) {
@@ -7063,6 +7083,9 @@ function addLog(msg) {
     if (logs.length > 100) logs.pop();
     salvarStore("logs", logs);
   }
+  // Espelha em auditoria estruturada e persistente (D1)
+  meta = meta || {};
+  try { auditar({ action: meta.action || 'log', modulo: meta.modulo || 'Geral', monitorado: meta.monitorado || '', alvo: meta.alvo || '', detalhe: msg }); } catch (e) {}
 }
 
 /* DADOS INICIAIS (do Excel) */
@@ -7988,7 +8011,8 @@ async function removerDoJuridico(idx) {
   const id = oc.id;
   const arr = (await _ocorrenciasFrescas()).map(o => o.id === id ? { ...o, juridicoOculto: true } : o);
   salvarStore('ocorrencias', arr);
-  addLog(`Removeu #${id} da aba Jurídico (${usuarioAtual?.nome || ''})`);
+  addLog(`Removeu #${id} da aba Jurídico (${usuarioAtual?.nome || ''})`,
+    { action: 'excluir', modulo: 'Jurídico', alvo: `Ocorrência #${id}`, monitorado: oc.monitorado });
   renderizarJuridico();
 }
 
@@ -9441,9 +9465,12 @@ async function excluirOcorrencia(idx) {
   if (id == null) return;
   if (!confirm("Tem certeza que deseja excluir esta ocorrência? Esta ação não pode ser desfeita.")) return;
   // Remove por ID sobre a base mais fresca (não ressuscita/sobrescreve outras edições)
-  const arr = (await _ocorrenciasFrescas()).filter(o => o.id !== id);
+  const _ocFrescas = await _ocorrenciasFrescas();
+  const _ocAlvo = _ocFrescas.find(o => o.id === id);
+  const arr = _ocFrescas.filter(o => o.id !== id);
   salvarStore('ocorrencias', arr);
-  addLog(`Excluiu ocorrência #${id} (${usuarioAtual.nome})`);
+  addLog(`Excluiu ocorrência #${id}${_ocAlvo && _ocAlvo.monitorado ? ' — ' + _ocAlvo.monitorado : ''} (${usuarioAtual.nome})`,
+    { action: 'excluir', modulo: 'Ocorrências', alvo: `Ocorrência #${id}`, monitorado: _ocAlvo ? _ocAlvo.monitorado : '' });
   atualizarTudo();
 }
 
@@ -9665,7 +9692,8 @@ function removerUsuario(loginId) {
   const us  = getUsuarios();
   const idx = us.findIndex(x => x.usuario === loginId);
   if (idx === -1) { _mostrarToast('Usuário não encontrado.', 'erro'); return; }
-  addLog(`Removeu usuário ${us[idx].nome} (${usuarioAtual?.nome || '?'})`);
+  addLog(`Removeu usuário ${us[idx].nome} (${usuarioAtual?.nome || '?'})`,
+    { action: 'excluir', modulo: 'Usuários', alvo: us[idx].nome });
   us.splice(idx, 1);
   salvarUsuarios(us);
   renderizarUsers();
@@ -19046,8 +19074,11 @@ function com_renderConsulta() {
 function com_excluirOficio(numero, ano) {
   if (!confirm(`Excluir o registro do ofício nº ${numero}/${ano} da consulta?\n\nIsso libera o número para reuso. O documento que você já gerou/enviou não é afetado.`)) return;
   const o = com_getOficios();
+  const reg = o.registros.find(r => r.numero === numero && r.ano === ano);
   o.registros = o.registros.filter(r => !(r.numero === numero && r.ano === ano));
   com_salvarOficios(o);
+  addLog(`Excluiu ofício nº ${numero}/${ano}${reg && reg.monitorado ? ' — ' + reg.monitorado : ''} (${usuarioAtual?.nome || '?'})`,
+    { action: 'excluir', modulo: 'Comunicação', alvo: `Ofício ${numero}/${ano}`, monitorado: reg ? reg.monitorado : '' });
   com_renderConsulta();
   com_atualizarAvisoNumero();
   _mostrarToast(`🗑️ Registro do ofício ${numero}/${ano} excluído.`, 'sucesso');
