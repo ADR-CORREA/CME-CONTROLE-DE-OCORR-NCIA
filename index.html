@@ -329,32 +329,32 @@ body:not(.is-admin) .arq-admin-only { display: none !important; }
    REDESIGN — Tema escuro (topo + nav horizontal no topo)
 ═══════════════════════════════════════════════════════ */
 .topbar {
-  background: #0E1A2E;
+  background: var(--cme-surface);
   height: 58px;
   box-shadow: none;
-  border-bottom: 1px solid rgba(255,255,255,.06);
+  border-bottom: 1px solid var(--cme-border);
   z-index: 200;
 }
 .nav-tabs {
-  background: #122036;
+  background: var(--cme-surface);
   padding: 0 18px;
   gap: 2px;
-  border-bottom: 1px solid rgba(255,255,255,.07);
+  border-bottom: 1px solid var(--cme-border);
 }
 .nav-tab {
   padding: 12px 15px;
-  color: rgba(255,255,255,.6);
+  color: var(--cme-text-muted);
   border-bottom: 2px solid transparent;
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: .82rem;
 }
-.nav-tab:hover { color: #fff; background: rgba(255,255,255,.05); }
+.nav-tab:hover { color: var(--cme-text); background: var(--cme-elevated); }
 .nav-tab.active {
-  color: #fff;
-  background: rgba(37,99,235,.14);
-  border-bottom-color: var(--az3);
+  color: var(--cme-text);
+  background: var(--cme-elevated);
+  border-bottom-color: var(--cme-accent);
 }
 /* Ícones SVG do menu (substituem os emojis) */
 .nav-tab svg {
@@ -405,6 +405,47 @@ body.td #panel-dashboard .dsec-row b.dsec-alert{ color:var(--cme-danger); }
 body.td #panel-dashboard .dalert-pill{ background:var(--cme-elevated) !important; border-color:var(--cme-border) !important; color:var(--cme-text); }
 body.td #panel-dashboard .dalert-title{ color:var(--cme-text-muted) !important; }
 body.td #panel-dashboard #dash-plantao-hoje *[style*="color:#64748b"]{ color:var(--cme-text-muted) !important; }
+
+/* ══ Tema escuro — COMPONENTES COMPARTILHADOS (Design System CME) ══
+   Valores conforme CLAUDE.md › Design System — CME. Só ficam visíveis na
+   aba ativa migrada; painéis ocultos não aparecem. */
+body.td .table-wrapper{ background:var(--cme-surface) !important; box-shadow:none !important; border:1px solid var(--cme-border); border-radius:6px; }
+body.td .table-toolbar{ border-bottom-color:var(--cme-border) !important; }
+body.td .table-search span{ color:var(--cme-text-muted); }
+body.td .table-search input{ background:var(--cme-bg) !important; border:1px solid var(--cme-border) !important; border-radius:6px; color:var(--cme-text) !important; }
+body.td .table-search input::placeholder{ color:var(--cme-text-subtle) !important; }
+body.td .btn-secondary{ background:#21262d !important; color:#c9d1d9 !important; border:1px solid var(--cme-border) !important; border-radius:6px; box-shadow:none !important; }
+body.td .btn-secondary:hover{ background:var(--cme-elevated) !important; border-color:#8b949e !important; }
+body.td .btn-primary{ background:#1f883d !important; color:#fff !important; border:1px solid rgba(31,35,40,.15) !important; border-radius:6px; box-shadow:none !important; }
+body.td .btn-primary:hover{ background:#1a7f37 !important; }
+body.td .sub-tabs{ border-bottom-color:var(--cme-border) !important; }
+body.td .sub-tab{ color:var(--cme-text-muted) !important; }
+body.td .sub-tab:hover{ color:var(--cme-text) !important; background:var(--cme-elevated) !important; }
+body.td .sub-tab.active{ color:var(--cme-text) !important; background:var(--cme-surface) !important; border-color:var(--cme-border) !important; border-bottom-color:var(--cme-surface) !important; }
+body.td .data-table thead tr,
+body.td .data-table th{ background:var(--cme-surface) !important; color:var(--cme-text-muted) !important; border-bottom:1px solid var(--cme-border) !important; }
+body.td .data-table tbody td{ color:var(--cme-text); border-bottom-color:var(--cme-border-muted) !important; }
+body.td .data-table tbody tr{ background:var(--cme-surface); }
+body.td .data-table tbody tr:hover{ background:rgba(33,38,45,.5) !important; }
+body.td .data-table tbody tr.row-vencido{ background:rgba(248,81,73,.10) !important; }
+body.td .data-table tbody tr.row-vencendo{ background:rgba(210,153,34,.12) !important; }
+body.td .data-table tbody tr.row-atencao{ background:rgba(210,153,34,.08) !important; }
+body.td .data-table tbody tr.row-ok{ background:rgba(63,185,80,.08) !important; }
+body.td .data-table tbody tr.row-protetiva{ background:rgba(137,87,229,.10) !important; }
+body.td .data-table tbody tr.row-comunicado{ background:rgba(63,185,80,.06) !important; }
+body.td tr.row-critico-com{ background:rgba(210,153,34,.10) !important; }
+
+/* ══ Específico — CRÍTICOS (banner NEUTRO = card #161b22, sem vermelho) ══ */
+body.td #panel-criticos{ color:var(--cme-text); }
+body.td #panel-criticos .criticos-banner{ background:var(--cme-surface) !important; border:1px solid var(--cme-border) !important; border-radius:6px; color:var(--cme-text); }
+body.td #panel-criticos .criticos-banner h2{ color:var(--cme-text) !important; }
+body.td #panel-criticos .criticos-banner p{ color:var(--cme-text-muted) !important; opacity:1; }
+body.td #panel-criticos .crit-kpi{ background:var(--cme-elevated) !important; border:1px solid var(--cme-border); border-radius:6px; }
+body.td #panel-criticos .crit-kpi-num{ color:var(--cme-text); }
+body.td #panel-criticos .crit-kpi-label{ color:var(--cme-text-muted); opacity:1; }
+
+/* ══ Específico — OCORRÊNCIAS ══ */
+body.td #panel-ocorrencias{ color:var(--cme-text); }
 
 /* R2 FILE MANAGER */
 .r2-pasta-card {
@@ -7406,7 +7447,7 @@ function mudarAba(aba) {
   if (tabs[map[aba]]) tabs[map[aba]].classList.add("active");
   const panel = document.getElementById("panel-" + aba);
   if (panel) panel.classList.add("active");
-  document.body.classList.toggle('td', aba === 'dashboard'); // tema escuro só na aba Dashboard
+  document.body.classList.toggle('td', ['dashboard','criticos','ocorrencias'].includes(aba)); // tema escuro: migração GitHub Dark (incremental)
   if (aba === "dashboard") atualizarDashboard();
   if (aba === "criticos") renderizarCriticos();
   if (aba === "ocorrencias") { marcarOcVisto(); renderizarOcorrencias(); }
