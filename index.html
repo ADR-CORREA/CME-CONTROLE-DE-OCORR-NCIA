@@ -18397,19 +18397,6 @@ const COM_MODELOS = [
       `Na oportunidade, solicita-se o encaminhamento de informações complementares referentes aos dados pessoais da vítima, tais como nome, endereço residencial e local do trabalho, a fim de viabilizar a definição da zona de exclusão e disponibilização do Botão do Pânico.`,
       `Ressalta-se que a ausência dos dados acima supracitados compromete a efetividade do monitoramento eletrônico instalado.`,
     ]},
-  { id:'encaminha-relatorios', cat:'Informativo', nome:'Encaminha Relatórios de Monitoração (vários monitorados)',
-    assunto:'Encaminha Relatórios de Monitoração Eletrônica',
-    campos:[
-      {id:'monitorados', label:'Monitorados — adicione quantos precisar (+)', tipo:'lista', placeholder:'Nome do monitorado'},
-    ],
-    corpo:c=>{
-      const lista = String(c.monitorados||'').split('\n').filter(Boolean);
-      return [
-        `Com os cumprimentos de estilo, sirvo-me do presente para encaminhar, por intermédio da Central de Monitoramento Eletrônico – CME, os Relatórios de Monitoração Eletrônica dos seguintes monitorados:`,
-        ...(lista.length ? lista : ['1. ____']),
-        `Sem mais para o momento, esta CME coloca-se à disposição para quaisquer esclarecimentos que se façam necessários.`,
-      ];
-    }},
   /* ── DESVINCULAÇÃO ────────────────────────────────────────── */
   { id:'desvincul-decisao', cat:'Desvinculação', nome:'Desvinculação — Por Decisão Judicial',
     assunto:'Desvinculação do Sistema de Monitoração Eletrônica',
@@ -18522,6 +18509,19 @@ const COM_MODELOS = [
       `Com os cumprimentos, neste ato representado pela Central de Monitoração Eletrônica – CME, encaminha o Relatório de Monitoramento de <b>${c.nome_monitorado}</b>, <b>SEM</b> registros de descumprimentos dos deveres e obrigações do monitorado, no período de ${c.periodo_inicio} a ${c.periodo_fim}.`,
     ]},
   /* ── INFORMATIVO ──────────────────────────────────────────── */
+  { id:'encaminha-relatorios', cat:'Informativo', nome:'Encaminha Relatórios de Monitoração (vários monitorados)',
+    assunto:'Encaminha Relatórios de Monitoração Eletrônica',
+    campos:[
+      {id:'monitorados', label:'Monitorados — adicione quantos precisar (+)', tipo:'lista', placeholder:'Nome do monitorado'},
+    ],
+    corpo:c=>{
+      const lista = String(c.monitorados||'').split('\n').filter(Boolean);
+      return [
+        `Com os cumprimentos de estilo, sirvo-me do presente para encaminhar, por intermédio da Central de Monitoramento Eletrônico – CME, os Relatórios de Monitoração Eletrônica dos seguintes monitorados:`,
+        ...(lista.length ? lista : ['1. ____']),
+        `Sem mais para o momento, esta CME coloca-se à disposição para quaisquer esclarecimentos que se façam necessários.`,
+      ];
+    }},
   { id:'recusa', cat:'Informativo', nome:'Recusa de Tornozeleira Eletrônica',
     assunto:'Termo de Recusa - Concessão de benefício de trabalho externo com monitoramento',
     campos:[],
