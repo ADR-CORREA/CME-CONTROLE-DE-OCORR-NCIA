@@ -48,6 +48,23 @@
   --radius-lg: 14px;
   --font-sans: 'IBM Plex Sans', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
+
+  /* ── Design System CME — GitHub Dark (ver CLAUDE.md › Design System — CME) ── */
+  --cme-bg:           #0d1117;
+  --cme-surface:      #161b22;
+  --cme-elevated:     #21262d;
+  --cme-border:       #30363d;
+  --cme-border-muted: #21262d;
+  --cme-text:         #e6edf3;
+  --cme-text-muted:   #8b949e;
+  --cme-text-subtle:  #484f58;
+  --cme-accent:       #58a6ff;
+  --cme-accent-hover: #388bfd;
+  --cme-success:      #3fb950;
+  --cme-warning:      #d29922;
+  --cme-danger:       #f85149;
+  --cme-purple:       #8957e5;
+  --cme-radius:       6px;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -356,30 +373,38 @@ body:not(.is-admin) .arq-admin-only { display: none !important; }
    TEMA ESCURO DO DASHBOARD — ligado só na aba Dashboard (body.td).
    Outras abas ficam intactas (claras). Topo e menu já são escuros.
 ═══════════════════════════════════════════════════════ */
-body.td{ background:#0A1120 !important; }
-body.td #panel-dashboard{ color:#E6EDF8; }
-body.td #panel-dashboard .dash-title{ color:#EAF0FA; }
-body.td #panel-dashboard .dash-update{ color:#8FA0BC; }
-body.td #panel-dashboard .section-title{ color:#8FA0BC; border-bottom-color:#22314B; }
-body.td #panel-dashboard .kpi-card{ background:#111C30; box-shadow:0 6px 20px rgba(0,0,0,.3); }
-body.td #panel-dashboard .kpi-num{ color:#EAF0FA; }
-body.td #panel-dashboard .kpi-label{ color:#8FA0BC; }
-body.td #dash-plantao-hoje{ background:#111C30 !important; border-color:#22314B !important; border-left-color:#3B82F6 !important; }
-body.td #dash-plantao-hoje *[style*="color:#1F4E78"]{ color:#EAF0FA !important; }
-body.td #dash-plantao-nome{ color:#EAF0FA !important; }
-body.td #dash-plantao-data{ color:#8FA0BC !important; }
-body.td #panel-dashboard .dash-alertas{ background:#16223A !important; border-color:#2C3D5C !important; border-left-color:#FBBF24 !important; }
-body.td #panel-dashboard .dash-alertas.ok{ background:#0C2018 !important; border-color:#14402E !important; }
-body.td #panel-dashboard .dchart-card{ background:#111C30 !important; border-color:#22314B !important; color:#D9E2F2; box-shadow:0 6px 20px rgba(0,0,0,.3); }
-body.td #panel-dashboard .dchart-title{ color:#8FA0BC !important; }
+body.td{ background:var(--cme-bg) !important; }
+body.td #panel-dashboard{ color:var(--cme-text); }
+body.td #panel-dashboard .dash-title{ color:var(--cme-text); }
+body.td #panel-dashboard .dash-update{ color:var(--cme-text-muted); }
+body.td #panel-dashboard .section-title{ color:var(--cme-text-muted); border-bottom-color:var(--cme-border); }
+body.td #panel-dashboard .kpi-card{ background:var(--cme-surface); border:1px solid var(--cme-border); box-shadow:none; }
+body.td #panel-dashboard .kpi-num{ color:var(--cme-text); }
+body.td #panel-dashboard .kpi-label{ color:var(--cme-text-muted); }
+body.td #dash-plantao-hoje{ background:var(--cme-surface) !important; border-color:var(--cme-border) !important; border-left-color:var(--cme-accent) !important; }
+body.td #dash-plantao-hoje *[style*="color:#1F4E78"]{ color:var(--cme-text) !important; }
+body.td #dash-plantao-nome{ color:var(--cme-text) !important; }
+body.td #dash-plantao-data{ color:var(--cme-text-muted) !important; }
+body.td #panel-dashboard .dash-alertas{ background:var(--cme-elevated) !important; border-color:var(--cme-border) !important; border-left-color:var(--cme-warning) !important; }
+body.td #panel-dashboard .dash-alertas.ok{ background:rgba(63,185,80,.12) !important; border-color:rgba(63,185,80,.4) !important; border-left-color:var(--cme-success) !important; }
+body.td #panel-dashboard .dchart-card{ background:var(--cme-surface) !important; border-color:var(--cme-border) !important; color:var(--cme-text); box-shadow:none; }
+body.td #panel-dashboard .dchart-title{ color:var(--cme-text-muted) !important; }
 body.td #panel-dashboard .dchart-card *[style*="color:#0"],
 body.td #panel-dashboard .dchart-card *[style*="color:#1"],
 body.td #panel-dashboard .dchart-card *[style*="color:#33"],
-body.td #panel-dashboard .dchart-card *[style*="color:#47"]{ color:#D9E2F2 !important; }
-body.td #panel-dashboard .dash-card{ background:#111C30; }
-body.td #panel-dashboard .dash-card-body{ color:#EAF0FA; }
-body.td #panel-dashboard .dash-row{ border-bottom-color:#22314B; }
-body.td #panel-dashboard .dash-row .label{ color:#D9E2F2; }
+body.td #panel-dashboard .dchart-card *[style*="color:#47"]{ color:var(--cme-text) !important; }
+body.td #panel-dashboard .dash-card{ background:var(--cme-surface); border:1px solid var(--cme-border); }
+body.td #panel-dashboard .dash-card-body{ color:var(--cme-text); }
+body.td #panel-dashboard .dash-row{ border-bottom-color:var(--cme-border); }
+body.td #panel-dashboard .dash-row .label{ color:var(--cme-text); }
+body.td #panel-dashboard .dsec-card{ background:var(--cme-surface) !important; border-color:var(--cme-border) !important; box-shadow:none; }
+body.td #panel-dashboard .dsec-head{ color:var(--cme-text); }
+body.td #panel-dashboard .dsec-row{ color:var(--cme-text-muted); border-top-color:var(--cme-border); }
+body.td #panel-dashboard .dsec-row b{ color:var(--cme-text); }
+body.td #panel-dashboard .dsec-row b.dsec-alert{ color:var(--cme-danger); }
+body.td #panel-dashboard .dalert-pill{ background:var(--cme-elevated) !important; border-color:var(--cme-border) !important; color:var(--cme-text); }
+body.td #panel-dashboard .dalert-title{ color:var(--cme-text-muted) !important; }
+body.td #panel-dashboard #dash-plantao-hoje *[style*="color:#64748b"]{ color:var(--cme-text-muted) !important; }
 
 /* R2 FILE MANAGER */
 .r2-pasta-card {
