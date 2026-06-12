@@ -3280,47 +3280,62 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <div class="admin-card-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
             <span>🔍 Auditoria Completa</span>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <button id="admin-audit-tab-sis" onclick="admin_mudarTabAudit('sistema')"
-                style="background:#1F4E78;color:#fff;border:none;border-radius:6px;padding:5px 13px;font-size:.8rem;font-weight:600;cursor:pointer">
-                📊 Log do Sistema
-              </button>
               <button id="admin-audit-tab-arq" onclick="admin_mudarTabAudit('arquivos')"
+                style="background:#1F4E78;color:#fff;border:none;border-radius:6px;padding:5px 13px;font-size:.8rem;font-weight:600;cursor:pointer">
+                🔍 Auditoria (tudo)
+              </button>
+              <button id="admin-audit-tab-sis" onclick="admin_mudarTabAudit('sistema')"
                 style="background:#e8f0fb;color:#1F4E78;border:1px solid #bcd4ee;border-radius:6px;padding:5px 13px;font-size:.8rem;font-weight:600;cursor:pointer">
-                📁 Arquivos R2
+                📜 Log texto (legado)
               </button>
               <button onclick="admin_recarregarAudit()" title="Atualizar"
                 style="background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:.82rem;cursor:pointer">🔄</button>
             </div>
           </div>
 
-          <!-- Log do Sistema -->
-          <div id="admin-audit-sis-panel" style="padding:14px">
+          <!-- Log do Sistema (legado, texto) -->
+          <div id="admin-audit-sis-panel" style="display:none;padding:14px">
             <div id="admin-audit-sis-lista"
               style="font-size:.78rem;font-family:var(--font-mono);color:var(--cz2);max-height:340px;overflow-y:auto;line-height:1.6">
             </div>
           </div>
 
-          <!-- Arquivos R2 -->
-          <div id="admin-audit-arq-panel" style="display:none;padding:14px">
+          <!-- Auditoria completa (D1: app + arquivos) -->
+          <div id="admin-audit-arq-panel" style="padding:14px">
             <!-- Filtros -->
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-              <input id="admin-arq-busca" type="text" placeholder="🔍 Monitorado, usuário ou arquivo…"
+              <input id="admin-arq-busca" type="text" placeholder="🔍 Monitorado, alvo, detalhe…"
                 oninput="admin_carregarAuditArquivos()"
-                style="flex:1;min-width:180px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:.83rem;outline:none">
+                style="flex:1;min-width:150px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:.83rem;outline:none">
+              <select id="admin-arq-usuario" onchange="admin_carregarAuditArquivos()"
+                style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:.83rem">
+                <option value="">Todos os servidores</option>
+              </select>
+              <select id="admin-arq-modulo" onchange="admin_carregarAuditArquivos()"
+                style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:.83rem">
+                <option value="">Todos os módulos</option>
+              </select>
               <select id="admin-arq-acao" onchange="admin_carregarAuditArquivos()"
                 style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:.83rem">
                 <option value="">Todas as ações</option>
-                <option value="upload">⬆️ Upload</option>
-                <option value="download">⬇️ Download</option>
-                <option value="delete">🗑️ Exclusão de Arquivo</option>
-                <option value="rename">✏️ Renomear</option>
-                <option value="delete-monitorado">🗑️🗑️ Excluir Monitorado</option>
+                <option value="__excluir">🗑️ Só exclusões</option>
+                <option value="excluir">Exclusão de registro</option>
+                <option value="delete">Exclusão de arquivo</option>
+                <option value="delete-monitorado">Excluir monitorado</option>
+                <option value="upload">Upload</option>
+                <option value="download">Download</option>
+                <option value="rename">Renomear / mover</option>
+                <option value="log">Outras ações</option>
               </select>
-              <input id="admin-arq-data" type="date" onchange="admin_carregarAuditArquivos()"
-                style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:.83rem">
+              <label style="font-size:.76rem;color:#64748b">de</label>
+              <input id="admin-arq-de" type="date" onchange="admin_carregarAuditArquivos()"
+                style="padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:.8rem">
+              <label style="font-size:.76rem;color:#64748b">até</label>
+              <input id="admin-arq-ate" type="date" onchange="admin_carregarAuditArquivos()"
+                style="padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:.8rem">
               <button onclick="admin_exportarAuditCSV()"
                 style="background:#f8fafc;color:#475569;border:1px solid #e2e8f0;border-radius:6px;padding:6px 12px;font-size:.8rem;cursor:pointer">
-                📥 Exportar CSV
+                📥 CSV
               </button>
             </div>
             <!-- Tabela -->
@@ -3329,16 +3344,15 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
                 <thead style="position:sticky;top:0;z-index:1">
                   <tr style="background:#f1f5f9;border-bottom:2px solid #e2e8f0">
                     <th style="padding:8px 10px;text-align:left;white-space:nowrap">Ação</th>
+                    <th style="padding:8px 10px;text-align:left">Módulo</th>
                     <th style="padding:8px 10px;text-align:left">Monitorado</th>
-                    <th style="padding:8px 10px;text-align:left">Pasta</th>
-                    <th style="padding:8px 10px;text-align:left">Arquivo</th>
+                    <th style="padding:8px 10px;text-align:left">Alvo / Detalhe</th>
                     <th style="padding:8px 10px;text-align:left">Servidor</th>
-                    <th style="padding:8px 10px;text-align:left">Nível</th>
                     <th style="padding:8px 10px;text-align:left;white-space:nowrap">Data / Hora</th>
                   </tr>
                 </thead>
                 <tbody id="admin-arq-tbody">
-                  <tr><td colspan="7" style="padding:20px;text-align:center;color:#aaa">Clique em "Arquivos R2" para carregar.</td></tr>
+                  <tr><td colspan="6" style="padding:20px;text-align:center;color:#aaa">Carregando…</td></tr>
                 </tbody>
               </table>
             </div>
@@ -10272,12 +10286,13 @@ function renderizarLogs() {
     const d = new Date(l.ts).toLocaleString("pt-BR");
     return `<div style="padding:4px 0;border-bottom:1px solid var(--cz4)">[${d}] ${esc(l.msg)}</div>`;
   }).join("") : "<div style='color:var(--cz2)'>Nenhum log ainda.</div>";
-  // Também atualiza o painel de auditoria completa, se visível
-  admin_popularLogSistema();
+  // Também atualiza o painel de auditoria, conforme a aba ativa
+  if (_adminAuditTab === 'arquivos') admin_carregarAuditArquivos();
+  else admin_popularLogSistema();
 }
 
 /* ══ AUDITORIA COMPLETA — Admin ════════════════════════════════ */
-let _adminAuditTab = 'sistema';
+let _adminAuditTab = 'arquivos'; // Hub unificado (D1) é o padrão
 let _adminAuditCache = null; // cache dos dados R2 para filtros rápidos
 
 function admin_mudarTabAudit(tab) {
@@ -10316,71 +10331,89 @@ function admin_popularLogSistema() {
   }).join('');
 }
 
+const _ACAO_LABEL = {
+  upload:'⬆️ Upload', download:'⬇️ Download', delete:'🗑️ Excl. arquivo',
+  rename:'✏️ Renomear', 'delete-monitorado':'🗑️🗑️ Excl. monitorado',
+  'rename-monitorado':'✏️ Renomear mon.', excluir:'🗑️ Exclusão', criar:'➕ Criação',
+  editar:'✏️ Edição', login:'🔑 Login', logout:'🚪 Logout', log:'• Ação', teste:'🧪 Teste'
+};
+const _ACAO_COR = {
+  upload:'#0d6efd', download:'#198754', delete:'#dc3545', rename:'#9d4edd',
+  'delete-monitorado':'#991b1b', 'rename-monitorado':'#9d4edd', excluir:'#dc3545',
+  criar:'#0f9d58', editar:'#9d4edd', login:'#64748b', logout:'#64748b', log:'#475569', teste:'#0891b2'
+};
+function _acaoLabel(a){ return _ACAO_LABEL[a] || a || '—'; }
+function _acaoCor(a){ return _ACAO_COR[a] || '#475569'; }
+
+/* Preenche um <select> de filtro com valores únicos, preservando a opção fixa ("") e a seleção atual. */
+function _admPreencherSelect(id, valores) {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  const cur = sel.value;
+  const fixo = sel.querySelector('option[value=""]');
+  const fixoHtml = fixo ? fixo.outerHTML : '';
+  sel.innerHTML = fixoHtml + valores.sort((a,b)=>String(a).localeCompare(String(b)))
+    .map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  sel.value = cur;
+}
+
 async function admin_carregarAuditArquivos() {
   const tbody = document.getElementById('admin-arq-tbody');
   const count = document.getElementById('admin-arq-count');
   if (!tbody) return;
 
-  const busca = (document.getElementById('admin-arq-busca')?.value || '').trim().toLowerCase();
-  const acao  = (document.getElementById('admin-arq-acao')?.value  || '');
-  const data  = (document.getElementById('admin-arq-data')?.value  || '');
-
-  // Se não tem cache ainda, buscar do servidor
+  // Busca do servidor (tudo: app + arquivos, mesmo D1) e popula os dropdowns
   if (!_adminAuditCache) {
-    tbody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:#aaa">Carregando…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:#aaa">Carregando…</td></tr>';
     try {
-      const res = await r2_api('GET', '/audit?limit=500');
+      const res = await r2_api('GET', '/audit?limit=2000');
       _adminAuditCache = res.audit || [];
     } catch(e) {
-      tbody.innerHTML = `<tr><td colspan="7" style="padding:20px;text-align:center;color:#dc3545">Erro: ${e.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="padding:20px;text-align:center;color:#dc3545">Erro: ${esc(e.message)}</td></tr>`;
       return;
     }
+    _admPreencherSelect('admin-arq-usuario', [...new Set(_adminAuditCache.map(r=>r.usuario).filter(Boolean))]);
+    _admPreencherSelect('admin-arq-modulo',  [...new Set(_adminAuditCache.map(r=>r.modulo ).filter(Boolean))]);
   }
 
-  // Filtros client-side (rápido, sem nova requisição)
+  const busca = (document.getElementById('admin-arq-busca')?.value || '').trim().toLowerCase();
+  const fUser = document.getElementById('admin-arq-usuario')?.value || '';
+  const fMod  = document.getElementById('admin-arq-modulo')?.value  || '';
+  const fAcao = document.getElementById('admin-arq-acao')?.value    || '';
+  const de    = document.getElementById('admin-arq-de')?.value      || '';
+  const ate   = document.getElementById('admin-arq-ate')?.value     || '';
+
   let rows = _adminAuditCache;
   if (busca) rows = rows.filter(r =>
     (r.monitorado||'').toLowerCase().includes(busca) ||
     (r.usuario   ||'').toLowerCase().includes(busca) ||
-    (r.filename  ||'').toLowerCase().includes(busca)
+    (r.filename  ||'').toLowerCase().includes(busca) ||
+    (r.alvo      ||'').toLowerCase().includes(busca) ||
+    (r.detalhe   ||'').toLowerCase().includes(busca)
   );
-  if (acao) rows = rows.filter(r => r.action === acao);
-  if (data) rows = rows.filter(r => (r.ts||'').startsWith(data));
+  if (fUser) rows = rows.filter(r => r.usuario === fUser);
+  if (fMod)  rows = rows.filter(r => r.modulo === fMod);
+  if (fAcao === '__excluir') rows = rows.filter(r => /excluir|delete/.test(r.action||''));
+  else if (fAcao)            rows = rows.filter(r => r.action === fAcao);
+  if (de)  rows = rows.filter(r => (r.ts||'') >= de);
+  if (ate) rows = rows.filter(r => (r.ts||'') <= ate + 'T23:59:59');
 
   if (count) count.textContent = `${rows.length} registro(s)`;
-
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:#aaa">Nenhum registro encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:#aaa">Nenhum registro encontrado.</td></tr>';
     return;
   }
 
-  const acao_label = {
-    upload:             '⬆️ Upload',
-    download:           '⬇️ Download',
-    delete:             '🗑️ Exclusão',
-    rename:             '✏️ Renomear',
-    'delete-monitorado':'🗑️🗑️ Excluir Mon.',
-  };
-  const acao_color = {
-    upload:             '#0d6efd',
-    download:           '#198754',
-    delete:             '#dc3545',
-    rename:             '#9d4edd',
-    'delete-monitorado':'#991b1b',
-  };
-
   tbody.innerHTML = rows.map(r => {
     const dt  = r.ts ? new Date(r.ts).toLocaleString('pt-BR') : '—';
-    const cor = acao_color[r.action] || '#555';
+    const cor = _acaoCor(r.action);
+    const alvoDet = [r.alvo || r.filename || '', r.detalhe || ''].filter(Boolean).join(' · ') || '—';
     return `<tr style="border-top:1px solid #f0f0f0" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background=''">
-      <td style="padding:6px 10px;white-space:nowrap">
-        <span style="color:${cor};font-weight:600">${acao_label[r.action]||r.action}</span>
-      </td>
-      <td style="padding:6px 10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.monitorado)}">${esc(r.monitorado)||'—'}</td>
-      <td style="padding:6px 10px;white-space:nowrap;color:#64748b">${esc(r.pasta)||'—'}</td>
-      <td style="padding:6px 10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.filename)}">${esc(r.filename)||'—'}</td>
+      <td style="padding:6px 10px;white-space:nowrap"><span style="color:${cor};font-weight:600">${_acaoLabel(r.action)}</span></td>
+      <td style="padding:6px 10px;white-space:nowrap;color:#475569">${esc(r.modulo)||'—'}</td>
+      <td style="padding:6px 10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.monitorado)}">${esc(r.monitorado)||'—'}</td>
+      <td style="padding:6px 10px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(alvoDet)}">${esc(alvoDet)}</td>
       <td style="padding:6px 10px;white-space:nowrap;font-weight:600">${esc(r.usuario)||'—'}</td>
-      <td style="padding:6px 10px;white-space:nowrap;font-size:.75rem;color:#64748b">${esc(r.nivel)||'—'}</td>
       <td style="padding:6px 10px;font-size:.78rem;color:#888;white-space:nowrap">${dt}</td>
     </tr>`;
   }).join('');
@@ -10395,9 +10428,9 @@ function admin_recarregarAudit() {
 function admin_exportarAuditCSV() {
   const rows = _adminAuditCache || [];
   if (!rows.length) return _mostrarToast('Nenhum dado para exportar.', 'erro');
-  const cab  = ['Ação','Monitorado','Pasta','Arquivo','Servidor','Nível','Data'];
+  const cab  = ['Ação','Módulo','Monitorado','Alvo','Detalhe','Servidor','Nível','Data'];
   const linhas = rows.map(r => [
-    r.action||'', r.monitorado||'', r.pasta||'', r.filename||'',
+    r.action||'', r.modulo||'', r.monitorado||'', r.alvo||r.filename||'', r.detalhe||'',
     r.usuario||'', r.nivel||'',
     r.ts ? new Date(r.ts).toLocaleString('pt-BR') : ''
   ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(';'));
