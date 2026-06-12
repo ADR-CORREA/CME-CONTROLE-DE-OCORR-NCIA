@@ -447,6 +447,23 @@ body.td #panel-criticos .crit-kpi-label{ color:var(--cme-text-muted); opacity:1;
 /* ══ Específico — OCORRÊNCIAS ══ */
 body.td #panel-ocorrencias{ color:var(--cme-text); }
 
+/* ══ KPIs / cabeçalhos / filtros genéricos (Relatório, Estoque, Triagem, Gerência…) ══ */
+body.td #panel-relatorio, body.td #panel-gerencia, body.td #panel-estoque, body.td #panel-triagem{ color:var(--cme-text); }
+body.td .kpi-card{ background:var(--cme-surface) !important; border:1px solid var(--cme-border); box-shadow:none; }
+body.td .kpi-num{ color:var(--cme-text) !important; }
+body.td .kpi-label{ color:var(--cme-text-muted) !important; }
+body.td .section-title{ color:var(--cme-text-muted) !important; border-bottom-color:var(--cme-border) !important; }
+body.td .est-kpi{ background:var(--cme-surface) !important; box-shadow:none !important; }
+body.td .est-kpi-num{ color:var(--cme-text) !important; }
+body.td .est-kpi-label{ color:var(--cme-text-muted) !important; }
+body.td .est-header-title, body.td .tri-header-title{ color:var(--cme-text) !important; }
+body.td .tri-filtros{ background:var(--cme-surface) !important; box-shadow:none !important; border:1px solid var(--cme-border); }
+body.td .tri-filtros-title{ color:var(--cme-text-muted) !important; }
+body.td .tri-filtros input, body.td .tri-filtros select, body.td .tri-filtros textarea,
+body.td .est-header input, body.td .est-header select,
+body.td .table-toolbar input, body.td .table-toolbar select{ background:var(--cme-bg) !important; border:1px solid var(--cme-border) !important; color:var(--cme-text) !important; border-radius:6px; }
+body.td .tri-filtros select option, body.td .table-toolbar select option{ background:var(--cme-surface); color:var(--cme-text); }
+
 /* R2 FILE MANAGER */
 .r2-pasta-card {
   background: #fff;
@@ -7447,7 +7464,7 @@ function mudarAba(aba) {
   if (tabs[map[aba]]) tabs[map[aba]].classList.add("active");
   const panel = document.getElementById("panel-" + aba);
   if (panel) panel.classList.add("active");
-  document.body.classList.toggle('td', ['dashboard','criticos','ocorrencias'].includes(aba)); // tema escuro: migração GitHub Dark (incremental)
+  document.body.classList.toggle('td', ['dashboard','criticos','ocorrencias','relatorio','gerencia','estoque','triagem'].includes(aba)); // tema escuro: migração GitHub Dark (incremental)
   if (aba === "dashboard") atualizarDashboard();
   if (aba === "criticos") renderizarCriticos();
   if (aba === "ocorrencias") { marcarOcVisto(); renderizarOcorrencias(); }
