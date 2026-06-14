@@ -19745,7 +19745,7 @@ async function com_processarArquivos(files) {
             anexo._ocrAviso = true;
             com_renderizarAnexos();
             const ocrParts = [];
-            const maxPag = Math.min(pdfDoc.numPages, 10); // máx 10 páginas (OCR de PDF escaneado)
+            const maxPag = Math.min(pdfDoc.numPages, 2); // só 1ª/2ª página: o cabeçalho fica aqui e economiza ~5x a quota de IA (visão é cara)
             for (let p = 1; p <= maxPag; p++) {
               try {
                 const page     = await pdfDoc.getPage(p);
