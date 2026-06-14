@@ -19718,6 +19718,7 @@ async function com_processarArquivos(files) {
         const buf = await file.arrayBuffer();
         const res = await mammoth.extractRawText({ arrayBuffer: buf });
         anexo.texto = res.value || '';
+        anexo._textoIA = (res.value || '').slice(0, 4000); // começo do doc p/ a IA (cabeçalho)
 
       } else if (tipo === 'pdf') {
         await _carregarScriptSE(
@@ -19735,6 +19736,7 @@ async function com_processarArquivos(files) {
             parts.push(content.items.map(i => i.str).join(' '));
           }
           anexo.texto = parts.join('\n');
+          anexo._textoIA = parts.slice(0, 2).join('\n'); // só 1ª e 2ª página p/ a IA (cabeçalho fica aqui; evita engasgar o modelo)
 
           // ── Detecta PDF escaneado (foto): texto extraído muito curto ──
           const avgChars = parts.reduce((s, p) => s + p.trim().length, 0) / pdfDoc.numPages;
@@ -19757,7 +19759,7 @@ async function com_processarArquivos(files) {
                 if (r) ocrParts.push(`[Página ${p}]\n${r}`);
               } catch(e) { console.warn('OCR página', p, e.message); }
             }
-            if (ocrParts.length) anexo.texto = ocrParts.join('\n\n');
+            if (ocrParts.length) { anexo.texto = ocrParts.join('\n\n'); anexo._textoIA = ocrParts.slice(0, 2).join('\n\n'); }
           }
         }
 
@@ -19991,7 +19993,7 @@ async function _bmonExtrairTexto(file) {
           const content = await (await pdfDoc.getPage(p)).getTextContent();
           parts.push(content.items.map(i => i.str).join(' '));
         }
-        return parts.join('\n');
+        return parts.slice(0, 2).join('\n'); // só 1ª e 2ª página p/ a IA (cabeçalho); evita engasgar o modelo em docs grandes
       }
     }
   } catch (e) { console.warn('[CME] Erro ao extrair texto', file.name, e); }
@@ -20932,7 +20934,7 @@ async function com_extrairComIA() {
   const comTexto = _comAnexos.filter(a => a.texto.trim());
   if (!comTexto.length) { _mostrarToast('\u{26A0}\u{FE0F} Nenhum texto pôde ser extraído dos documentos.', 'erro'); return; }
 
-  const textoGeral = comTexto.map(a => `=== ${a.nome} ===\n${a.texto}`).join('\n\n---\n\n').slice(0, 12000);
+  const textoGeral = comTexto.map(a => `=== ${a.nome} ===\n${a._textoIA || a.texto}`).join('\n\n---\n\n').slice(0, 12000);
 
   const btn    = document.getElementById('com-btn-extrair-ia');
   const status = document.getElementById('com-ia-status');
