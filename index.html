@@ -20031,21 +20031,25 @@ async function com_processarArquivos(files) {
             anexo.status = 'ocr';
             anexo._ocrAviso = true;
             com_renderizarAnexos();
-            const ocrParts = [];
             const maxPag = Math.min(pdfDoc.numPages, 2); // só 1ª/2ª página: o cabeçalho fica aqui e economiza ~5x a quota de IA (visão é cara)
+            // Renderiza + OCR das páginas EM PARALELO (cada página tem seu próprio canvas) — ~2x mais rápido
+            const ocrTasks = [];
             for (let p = 1; p <= maxPag; p++) {
-              try {
-                const page     = await pdfDoc.getPage(p);
-                const viewport = page.getViewport({ scale: 2.2 });
-                const canvas   = document.createElement('canvas');
-                canvas.width   = viewport.width;
-                canvas.height  = viewport.height;
-                await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-                const b64 = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
-                const r = await _comOcrViaWorker(b64);
-                if (r) ocrParts.push(`[Página ${p}]\n${r}`);
-              } catch(e) { console.warn('OCR página', p, e.message); }
+              ocrTasks.push((async (pg) => {
+                try {
+                  const page     = await pdfDoc.getPage(pg);
+                  const viewport = page.getViewport({ scale: 2.0 });
+                  const canvas   = document.createElement('canvas');
+                  canvas.width   = viewport.width;
+                  canvas.height  = viewport.height;
+                  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+                  const b64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+                  const r = await _comOcrViaWorker(b64);
+                  return r ? `[Página ${pg}]\n${r}` : '';
+                } catch(e) { console.warn('OCR página', pg, e.message); return ''; }
+              })(p));
             }
+            const ocrParts = (await Promise.all(ocrTasks)).filter(Boolean);
             if (ocrParts.length) { anexo.texto = ocrParts.join('\n\n'); anexo._textoIA = ocrParts.slice(0, 2).join('\n\n'); }
           }
         }
@@ -20993,15 +20997,15 @@ async function com_carregarEExtrair() {
   const btn = document.getElementById('com-btn-extrair-ia');
   const status = document.getElementById('com-ia-status');
   if (btn) { btn.disabled = true; btn.textContent = '\u{23F3} Baixando docs...'; }
-  if (status) { status.style.display = 'block'; status.style.background = '#eff6ff'; status.style.color = '#1e40af'; status.textContent = '\u{23F3} Baixando documentos do sistema...'; }
+  if (status) { status.style.display = 'block'; status.style.background = '#eff6ff'; status.style.color = '#1e40af'; status.textContent = '\u{23F3} Baixando e lendo documentos (OCR)... pode levar alguns segundos.'; }
 
   // Limpa anexos anteriores
   _comAnexos = [];
   com_renderizarAnexos();
 
-  // Baixa cada arquivo selecionado e processa como se fosse upload manual
+  // Baixa e processa os arquivos selecionados EM PARALELO (download + leitura/OCR concorrentes)
   const erros = [];
-  for (const chk of checks) {
+  await Promise.all(checks.map(async (chk) => {
     const key  = chk.dataset.key;
     const nome = chk.dataset.nome || key.split('/').pop();
     try {
@@ -21017,7 +21021,7 @@ async function com_carregarEExtrair() {
     } catch (e) {
       erros.push(nome);
     }
-  }
+  }));
 
   if (erros.length) {
     _mostrarToast(`\u{26A0}\u{FE0F} ${erros.length} arquivo(s) não puderam ser baixados.`, 'erro');
