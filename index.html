@@ -21282,6 +21282,9 @@ function _comExtrairJpegsPdf(arrBuf) {
       }
     }
   }
+  // Maior primeiro: a imagem da PÁGINA escaneada (com o conteúdo) costuma ser a
+  // maior; faixas/bandas finas ficam por último. Evita OCR à toa de banners.
+  out.sort((a, b) => b.length - a.length);
   return out;
 }
 /* Desenha um ImageBitmap num canvas, reduzindo a largura máx. (OCR não
