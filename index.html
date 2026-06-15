@@ -20031,40 +20031,47 @@ async function com_processarArquivos(files) {
             anexo.status = 'ocr';
             anexo._ocrAviso = true;
             com_renderizarAnexos();
-            const maxPag = Math.min(pdfDoc.numPages, 2); // só 1ª/2ª página: o cabeçalho fica aqui e economiza ~5x a quota de IA (visão é cara)
-            // Renderiza + OCR das páginas EM PARALELO (cada página tem seu próprio canvas) — ~2x mais rápido
-            const ocrTasks = [];
-            for (let p = 1; p <= maxPag; p++) {
-              ocrTasks.push((async (pg) => {
-                try {
-                  const page     = await pdfDoc.getPage(pg);
-                  const viewport = page.getViewport({ scale: 2.0 });
-                  const canvas   = document.createElement('canvas');
-                  canvas.width   = viewport.width;
-                  canvas.height  = viewport.height;
-                  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-                  const b64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-                  const r = await _comOcrViaWorker(b64);
-                  return r ? `[Página ${pg}]\n${r}` : '';
-                } catch(e) { console.warn('OCR página', pg, e.message); return ''; }
-              })(p));
+            // OCR LOCAL (Tesseract) só da 1ª página por padrão — o cabeçalho
+            // (nome/processo/comarca/vara) fica nela. A 2ª só é lida se a 1ª
+            // trouxer pouco texto. Fallback pro modelo de visão dentro de _comOcrCanvas.
+            const _ocrPag = async (pg) => {
+              const page     = await pdfDoc.getPage(pg);
+              const viewport = page.getViewport({ scale: 2.0 });
+              const canvas   = document.createElement('canvas');
+              canvas.width   = viewport.width;
+              canvas.height  = viewport.height;
+              await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+              return await _comOcrCanvas(canvas);
+            };
+            const ocrParts = [];
+            let t1 = '';
+            try { t1 = await _ocrPag(1); } catch(e) { console.warn('OCR pág 1', e.message); }
+            if (t1) ocrParts.push(`[Página 1]\n${t1}`);
+            if (pdfDoc.numPages >= 2 && t1.replace(/\s/g, '').length < 150) {
+              try { const t2 = await _ocrPag(2); if (t2) ocrParts.push(`[Página 2]\n${t2}`); }
+              catch(e) { console.warn('OCR pág 2', e.message); }
             }
-            const ocrParts = (await Promise.all(ocrTasks)).filter(Boolean);
             if (ocrParts.length) { anexo.texto = ocrParts.join('\n\n'); anexo._textoIA = ocrParts.slice(0, 2).join('\n\n'); }
           }
         }
 
       } else if (['jpg', 'jpeg', 'png', 'bmp', 'webp'].includes(tipo)) {
-        // ── Imagem: OCR via Cloudflare Vision AI ──────────────────
+        // ── Imagem: OCR LOCAL (Tesseract) com fallback no modelo de visão ──
         anexo.status = 'ocr';
         com_renderizarAnexos();
-        const b64 = await new Promise((res, rej) => {
-          const fr = new FileReader();
-          fr.onload  = e => res(e.target.result.split(',')[1]);
-          fr.onerror = rej;
-          fr.readAsDataURL(file);
+        const texto = await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = async () => {
+            const canvas = document.createElement('canvas');
+            canvas.width  = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            URL.revokeObjectURL(img.src);
+            resolve(await _comOcrCanvas(canvas));
+          };
+          img.onerror = () => resolve('');
+          img.src = URL.createObjectURL(file);
         });
-        const texto = await _comOcrViaWorker(b64);
         anexo.texto = texto || '';
 
       } else {
@@ -21215,6 +21222,40 @@ async function _comOcrViaWorker(base64jpeg) {
     console.warn('[CME] OCR falhou:', e.message);
     return '';
   }
+}
+
+/* ── OCR LOCAL (Tesseract.js, no navegador) ───────────────────
+   Rápido, não gasta cota da Cloudflare e o documento não sai do PC.
+   Worker reaproveitado entre páginas/docs. Idioma: português. */
+let _tessWorker = null, _tessLoading = null;
+async function _getTessWorker() {
+  if (_tessWorker) return _tessWorker;
+  if (!_tessLoading) {
+    _tessLoading = (async () => {
+      await _carregarScriptSE('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js', 'Tesseract');
+      _tessWorker = await Tesseract.createWorker('por');
+      return _tessWorker;
+    })();
+  }
+  return _tessLoading;
+}
+/* OCR de um canvas: tenta Tesseract local; se vier pouco texto (scan ruim),
+   cai no modelo de visão da Cloudflare (mais robusto). */
+async function _comOcrCanvas(canvas) {
+  let txt = '';
+  try {
+    const w = await _getTessWorker();
+    const { data } = await w.recognize(canvas);
+    txt = (data.text || '').trim();
+  } catch(e) { console.warn('[CME] OCR local falhou:', e.message); }
+  if (txt.replace(/\s/g, '').length < 25) { // texto insuficiente → fallback visão
+    try {
+      const b64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+      const r = await _comOcrViaWorker(b64);
+      if (r && r.length > txt.length) txt = r;
+    } catch(e) {}
+  }
+  return txt;
 }
 
 /* ── Extração com IA ─────────────────────────────────────────── */
