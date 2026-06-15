@@ -2317,6 +2317,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
               <option>INFORMATIVO – ATUALIZAÇÃO CADASTRAL</option>
               <option>ALTERAÇÃO ENDEREÇO/ZONA</option>
               <option>VINCULAÇÃO – DPP</option>
+              <option>DESVINCULAÇÃO – DPP</option>
               <option>COMPARECIMENTO NA CENTRAL</option>
             </select>
           </div>
@@ -14173,7 +14174,7 @@ function gerarModelo() {
   // Mostrar/ocultar campos dinâmicos
   const camposTNZ         = ['TROCA/SUBSTITUIÇÃO DE TORNOZELEIRA'];
   const camposTNZUnit     = ['VINCULAÇÃO','VINCULAÇÃO JVD','DESVINCULAÇÃO','INSPEÇÃO DE TORNOZELEIRA','TEMPO LIMITE AUSÊNCIA GPRS','TERMO DE ROMPIMENTO DE TORNOZELEIRA'];
-  const camposDPP         = ['VINCULAÇÃO – DPP'];
+  const camposDPP         = ['VINCULAÇÃO – DPP','DESVINCULAÇÃO – DPP'];
   const camposZona        = ['JUSTIFICATIVA DE SAÍDA DE ZONA','JUSTIFICATIVA ATESTADO MÉDICO','ALTERAÇÃO ENDEREÇO/ZONA','TERMO DE ROMPIMENTO DE TORNOZELEIRA'];
   const camposPermuta     = ['PERMUTA SERVIDOR/PLANTÃO'];
   const camposComparec    = ['COMPARECIMENTO NA CENTRAL'];
@@ -14392,6 +14393,19 @@ Registramos nesta data (${dataFmt}) a VINCULAÇÃO de DISPOSITIVO DE PROTEÇÃO 
 O dispositivo foi entregue, configurado e testado, confirmando seu correto funcionamento. O (a) usuário (a) foi devidamente instruído (a) quanto ao modo de uso, acionamento em situações de emergência e procedimentos de manutenção e recarga.
 
 Servidor responsável: ${servidor}
+Policial Penal
+Plantão: ${plantao}`,
+
+    'DESVINCULAÇÃO – DPP': `
+Registramos nesta data (${dataFmt}) a DESVINCULAÇÃO do DISPOSITIVO DE PROTEÇÃO PREVENTIVA (DPP) — "Botão do Pânico" — da usuária/vítima identificada abaixo:
+
+• USUÁRIA/VÍTIMA: ${monit}
+• PROCESSO/ALVARÁ: ${processo}
+• Nº DE SÉRIE DO DPP: ${dpp}
+
+O dispositivo foi recolhido por esta Central de Monitoramento Eletrônico, encerrando-se a disponibilização do "Botão do Pânico". O equipamento foi encaminhado ao setor competente para triagem e manutenção.
+
+Servidor responsável pela desvinculação: ${servidor}
 Policial Penal
 Plantão: ${plantao}`,
 
@@ -18732,7 +18746,7 @@ const COM_MODELOS = [
   { id:'encaminha-relatorios', cat:'Informativo', nome:'Encaminha Relatórios de Monitoração (vários monitorados)',
     assunto:'Encaminha Relatórios de Monitoração Eletrônica',
     campos:[
-      {id:'monitorados', label:'Monitorados — adicione quantos precisar (+)', tipo:'lista', placeholder:'Nome do monitorado'},
+      {id:'monitorados', label:'Monitorados e processos — adicione quantos precisar (+)', tipo:'lista-par', placeholder:'Nome do monitorado', placeholderProc:'Processo nº'},
     ],
     corpo:c=>{
       const lista = String(c.monitorados||'').split('\n').filter(Boolean);
@@ -19086,7 +19100,7 @@ function com_atualizarCampos() {
   const m   = COM_MODELOS.find(x => x.id === document.getElementById('com-of-modelo').value);
   const div = document.getElementById('com-of-campos-dinamicos');
   if (!m || !m.campos.length) { div.innerHTML = ''; return; }
-  const temWide = m.campos.some(c => c.tipo === 'textarea' || c.tipo === 'lista');
+  const temWide = m.campos.some(c => c.tipo === 'textarea' || c.tipo === 'lista' || c.tipo === 'lista-par');
   const cols = temWide ? '1fr' : (m.campos.length <= 2 ? '1fr '.repeat(m.campos.length).trim() : '1fr 1fr');
   div.innerHTML = `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px">
     <div style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Campos do Modelo</div>
@@ -19098,6 +19112,12 @@ function com_atualizarCampos() {
         return `<div style="grid-column:1/-1"><label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:6px">${c.label}</label>
           <div id="com-of-lista-${c.id}">${com_listaItemHtml(c.id, c.placeholder)}</div>
           <button type="button" onclick="com_listaAdd('${c.id}')" style="margin-top:2px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">+ Adicionar monitorado</button>
+          <input type="hidden" id="com-of-campo-${c.id}"></div>`;
+      }
+      if (c.tipo === 'lista-par') {
+        return `<div style="grid-column:1/-1"><label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:6px">${c.label}</label>
+          <div id="com-of-listapar-${c.id}">${com_listaParItemHtml(c.id, c.placeholder, c.placeholderProc)}</div>
+          <button type="button" onclick="com_listaParAdd('${c.id}')" style="margin-top:2px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">+ Adicionar monitorado e processo</button>
           <input type="hidden" id="com-of-campo-${c.id}"></div>`;
       }
       const el = c.tipo === 'textarea'
@@ -19135,6 +19155,38 @@ function com_listaSync(id) {
   const nomes = [...c.querySelectorAll('input')].map(i => i.value.trim()).filter(Boolean);
   const hid = document.getElementById('com-of-campo-' + id);
   if (hid) hid.value = nomes.map((n, i) => (i + 1) + '. ' + n).join('\n');
+  try { com_atualizarPreview(); } catch (e) {}
+}
+
+/* ── Campo tipo "lista-par" (vários monitorados, cada um com seu processo,
+   com +/−). Sincroniza num input oculto como lista numerada:
+   "1. NOME — Processo nº XXXX". Itens 1 e 2 do pedido. */
+function com_listaParItemHtml(id, phMon, phProc) {
+  const base = 'padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box;font-family:var(--font-sans)';
+  return `<div class="com-listapar-item" style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+    <input type="text" placeholder="${phMon || 'Nome do monitorado'}" oninput="com_listaParSync('${id}')" style="flex:2;${base}">
+    <input type="text" placeholder="${phProc || 'Processo nº'}" oninput="com_listaParSync('${id}')" style="flex:1.4;${base};font-family:var(--font-mono)">
+    <button type="button" title="Remover" onclick="com_listaParRemover(this,'${id}')" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;width:32px;height:32px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+  </div>`;
+}
+function com_listaParAdd(id) {
+  const c = document.getElementById('com-of-listapar-' + id);
+  if (c) { c.insertAdjacentHTML('beforeend', com_listaParItemHtml(id)); com_listaParSync(id); }
+}
+function com_listaParRemover(btn, id) {
+  const c = document.getElementById('com-of-listapar-' + id);
+  if (c && c.querySelectorAll('.com-listapar-item').length > 1) btn.closest('.com-listapar-item').remove();
+  com_listaParSync(id);
+}
+function com_listaParSync(id) {
+  const c = document.getElementById('com-of-listapar-' + id);
+  if (!c) return;
+  const linhas = [...c.querySelectorAll('.com-listapar-item')].map(r => {
+    const ins = r.querySelectorAll('input');
+    return { mon: (ins[0]?.value || '').trim(), proc: (ins[1]?.value || '').trim() };
+  }).filter(x => x.mon);
+  const hid = document.getElementById('com-of-campo-' + id);
+  if (hid) hid.value = linhas.map((x, i) => `${i + 1}. ${x.mon}${x.proc ? ` — Processo nº ${x.proc}` : ''}`).join('\n');
   try { com_atualizarPreview(); } catch (e) {}
 }
 
