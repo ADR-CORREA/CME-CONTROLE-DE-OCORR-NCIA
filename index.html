@@ -20031,23 +20031,35 @@ async function com_processarArquivos(files) {
             anexo.status = 'ocr';
             anexo._ocrAviso = true;
             com_renderizarAnexos();
-            // OCR LOCAL (Tesseract) só da 1ª página por padrão — o cabeçalho
-            // (nome/processo/comarca/vara) fica nela. A 2ª só é lida se a 1ª
-            // trouxer pouco texto. Fallback pro modelo de visão dentro de _comOcrCanvas.
-            const _ocrPag = async (pg) => {
-              const page     = await pdfDoc.getPage(pg);
-              const viewport = page.getViewport({ scale: 2.0 });
-              const canvas   = document.createElement('canvas');
-              canvas.width   = viewport.width;
-              canvas.height  = viewport.height;
-              await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-              return await _comOcrCanvas(canvas);
+            // Caminho RÁPIDO: extrai os JPEGs embutidos (scan) e decodifica
+            // nativamente — evita o render do pdf.js, que TRAVA em alguns scans.
+            // Só 1ª página por padrão (cabeçalho); 2ª só se a 1ª vier pouco texto.
+            const jpegs = _comExtrairJpegsPdf(new Uint8Array(await file.arrayBuffer()));
+            const _ocrViaJpeg = async (idx) => {
+              const c = await _comJpegParaCanvas(jpegs[idx], 1600);
+              return c ? await _comOcrCanvas(c) : '';
             };
+            // Caminho de RESERVA (scans não-JPEG): render do pdf.js com TIMEOUT
+            // para nunca travar a interface.
+            const _ocrViaRender = async (pg) => {
+              try {
+                const page     = await pdfDoc.getPage(pg);
+                const viewport = page.getViewport({ scale: 2.0 });
+                const canvas   = document.createElement('canvas');
+                canvas.width = viewport.width; canvas.height = viewport.height;
+                const task = page.render({ canvasContext: canvas.getContext('2d'), viewport });
+                const timeout = new Promise((_, rej) => setTimeout(() => { try { task.cancel(); } catch(e){} rej(new Error('render timeout')); }, 12000));
+                await Promise.race([task.promise, timeout]);
+                return await _comOcrCanvas(canvas);
+              } catch(e) { console.warn('render OCR', e.message); return ''; }
+            };
+            const _ocrPag = (pg) => jpegs.length >= pg ? _ocrViaJpeg(pg - 1) : _ocrViaRender(pg);
             const ocrParts = [];
             let t1 = '';
             try { t1 = await _ocrPag(1); } catch(e) { console.warn('OCR pág 1', e.message); }
             if (t1) ocrParts.push(`[Página 1]\n${t1}`);
-            if (pdfDoc.numPages >= 2 && t1.replace(/\s/g, '').length < 150) {
+            const temPag2 = jpegs.length >= 2 || pdfDoc.numPages >= 2;
+            if (temPag2 && t1.replace(/\s/g, '').length < 150) {
               try { const t2 = await _ocrPag(2); if (t2) ocrParts.push(`[Página 2]\n${t2}`); }
               catch(e) { console.warn('OCR pág 2', e.message); }
             }
@@ -20059,19 +20071,13 @@ async function com_processarArquivos(files) {
         // ── Imagem: OCR LOCAL (Tesseract) com fallback no modelo de visão ──
         anexo.status = 'ocr';
         com_renderizarAnexos();
-        const texto = await new Promise((resolve) => {
-          const img = new Image();
-          img.onload = async () => {
-            const canvas = document.createElement('canvas');
-            canvas.width  = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-            canvas.getContext('2d').drawImage(img, 0, 0);
-            URL.revokeObjectURL(img.src);
-            resolve(await _comOcrCanvas(canvas));
-          };
-          img.onerror = () => resolve('');
-          img.src = URL.createObjectURL(file);
-        });
+        let texto = '';
+        try {
+          const bmp = await createImageBitmap(file);   // decode nativo
+          const canvas = _comBitmapParaCanvas(bmp, 1600); // reduz p/ OCR rápido
+          if (bmp.close) bmp.close();
+          texto = await _comOcrCanvas(canvas);
+        } catch(e) { console.warn('[CME] OCR imagem falhou:', e.message); }
         anexo.texto = texto || '';
 
       } else {
@@ -21256,6 +21262,49 @@ async function _comOcrCanvas(canvas) {
     } catch(e) {}
   }
   return txt;
+}
+
+/* Extrai os JPEGs embutidos (SOI..EOI) de um PDF, em ordem do documento.
+   Scans de CamScanner/celular usam DCTDecode (JPEG) — extrair o JPEG e
+   decodificá-lo nativamente é instantâneo e EVITA o render do pdf.js, que
+   TRAVA em alguns PDFs escaneados. Só retorna imagens grandes (páginas). */
+function _comExtrairJpegsPdf(arrBuf) {
+  const u = arrBuf instanceof Uint8Array ? arrBuf : new Uint8Array(arrBuf);
+  const out = [];
+  for (let i = 0; i < u.length - 3; i++) {
+    if (u[i] === 0xFF && u[i+1] === 0xD8 && u[i+2] === 0xFF) {
+      for (let j = i + 3; j < u.length - 1; j++) {
+        if (u[j] === 0xFF && u[j+1] === 0xD9) {
+          const seg = u.slice(i, j + 2);
+          if (seg.length > 20000) out.push(seg); // ignora logos/thumbnails
+          i = j + 1; break;
+        }
+      }
+    }
+  }
+  return out;
+}
+/* Desenha um ImageBitmap num canvas, reduzindo a largura máx. (OCR não
+   precisa de alta resolução; menos pixels = OCR bem mais rápido). */
+function _comBitmapParaCanvas(bmp, maxW) {
+  const scale = Math.min(1, (maxW || 1600) / bmp.width);
+  const W = Math.max(1, Math.round(bmp.width * scale));
+  const H = Math.max(1, Math.round(bmp.height * scale));
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bmp, 0, 0, W, H);
+  return c;
+}
+/* Bytes de JPEG → canvas reduzido (decode nativo). */
+async function _comJpegParaCanvas(jpegBytes, maxW) {
+  try {
+    const bmp = await createImageBitmap(new Blob([jpegBytes], { type: 'image/jpeg' }));
+    const c = _comBitmapParaCanvas(bmp, maxW);
+    if (bmp.close) bmp.close();
+    return c;
+  } catch(e) { console.warn('[CME] decode JPEG falhou:', e.message); return null; }
 }
 
 /* ── Extração com IA ─────────────────────────────────────────── */
