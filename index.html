@@ -3749,6 +3749,9 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         <div class="sub-tab"       id="psi-stab-arquivados" onclick="mudarSubAbaPsi('arquivados')">
           📁 Arquivados <span id="psi-arq-badge" class="notif-badge" style="display:none">0</span>
         </div>
+        <div class="sub-tab"       id="psi-stab-semcom" onclick="mudarSubAbaPsi('semcom')">
+          📵 Sem Comunicação (DPP) <span id="psi-semcom-badge" class="notif-badge" style="display:none">0</span>
+        </div>
       </div>
 
       <!-- ── ATIVOS ── -->
@@ -3989,6 +3992,201 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         </div>
 
       </div><!-- /psi-panel-arquivados -->
+
+      <!-- ── SEM COMUNICAÇÃO (DPP) — Psicossocial ── -->
+      <div class="sub-panel" id="psi-panel-semcom">
+
+        <!-- Toolbar -->
+        <div class="table-toolbar" style="flex-wrap:wrap;gap:8px">
+          <div style="font-weight:600;color:var(--az1);font-size:1rem">📵 Monitorados DPP Sem Comunicação — AKILES</div>
+          <div class="table-actions" style="flex-wrap:wrap;gap:6px">
+            <span id="pscom-ultima-importacao" style="font-size:.82rem;color:#888;align-self:center"></span>
+            <label class="btn-secondary" style="cursor:pointer;margin:0">
+              📂 Importar Excel AKILES
+              <input type="file" id="pscom-file-input" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="importarExcelSemCom(this,'psicossocial')">
+            </label>
+            <button class="btn-secondary" onclick="renderizarSemCom('psicossocial')">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="exportarSemComExcel('psicossocial')">📥 Exportar Excel</button>
+          </div>
+        </div>
+
+        <!-- Sub-abas internas: Ativos / Desvinculados -->
+        <div class="sub-tabs" style="margin:10px 0 0 0;border-bottom:1px solid #e2e8f0">
+          <div class="sub-tab active" id="psc-stab-ativos" onclick="mudarSubAbaSemCom('ativos','psicossocial')" style="font-size:.88rem">📡 Ativos</div>
+          <div class="sub-tab" id="psc-stab-desvinculados" onclick="mudarSubAbaSemCom('desvinculados','psicossocial')" style="font-size:.88rem">
+            ✅ Desvinculados
+            <span id="psc-desvinc-badge" class="notif-badge" style="display:none;background:#16a34a">0</span>
+          </div>
+        </div>
+
+        <!-- ── Painel: Ativos ── -->
+        <div class="sub-panel active" id="psc-panel-ativos" style="padding:0">
+
+        <!-- KPIs -->
+        <div class="kpi-grid" style="margin:12px 0 8px 0;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
+          <div class="kpi-card" style="background:#f0f9ff;border-left:4px solid #0284c7">
+            <div class="kpi-icon">📋</div>
+            <div class="kpi-value" id="psc-kpi-total">0</div>
+            <div class="kpi-label">Total</div>
+          </div>
+          <div class="kpi-card" style="background:#fefce8;border-left:4px solid #ca8a04">
+            <div class="kpi-icon">⏱️</div>
+            <div class="kpi-value" id="psc-kpi-4h">0</div>
+            <div class="kpi-label">+4 horas</div>
+          </div>
+          <div class="kpi-card" style="background:#fff7ed;border-left:4px solid #ea580c">
+            <div class="kpi-icon">📅</div>
+            <div class="kpi-value" id="psc-kpi-1d">0</div>
+            <div class="kpi-label">+1 dia</div>
+          </div>
+          <div class="kpi-card" style="background:#fef2f2;border-left:4px solid #dc2626">
+            <div class="kpi-icon">📆</div>
+            <div class="kpi-value" id="psc-kpi-7d">0</div>
+            <div class="kpi-label">+7 dias</div>
+          </div>
+          <div class="kpi-card" style="background:#fdf4ff;border-left:4px solid #9333ea">
+            <div class="kpi-icon">🗓️</div>
+            <div class="kpi-value" id="psc-kpi-30d">0</div>
+            <div class="kpi-label">+30 dias</div>
+          </div>
+          <div class="kpi-card" style="background:#1a1a2e;border-left:4px solid #e11d48">
+            <div class="kpi-icon">⚠️</div>
+            <div class="kpi-value" id="psc-kpi-180d" style="color:#f87171">0</div>
+            <div class="kpi-label" style="color:#fca5a5">≥180 dias — DESVINCULAR</div>
+          </div>
+          <div class="kpi-card" style="background:#f0fdf4;border-left:4px solid #16a34a">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-value" id="psc-kpi-desvinc">0</div>
+            <div class="kpi-label">Desvinculados</div>
+          </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="tri-filtros">
+          <div class="tri-filtros-title">🔍 Filtros</div>
+          <div class="tri-filtros-grid">
+            <div class="form-field" style="margin:0">
+              <label>Nome</label>
+              <input type="text" id="psc-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemCom('psicossocial')">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Registro</label>
+              <input type="text" id="psc-f-registro" placeholder="Nº registro..." oninput="renderizarSemCom('psicossocial')">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Intervalo</label>
+              <select id="psc-f-intervalo" onchange="renderizarSemCom('psicossocial')">
+                <option value="">Todos</option>
+                <option>1. at&eacute; 30 min</option>
+                <option>2. at&eacute; 1 hora</option>
+                <option>3. at&eacute; 3 horas</option>
+                <option>4. at&eacute; 4 horas</option>
+                <option>5. mais de 4h</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Situação</label>
+              <select id="psc-f-situacao" onchange="renderizarSemCom('psicossocial')">
+                <option value="">Todas</option>
+                <option value="ativo">Ativo</option>
+                <option value="tratativa">Com tratativa</option>
+                <option value="desvinculado">Desvinculado</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Mín. dias sem com.</label>
+              <input type="number" id="psc-f-dias-min" placeholder="ex: 180" min="0" oninput="renderizarSemCom('psicossocial')" style="width:100%">
+            </div>
+            <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemCom('psicossocial')">✕ Limpar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="est-section-title" id="psc-count-label">Registros</div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th>Nº</th>
+              <th>Nome</th>
+              <th>Registro</th>
+              <th>Última Comunicação</th>
+              <th>Tempo Sem Com.</th>
+              <th>Dias</th>
+              <th>Intervalo</th>
+              <th>Unidade</th>
+              <th>Situação</th>
+              <th>Tratativas</th>
+              <th>Ações</th>
+            </tr></thead>
+            <tbody id="tbody-pscom"></tbody>
+          </table>
+        </div>
+        </div><!-- /psc-panel-ativos -->
+
+        <!-- ── Painel: Desvinculados ── -->
+        <div class="sub-panel" id="psc-panel-desvinculados" style="padding:0">
+          <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
+            <div style="font-weight:600;color:#16a34a">✅ Monitorados DPP Desvinculados</div>
+            <div class="table-actions">
+              <button class="btn-secondary" onclick="renderizarSemComDesvinc('psicossocial')">🔄 Atualizar</button>
+              <button class="btn-secondary" onclick="exportarDesvinculadosExcel('psicossocial')">📥 Exportar Excel</button>
+            </div>
+          </div>
+
+          <!-- Filtros desvinculados -->
+          <div class="tri-filtros" style="margin-top:8px">
+            <div class="tri-filtros-title">🔍 Filtros</div>
+            <div class="tri-filtros-grid">
+              <div class="form-field" style="margin:0">
+                <label>Nome</label>
+                <input type="text" id="pscde-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemComDesvinc('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Registro</label>
+                <input type="text" id="pscde-f-registro" placeholder="Nº registro..." oninput="renderizarSemComDesvinc('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Servidor que desvinculou</label>
+                <input type="text" id="pscde-f-servidor" placeholder="Nome do servidor..." oninput="renderizarSemComDesvinc('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Data desvinculação início</label>
+                <input type="date" id="pscde-f-inicio" onchange="renderizarSemComDesvinc('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Data desvinculação fim</label>
+                <input type="date" id="pscde-f-fim" onchange="renderizarSemComDesvinc('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+                <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemComDesvinc('psicossocial')">✕ Limpar</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="est-section-title" id="psc-desvinc-count-label">Desvinculados</div>
+          <div class="table-scroll">
+            <table class="data-table" style="font-size:.83rem">
+              <thead><tr>
+                <th>Nº</th>
+                <th>Nome</th>
+                <th>Registro</th>
+                <th>Última Comunicação</th>
+                <th>Dias (na desvinc.)</th>
+                <th>Unidade</th>
+                <th>Data Desvinculação</th>
+                <th>Servidor</th>
+                <th>Ato / Autorização</th>
+                <th>Sistema</th>
+                <th>Observações</th>
+                <th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-pscom-desvinc"></tbody>
+            </table>
+          </div>
+        </div><!-- /psc-panel-desvinculados -->
+
+      </div><!-- /psi-panel-semcom -->
 
     </div><!-- /panel-psicossocial -->
 
@@ -7584,7 +7782,7 @@ function _dSecCard(icon,nome,cor,rows){
 function _dashSetores(ocs, jm){
   const box=document.getElementById('dash-sectors'); if(!box) return;
   const todayK=new Date().toISOString().slice(0,10), monthK=todayK.slice(0,7);
-  const sc=(getSemCom().monitorados)||[];
+  const sc=_scListaArea(getSemCom(),'juridico'); // exclui DPP (competência do Psicossocial)
   const semComCrit=sc.filter(m=>m.situacao!=='desvinculado' && (Number(m.diasSemCom)||0)>=7).length;
   const jur180=sc.filter(m=>m.situacao!=='desvinculado' && _diasSemComAtual(m)>=180).length; // ≥180 dias sem comunicação (Akiles) — mesma base do KPI sc-kpi-180d
   const ofc=(getOFC().registros)||[];
@@ -8030,6 +8228,22 @@ async function removerDoJuridico(idx) {
 
 function getSemCom()       { return carregarStore('semcomunicacao', { monitorados: [], ultimaImportacao: null }); }
 function salvarSemCom(d)   { salvarStore('semcomunicacao', d); }
+
+/* ── Separação Jurídico × Psicossocial (DPP) ───────────────
+   REGRA: monitorados cujo REGISTRO contém "DPP" são de competência
+   da equipe Psicossocial; os demais, do Jurídico. Mesmo store, sem
+   mover nenhum dado — só filtragem de exibição. Preserva 100% das
+   tratativas/desvinculações já registradas. */
+function _scIsDPP(m)        { return /dpp/i.test(String((m && m.registro) || '')); }
+function _scEhMembro(m, area){ return area === 'psicossocial' ? _scIsDPP(m) : !_scIsDPP(m); }
+function _scAreaDe(m)       { return _scIsDPP(m) ? 'psicossocial' : 'juridico'; }
+function _scListaArea(dados, area){ return (dados.monitorados || []).filter(m => _scEhMembro(m, area)); }
+// Prefixos de DOM por área — Jurídico usa os IDs originais (sc/scde),
+// Psicossocial usa IDs espelhados (psc/pscde).
+const _SC_CFG = {
+  juridico:     { pfx:'sc',  dpfx:'scde',  ultima:'semcom-ultima-importacao', tbody:'tbody-semcom',  tbodyD:'tbody-semcom-desvinc' },
+  psicossocial: { pfx:'psc', dpfx:'pscde', ultima:'pscom-ultima-importacao',  tbody:'tbody-pscom',   tbodyD:'tbody-pscom-desvinc'  },
+};
 
 // ── Sub-abas Jurídico ──────────────────────────────────────
 function mudarSubAbaJur(aba) {
@@ -8522,7 +8736,9 @@ function _corDias(dias, desvinculado) {
 }
 
 // ── Importar Excel AKILES ─────────────────────────────────
-function importarExcelSemCom(input) {
+// area: 'juridico' (padrão, exclui DPP) | 'psicossocial' (só DPP)
+function importarExcelSemCom(input, area) {
+  area = area || 'juridico';
   const file = input.files[0];
   if (!file) return;
 
@@ -8610,6 +8826,8 @@ function importarExcelSemCom(input) {
       const nome     = gc(cNome);
       const registro = gc(cReg);
       if (!nome || !registro || !/\d/.test(registro)) { pulados++; continue; } // pula linhas sem dados válidos
+      // Separação por área: Jurídico ignora DPP; Psicossocial só importa DPP.
+      if (!_scEhMembro({ registro }, area)) { pulados++; continue; }
       const dataUlt  = gc(cData);
       const tempo    = gc(cTempo);
       const intervalo = gc(cIntervalo);
@@ -8635,9 +8853,11 @@ function importarExcelSemCom(input) {
     }
 
     dados.ultimaImportacao = agora;
+    if (!dados.ultimaImportArea) dados.ultimaImportArea = {};
+    dados.ultimaImportArea[area] = agora;
     salvarSemCom(dados);
     atualizarBadgeSemCom();
-    renderizarSemCom();
+    renderizarSemCom(area);
     input.value = '';
     _mostrarToast(`Importado com sucesso: ${novos} novos + ${atualizados} atualizados.`, 'sucesso');
   };
@@ -8647,38 +8867,49 @@ function importarExcelSemCom(input) {
 }
 
 // ── Sub-abas internas do Sem Comunicação ──────────────────
-function mudarSubAbaSemCom(aba) {
+function mudarSubAbaSemCom(aba, area) {
+  area = area || 'juridico';
+  const cfg = _SC_CFG[area];
   ['ativos','desvinculados'].forEach(a => {
-    document.getElementById('sc-stab-'      + a)?.classList.toggle('active', a === aba);
-    document.getElementById('sc-panel-'     + a)?.classList.toggle('active', a === aba);
+    document.getElementById(cfg.pfx + '-stab-'  + a)?.classList.toggle('active', a === aba);
+    document.getElementById(cfg.pfx + '-panel-' + a)?.classList.toggle('active', a === aba);
   });
-  if (aba === 'desvinculados') renderizarSemComDesvinc();
-  if (aba === 'ativos')        renderizarSemCom();
+  if (aba === 'desvinculados') renderizarSemComDesvinc(area);
+  if (aba === 'ativos')        renderizarSemCom(area);
 }
 
 // ── Badge ──────────────────────────────────────────────────
 function atualizarBadgeSemCom() {
   const dados = getSemCom();
-  const ct180 = dados.monitorados.filter(m => _diasSemComAtual(m) >= 180 && m.situacao !== 'desvinculado').length;
-  const badge = document.getElementById('jur-semcom-badge');
-  if (badge) { badge.textContent = ct180; badge.style.display = ct180 > 0 ? 'flex' : 'none'; }
-
-  // Badge dos desvinculados (verde)
-  const ctDesvinc = dados.monitorados.filter(m => m.situacao === 'desvinculado').length;
-  const bdDesvinc = document.getElementById('sc-desvinc-badge');
-  if (bdDesvinc) { bdDesvinc.textContent = ctDesvinc; bdDesvinc.style.display = ctDesvinc > 0 ? 'flex' : 'none'; }
+  const _set = (id, n, cor) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = n;
+    el.style.display = n > 0 ? 'flex' : 'none';
+    if (cor) el.style.background = cor;
+  };
+  // Jurídico (exclui DPP)
+  const jur = _scListaArea(dados, 'juridico');
+  _set('jur-semcom-badge', jur.filter(m => _diasSemComAtual(m) >= 180 && m.situacao !== 'desvinculado').length);
+  _set('sc-desvinc-badge', jur.filter(m => m.situacao === 'desvinculado').length, '#16a34a');
+  // Psicossocial (só DPP)
+  const psi = _scListaArea(dados, 'psicossocial');
+  _set('psi-semcom-badge', psi.filter(m => _diasSemComAtual(m) >= 180 && m.situacao !== 'desvinculado').length);
+  _set('psc-desvinc-badge', psi.filter(m => m.situacao === 'desvinculado').length, '#16a34a');
 }
 
 // ── Renderizar Desvinculados ───────────────────────────────
-function renderizarSemComDesvinc() {
+function renderizarSemComDesvinc(area) {
+  area = area || 'juridico';
+  const cfg = _SC_CFG[area];
   const dados  = getSemCom();
-  const fNome  = (document.getElementById('scde-f-nome')?.value     || '').toLowerCase().trim();
-  const fReg   = (document.getElementById('scde-f-registro')?.value || '').toLowerCase().trim();
-  const fSrv   = (document.getElementById('scde-f-servidor')?.value || '').toLowerCase().trim();
-  const fIni   = document.getElementById('scde-f-inicio')?.value || '';
-  const fFim   = document.getElementById('scde-f-fim')?.value    || '';
+  const fNome  = (document.getElementById(cfg.dpfx+'-f-nome')?.value     || '').toLowerCase().trim();
+  const fReg   = (document.getElementById(cfg.dpfx+'-f-registro')?.value || '').toLowerCase().trim();
+  const fSrv   = (document.getElementById(cfg.dpfx+'-f-servidor')?.value || '').toLowerCase().trim();
+  const fIni   = document.getElementById(cfg.dpfx+'-f-inicio')?.value || '';
+  const fFim   = document.getElementById(cfg.dpfx+'-f-fim')?.value    || '';
 
-  let lista = (dados.monitorados || []).filter(m => m.situacao === 'desvinculado');
+  let lista = _scListaArea(dados, area).filter(m => m.situacao === 'desvinculado');
   if (fNome) lista = lista.filter(m => m.nome.toLowerCase().includes(fNome));
   if (fReg)  lista = lista.filter(m => (m.registro||'').toLowerCase().includes(fReg));
   if (fSrv)  lista = lista.filter(m => (m.desvinculacao?.servidor||'').toLowerCase().includes(fSrv));
@@ -8687,10 +8918,10 @@ function renderizarSemComDesvinc() {
 
   lista.sort((a,b) => (b.desvinculacao?.data||'').localeCompare(a.desvinculacao?.data||''));
 
-  const countEl = document.getElementById('sc-desvinc-count-label');
+  const countEl = document.getElementById(cfg.pfx+'-desvinc-count-label');
   if (countEl) countEl.textContent = `${lista.length} desvinculado${lista.length !== 1 ? 's' : ''}`;
 
-  const tbody = document.getElementById('tbody-semcom-desvinc');
+  const tbody = document.getElementById(cfg.tbodyD);
   if (!tbody) return;
   if (!lista.length) {
     tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:32px;color:#888">Nenhum monitorado desvinculado ainda.</td></tr>';
@@ -8721,11 +8952,13 @@ function renderizarSemComDesvinc() {
   }).join('');
 }
 
-function limparFiltrosSemComDesvinc() {
-  ['scde-f-nome','scde-f-registro','scde-f-servidor','scde-f-inicio','scde-f-fim'].forEach(id => {
+function limparFiltrosSemComDesvinc(area) {
+  area = area || 'juridico';
+  const dpfx = _SC_CFG[area].dpfx;
+  [dpfx+'-f-nome',dpfx+'-f-registro',dpfx+'-f-servidor',dpfx+'-f-inicio',dpfx+'-f-fim'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  renderizarSemComDesvinc();
+  renderizarSemComDesvinc(area);
 }
 
 // Reverter desvinculação (volta para Ativos)
@@ -8738,13 +8971,14 @@ function reverterDesvinculacao(id) {
   m.desvinculacao = null;
   salvarSemCom(dados);
   atualizarBadgeSemCom();
-  renderizarSemComDesvinc();
+  renderizarSemComDesvinc(_scAreaDe(m));
   _mostrarToast('\u{21A9} Desvinculação revertida. Monitorado voltou para Ativos.', 'sucesso');
 }
 
 // Exportar desvinculados
-function exportarDesvinculadosExcel() {
-  const lista = (getSemCom().monitorados || []).filter(m => m.situacao === 'desvinculado')
+function exportarDesvinculadosExcel(area) {
+  area = area || 'juridico';
+  const lista = _scListaArea(getSemCom(), area).filter(m => m.situacao === 'desvinculado')
     .sort((a,b) => (b.desvinculacao?.data||'').localeCompare(a.desvinculacao?.data||''));
   if (!lista.length) { _mostrarToast('Nenhum desvinculado para exportar.', 'erro'); return; }
   const rows = lista.map((m, i) => ({
@@ -8770,15 +9004,19 @@ function exportarDesvinculadosExcel() {
 }
 
 // ── Renderizar tabela ──────────────────────────────────────
-function renderizarSemCom() {
+function renderizarSemCom(area) {
+  area = area || 'juridico';
+  const cfg = _SC_CFG[area];
   const dados = getSemCom();
-  const fNome     = (document.getElementById('sc-f-nome')?.value || '').toLowerCase().trim();
-  const fReg      = (document.getElementById('sc-f-registro')?.value || '').toLowerCase().trim();
-  const fIntervalo = (document.getElementById('sc-f-intervalo')?.value || '').toLowerCase().trim();
-  const fSituacao = document.getElementById('sc-f-situacao')?.value || '';
-  const fDiasMin  = parseInt(document.getElementById('sc-f-dias-min')?.value || '0') || 0;
+  const fNome     = (document.getElementById(cfg.pfx+'-f-nome')?.value || '').toLowerCase().trim();
+  const fReg      = (document.getElementById(cfg.pfx+'-f-registro')?.value || '').toLowerCase().trim();
+  const fIntervalo = (document.getElementById(cfg.pfx+'-f-intervalo')?.value || '').toLowerCase().trim();
+  const fSituacao = document.getElementById(cfg.pfx+'-f-situacao')?.value || '';
+  const fDiasMin  = parseInt(document.getElementById(cfg.pfx+'-f-dias-min')?.value || '0') || 0;
 
-  let lista = dados.monitorados || [];
+  // Base já filtrada pela área (Jurídico exclui DPP; Psicossocial só DPP)
+  const all = _scListaArea(dados, area);
+  let lista = all.slice();
   if (fNome)     lista = lista.filter(m => m.nome.toLowerCase().includes(fNome));
   if (fReg)      lista = lista.filter(m => m.registro.toLowerCase().includes(fReg));
   if (fIntervalo) lista = lista.filter(m => (m.intervalo||'').toLowerCase().includes(fIntervalo));
@@ -8790,27 +9028,28 @@ function renderizarSemCom() {
   // Ordenar: maiores dias primeiro (críticos no topo)
   lista.sort((a,b) => _diasSemComAtual(b) - _diasSemComAtual(a));
 
-  // KPIs — calculados dinamicamente
-  const all = dados.monitorados || [];
-  document.getElementById('sc-kpi-total').textContent  = all.length;
-  document.getElementById('sc-kpi-4h').textContent     = all.filter(m => _diasSemComAtual(m) === 0).length;
-  document.getElementById('sc-kpi-1d').textContent     = all.filter(m => { const d = _diasSemComAtual(m); return d >= 1 && d < 7; }).length;
-  document.getElementById('sc-kpi-7d').textContent     = all.filter(m => { const d = _diasSemComAtual(m); return d >= 7 && d < 30; }).length;
-  document.getElementById('sc-kpi-30d').textContent    = all.filter(m => { const d = _diasSemComAtual(m); return d >= 30 && d < 180; }).length;
-  document.getElementById('sc-kpi-180d').textContent   = all.filter(m => _diasSemComAtual(m) >= 180 && m.situacao !== 'desvinculado').length;
-  document.getElementById('sc-kpi-desvinc').textContent = all.filter(m => m.situacao === 'desvinculado').length;
+  // KPIs — calculados dinamicamente (escopo da área)
+  const kpi = (suf, v) => { const el = document.getElementById(cfg.pfx+'-kpi-'+suf); if (el) el.textContent = v; };
+  kpi('total',  all.length);
+  kpi('4h',     all.filter(m => _diasSemComAtual(m) === 0).length);
+  kpi('1d',     all.filter(m => { const d = _diasSemComAtual(m); return d >= 1 && d < 7; }).length);
+  kpi('7d',     all.filter(m => { const d = _diasSemComAtual(m); return d >= 7 && d < 30; }).length);
+  kpi('30d',    all.filter(m => { const d = _diasSemComAtual(m); return d >= 30 && d < 180; }).length);
+  kpi('180d',   all.filter(m => _diasSemComAtual(m) >= 180 && m.situacao !== 'desvinculado').length);
+  kpi('desvinc', all.filter(m => m.situacao === 'desvinculado').length);
 
-  // Última importação
-  const uiEl = document.getElementById('semcom-ultima-importacao');
-  if (uiEl && dados.ultimaImportacao) {
-    uiEl.textContent = 'Última importação: ' + new Date(dados.ultimaImportacao).toLocaleString('pt-BR');
+  // Última importação (timestamp da área, com fallback ao global)
+  const uiEl = document.getElementById(cfg.ultima);
+  const tsArea = (dados.ultimaImportArea && dados.ultimaImportArea[area]) || dados.ultimaImportacao;
+  if (uiEl && tsArea) {
+    uiEl.textContent = 'Última importação: ' + new Date(tsArea).toLocaleString('pt-BR');
   }
 
   // Count label
-  const countEl = document.getElementById('sc-count-label');
+  const countEl = document.getElementById(cfg.pfx+'-count-label');
   if (countEl) countEl.textContent = `${lista.length} registro${lista.length !== 1 ? 's' : ''} encontrado${lista.length !== 1 ? 's' : ''}`;
 
-  const tbody = document.getElementById('tbody-semcom');
+  const tbody = document.getElementById(cfg.tbody);
   if (!tbody) return;
   if (!lista.length) {
     tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:#888">Nenhum registro encontrado. Importe o Excel do AKILES.</td></tr>';
@@ -8849,11 +9088,13 @@ function renderizarSemCom() {
   }).join('');
 }
 
-function limparFiltrosSemCom() {
-  ['sc-f-nome','sc-f-registro','sc-f-intervalo','sc-f-situacao','sc-f-dias-min'].forEach(id => {
+function limparFiltrosSemCom(area) {
+  area = area || 'juridico';
+  const pfx = _SC_CFG[area].pfx;
+  [pfx+'-f-nome',pfx+'-f-registro',pfx+'-f-intervalo',pfx+'-f-situacao',pfx+'-f-dias-min'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  renderizarSemCom();
+  renderizarSemCom(area);
 }
 
 // ── Modal: Registrar Tratativa ─────────────────────────────
@@ -8895,7 +9136,7 @@ function salvarTratativaSemCom() {
   if (m.situacao === 'ativo') m.situacao = 'ativo'; // mantém ativo, mas tratativa fica registrada
   salvarSemCom(dados);
   fecharModal('modal-semcom-tratativa');
-  renderizarSemCom();
+  renderizarSemCom(_scAreaDe(m));
   _mostrarToast('Tratativa registrada com sucesso!', 'sucesso');
 }
 
@@ -8936,8 +9177,8 @@ function salvarDesvinculacao() {
   salvarSemCom(dados);
   atualizarBadgeSemCom();
   fecharModal('modal-semcom-desvinc');
-  // Redireciona automaticamente para a sub-aba Desvinculados
-  mudarSubAbaSemCom('desvinculados');
+  // Redireciona automaticamente para a sub-aba Desvinculados da área correta
+  mudarSubAbaSemCom('desvinculados', _scAreaDe(m));
   _mostrarToast('\u{2705} Desvinculação registrada! Registro movido para Desvinculados.', 'sucesso');
 }
 
@@ -8981,9 +9222,10 @@ function verMonitoradoSemCom(monId) {
 }
 
 // ── Exportar Excel ─────────────────────────────────────────
-function exportarSemComExcel() {
+function exportarSemComExcel(area) {
+  area = area || 'juridico';
   const dados = getSemCom();
-  const lista = (dados.monitorados || []).sort((a,b) => (b.diasSemCom||0) - (a.diasSemCom||0));
+  const lista = _scListaArea(dados, area).sort((a,b) => (b.diasSemCom||0) - (a.diasSemCom||0));
   if (!lista.length) { _mostrarToast('Nenhum registro para exportar.', 'erro'); return; }
   const rows = lista.map((m, i) => ({
     'Nº':                   i + 1,
@@ -9011,7 +9253,7 @@ function exportarSemComExcel() {
   const ws = XLSX.utils.json_to_sheet(rows);
   ws['!cols'] = [{wch:4},{wch:35},{wch:14},{wch:20},{wch:25},{wch:8},{wch:18},{wch:18},{wch:14},{wch:6},{wch:20},{wch:25},{wch:40},{wch:15},{wch:25},{wch:20},{wch:22},{wch:30},{wch:20},{wch:20}];
   XLSX.utils.book_append_sheet(wb, ws, 'Sem Comunicação');
-  XLSX.writeFile(wb, 'sem_comunicacao_CME.xlsx');
+  XLSX.writeFile(wb, area === 'psicossocial' ? 'sem_comunicacao_DPP_psicossocial.xlsx' : 'sem_comunicacao_CME.xlsx');
   _mostrarToast('Excel exportado com sucesso!', 'sucesso');
 }
 
@@ -12058,12 +12300,13 @@ function getPsi()          { return carregarStore('psicossocial', { atendimentos
 function salvarPsi(dados)  { salvarStore('psicossocial', dados); }
 
 function mudarSubAbaPsi(aba) {
-  ['ativos','arquivados'].forEach(a => {
+  ['ativos','arquivados','semcom'].forEach(a => {
     document.getElementById('psi-stab-'+a)?.classList.toggle('active', a===aba);
     document.getElementById('psi-panel-'+a)?.classList.toggle('active', a===aba);
   });
   if (aba==='arquivados') renderizarPsiArquivados();
   if (aba==='ativos')     renderizarPsi();
+  if (aba==='semcom')     { renderizarSemCom('psicossocial'); atualizarBadgeSemCom(); }
 }
 
 function atualizarBadgePsiArq() {
