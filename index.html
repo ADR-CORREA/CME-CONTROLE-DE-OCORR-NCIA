@@ -18492,7 +18492,7 @@ const COM_COMARCAS = [
     'Vara do Juizado Especial Criminal',
   ]},
   { nome:'Mazagão',                varas:['Vara Única'] },
-  { nome:'Oiapoque',               varas:['1ª Vara de Oiapoque','2ª Vara de Oiapoque'] },
+  { nome:'Oiapoque',               varas:['1ª Vara de Oiapoque','2ª Vara de Oiapoque','Vara Federal Cível e Criminal da SSJ de Oiapoque-AP'] },
   { nome:'Pedra Branca do Amapari',varas:['Vara Única'] },
   { nome:'Porto Grande',           varas:['Vara Única'] },
   { nome:'Santana', varas:[
@@ -18643,6 +18643,15 @@ const COM_MODELOS = [
       `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME vem informar que foi desvinculado (a) do Dispositivo de Proteção Preventiva "Botão do Pânico" <b>${c.nome_monitorado}</b>, na data do dia <b>${c.data_desvincul}</b>, em cumprimento à Decisão contida nos Autos, datada de ${c.data_decisao}.`,
       `Em anexo segue o Relatório de Utilização de Dispositivos, o Relatório de Listagem de Eventos de Monitorados e o expediente acima citado.`,
     ]},
+  { id:'desvincul-dpp-sem-interesse', cat:'Desvinculação', nome:'Desvinculação — DPP por falta de interesse no uso',
+    assunto:'Desvinculação do Dispositivo de Proteção Preventiva - DPP (Botão do Pânico)',
+    campos:[
+      {id:'data_devolucao', label:'Data da devolução espontânea', tipo:'date'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoração Eletrônica – CME vem informar que <b>${c.nome_monitorado}</b>, compareceu voluntariamente nesta Central para fazer a devolução espontânea do Dispositivo Eletrônico denominado "Botão do Pânico" na data do dia <b>${c.data_devolucao}</b>.`,
+      `Sem mais, esta CME encontra-se à disposição, podendo ser contatada nos telefones constantes no rodapé deste expediente.`,
+    ]},
   { id:'desvincul-aus-comun', cat:'Desvinculação', nome:'Desvinculação + Ausência de Comunicação + Ressarcimento',
     assunto:'Informa ausência de comunicação, nova entrada e desvinculação',
     campos:[
@@ -18711,6 +18720,13 @@ const COM_MODELOS = [
     ],
     corpo:c=>[
       `Com os cumprimentos, neste ato representado pela Central de Monitoração Eletrônica – CME, encaminha o Relatório de Monitoramento de <b>${c.nome_monitorado}</b>, <b>SEM</b> registros de descumprimentos dos deveres e obrigações do monitorado, no período de ${c.periodo_inicio} a ${c.periodo_fim}.`,
+    ]},
+  { id:'relatorio-social-interventivo', cat:'Relatório', nome:'Encaminha Relatório Social Interventivo',
+    assunto:'Encaminha Relatório Social Interventivo',
+    campos:[],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônica – CME, encaminha RELATÓRIO SOCIAL INTERVENTIVO, para ciência e demais providências.`,
+      `Sem mais, esta CME encontra-se à disposição, podendo ser contatada no telefone constantes no rodapé.`,
     ]},
   /* ── INFORMATIVO ──────────────────────────────────────────── */
   { id:'encaminha-relatorios', cat:'Informativo', nome:'Encaminha Relatórios de Monitoração (vários monitorados)',
