@@ -2815,7 +2815,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
               <div class="form-field">
                 <label>Nome do Monitorado</label>
-                <input type="text" id="com-of-nome" oninput="com_atualizarPreview()"
+                <input type="text" id="com-of-nome" oninput="com_onCampoInput()"
                   style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
                   placeholder="NOME COMPLETO EM MAIÚSCULAS">
               </div>
@@ -19121,8 +19121,8 @@ function com_atualizarCampos() {
           <input type="hidden" id="com-of-campo-${c.id}"></div>`;
       }
       const el = c.tipo === 'textarea'
-        ? `<textarea id="com-of-campo-${c.id}" rows="4" ${ph} oninput="com_atualizarPreview()" style="${baseStyle};resize:vertical"></textarea>`
-        : `<input type="${c.tipo}" id="com-of-campo-${c.id}" ${ph} oninput="com_atualizarPreview()" onchange="com_atualizarPreview()" style="${baseStyle}">`;
+        ? `<textarea id="com-of-campo-${c.id}" rows="4" ${ph} oninput="com_onCampoInput()" style="${baseStyle};resize:vertical"></textarea>`
+        : `<input type="${c.tipo}" id="com-of-campo-${c.id}" ${ph} oninput="com_onCampoInput()" onchange="com_onCampoInput()" style="${baseStyle}">`;
       const isWide = c.tipo === 'textarea';
       return `<div${isWide ? ' style="grid-column:1/-1"' : ''}><label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">${c.label}</label>${el}</div>`;
     }).join('')}
@@ -19155,7 +19155,7 @@ function com_listaSync(id) {
   const nomes = [...c.querySelectorAll('input')].map(i => i.value.trim()).filter(Boolean);
   const hid = document.getElementById('com-of-campo-' + id);
   if (hid) hid.value = nomes.map((n, i) => (i + 1) + '. ' + n).join('\n');
-  try { com_atualizarPreview(); } catch (e) {}
+  try { com_destravarCorpo(); com_atualizarPreview(); } catch (e) {}
 }
 
 /* ── Campo tipo "lista-par" (vários monitorados, cada um com seu processo,
@@ -19187,7 +19187,7 @@ function com_listaParSync(id) {
   }).filter(x => x.mon);
   const hid = document.getElementById('com-of-campo-' + id);
   if (hid) hid.value = linhas.map((x, i) => `${i + 1}. ${x.mon}${x.proc ? ` — Processo nº ${x.proc}` : ''}`).join('\n');
-  try { com_atualizarPreview(); } catch (e) {}
+  try { com_destravarCorpo(); com_atualizarPreview(); } catch (e) {}
 }
 
 /* ═══════════ NUMERAÇÃO AUTOMÁTICA DE OFÍCIOS ═══════════════════
@@ -19813,6 +19813,21 @@ function _comOnCorpoInput(ta) {
   const btn = document.getElementById('com-corpo-restaurar-btn');
   if (btn) btn.style.display = 'inline-block';
   com_atualizarPreview(); // atualiza o preview com o novo corpo
+}
+
+/* Usuário mudou um CAMPO (nome, data, monitorado, lista…): destrava o corpo
+   para que a informação nova SEMPRE entre no texto. A edição manual do corpo
+   só permanece enquanto nenhum campo for alterado depois. */
+function com_destravarCorpo() {
+  _comCorpoEditado = false;
+  const ta = document.getElementById('com-of-corpo');
+  if (ta) ta.style.borderColor = '#cbd5e1';
+  const btn = document.getElementById('com-corpo-restaurar-btn');
+  if (btn) btn.style.display = 'none';
+}
+function com_onCampoInput() {
+  com_destravarCorpo();
+  com_atualizarPreview();
 }
 
 /* Restaura o corpo do texto a partir do modelo */
@@ -21285,6 +21300,7 @@ async function com_extrairComIA() {
       naoEncontrados.push('Comarca/Vara');
     }
 
+    com_destravarCorpo(); // info extraída sempre entra no corpo
     com_atualizarPreview();
 
     // Mensagem detalhada de resultado
