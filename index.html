@@ -4335,6 +4335,11 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
                 <div style="font-weight:600;font-size:1rem">Recibos</div>
                 <div id="r2-count-recibos" style="font-size:.8rem;color:#888;margin-top:4px">Carregando…</div>
               </div>
+              <div class="r2-pasta-card" onclick="r2_abrirPasta('Psicossocial')">
+                <div style="font-size:2rem;margin-bottom:8px">🧠</div>
+                <div style="font-weight:600;font-size:1rem">Psicossocial</div>
+                <div id="r2-count-psicossocial" style="font-size:.8rem;color:#888;margin-top:4px">Carregando…</div>
+              </div>
             </div>
           </div>
 
@@ -16006,7 +16011,7 @@ function r2_renderizarListaMon(lista, busca, total) {
 
 /* ── Excluir monitorado inteiro (admin) ───────────────────────── */
 function r2_confirmarDeleteMonitorado(nome) {
-  if (!confirm(`\u{26A0}\u{FE0F} ATENÇÃO!\n\nExcluir TODOS os arquivos do monitorado "${nome}"?\n\nEsta ação é IRREVERSÍVEL e apagará permanentemente todos os documentos das pastas Processo, Docs do monitorado, Justificativa e Recibos.`)) return;
+  if (!confirm(`\u{26A0}\u{FE0F} ATENÇÃO!\n\nExcluir TODOS os arquivos do monitorado "${nome}"?\n\nEsta ação é IRREVERSÍVEL e apagará permanentemente todos os documentos das pastas Processo, Docs do monitorado, Justificativa, Recibos e Psicossocial.`)) return;
   r2_deletarMonitorado(nome);
 }
 
@@ -16869,6 +16874,13 @@ async function r2_novoMonitorado() {
       'Content-Type': 'application/octet-stream',
     };
     await r2_api('POST', '/upload', headers4, new Blob([]));
+    const headers5 = {
+      'X-Monitorado': nomeTrimmed,
+      'X-Pasta': 'Psicossocial',
+      'X-Filename': '.keep',
+      'Content-Type': 'application/octet-stream',
+    };
+    await r2_api('POST', '/upload', headers5, new Blob([]));
     _mostrarToast(`\u{2705} Monitorado "${nomeTrimmed}" criado!`, 'sucesso');
     addLog(`R2: monitorado criado — ${nomeTrimmed}`);
     await r2_carregarMonitorados();
@@ -16901,8 +16913,8 @@ async function r2_selecionarMonitorado(nome) {
 }
 
 async function r2_atualizarContagens(nome) {
-  const pastas = ['Processo', 'Docs do monitorado', 'Justificativa', 'Recibos'];
-  const ids    = ['r2-count-processo', 'r2-count-docs', 'r2-count-justificativa', 'r2-count-recibos'];
+  const pastas = ['Processo', 'Docs do monitorado', 'Justificativa', 'Recibos', 'Psicossocial'];
+  const ids    = ['r2-count-processo', 'r2-count-docs', 'r2-count-justificativa', 'r2-count-recibos', 'r2-count-psicossocial'];
   for (let i = 0; i < pastas.length; i++) {
     try {
       const q = new URLSearchParams({ monitorado: nome, pasta: pastas[i] });
