@@ -18356,14 +18356,15 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
       `<tr><td>${esc(tipo)}</td><td style="text-align:center">${qtd}</td></tr>`
     ).join('');
 
-    // Tabela de violações
+    // Tabela de violações — linha em branco mesclada após cada ocorrência (igual ao Python)
     const violRows = grupo.map(r =>
       `<tr>
         <td>${esc(r.tipo)}</td>
         <td>${esc(r.idOc)}</td>
         <td style="white-space:nowrap">${esc(fmtOcorreu(r.ocorreu))}</td>
         <td>${esc(r.duracao)}</td>
-      </tr>`
+      </tr>
+      <tr><td colspan="4">&nbsp;</td></tr>`
     ).join('');
 
     // Síntese técnica — análise da bateria (igual ao Python)
@@ -18395,18 +18396,18 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
         <h2 class="titulo-rel">RELATÓRIO DE MONITORAÇÃO ELETRÔNICA</h2>
 
         <div class="secao-tit">DADOS PESSOAIS</div>
-        <p class="dado"><strong>MONITORADO:</strong> ${esc(r0.nome)}</p>
-        <p class="dado"><strong>CPF:</strong> ${esc(fmtCpf(r0.cpf)) || 'NÃO INFORMADO'}</p>
-        <p class="dado"><strong>ENDEREÇO:</strong> _______________________________________________</p>
-        <p class="dado"><strong>CONTATO:</strong> _______________________________________________</p>
+        <p class="dado"><strong>MONITORADO:</strong> ${esc(r0.nome) || 'XXX'}</p>
+        <p class="dado"><strong>CPF:</strong> ${esc(fmtCpf(r0.cpf)) || 'XXX'}</p>
+        <p class="dado"><strong>ENDEREÇO:</strong> XXX</p>
+        <p class="dado"><strong>CONTATO:</strong> XXX</p>
 
         <div class="secao-tit">DADOS PROCESSUAIS</div>
-        <p class="dado"><strong>PROCESSO Nº:</strong> ${esc(r0.processo) || 'NÃO INFORMADO'}</p>
-        <p class="dado"><strong>VARA:</strong> ${esc(r0.competencia) || 'NÃO INFORMADO'}</p>
-        <p class="dado"><strong>COMARCA:</strong> ${esc(r0.comarca) || 'NÃO INFORMADO'}</p>
+        <p class="dado"><strong>PROCESSO Nº:</strong> ${esc(r0.processo) || 'XXX'}</p>
+        <p class="dado"><strong>VARA:</strong> ${esc(r0.competencia) || 'XXX'}</p>
+        <p class="dado"><strong>COMARCA:</strong> ${esc(r0.comarca) || 'XXX'}</p>
 
         <div class="secao-tit">DADOS DA MONITORAÇÃO</div>
-        <p class="dado"><strong>DATA DE INÍCIO:</strong> _______________&nbsp;&nbsp;&nbsp;<strong>DATA DE TÉRMINO:</strong> _______________</p>
+        <p class="dado"><strong>DATA DE INÍCIO:</strong> XXX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>DATA DE TÉRMINO:</strong> XXX</p>
 
         <p class="corpo" style="margin-top:12px">
           Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos
