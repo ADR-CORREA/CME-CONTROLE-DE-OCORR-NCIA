@@ -16843,51 +16843,38 @@ async function r2_novoMonitorado() {
   const nome = prompt('Nome do monitorado:');
   if (!nome || !nome.trim()) return;
   const nomeTrimmed = nome.trim();
-  // Criar um arquivo marcador para que o "monitorado" apareça no R2
-  // Usamos um arquivo .keep invisível em cada pasta
-  try {
-    const headers = {
-      'X-Monitorado': nomeTrimmed,
-      'X-Pasta': 'Processo',
-      'X-Filename': '.keep',
-      'Content-Type': 'application/octet-stream',
-    };
-    await r2_api('POST', '/upload', headers, new Blob([]));
-    const headers2 = {
-      'X-Monitorado': nomeTrimmed,
-      'X-Pasta': 'Docs do monitorado',
-      'X-Filename': '.keep',
-      'Content-Type': 'application/octet-stream',
-    };
-    await r2_api('POST', '/upload', headers2, new Blob([]));
-    const headers3 = {
-      'X-Monitorado': nomeTrimmed,
-      'X-Pasta': 'Justificativa',
-      'X-Filename': '.keep',
-      'Content-Type': 'application/octet-stream',
-    };
-    await r2_api('POST', '/upload', headers3, new Blob([]));
-    const headers4 = {
-      'X-Monitorado': nomeTrimmed,
-      'X-Pasta': 'Recibos',
-      'X-Filename': '.keep',
-      'Content-Type': 'application/octet-stream',
-    };
-    await r2_api('POST', '/upload', headers4, new Blob([]));
-    const headers5 = {
-      'X-Monitorado': nomeTrimmed,
-      'X-Pasta': 'Psicossocial',
-      'X-Filename': '.keep',
-      'Content-Type': 'application/octet-stream',
-    };
-    await r2_api('POST', '/upload', headers5, new Blob([]));
-    _mostrarToast(`\u{2705} Monitorado "${nomeTrimmed}" criado!`, 'sucesso');
-    addLog(`R2: monitorado criado — ${nomeTrimmed}`);
-    await r2_carregarMonitorados();
-    await r2_selecionarMonitorado(nomeTrimmed);
-  } catch(e) {
-    _mostrarToast(`\u{26A0}\u{FE0F} Erro: ${e.message}`, 'erro');
+  if (!r2_state.url || !r2_state.token) {
+    _mostrarToast('\u{26A0}\u{FE0F} Armazenamento (R2) não configurado. Recarregue a página e tente de novo.', 'erro');
+    return;
   }
+  // Renova o token de sessão UMA vez antes (evita falha por token expirado).
+  try { await _garantirTokenSessao(); } catch(e) {}
+  // Cria cada pasta com um marcador .keep, de forma INDEPENDENTE e em paralelo:
+  // uma pasta que falhe NÃO derruba o cadastro inteiro (era a causa do erro).
+  const pastas = ['Processo', 'Docs do monitorado', 'Justificativa', 'Recibos', 'Psicossocial'];
+  const resultados = await Promise.allSettled(pastas.map(p =>
+    r2_api('POST', '/upload', {
+      'X-Monitorado': nomeTrimmed, 'X-Pasta': p, 'X-Filename': '.keep',
+      'Content-Type': 'application/octet-stream',
+    }, new Blob([]))
+  ));
+  const ok     = resultados.filter(r => r.status === 'fulfilled').length;
+  const falhas = resultados.filter(r => r.status === 'rejected').map(r => (r.reason && r.reason.message) || '');
+
+  if (ok === 0) {
+    // Nenhuma pasta criada — quase sempre sessão expirada ou sem conexão.
+    const authErr = falhas.some(m => /401|403|n.o autorizado|unauthorized|token|sess/i.test(m));
+    _mostrarToast(authErr
+      ? '\u{26A0}\u{FE0F} Sessão expirada. Clique em "Sair", entre novamente e tente criar o monitorado.'
+      : ('\u{26A0}\u{FE0F} Não foi possível criar: ' + (falhas[0] || 'erro de conexão. Tente novamente.')), 'erro');
+    return;
+  }
+
+  _mostrarToast(falhas.length
+    ? `\u{2705} Monitorado "${nomeTrimmed}" criado (${ok}/${pastas.length} pastas; reabra se faltar alguma).`
+    : `\u{2705} Monitorado "${nomeTrimmed}" criado!`, 'sucesso');
+  addLog(`R2: monitorado criado — ${nomeTrimmed} (${ok}/${pastas.length} pastas)`);
+  try { await r2_carregarMonitorados(); await r2_selecionarMonitorado(nomeTrimmed); } catch(e) {}
 }
 
 /* ── Navegação ────────────────────────────────────────────────── */
