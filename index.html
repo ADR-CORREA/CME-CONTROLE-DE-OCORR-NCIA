@@ -8237,8 +8237,23 @@ function salvarSemCom(d)   { salvarStore('semcomunicacao', d); }
    mover nenhum dado — só filtragem de exibição. Preserva 100% das
    tratativas/desvinculações já registradas. */
 function _scIsDPP(m)        { return /dpp/i.test(String((m && m.registro) || '')); }
-function _scEhMembro(m, area){ return area === 'psicossocial' ? _scIsDPP(m) : !_scIsDPP(m); }
-function _scAreaDe(m)       { return _scIsDPP(m) ? 'psicossocial' : 'juridico'; }
+// Área do registro: marcação MANUAL (areaManual) tem prioridade — alguns DPP
+// não vêm com "-DPP" no Excel do AKILES, então o operador pode reclassificar.
+function _scAreaDe(m)       { if (m && (m.areaManual === 'psicossocial' || m.areaManual === 'juridico')) return m.areaManual; return _scIsDPP(m) ? 'psicossocial' : 'juridico'; }
+function _scEhMembro(m, area){ return _scAreaDe(m) === (area || 'juridico'); }
+// Move um registro entre Jurídico e Psicossocial (DPP) manualmente; a marcação
+// persiste nos próximos imports (o merge preserva campos não-AKILES).
+function _scMoverArea(id, destino) {
+  const dados = getSemCom();
+  const m = (dados.monitorados||[]).find(x => x.id === id);
+  if (!m) return;
+  m.areaManual = destino;
+  salvarSemCom(dados);
+  atualizarBadgeSemCom();
+  renderizarSemCom('juridico'); renderizarSemComDesvinc('juridico');
+  renderizarSemCom('psicossocial'); renderizarSemComDesvinc('psicossocial');
+  _mostrarToast(destino === 'psicossocial' ? '\u{2705} Movido para Psicossocial (DPP).' : '\u{2705} Movido para Jurídico.', 'sucesso');
+}
 function _scListaArea(dados, area){ return (dados.monitorados || []).filter(m => _scEhMembro(m, area)); }
 // Prefixos de DOM por área — Jurídico usa os IDs originais (sc/scde),
 // Psicossocial usa IDs espelhados (psc/pscde).
@@ -9034,7 +9049,8 @@ function renderizarSemCom(area) {
 
   // Base já filtrada pela área (Jurídico exclui DPP; Psicossocial só DPP)
   const all = _scListaArea(dados, area);
-  let lista = all.slice();
+  // Desvinculados ficam SÓ na sub-aba Desvinculados — somem da lista de Ativos
+  let lista = all.filter(m => m.situacao !== 'desvinculado');
   if (fNome)     lista = lista.filter(m => m.nome.toLowerCase().includes(fNome));
   if (fReg)      lista = lista.filter(m => m.registro.toLowerCase().includes(fReg));
   if (fIntervalo) lista = lista.filter(m => (m.intervalo||'').toLowerCase().includes(fIntervalo));
@@ -9048,7 +9064,7 @@ function renderizarSemCom(area) {
 
   // KPIs — calculados dinamicamente (escopo da área)
   const kpi = (suf, v) => { const el = document.getElementById(cfg.pfx+'-kpi-'+suf); if (el) el.textContent = v; };
-  kpi('total',  all.length);
+  kpi('total',  all.filter(m => m.situacao !== 'desvinculado').length);
   kpi('4h',     all.filter(m => _diasSemComAtual(m) === 0).length);
   kpi('1d',     all.filter(m => { const d = _diasSemComAtual(m); return d >= 1 && d < 7; }).length);
   kpi('7d',     all.filter(m => { const d = _diasSemComAtual(m); return d >= 7 && d < 30; }).length);
@@ -9086,6 +9102,10 @@ function renderizarSemCom(area) {
         ? '<span style="color:#2563eb">\u{1F4DD} Com tratativa</span>'
         : '<span style="color:#6b7280">Ativo</span>';
     const btnDesvinc = !desv(m) ? `<button class="btn-sm" style="background:#dc2626;color:#fff;border:none;border-radius:4px;padding:2px 7px;cursor:pointer;font-size:.8rem" onclick="abrirModalDesvinc('${m.id}')">\u{26A1} Desvincular</button>` : '';
+    // Reclassificação manual: alguns DPP não vêm marcados no Excel
+    const _destino  = area === 'psicossocial' ? 'juridico' : 'psicossocial';
+    const _moverTxt = area === 'psicossocial' ? 'Mover p/ Jurídico' : 'Mover p/ DPP';
+    const btnMover = `<button class="btn-sm btn-outline" style="color:#8957e5;border-color:#c4a5f0;font-size:.78rem" title="Reclassificar entre Jurídico e Psicossocial (DPP)" onclick="_scMoverArea('${m.id}','${_destino}')">${_moverTxt}</button>`;
     return `<tr style="${rowStyle}">
       <td>${i+1}</td>
       <td><strong>${esc(m.nome)}</strong>${badges180}</td>
@@ -9101,6 +9121,7 @@ function renderizarSemCom(area) {
         <button class="btn-sm btn-outline" onclick="verMonitoradoSemCom('${m.id}')" title="Visualizar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
         <button class="btn-sm btn-outline" style="color:#2563eb;border-color:#2563eb" onclick="abrirModalTratativa('${m.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg></button>
         ${btnDesvinc}
+        ${btnMover}
       </td>
     </tr>`;
   }).join('');
