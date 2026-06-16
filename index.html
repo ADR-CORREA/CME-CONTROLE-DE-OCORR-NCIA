@@ -4545,9 +4545,12 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
             <option value="mes">Este mês</option>
             <option value="ano">Este ano</option>
             <option value="dia">Dia específico…</option>
+            <option value="semana-esp">Semana específica…</option>
+            <option value="mes-esp">Mês específico…</option>
             <option value="tudo" selected>Tudo</option>
           </select>
           <input type="date" id="prod-data" onchange="prod_render()" style="display:none;padding:6px 9px;border:1px solid #cbd5e1;border-radius:8px;font-size:.88rem">
+          <input type="month" id="prod-mes" onchange="prod_render()" style="display:none;padding:6px 9px;border:1px solid #cbd5e1;border-radius:8px;font-size:.88rem">
           <button class="btn-secondary" onclick="prod_render()">🔄 Atualizar</button>
           <span id="prod-periodo-label" style="font-size:.78rem;color:#1d4ed8;font-weight:600"></span>
           <span style="font-size:.78rem;color:#94a3b8">Conta os registros criados em cada setor, por servidor.</span>
@@ -23297,14 +23300,35 @@ function _prodIntervalo() {
     if (dv) { const p = dv.split('-').map(Number); const ini = new Date(p[0], p[1]-1, p[2]); return { ini, fim: fimDe(ini), label: 'Dia — ' + fmt(ini) }; }
     return { ini: null, fim: null, label: '\u{26A0}\u{FE0F} Selecione um dia' };
   }
+  if (periodo === 'semana-esp') {
+    const dv = document.getElementById('prod-data')?.value;
+    if (!dv) return { ini: null, fim: null, label: '\u{26A0}\u{FE0F} Selecione uma data da semana' };
+    const p = dv.split('-').map(Number);
+    const base = new Date(p[0], p[1]-1, p[2]); base.setHours(0,0,0,0);
+    const seg = (base.getDay()+6)%7; // 0 = segunda
+    const ini = new Date(base.getFullYear(), base.getMonth(), base.getDate()-seg);
+    const fim = fimDe(new Date(ini.getFullYear(), ini.getMonth(), ini.getDate()+6));
+    return { ini, fim, label: 'Semana — ' + fmt(ini) + ' a ' + fmt(fim) };
+  }
+  if (periodo === 'mes-esp') {
+    const mv = document.getElementById('prod-mes')?.value; // YYYY-MM
+    if (!mv) return { ini: null, fim: null, label: '\u{26A0}\u{FE0F} Selecione um mês' };
+    const p = mv.split('-').map(Number);
+    const ini = new Date(p[0], p[1]-1, 1);
+    const fim = fimDe(new Date(p[0], p[1], 0));
+    const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    return { ini, fim, label: 'Mês — ' + meses[p[1]-1] + '/' + p[0] };
+  }
   return { ini: null, fim: null, label: 'Tudo (todos os períodos)' };
 }
 
 /* Mostra/oculta o campo de data quando "Dia específico" e re-renderiza. */
 function prod_onPeriodoChange() {
-  const sel = document.getElementById('prod-periodo');
+  const v   = document.getElementById('prod-periodo')?.value;
   const dt  = document.getElementById('prod-data');
-  if (dt) dt.style.display = (sel && sel.value === 'dia') ? '' : 'none';
+  const mes = document.getElementById('prod-mes');
+  if (dt)  dt.style.display  = (v === 'dia' || v === 'semana-esp') ? '' : 'none';
+  if (mes) mes.style.display = (v === 'mes-esp') ? '' : 'none';
   prod_render();
 }
 
