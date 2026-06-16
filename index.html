@@ -5318,6 +5318,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
     <div class="modal-body" id="viewer-body" style="padding-top:4px"></div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-viewer')">Fechar</button>
+      <button class="btn-secondary" id="viewer-btn-pdf" style="display:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Gerar PDF</button>
       <button class="btn-primary" id="viewer-btn-editar" style="display:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Editar</button>
     </div>
   </div>
@@ -7506,12 +7507,12 @@ function fazerLogout() {
 
 // ── Mapa de abas permitidas por nível ─────────────────────
 const TABS_POR_NIVEL = {
-  plantao:    ['dashboard', 'criticos', 'ocorrencias', 'links', 'modelos', 'arquivos'],
-  comunicacao: ['dashboard', 'comunicacao', 'links', 'modelos', 'arquivos'],
-  relatorio:  ['dashboard', 'relatorio', 'links', 'modelos', 'arquivos'],
-  juridico:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'links', 'modelos', 'arquivos'],
-  estoque:    ['dashboard', 'estoque', 'links', 'arquivos'],
-  triagem:       ['dashboard', 'triagem', 'links', 'arquivos'],
+  plantao:    ['dashboard', 'criticos', 'ocorrencias', 'links', 'modelos', 'arquivos', 'psicossocial'],
+  comunicacao: ['dashboard', 'comunicacao', 'links', 'modelos', 'arquivos', 'psicossocial'],
+  relatorio:  ['dashboard', 'relatorio', 'links', 'modelos', 'arquivos', 'psicossocial'],
+  juridico:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'links', 'modelos', 'arquivos', 'psicossocial'],
+  estoque:    ['dashboard', 'estoque', 'links', 'arquivos', 'psicossocial'],
+  triagem:       ['dashboard', 'triagem', 'links', 'arquivos', 'psicossocial'],
   psicossocial:  ['dashboard', 'psicossocial', 'links', 'modelos', 'arquivos'],
   gerencia:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
                'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'gerencia', 'arquivos', 'estatisticas'],
@@ -9282,7 +9283,7 @@ function _vsec(title, html) {
     <div class="form-grid" style="gap:8px">${html}</div>
   </div>`;
 }
-function _abrirViewer(title, bodyHtml, onEditar) {
+function _abrirViewer(title, bodyHtml, onEditar, onPdf) {
   document.getElementById('viewer-title').textContent = title;
   document.getElementById('viewer-body').innerHTML = bodyHtml;
   const btn = document.getElementById('viewer-btn-editar');
@@ -9291,6 +9292,11 @@ function _abrirViewer(title, bodyHtml, onEditar) {
     btn.onclick = () => { fecharModal('modal-viewer'); onEditar(); };
   } else {
     btn.style.display = 'none';
+  }
+  const btnPdf = document.getElementById('viewer-btn-pdf');
+  if (btnPdf) {
+    if (onPdf) { btnPdf.style.display = ''; btnPdf.onclick = () => onPdf(); }
+    else btnPdf.style.display = 'none';
   }
   document.getElementById('modal-viewer').classList.add('open');
 }
@@ -9392,7 +9398,75 @@ function verPsi(id) {
       _vta('Observações', a.obs)
     );
   const podeEd = podeAlterarPsi();
-  _abrirViewer('Psicossocial — ' + (a.nome||''), html, podeEd ? () => abrirModalPsi(id) : null);
+  _abrirViewer('Psicossocial — ' + (a.nome||''), html, podeEd ? () => abrirModalPsi(id) : null, () => gerarPdfAtendimentoPsi(id));
+}
+
+// Gera um documento PDF (via HTML+print) do atendimento psicossocial, p/ leitura fácil.
+function gerarPdfAtendimentoPsi(id) {
+  const a = ((getPsi().atendimentos)||[]).find(x => x.id === id);
+  if (!a) { _mostrarToast('Atendimento não encontrado.', 'erro'); return; }
+  const cmeSrc   = window._CME_LOGO_B64   ? 'data:image/png;base64,' + window._CME_LOGO_B64   : '';
+  const iapenSrc = window._IAPEN_LOGO_B64 ? 'data:image/png;base64,' + window._IAPEN_LOGO_B64 : '';
+  const _d   = v => (v == null || v === '') ? '—' : esc(String(v));
+  const dataFmt = a.dataHora ? a.dataHora.replace('T',' ').slice(0,16) : (a.data ? a.data.split('-').reverse().join('/') : '—');
+  const prox    = a.proximoAtend ? a.proximoAtend.split('-').reverse().join('/') : '—';
+  const row   = (r,v) => `<tr><td class="rot">${esc(r)}</td><td class="val">${_d(v)}</td></tr>`;
+  const bloco = (r,v) => `<div class="bloco"><div class="b-rot">${esc(r)}</div><div class="b-val">${(v==null||v==='')?'—':esc(String(v)).replace(/\n/g,'<br>')}</div></div>`;
+  const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const ag = new Date();
+  const dataExt = `Macapá – AP, ${String(ag.getDate()).padStart(2,'0')} de ${meses[ag.getMonth()]} de ${ag.getFullYear()}`;
+  const fatores = (a.fatoresVul && a.fatoresVul.length) ? bloco('Fatores de Vulnerabilidade', a.fatoresVul.join(', ')) : '';
+  const encam   = (a.encaminhamentos && a.encaminhamentos.length) ? bloco('Encaminhamentos Realizados', a.encaminhamentos.join(', ')) : '';
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Atendimento Psicossocial — ${esc(a.nome||'')}</title>
+<style>
+  *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;margin:0;font-size:11pt;line-height:1.45}
+  @media screen{body{padding:2.5cm 2cm}}
+  .cab{display:flex;align-items:center;gap:14px;border-bottom:2px solid #1a3a6b;padding-bottom:10px}
+  .cab img{height:64px;width:auto}
+  .cab .txt{flex:1;text-align:center;line-height:1.3}
+  .cab .txt .a{font-weight:bold;font-size:11pt}.cab .txt .b{font-size:9.5pt;color:#333}
+  h1{font-size:14pt;text-align:center;margin:14px 0 2px;color:#1a3a6b;text-transform:uppercase;letter-spacing:.5px}
+  .sub{text-align:center;color:#666;font-size:9pt;margin-bottom:12px}
+  h2{font-size:11pt;color:#1a3a6b;border-bottom:1px solid #cdd6e4;padding-bottom:3px;margin:16px 0 6px}
+  table{width:100%;border-collapse:collapse;margin-bottom:4px}
+  td{padding:4px 6px;vertical-align:top;border-bottom:1px solid #eef1f6}
+  td.rot{width:34%;color:#555;font-weight:bold;font-size:10pt}td.val{font-size:10.5pt}
+  .bloco{margin:8px 0}.b-rot{font-weight:bold;color:#555;font-size:10pt;margin-bottom:2px}.b-val{font-size:10.5pt;text-align:justify}
+  .data{margin-top:26px;text-align:right;font-size:10.5pt}
+  .ass{margin-top:42px;text-align:center}.ass .ln{border-top:1px solid #333;width:60%;margin:0 auto 4px}.ass .nm{font-weight:bold}.ass .cg{font-size:9.5pt;color:#444}
+  .rodape{margin-top:30px;border-top:1px solid #ccc;padding-top:8px;text-align:center;font-size:8.5pt;color:#777}
+  .no-print{text-align:center;margin-top:20px}
+  .btn-imp{background:#1a3a6b;color:#fff;border:none;border-radius:6px;padding:10px 28px;font-size:12pt;cursor:pointer}
+  @media print{.no-print{display:none!important} body{padding:0}}
+</style></head><body>
+<div class="cab">
+  ${cmeSrc?`<img src="${cmeSrc}" alt="CME">`:''}
+  <div class="txt">
+    <div class="a">GOVERNO DO ESTADO DO AMAPÁ</div>
+    <div class="b">Secretaria de Estado da Justiça e Segurança Pública – SEJUSP</div>
+    <div class="b">Instituto de Administração Penitenciária – IAPEN/AP</div>
+    <div class="b">Central de Monitoramento Eletrônico – CME – Equipe Multidisciplinar</div>
+  </div>
+  ${iapenSrc?`<img src="${iapenSrc}" alt="IAPEN">`:''}
+</div>
+<h1>Relatório de Atendimento Psicossocial</h1>
+<div class="sub">Documento para leitura — registro técnico da Equipe Multidisciplinar CME/IAPEN-AP</div>
+<h2>Identificação</h2>
+<table>${row('Público',a.publico)}${row('Nome',a.nome)}${row('CPF',a.cpf)}${row('Processo',a.processo)}${row('Medida',a.medida)}${row('Data/Hora do Atendimento',dataFmt)}</table>
+<h2>Dados do Atendimento</h2>
+<table>${row('Tipo',a.tipo)}${row('Modalidade',a.modalidade)}${row('Área Profissional',a.area)}${row('Caráter',a.carater)}${row('Profissional Responsável',a.profissional)}${row('Origem',a.origem)}${row('Situação Verificada',a.situacao)}${row('Nível de Risco',a.risco)}${row('Próximo Atendimento',prox)}</table>
+${(fatores||encam)?`<h2>Vulnerabilidade e Encaminhamentos</h2>${fatores}${encam}`:''}
+<h2>Registro Técnico</h2>
+${bloco('Descrição',a.descricao)}${bloco('Análise Técnica',a.analise)}${bloco('Providência',a.providencia)}${bloco('Observações',a.obs)}
+<div class="data">${dataExt}</div>
+<div class="ass"><div class="ln"></div><div class="nm">${esc(a.profissional||'_______________________________')}</div><div class="cg">Equipe Multidisciplinar – CME/IAPEN-AP</div></div>
+<div class="rodape">Av. Machado de Assis, 372 – Centro, CEP 68900-066 – Macapá-AP &nbsp;|&nbsp; cme@iapen.ap.gov.br &nbsp;|&nbsp; (96) 98415-2844</div>
+<div class="no-print"><button class="btn-imp" onclick="window.print()">Imprimir / Salvar como PDF</button><p style="font-size:9pt;color:#777">No diálogo, escolha <strong>"Salvar como PDF"</strong>.</p></div>
+<script>window.onload=function(){setTimeout(function(){window.print();},600);};<\/script>
+</body></html>`;
+  try {
+    _entregarDoc(new Blob([html], { type: 'text/html' }), `atendimento_psicossocial_${String(a.nome||'').replace(/\s+/g,'_')}.html`);
+  } catch(e) { _mostrarToast('Erro ao gerar documento: ' + e.message, 'erro'); }
 }
 
 // ── Comunicação — reutiliza visualizarOcorrencia ────────────
@@ -12411,7 +12485,10 @@ function renderizarPsi() {
   const el = id => document.getElementById(id);
   if (el('psi-aviso-perm'))  el('psi-aviso-perm').style.display  = podeMod ? 'none' : '';
   if (el('psi-btns-acao'))   el('psi-btns-acao').style.display   = podeMod ? '' : 'none';
-  if (el('psi-col-acoes'))   el('psi-col-acoes').style.display   = podeMod ? '' : 'none';
+  if (el('psi-col-acoes'))   el('psi-col-acoes').style.display   = '';  // coluna Ações sempre visível (botão Ver + PDF p/ todos)
+  // Não-equipe (somente leitura): vê apenas a sub-aba Atendimentos; oculta Arquivados e Sem Comunicação (DPP), que têm ações sensíveis
+  ['psi-stab-arquivados','psi-stab-semcom'].forEach(tid => { const t=el(tid); if(t) t.style.display = podeMod ? '' : 'none'; });
+  if (!podeMod) { const sa=el('psi-stab-ativos'); if(sa && !sa.classList.contains('active')) mudarSubAbaPsi('ativos'); }
 
   // Label e tabela
   const lbl = el('psi-count-label');
