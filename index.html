@@ -17937,14 +17937,12 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
   const secao=t=>_rvPara([_ar(t,{b:true,u:true})],{before:10,after:4,line:16.5});
   const dado=(l,v)=>_rvPara([_ar(l+': ',{b:true}),_ar(v||'XXX')],{after:4,line:16.5});
   body.push(secao('DADOS PESSOAIS'));
-  body.push(dado('MONITORADO',nome||'XXX')); body.push(dado('CPF',cpf||'XXX')); body.push(dado('ENDEREÇO',(r0.endereco||'').trim()||'XXX')); body.push(dado('CONTATO',(r0.contato||'').trim()||'XXX'));
+  body.push(dado('MONITORADO',nome||'XXX')); body.push(dado('CPF',cpf||'XXX')); body.push(dado('ENDEREÇO','XXX')); body.push(dado('CONTATO','XXX'));
   body.push(secao('DADOS PROCESSUAIS'));
   body.push(dado('PROCESSO Nº',proc||'XXX')); body.push(dado('VARA',vara||'XXX')); body.push(dado('COMARCA',comarca||'XXX'));
   body.push(secao('DADOS DA MONITORAÇÃO'));
   body.push(_rvPara([_ar('DATA DE INÍCIO: ',{b:true}),_ar('XXX          '),_ar('DATA DE TÉRMINO: ',{b:true}),_ar('XXX')],{after:8,line:16.5}));
-  const _dtsOc = grupo.map(x=>_rvParseDate(x.ocorreu)).filter(Boolean).sort((a,b)=>a-b);
-  const _periodoOc = _dtsOc.length ? `${_rvDataBR(_dtsOc[0])} a ${_rvDataBR(_dtsOc[_dtsOc.length-1])}` : '___ a ___';
-  body.push(_rvPara([_ar('Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos dos deveres e obrigações do monitorado, gerados pelo sistema de monitoração eletrônica no período de '+_periodoOc+'.')],{jc:'both',after:0,line:16.5}));
+  body.push(_rvPara([_ar('Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos dos deveres e obrigações do monitorado, gerados pelo sistema de monitoração eletrônica no período de ___ a ___.')],{jc:'both',after:0,line:16.5}));
   // Resumo quantitativo
   const cont={}; grupo.forEach(x=>{const t=String(x.tipo||''); cont[t]=(cont[t]||0)+1;});
   const contArr=Object.entries(cont).sort((a,b)=>b[1]-a[1]); const totalV=contArr.reduce((s,e)=>s+e[1],0);
