@@ -8819,7 +8819,18 @@ function importarExcelSemCom(input, area) {
     // ── 6. Processar linhas de dados ───────────────────────
     const dados = getSemCom();
     const agora = new Date().toISOString();
-    let novos = 0, atualizados = 0, pulados = 0;
+
+    // BACKUP de segurança ANTES de qualquer alteração — garante a recuperação
+    // do que já foi feito (desvinculações/tratativas) caso algo dê errado.
+    // Mantém os 5 backups mais recentes em localStorage.
+    try {
+      const bk = 'semcom_backup_' + agora.replace(/[:.]/g,'').slice(0,15);
+      localStorage.setItem(bk, JSON.stringify(dados));
+      const ks = Object.keys(localStorage).filter(k => k.startsWith('semcom_backup_')).sort();
+      while (ks.length > 5) localStorage.removeItem(ks.shift());
+    } catch(e) { console.warn('[CME] backup pré-import falhou:', e.message); }
+
+    let novos = 0, atualizados = 0, pulados = 0, nJur = 0, nPsi = 0;
 
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const cells = Array.from(rows[i].querySelectorAll('td'));
@@ -8828,8 +8839,10 @@ function importarExcelSemCom(input, area) {
       const nome     = gc(cNome);
       const registro = gc(cReg);
       if (!nome || !registro || !/\d/.test(registro)) { pulados++; continue; } // pula linhas sem dados válidos
-      // Separação por área: Jurídico ignora DPP; Psicossocial só importa DPP.
-      if (!_scEhMembro({ registro }, area)) { pulados++; continue; }
+      // Importa TODAS as linhas (DPP e não-DPP). O filtro de exibição roteia
+      // DPP → Psicossocial e não-DPP → Jurídico, então NADA some no import,
+      // não importa por qual aba você jogue o Excel.
+      if (_scIsDPP({ registro })) nPsi++; else nJur++;
       const dataUlt  = gc(cData);
       const tempo    = gc(cTempo);
       const intervalo = gc(cIntervalo);
@@ -8856,12 +8869,15 @@ function importarExcelSemCom(input, area) {
 
     dados.ultimaImportacao = agora;
     if (!dados.ultimaImportArea) dados.ultimaImportArea = {};
-    dados.ultimaImportArea[area] = agora;
+    // O import popula AS DUAS áreas (o filtro só separa na exibição)
+    dados.ultimaImportArea['juridico'] = agora;
+    dados.ultimaImportArea['psicossocial'] = agora;
     salvarSemCom(dados);
     atualizarBadgeSemCom();
     renderizarSemCom(area);
     input.value = '';
-    _mostrarToast(`Importado com sucesso: ${novos} novos + ${atualizados} atualizados.`, 'sucesso');
+    const _desvinc = (dados.monitorados||[]).filter(m => m.situacao === 'desvinculado').length;
+    _mostrarToast(`\u{2705} Importado: ${nJur} Jurídico + ${nPsi} DPP→Psicossocial (${novos} novos, ${atualizados} atualizados). ${_desvinc} desvinculado(s) preservado(s).`, 'sucesso');
   };
 
   reader.onerror = () => { _mostrarToast('Erro ao ler o arquivo. Tente novamente.', 'erro'); input.value = ''; };
