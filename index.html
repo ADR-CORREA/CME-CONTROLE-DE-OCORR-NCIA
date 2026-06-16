@@ -17906,9 +17906,30 @@ function _rvTc(pXml,o){ o=o||{}; let pr='<w:tcPr>'; if(o.w)pr+=`<w:tcW w:w="${o.
 function _rvTcTxt(text,o){ o=o||{}; return _rvTc(_rvPara([_rvRun(text,{b:o.b,font:o.font,size:o.size})],{jc:o.jc}),o); }
 function _rvFmtCpf(c){ const d=String(c||'').replace(/\D/g,''); if(!d)return ''; const p=d.padStart(11,'0'); return `${p.slice(0,3)}.${p.slice(3,6)}.${p.slice(6,9)}-${p.slice(9)}`; }
 function _rvParseDurMin(s){ s=String(s||'').trim(); if(!s||s==='nan')return 0; const d=(s.match(/(\d+)\s*d/)||[0,0])[1]*1440; const h=(s.match(/(\d+)\s*h/)||[0,0])[1]*60; const m=(s.match(/(\d+)\s*min/)||[0,0])[1]*1; return (+d)+(+h)+(+m); }
-function _rvFmtOcorreu(v){ if(!v||String(v).trim().toLowerCase()==='nan')return ''; const dias=['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado','Domingo']; let s=String(v).trim(); s=s.replace(/^(\d{2})\/(\d{2})\/(\d{4})(.*)$/,'$3-$2-$1$4').replace(/^(\d{4}-\d{2}-\d{2}) /,'$1T'); const dt=new Date(s); if(isNaN(dt))return String(v); const dd=String(dt.getDate()).padStart(2,'0'),mm=String(dt.getMonth()+1).padStart(2,'0'),hh=String(dt.getHours()).padStart(2,'0'),mi=String(dt.getMinutes()).padStart(2,'0'); const dow=dt.getDay(); return `${dd}/${mm}/${dt.getFullYear()} (${dias[dow===0?6:dow-1]}) ${hh}:${mi}`; }
+function _rvFmtOcorreu(v){
+  if(v==null||v===''||String(v).trim().toLowerCase()==='nan')return '';
+  const dias=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  let Y,Mo,D,H=0,Mi=0,ok=false,m;
+  if(v instanceof Date && !isNaN(v)){Y=v.getFullYear();Mo=v.getMonth()+1;D=v.getDate();H=v.getHours();Mi=v.getMinutes();ok=true;}
+  else{ const s=String(v).trim();
+    if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/))){Y=+m[1];Mo=+m[2];D=+m[3];H=+(m[4]||0);Mi=+(m[5]||0);ok=true;}
+    else if((m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ T](\d{1,2}):(\d{2}))?/))){D=+m[1];Mo=+m[2];Y=+m[3];if(Y<100)Y+=2000;H=+(m[4]||0);Mi=+(m[5]||0);ok=true;}
+  }
+  if(!ok)return String(v);
+  const dt=new Date(Y,Mo-1,D,H,Mi); if(isNaN(dt))return String(v);
+  const p=n=>String(n).padStart(2,'0');
+  return `${p(D)}/${p(Mo)}/${Y} (${dias[dt.getDay()]}) ${p(H)}:${p(Mi)}`;
+}
 
-function _rvParseDate(v){ if(!v||String(v).trim().toLowerCase()==='nan')return null; let s=String(v).trim(); s=s.replace(/^(\d{2})\/(\d{2})\/(\d{4})(.*)$/,'$3-$2-$1$4').replace(/^(\d{4}-\d{2}-\d{2}) /,'$1T'); const dt=new Date(s); return isNaN(dt)?null:dt; }
+function _rvParseDate(v){
+  if(v==null||v===''||String(v).trim().toLowerCase()==='nan')return null;
+  if(v instanceof Date)return isNaN(v)?null:v;
+  const s=String(v).trim(); let m,Y,Mo,D,H=0,Mi=0;
+  if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/))){Y=+m[1];Mo=+m[2];D=+m[3];H=+(m[4]||0);Mi=+(m[5]||0);}
+  else if((m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ T](\d{1,2}):(\d{2}))?/))){D=+m[1];Mo=+m[2];Y=+m[3];if(Y<100)Y+=2000;H=+(m[4]||0);Mi=+(m[5]||0);}
+  else return null;
+  const dt=new Date(Y,Mo-1,D,H,Mi); return isNaN(dt)?null:dt;
+}
 function _rvDataBR(dt){ return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`; }
 // Co-assinatura automática do gerente (réplica do interface.py)
 function _rvGetGerente(us){ return (us||[]).find(u => /gerente/i.test(u.cargo||'') && !/subgerente/i.test(u.cargo||'')) || null; }
@@ -18329,20 +18350,23 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
       return d.length === 11 ? `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}` : c;
     }
 
-    // Formatar data/hora
+    // Formatar data/hora — parse EXPLÍCITO de dd/mm/aa(aa) e ISO (não usa new Date(string),
+    // que interpretaria "03/05/26" como mês/dia ao estilo americano e inverteria a data).
     function fmtOcorreu(v) {
-      if (!v) return '—';
-      // Tenta parsear
+      if (v == null || v === '') return '—';
       const dias = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
-      const d = new Date(v);
-      if (!isNaN(d.getTime())) {
-        const dd = String(d.getDate()).padStart(2,'0');
-        const mm = String(d.getMonth()+1).padStart(2,'0');
-        const hh = String(d.getHours()).padStart(2,'0');
-        const mi = String(d.getMinutes()).padStart(2,'0');
-        return `${dd}/${mm}/${d.getFullYear()} (${dias[d.getDay()]}) ${hh}:${mi}`;
+      let Y, Mo, D, H = 0, Mi = 0, ok = false, m;
+      if (v instanceof Date && !isNaN(v)) { Y=v.getFullYear(); Mo=v.getMonth()+1; D=v.getDate(); H=v.getHours(); Mi=v.getMinutes(); ok=true; }
+      else {
+        const s = String(v).trim();
+        if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/))) { Y=+m[1]; Mo=+m[2]; D=+m[3]; H=+(m[4]||0); Mi=+(m[5]||0); ok=true; }
+        else if ((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ T](\d{1,2}):(\d{2}))?/))) { D=+m[1]; Mo=+m[2]; Y=+m[3]; if (Y<100) Y+=2000; H=+(m[4]||0); Mi=+(m[5]||0); ok=true; }
       }
-      return v;
+      if (!ok) return String(v);
+      const d = new Date(Y, Mo-1, D, H, Mi);
+      if (isNaN(d)) return String(v);
+      const p = n => String(n).padStart(2,'0');
+      return `${p(D)}/${p(Mo)}/${Y} (${dias[d.getDay()]}) ${p(H)}:${p(Mi)}`;
     }
 
     // Resumo por tipo de violação
@@ -18379,7 +18403,9 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
 
     let parabat = '';
     if (maxRow) {
-      const ocFmt = fmtOcorreu(maxRow.ocorreu);
+      const _ocF = fmtOcorreu(maxRow.ocorreu);
+      const _mm  = _ocF.match(/(\d{2}\/\d{2}\/\d{4}).*?(\d{2}:\d{2})/);
+      const ocFmt = _mm ? `${_mm[1]} às ${_mm[2]}` : _ocF;  // "DD/MM/AAAA às HH:MM" (igual ao Python)
       if (maxMin > 1440) {
         parabat = `Entre as ocorrências de descarregamento do dispositivo, o maior período registrado foi de <strong>${esc(maxRow.duracao)}</strong>, referente à ocorrência ID ${esc(maxRow.idOc)}, iniciada em ${esc(ocFmt)}. Durante o período em que o equipamento permaneceu sem carga, a Central de Monitoramento Eletrônico ficou impossibilitada ou substancialmente limitada de fiscalizar de forma efetiva a localização do monitorado em tempo real, comprometendo a rastreabilidade dos deslocamentos e a verificação adequada do cumprimento das condições judiciais estabelecidas.`;
       } else {
