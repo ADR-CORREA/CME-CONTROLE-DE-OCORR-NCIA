@@ -2121,7 +2121,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div style="font-weight:600;font-size:.9rem;color:#1F4E78" id="rv-lista-titulo"></div>
             <div id="rv-lista-controles" style="display:none;gap:6px">
-              <button onclick="document.getElementById('rv-bulk-input').click()" title="Importe vários prints de uma vez; cada um vai pro slot pelo número da ocorrência (idOc) no nome do arquivo" style="font-size:.75rem;padding:3px 10px;border:1px solid #16a34a;border-radius:5px;background:#fff;color:#15803d;cursor:pointer">🗺️ Importar prints (lote)</button>
+              <button id="rv-bulk-btn" onclick="rv_botaoLote()" title="Se o robô (motor) estiver ligado, captura os mapas no AKILES automaticamente. Senão, importe os prints de uma pasta — cada um vai pro slot pelo número da ocorrência (idOc) no nome do arquivo" style="font-size:.75rem;padding:3px 10px;border:1px solid #16a34a;border-radius:5px;background:#fff;color:#15803d;cursor:pointer">🗺️ Importar prints (lote)</button>
               <input type="file" id="rv-bulk-input" accept="image/*" multiple style="display:none" onchange="rv_importarPrintsLote(this.files); this.value=''">
               <button onclick="rv_marcarTodos(true)"  style="font-size:.75rem;padding:3px 10px;border:1px solid #1F4E78;border-radius:5px;background:#fff;color:#1F4E78;cursor:pointer">✔ Marcar todos</button>
               <button onclick="rv_marcarTodos(false)" style="font-size:.75rem;padding:3px 10px;border:1px solid #999;border-radius:5px;background:#fff;color:#555;cursor:pointer">✗ Desmarcar todos</button>
@@ -17886,6 +17886,63 @@ function rv_removerImg(id) {
 // ── Import em lote (Fase 2): solte vários prints; cada um vai pro slot pelo idOc
 // embutido no nome do arquivo (ex.: "159605.png", "print 159605.png"). Casa a
 // maior/qualquer sequência de dígitos que seja uma violação de zona conhecida.
+// Porta do motor local (servidor.js do projeto "ROBO MAPAS AKILES").
+const _RV_MOTOR = 'http://localhost:8787';
+
+// Dispatcher do botão "Importar prints (lote)": se o motor (robô local) estiver
+// ligado, captura os mapas no AKILES sozinho; senão, abre o seletor de pasta.
+async function rv_botaoLote() {
+  const ids = Object.keys(_rv_idGrupo); // idOcs de violação de zona da seleção atual
+  if (!ids.length) { _mostrarToast('Nenhuma violação de zona na seleção atual.', 'erro'); return; }
+
+  let motorLigado = false;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 900);
+    const r = await fetch(_RV_MOTOR + '/health', { signal: ctrl.signal });
+    clearTimeout(t);
+    motorLigado = r.ok;
+  } catch { motorLigado = false; }
+
+  if (motorLigado) {
+    rv_capturarViaMotor(ids);
+  } else {
+    // motor desligado → método manual (selecionar pasta de prints)
+    document.getElementById('rv-bulk-input').click();
+  }
+}
+
+// Pede ao motor local para capturar os mapas dos IDs no AKILES e encaixa nos slots.
+async function rv_capturarViaMotor(ids) {
+  const btn = document.getElementById('rv-bulk-btn');
+  const txtOrig = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '\u{1F916} Capturando no AKILES…'; }
+  _mostrarToast(`\u{1F916} Capturando ${ids.length} mapa(s) no AKILES… pode levar alguns minutos. Não feche a janela do robô.`);
+
+  try {
+    const r = await fetch(_RV_MOTOR + '/capturar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+    const data = await r.json();
+    if (!r.ok) { _mostrarToast(data.erro || 'Erro no motor do robô.', 'erro'); return; }
+
+    const resultados = data.resultados || {};
+    let casados = 0;
+    Object.keys(resultados).forEach(id => { _rvSetImg(id, resultados[id]); casados++; });
+
+    const falhas = data.falhas || [];
+    let msg = `\u{1F5FA}\u{FE0F} ${casados} mapa(s) capturado(s)`;
+    if (falhas.length) msg += ` \u{2022} ${falhas.length} falha(s): ${falhas.slice(0,6).join(', ')}${falhas.length>6?'…':''}`;
+    _mostrarToast(msg, casados ? 'sucesso' : 'erro');
+  } catch (e) {
+    _mostrarToast('Não consegui falar com o robô. Ele ainda está ligado? (' + e.message + ')', 'erro');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = txtOrig; }
+  }
+}
+
 function rv_importarPrintsLote(fileList) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
