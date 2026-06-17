@@ -17905,7 +17905,11 @@ async function rv_botaoLote() {
   } catch { motorLigado = false; }
 
   if (motorLigado) {
-    rv_capturarViaMotor(ids);
+    // captura só os slots ainda VAZIOS — re-clicar completa o que faltou sem
+    // refazer os que já têm mapa.
+    const faltam = ids.filter(id => !_rv_imagens[id]);
+    if (!faltam.length) { _mostrarToast('\u{2705} Todos os mapas já foram capturados.', 'sucesso'); return; }
+    rv_capturarViaMotor(faltam);
   } else {
     // motor desligado → método manual (selecionar pasta de prints)
     document.getElementById('rv-bulk-input').click();
