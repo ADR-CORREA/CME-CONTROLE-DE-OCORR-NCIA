@@ -17892,8 +17892,13 @@ const _RV_MOTOR = 'http://localhost:8787';
 // Dispatcher do botão "Importar prints (lote)": se o motor (robô local) estiver
 // ligado, captura os mapas no AKILES sozinho; senão, abre o seletor de pasta.
 async function rv_botaoLote() {
-  const ids = Object.keys(_rv_idGrupo); // idOcs de violação de zona da seleção atual
-  if (!ids.length) { _mostrarToast('Nenhuma violação de zona na seleção atual.', 'erro'); return; }
+  // Só os monitorados SELECIONADOS (o mesmo checkbox usado pra gerar o relatório):
+  // captura/importa o mapa apenas de quem está marcado na lista.
+  const ids = Object.keys(_rv_idGrupo).filter(id => {
+    const chk = document.getElementById('rv-chk-' + _rv_idGrupo[id]);
+    return chk && chk.checked;
+  });
+  if (!ids.length) { _mostrarToast('Marque ao menos um monitorado com violação de zona.', 'erro'); return; }
 
   let motorLigado = false;
   try {
