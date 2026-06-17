@@ -18007,7 +18007,7 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
   function blocoAss(info,antes){ for(let i=0;i<antes;i++) body.push(_rvEmpty()); if(info&&info.assinatura){ const a=addBodyImg(info.assinatura); if(a)body.push(_rvPara([_rvImgRun(a.rid,_rvEmuW(a.im,2))],{jc:'center'})); }
     const l3 = info&&info.decreto ? _fmtDecreto(info.decreto) : (info&&info.cress?info.cress:'');
     const linhas=[info&&info.nome,info&&info.cargo,l3].filter(Boolean);
-    linhas.forEach(l=>body.push(_rvPara([_rvRun(String(l),{b:true})],{jc:'center'}))); }
+    if(linhas.length){const runs=[];linhas.forEach((l,i)=>{if(i>0)runs.push('<w:r><w:br/></w:r>');runs.push(_rvRun(String(l),{b:true}));});body.push(_rvPara(runs,{jc:'center',after:0,before:0}));} }
   blocoAss(infoAss,2);
   if(infoGer) blocoAss(infoGer,2);
 
