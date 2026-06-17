@@ -18212,8 +18212,8 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
   let vrows=`<w:tr>${_rvTcTxt('Tipo de Ocorrência',{b:true})}${_rvTcTxt('ID da Ocorrência',{b:true})}${_rvTcTxt('Ocorreu',{b:true})}${_rvTcTxt('Duração',{b:true})}</w:tr>`;
   grupo.forEach(x=>{
     const _src=_rv_imagens[String(x.idOc||'')];
-    if(_src){ const _a=addBodyImg(_src); if(_a){ vrows+=`<w:tr>${_rvTc(_rvPara([_rvImgRun(_a.rid,_rvEmuW(_a.im,6.2))],{jc:'center'}),{span:4})}</w:tr>`; } }
     vrows+=`<w:tr>${_rvTcTxt(String(x.tipo||''))}${_rvTcTxt(String(x.idOc||''))}${_rvTcTxt(_rvFmtOcorreu(x.ocorreu))}${_rvTcTxt(String(x.duracao||''))}</w:tr>`;
+    if(_src){ const _a=addBodyImg(_src); if(_a){ vrows+=`<w:tr>${_rvTc(_rvPara([_rvImgRun(_a.rid,_rvEmuW(_a.im,6.2))],{jc:'center'}),{span:4})}</w:tr>`; } }
     vrows+=`<w:tr>${_rvTc(_rvPara([_rvRun('')],{}),{span:4})}</w:tr>`;
   });
   body.push(`<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>${_RV_TBLBORDERS}</w:tblPr><w:tblGrid><w:gridCol w:w="3200"/><w:gridCol w:w="2200"/><w:gridCol w:w="2600"/><w:gridCol w:w="1600"/></w:tblGrid>${vrows}</w:tbl>`);
@@ -18615,12 +18615,12 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
       const _imgRow = _img
         ? `<tr><td colspan="4" style="text-align:center;padding:6px 4px"><img src="${_img}" style="max-width:100%;max-height:360px;border:1px solid #ccc"></td></tr>`
         : '';
-      return `${_imgRow}<tr>
+      return `<tr>
         <td>${esc(r.tipo)}</td>
         <td>${esc(r.idOc)}</td>
         <td style="white-space:nowrap">${esc(fmtOcorreu(r.ocorreu))}</td>
         <td>${esc(r.duracao)}</td>
-      </tr>
+      </tr>${_imgRow}
       <tr><td colspan="4">&nbsp;</td></tr>`;
     }).join('');
 
