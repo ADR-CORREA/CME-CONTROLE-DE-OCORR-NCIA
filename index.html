@@ -17884,7 +17884,25 @@ function rv_removerImg(id) {
 function _rvImgDeArquivo(file, cb) {
   if (!file || !/^image\//.test(file.type)) { _mostrarToast('Cole ou arraste uma imagem (PNG/JPG).', 'erro'); return; }
   const fr = new FileReader();
-  fr.onload = e => cb(e.target.result);
+  fr.onload = e => {
+    const src = e.target.result;
+    // Normaliza para PNG limpo via canvas. O clipboard do Windows às vezes entrega
+    // BMP/outros formatos; o navegador renderia na miniatura, mas o Word (rígido com
+    // o conteúdo do .docx) não consegue exibir bytes que não batem com a extensão.
+    // Re-encodando para PNG, slot/HTML/Word usam sempre uma imagem válida.
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth || img.width;
+        c.height = img.naturalHeight || img.height;
+        c.getContext('2d').drawImage(img, 0, 0);
+        cb(c.toDataURL('image/png'));
+      } catch (err) { cb(src); } // fallback: dataURL original
+    };
+    img.onerror = () => cb(src);
+    img.src = src;
+  };
   fr.readAsDataURL(file);
 }
 
