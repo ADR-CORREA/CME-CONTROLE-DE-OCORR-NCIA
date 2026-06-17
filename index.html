@@ -17668,6 +17668,10 @@ const _RV_MESES = ['janeiro','fevereiro','março','abril','maio','junho',
 
 let _rv_grupos = [];      // dados agrupados por monitorado+processo
 let _rv_planilha = '';    // nome do arquivo
+let _rv_imagens = {};     // { idOc: dataURL } — print do mapa do AKILES por violação de zona
+let _rv_pasteAlvo = null; // idOc do slot "armado" para colar (Ctrl+V)
+let _rv_mapsAbertos = {}; // { groupIndex: true } — painéis de mapas expandidos
+let _rv_idGrupo = {};     // { idOc: groupIndex } — lookup p/ atualizar contadores
 
 // ── Inicializar painel ────────────────────────────────────────
 function rv_inicializar() {
@@ -17683,6 +17687,8 @@ function rv_inicializar() {
   // Auto-selecionar usuário logado
   const myIdx = us.findIndex(u => u.usuario === usuarioAtual?.usuario);
   if (myIdx >= 0 && sel1) { sel1.value = myIdx; rv_atualizarAssinante(); }
+  // Listener global de "colar" (uma vez) — cola o print do mapa no slot armado
+  if (!window._rvPasteReg) { document.addEventListener('paste', _rvOnPaste); window._rvPasteReg = true; }
 }
 
 function rv_atualizarAssinante() {
@@ -17791,19 +17797,134 @@ function rv_renderizarLista() {
   const ctrl = document.getElementById('rv-lista-controles');
   if (ctrl) ctrl.style.display = 'flex';
 
+  _rv_idGrupo = {};
   el.innerHTML = _rv_grupos.map((g, i) => {
     const r0    = g[0];
     const total = g.length;
     const tipos = [...new Set(g.map(x => x.tipo))].length;
+    // Violações de zona (inclusão/exclusão) — são as que recebem o print do mapa
+    const zonas = g.filter(x => /zona/i.test(x.tipo || ''));
+    zonas.forEach(z => { _rv_idGrupo[String(z.idOc || '')] = i; });
+    const nZ = zonas.length;
+    const f  = zonas.filter(x => _rv_imagens[String(x.idOc || '')]).length;
+    const mapsBtn = nZ
+      ? `<button type="button" id="rv-mapbtn-${i}" onclick="rv_toggleMapas(${i})" style="font-size:.72rem;padding:3px 9px;border:1px solid ${f?'#16a34a':'#1F4E78'};border-radius:5px;background:${f?'#dcfce7':'#fff'};color:${f?'#15803d':'#1F4E78'};cursor:pointer;white-space:nowrap">\u{1F5FA}\u{FE0F} Mapas ${f}/${nZ}</button>`
+      : '';
+    const mapsPanel = nZ
+      ? `<div id="rv-maps-${i}" style="display:${_rv_mapsAbertos[i]?'':'none'};background:#fafbfc;border-bottom:1px solid #f0f0f0">${zonas.map(_rvSlotHtml).join('')}</div>`
+      : '';
     return `<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #f0f0f0;font-size:.85rem">
       <input type="checkbox" id="rv-chk-${i}" checked style="accent-color:#1F4E78;width:16px;height:16px">
       <label for="rv-chk-${i}" style="flex:1;cursor:pointer">
         <span style="font-weight:600">${r0.nome}</span>
         <span style="color:#888;margin-left:6px;font-size:.78rem">${r0.processo}</span>
       </label>
+      ${mapsBtn}
       <span style="color:#1F4E78;font-size:.78rem;white-space:nowrap">${total} ocorrência${total!==1?'s':''} · ${tipos} tipo${tipos!==1?'s':''}</span>
-    </div>`;
+    </div>${mapsPanel}`;
   }).join('');
+}
+
+// ── Mapas do AKILES por violação de zona (Fase 1: colar/arrastar print) ───────
+function _rvSlotHtml(z) {
+  const id  = String(z.idOc || '');
+  const img = _rv_imagens[id];
+  const corpo = img
+    ? `<img src="${img}" style="max-width:100%;max-height:100%;object-fit:cover">`
+      + `<span onclick="event.stopPropagation();rv_removerImg('${id}')" title="Remover" style="position:absolute;top:2px;right:2px;background:rgba(220,38,38,.92);color:#fff;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;cursor:pointer;line-height:1">\u{00D7}</span>`
+    : `<span style="font-size:.68rem;color:#94a3b8;text-align:center;padding:0 4px">\u{1F4CB} clique e Ctrl+V<br>ou arraste</span>`;
+  return `<div style="display:flex;gap:10px;align-items:center;padding:8px 14px;border-top:1px dashed #e2e8f0">
+    <div style="flex:1;min-width:0;font-size:.8rem">
+      <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_rvEscAttr(z.tipo)}</div>
+      <div style="color:#888;font-size:.72rem">ID ${_rvEscAttr(id)}${_rvDataCurta(z.ocorreu)?' · '+_rvDataCurta(z.ocorreu):''}</div>
+    </div>
+    <div id="rv-slot-${id}" onclick="rv_focarSlot('${id}')" ondragover="event.preventDefault()" ondrop="rv_dropImg(event,'${id}')"
+         style="cursor:pointer;border:2px dashed ${img?'#16a34a':'#cbd5e1'};border-radius:6px;width:124px;height:72px;flex:0 0 124px;display:flex;align-items:center;justify-content:center;background:#f8fafc;overflow:hidden;position:relative">${corpo}</div>
+  </div>`;
+}
+
+function _rvEscAttr(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function _rvDataCurta(v) {
+  if (v == null || v === '') return '';
+  const s = String(v).trim(); let m;
+  if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return `${String(+m[3]).padStart(2,'0')}/${String(+m[2]).padStart(2,'0')}/${m[1].slice(2)}`;
+  if ((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/))) return `${String(+m[1]).padStart(2,'0')}/${String(+m[2]).padStart(2,'0')}/${m[3].slice(-2)}`;
+  return s.slice(0, 16);
+}
+
+function rv_toggleMapas(i) {
+  _rv_mapsAbertos[i] = !_rv_mapsAbertos[i];
+  const p = document.getElementById('rv-maps-' + i);
+  if (p) p.style.display = _rv_mapsAbertos[i] ? '' : 'none';
+}
+
+function rv_focarSlot(id) {
+  _rv_pasteAlvo = id;
+  document.querySelectorAll('[id^="rv-slot-"]').forEach(s => {
+    if (!_rv_imagens[s.id.replace('rv-slot-','')]) s.style.borderColor = '#cbd5e1';
+  });
+  const s = document.getElementById('rv-slot-' + id);
+  if (s) s.style.borderColor = '#2563eb';
+  _mostrarToast('\u{1F4CB} Agora aperte Ctrl+V para colar o print do mapa');
+}
+
+function rv_dropImg(e, id) {
+  e.preventDefault();
+  const f = (e.dataTransfer && e.dataTransfer.files || [])[0];
+  _rvImgDeArquivo(f, d => { _rvSetImg(id, d); _mostrarToast('\u{1F5FA}\u{FE0F} Mapa anexado à violação ' + id); });
+}
+
+function rv_removerImg(id) {
+  delete _rv_imagens[id];
+  if (_rv_pasteAlvo === id) _rv_pasteAlvo = null;
+  _rvAtualizarSlot(id);
+}
+
+function _rvImgDeArquivo(file, cb) {
+  if (!file || !/^image\//.test(file.type)) { _mostrarToast('Cole ou arraste uma imagem (PNG/JPG).', 'erro'); return; }
+  const fr = new FileReader();
+  fr.onload = e => cb(e.target.result);
+  fr.readAsDataURL(file);
+}
+
+function _rvSetImg(id, dataURL) { if (!id) return; _rv_imagens[id] = dataURL; _rvAtualizarSlot(id); }
+
+function _rvAtualizarSlot(id) {
+  const slot = document.getElementById('rv-slot-' + id);
+  if (slot) {
+    const img = _rv_imagens[id];
+    slot.style.borderColor = img ? '#16a34a' : '#cbd5e1';
+    slot.innerHTML = img
+      ? `<img src="${img}" style="max-width:100%;max-height:100%;object-fit:cover"><span onclick="event.stopPropagation();rv_removerImg('${id}')" title="Remover" style="position:absolute;top:2px;right:2px;background:rgba(220,38,38,.92);color:#fff;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;cursor:pointer;line-height:1">\u{00D7}</span>`
+      : `<span style="font-size:.68rem;color:#94a3b8;text-align:center;padding:0 4px">\u{1F4CB} clique e Ctrl+V<br>ou arraste</span>`;
+  }
+  const gi = _rv_idGrupo[id];
+  if (gi != null) _rvAtualizarContadorGrupo(gi);
+}
+
+function _rvAtualizarContadorGrupo(i) {
+  const btn = document.getElementById('rv-mapbtn-' + i);
+  if (!btn || !_rv_grupos[i]) return;
+  const zonas = _rv_grupos[i].filter(x => /zona/i.test(x.tipo || ''));
+  const n = zonas.length, f = zonas.filter(x => _rv_imagens[String(x.idOc || '')]).length;
+  btn.textContent = `\u{1F5FA}\u{FE0F} Mapas ${f}/${n}`;
+  btn.style.background  = f ? '#dcfce7' : '#fff';
+  btn.style.borderColor = f ? '#16a34a' : '#1F4E78';
+  btn.style.color       = f ? '#15803d' : '#1F4E78';
+}
+
+function _rvOnPaste(e) {
+  if (!_rv_pasteAlvo) return;
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  for (const it of items) {
+    if (it.type && it.type.indexOf('image') === 0) {
+      const alvo = _rv_pasteAlvo;
+      _rvImgDeArquivo(it.getAsFile(), d => { _rvSetImg(alvo, d); _mostrarToast('\u{1F5FA}\u{FE0F} Mapa colado na violação ' + alvo); });
+      e.preventDefault();
+      return;
+    }
+  }
 }
 
 // ── Marcar / Desmarcar todos ──────────────────────────────────
@@ -17984,7 +18105,12 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
   body.push(ident('Nome do Monitorado',nome)); body.push(ident('CPF',cpf)); body.push(ident('Número do Processo',proc)); body.push(ident('Competência',vara)); body.push(ident('Comarca',comarca));
   // tabela de violações (4 col, fonte padrão; linha-espaçadora entre cada)
   let vrows=`<w:tr>${_rvTcTxt('Tipo de Ocorrência',{b:true})}${_rvTcTxt('ID da Ocorrência',{b:true})}${_rvTcTxt('Ocorreu',{b:true})}${_rvTcTxt('Duração',{b:true})}</w:tr>`;
-  grupo.forEach(x=>{ vrows+=`<w:tr>${_rvTcTxt(String(x.tipo||''))}${_rvTcTxt(String(x.idOc||''))}${_rvTcTxt(_rvFmtOcorreu(x.ocorreu))}${_rvTcTxt(String(x.duracao||''))}</w:tr>`; vrows+=`<w:tr>${_rvTc(_rvPara([_rvRun('')],{}),{span:4})}</w:tr>`; });
+  grupo.forEach(x=>{
+    const _src=_rv_imagens[String(x.idOc||'')];
+    if(_src){ const _a=addBodyImg(_src); if(_a){ vrows+=`<w:tr>${_rvTc(_rvPara([_rvImgRun(_a.rid,_rvEmuW(_a.im,6.2))],{jc:'center'}),{span:4})}</w:tr>`; } }
+    vrows+=`<w:tr>${_rvTcTxt(String(x.tipo||''))}${_rvTcTxt(String(x.idOc||''))}${_rvTcTxt(_rvFmtOcorreu(x.ocorreu))}${_rvTcTxt(String(x.duracao||''))}</w:tr>`;
+    vrows+=`<w:tr>${_rvTc(_rvPara([_rvRun('')],{}),{span:4})}</w:tr>`;
+  });
   body.push(`<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>${_RV_TBLBORDERS}</w:tblPr><w:tblGrid><w:gridCol w:w="3200"/><w:gridCol w:w="2200"/><w:gridCol w:w="2600"/><w:gridCol w:w="1600"/></w:tblGrid>${vrows}</w:tbl>`);
   // nota de autenticidade (Arial 11, recuo 1.25cm, justificado)
   body.push(_rvEmpty());
@@ -18378,16 +18504,20 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
       `<tr><td>${esc(tipo)}</td><td style="text-align:center">${qtd}</td></tr>`
     ).join('');
 
-    // Tabela de violações — linha em branco mesclada após cada ocorrência (igual ao Python)
-    const violRows = grupo.map(r =>
-      `<tr>
+    // Tabela de violações — print do mapa (se houver) acima da linha + linha em branco após (igual ao Python)
+    const violRows = grupo.map(r => {
+      const _img = _rv_imagens[String(r.idOc || '')];
+      const _imgRow = _img
+        ? `<tr><td colspan="4" style="text-align:center;padding:6px 4px"><img src="${_img}" style="max-width:100%;max-height:360px;border:1px solid #ccc"></td></tr>`
+        : '';
+      return `${_imgRow}<tr>
         <td>${esc(r.tipo)}</td>
         <td>${esc(r.idOc)}</td>
         <td style="white-space:nowrap">${esc(fmtOcorreu(r.ocorreu))}</td>
         <td>${esc(r.duracao)}</td>
       </tr>
-      <tr><td colspan="4">&nbsp;</td></tr>`
-    ).join('');
+      <tr><td colspan="4">&nbsp;</td></tr>`;
+    }).join('');
 
     // Síntese técnica — análise da bateria (igual ao Python)
     const TIPO_BAT = 'Dispositivo desligado por falta de carga na bateria';
@@ -22269,6 +22399,10 @@ function com_copiarOficio() {
 function rv_limpar() {
   _rv_grupos = [];
   _rv_planilha = '';
+  _rv_imagens = {};
+  _rv_pasteAlvo = null;
+  _rv_mapsAbertos = {};
+  _rv_idGrupo = {};
   document.getElementById('rv-status').style.display = 'none';
   document.getElementById('rv-file-input').value = '';
   _mostrarToast('Painel limpo.', 'sucesso');
