@@ -2121,6 +2121,8 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div style="font-weight:600;font-size:.9rem;color:#1F4E78" id="rv-lista-titulo"></div>
             <div id="rv-lista-controles" style="display:none;gap:6px">
+              <button onclick="document.getElementById('rv-bulk-input').click()" title="Importe vários prints de uma vez; cada um vai pro slot pelo número da ocorrência (idOc) no nome do arquivo" style="font-size:.75rem;padding:3px 10px;border:1px solid #16a34a;border-radius:5px;background:#fff;color:#15803d;cursor:pointer">🗺️ Importar prints (lote)</button>
+              <input type="file" id="rv-bulk-input" accept="image/*" multiple style="display:none" onchange="rv_importarPrintsLote(this.files); this.value=''">
               <button onclick="rv_marcarTodos(true)"  style="font-size:.75rem;padding:3px 10px;border:1px solid #1F4E78;border-radius:5px;background:#fff;color:#1F4E78;cursor:pointer">✔ Marcar todos</button>
               <button onclick="rv_marcarTodos(false)" style="font-size:.75rem;padding:3px 10px;border:1px solid #999;border-radius:5px;background:#fff;color:#555;cursor:pointer">✗ Desmarcar todos</button>
             </div>
@@ -17879,6 +17881,30 @@ function rv_removerImg(id) {
   delete _rv_imagens[id];
   if (_rv_pasteAlvo === id) _rv_pasteAlvo = null;
   _rvAtualizarSlot(id);
+}
+
+// ── Import em lote (Fase 2): solte vários prints; cada um vai pro slot pelo idOc
+// embutido no nome do arquivo (ex.: "159605.png", "print 159605.png"). Casa a
+// maior/qualquer sequência de dígitos que seja uma violação de zona conhecida.
+function rv_importarPrintsLote(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  const idsValidos = Object.keys(_rv_idGrupo); // idOcs de violação de zona
+  let casados = 0; const naoReconhecidos = [];
+  let pendentes = files.length;
+  const finalizar = () => {
+    if (--pendentes > 0) return;
+    let msg = `\u{1F5FA}\u{FE0F} ${casados} print(s) encaixado(s)`;
+    if (naoReconhecidos.length) msg += ` \u{2022} ${naoReconhecidos.length} não reconhecido(s): ${naoReconhecidos.slice(0,6).join(', ')}${naoReconhecidos.length>6?'…':''}`;
+    _mostrarToast(msg, casados ? 'sucesso' : 'erro');
+  };
+  files.forEach(f => {
+    if (!/^image\//.test(f.type)) { naoReconhecidos.push(f.name); finalizar(); return; }
+    const cand = f.name.match(/\d+/g) || [];
+    const id = cand.find(d => idsValidos.includes(d));
+    if (!id) { naoReconhecidos.push(f.name); finalizar(); return; }
+    _rvImgDeArquivo(f, d => { _rvSetImg(id, d); casados++; finalizar(); });
+  });
 }
 
 function _rvImgDeArquivo(file, cb) {
