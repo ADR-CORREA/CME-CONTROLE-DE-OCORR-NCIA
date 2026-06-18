@@ -17942,14 +17942,30 @@ async function rv_capturarViaMotor(ids) {
     Object.keys(resultados).forEach(id => { _rvSetImg(id, resultados[id]); casados++; });
 
     const falhas = data.falhas || [];
-    let msg = `\u{1F5FA}\u{FE0F} ${casados} mapa(s) capturado(s)`;
+    let msg = casados
+      ? `\u{2705} Captura concluída! ${casados} print(s) tirado(s)`
+      : 'Captura finalizada sem sucesso.';
     if (falhas.length) msg += ` \u{2022} ${falhas.length} falha(s): ${falhas.slice(0,6).join(', ')}${falhas.length>6?'…':''}`;
     _mostrarToast(msg, casados ? 'sucesso' : 'erro');
+    if (casados) _rvBeep();
   } catch (e) {
     _mostrarToast('Não consegui falar com o robô. Ele ainda está ligado? (' + e.message + ')', 'erro');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = txtOrig; }
   }
+}
+
+function _rvBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = 'sine'; o.frequency.value = 880;
+    g.gain.setValueAtTime(0.2, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    o.start(); o.stop(ctx.currentTime + 0.5);
+  } catch {}
 }
 
 function rv_importarPrintsLote(fileList) {
