@@ -5475,13 +5475,12 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 
       <!-- Painel: Upload -->
       <div id="ass-panel-upload" style="display:none">
-        <p style="font-size:.82rem;color:#888;margin:0 0 8px 0">Envie uma <b>foto</b> ou imagem da assinatura. Pode ser foto comum no papel — depois clique em <b>📸 Limpar foto</b> para deixar o fundo branco e o traço nítido.</p>
+        <p style="font-size:.82rem;color:#888;margin:0 0 8px 0">Tire uma <b>foto da sua assinatura no papel</b> ou selecione uma imagem. O sistema remove o fundo automaticamente.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <label class="btn-secondary" style="cursor:pointer;display:inline-block">
-            📎 Selecionar / tirar foto
+            📷 Selecionar / tirar foto
             <input type="file" id="ass-file-input" accept="image/*" capture="environment" style="display:none" onchange="ass_carregarImagem(this)">
           </label>
-          <button type="button" class="btn-secondary" onclick="ass_limparFoto()" title="Clareia o papel para branco e mantém só o traço da caneta">📸 Limpar foto</button>
         </div>
       </div>
 
@@ -10445,10 +10444,16 @@ function ass_atualizarPreview() {
 function ass_carregarImagem(input) {
   const file = input.files[0];
   if (!file) return;
+  const msg = document.getElementById('ass-msg');
+  msg.innerHTML = '<div style="color:#666;font-size:.85rem">⏳ Processando foto, aguarde...</div>';
+  document.getElementById('ass-preview-wrap').style.display = 'none';
   const reader = new FileReader();
   reader.onload = e => {
-    document.getElementById('ass-preview-img').src = e.target.result;
-    document.getElementById('ass-preview-wrap').style.display = 'block';
+    _limparFotoAssinatura(e.target.result).then(limpa => {
+      document.getElementById('ass-preview-img').src = limpa;
+      document.getElementById('ass-preview-wrap').style.display = 'block';
+      msg.innerHTML = '<div style="color:#166534;font-size:.85rem">✅ Foto processada. Confira o preview e clique em Salvar.</div>';
+    });
   };
   reader.readAsDataURL(file);
 }
