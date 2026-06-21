@@ -7140,6 +7140,10 @@ function _ehBase64Legado(s) {
   return typeof s === 'string' && s.length < 64 && /^[A-Za-z0-9+/=]+$/.test(s);
 }
 
+/* ─── Credenciais de sessão em escopo privado (não em window) ─── */
+let _sessionUser = null;
+let _sessionHash = null;
+
 /* ─── Rate limiting: máx 5 tentativas, bloqueio 15 min ─── */
 const _loginTentativas = {};
 function _loginBloqueado(u) {
@@ -7165,8 +7169,8 @@ function getUsuarios() {
 }
 function salvarUsuarios(u) {
   _cache['usuarios'] = u;
-  if (window._db && window._sessionHash && window._sessionUser) {
-    window._db.rpc('cme_save_usuarios', { p_username: window._sessionUser, p_hash: window._sessionHash, p_usuarios: JSON.parse(JSON.stringify(u)) })
+  if (window._db && _sessionHash && _sessionUser) {
+    window._db.rpc('cme_save_usuarios', { p_username: _sessionUser, p_hash: _sessionHash, p_usuarios: JSON.parse(JSON.stringify(u)) })
       .then(({ error }) => { if (error) { console.error('[CME] Erro ao salvar usuários:', error); _mostrarToast('\u{26A0}\u{FE0F} Erro ao salvar usuários: ' + error.message, 'erro'); } });
   } else if (window._db) {
     // Sem credenciais de sessão (ex.: estado inesperado) — não dá para persistir.
@@ -7188,8 +7192,8 @@ function _usuariosProntos() {
   return _usuariosCarregados === true;   // exige carga confirmada do servidor
 }
 function _recarregarUsuariosAdmin() {
-  if (window._db && window._sessionHash && window._sessionUser) {
-    window._db.rpc('cme_get_usuarios', { p_username: window._sessionUser, p_hash: window._sessionHash })
+  if (window._db && _sessionHash && _sessionUser) {
+    window._db.rpc('cme_get_usuarios', { p_username: _sessionUser, p_hash: _sessionHash })
       .then(({ data }) => {
         if (data) {
           _cache['usuarios'] = data;
@@ -7206,11 +7210,11 @@ function _recarregarUsuariosAdmin() {
    Requer acesso físico ao PC (console F12). Salva direto no Supabase.
    ────────────────────────────────────────────────────────────────── */
 window._resetarSenha = async function(login, novaSenha) {
-  if (!window._db || !window._sessionHash || !window._sessionUser) {
+  if (!window._db || !_sessionHash || !_sessionUser) {
     console.error('Faça login como admin no sistema antes de usar _resetarSenha.');
     return false;
   }
-  const { data: todos } = await window._db.rpc('cme_get_usuarios', { p_username: window._sessionUser, p_hash: window._sessionHash });
+  const { data: todos } = await window._db.rpc('cme_get_usuarios', { p_username: _sessionUser, p_hash: _sessionHash });
   if (!todos) { console.error('Sem permissão (requer admin/subgerente logado).'); return false; }
   const idx = todos.findIndex(x => (x.usuario||'').toLowerCase() === login.toLowerCase());
   if (idx === -1) { console.error('Usuário não encontrado:', login); return false; }
@@ -7219,7 +7223,7 @@ window._resetarSenha = async function(login, novaSenha) {
   todos[idx].senhaSalt   = salt;
   todos[idx].senhaVersao = 3;
   delete todos[idx].primeiroLogin;
-  const { data: ok } = await window._db.rpc('cme_save_usuarios', { p_username: window._sessionUser, p_hash: window._sessionHash, p_usuarios: JSON.parse(JSON.stringify(todos)) });
+  const { data: ok } = await window._db.rpc('cme_save_usuarios', { p_username: _sessionUser, p_hash: _sessionHash, p_usuarios: JSON.parse(JSON.stringify(todos)) });
   if (ok) { _cache['usuarios'] = todos; console.log('\u{2705} Senha de "' + login + '" redefinida. Faça login normalmente.'); return true; }
   console.error('Falha ao salvar — verifique permissões.'); return false;
 };
@@ -7333,8 +7337,8 @@ function _salvarSessao(usuario) {
       ...limpo,
       // Credenciais de sessão para os RPCs autenticados (gerenciar usuários etc.)
       // continuarem funcionando após F5, sem precisar logar de novo.
-      _su: window._sessionUser || null,
-      _sh: window._sessionHash || null,
+      _su: _sessionUser || null,
+      _sh: _sessionHash || null,
       loginAt: Date.now()
     }));
   } catch (e) { console.warn('[CME] não foi possível salvar a sessão:', e.message); }
@@ -7385,8 +7389,8 @@ async function fazerLogin() {
 
       if (validado) {
         usuario = validado;
-        window._sessionUser = u;
-        window._sessionHash = hash;
+        _sessionUser = u;
+        _sessionHash = hash;
 
         // Admin/subgerente: carregar lista de usuários para o painel
         if (['admin', 'subgerente'].includes(usuario.nivel)) {
@@ -7398,7 +7402,7 @@ async function fazerLogin() {
         if (!loginInfo?.senhaSalt) {
           const { hash: novoHash, salt: novoSalt } = await hashSenhaPBKDF2(p);
           const { data: migrou } = await window._db.rpc('cme_update_senha', { p_username: u, p_hash_atual: hash, p_novo_hash: novoHash, p_novo_salt: novoSalt });
-          if (migrou) window._sessionHash = novoHash;
+          if (migrou) _sessionHash = novoHash;
         }
 
         // Troca usuário+hash por um token de sessão do Worker (p/ acesso aos arquivos)
@@ -7475,20 +7479,20 @@ async function definirPrimeiraSenha() {
   // Atualiza a senha direto no servidor (funciona para o próprio usuário, sem
   // depender da lista local — que não é carregada para níveis não-admin — nem
   // de privilégio de admin). p_hash_atual = hash da senha temporária do admin
-  // (guardado em window._sessionHash durante o login).
-  if (!window._db || !window._sessionUser || !window._sessionHash) {
+  // (guardado em _sessionHash durante o login).
+  if (!window._db || !_sessionUser || !_sessionHash) {
     return mostrarErro('Sessão inválida. Faça login novamente.');
   }
   let ok = false;
   try {
     const { data } = await window._db.rpc('cme_update_senha', {
-      p_username: window._sessionUser, p_hash_atual: window._sessionHash, p_novo_hash: hash, p_novo_salt: salt
+      p_username: _sessionUser, p_hash_atual: _sessionHash, p_novo_hash: hash, p_novo_salt: salt
     });
     ok = !!data;
   } catch (e) { console.error('[CME] definirPrimeiraSenha:', e); }
   if (!ok) return mostrarErro('Não foi possível salvar a senha. Tente novamente.');
 
-  window._sessionHash = hash;
+  _sessionHash = hash;
   const { senha, senhaSalt, ...limpo } = _usuarioPrimeiroLogin;
   const eu = { ...limpo, primeiroLogin: false };
   usuarioAtual = eu;
@@ -7503,7 +7507,7 @@ async function definirPrimeiraSenha() {
 function fazerLogout() {
   addLog(`Logout: ${usuarioAtual.nome}`);
   usuarioAtual = null;
-  window._sessionUser = null; window._sessionHash = null;
+  _sessionUser = null; _sessionHash = null;
   _r2Session = null;
   localStorage.removeItem('cme_sessao');
   localStorage.removeItem('cme_r2_session');
@@ -10077,9 +10081,9 @@ let _editAssRemover    = false;  // flag: remover assinatura existente
 
 async function abrirModalEditarUsuario(loginId) {
   // Busca dados frescos via RPC (requer admin autenticado)
-  if (window._db && window._sessionHash && window._sessionUser) {
+  if (window._db && _sessionHash && _sessionUser) {
     try {
-      const { data } = await window._db.rpc('cme_get_usuarios', { p_username: window._sessionUser, p_hash: window._sessionHash });
+      const { data } = await window._db.rpc('cme_get_usuarios', { p_username: _sessionUser, p_hash: _sessionHash });
       if (data) { _cache['usuarios'] = data; _marcarUsuariosCarregados(); }
     } catch(e) { /* usa cache existente se falhar */ }
   }
@@ -10628,7 +10632,7 @@ async function alterarMinhaSenha() {
   } catch (e) { console.error('[CME] alterarMinhaSenha update_senha:', e); }
   if (!ok) { msg.className = "sys-alert error"; msg.textContent = "Senha atual incorreta."; return; }
 
-  window._sessionHash = hash; // mantém a sessão válida com a nova senha
+  _sessionHash = hash; // mantém a sessão válida com a nova senha
   // Atualiza o cache local, se carregado (admin/subgerente)
   if (_cache['usuarios']) {
     const u = _cache['usuarios'].find(x => (x.usuario||'').toLowerCase() === username);
@@ -15802,12 +15806,12 @@ function _r2SessionToken() {
 }
 function _workerToken() { return _r2SessionToken() || r2_state.token; }
 async function _obterTokenSessao() {
-  if (!window._sessionUser || !window._sessionHash) return null;
+  if (!_sessionUser || !_sessionHash) return null;
   try {
     if (!r2_state.url) r2_carregarConfig();
     const res = await fetch(r2_state.url.replace(/\/$/, '') + '/auth/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: window._sessionUser, hash: window._sessionHash }),
+      body: JSON.stringify({ username: _sessionUser, hash: _sessionHash }),
     });
     if (!res.ok) return null;
     const j = await res.json();
@@ -15828,7 +15832,7 @@ async function _obterTokenSessao() {
 let _r2RenovandoToken = null; // evita reemissões simultâneas
 async function _garantirTokenSessao() {
   if (_r2SessionToken()) return;                       // ainda válido
-  if (!window._sessionUser || !window._sessionHash) return; // sem credenciais
+  if (!_sessionUser || !_sessionHash) return; // sem credenciais
   if (!_r2RenovandoToken) {
     _r2RenovandoToken = _obterTokenSessao().finally(() => { _r2RenovandoToken = null; });
   }
@@ -17605,8 +17609,8 @@ function r2_iconeArquivo(nome) {
         // Repõe as credenciais de sessão para os RPCs autenticados (gerenciar
         // usuários, salvar, etc.) voltarem a funcionar após o F5.
         const { loginAt, _su, _sh, ...snapshot } = s;
-        if (_su) window._sessionUser = _su;
-        if (_sh) window._sessionHash = _sh;
+        if (_su) _sessionUser = _su;
+        if (_sh) _sessionHash = _sh;
         // Reemite o token de sessão do Worker (arquivos R2) — sem isso, ao
         // expirar, as ações de arquivo (ver/renomear/excluir) param de funcionar.
         if (_su && _sh && typeof _obterTokenSessao === 'function') { try { _obterTokenSessao(); } catch (e) {} }
