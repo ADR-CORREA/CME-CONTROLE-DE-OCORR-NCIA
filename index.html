@@ -6958,9 +6958,9 @@ async function verificarSenhaUsuario(senhaDigitada, usuario) {
     const buf  = await crypto.subtle.digest('SHA-256', data);
     return _bytesToHex(buf) === usuario.senha;
   }
-  // Versão 1: btoa (mais antigo, aceitar apenas para migração imediata)
+  // Versão 1 (btoa) bloqueada — hash reversível, não aceito por segurança.
   if (usuario.senhaVersao === 1 || _ehBase64Legado(usuario.senha)) {
-    return btoa(senhaDigitada) === usuario.senha;
+    return false;
   }
   return false;
 }
@@ -15831,14 +15831,12 @@ async function _garantirTokenSessao() {
 
 /* ── Config: carregar / salvar ────────────────────────────────── */
 function r2_carregarConfig() {
-  // Valores padrão já configurados — todos os usuários conectam automaticamente
-  const DEFAULT_URL   = 'https://cme-files-api.adr-correa30.workers.dev';
-  const DEFAULT_TOKEN = 'F@ca480096';
+  const DEFAULT_URL = 'https://cme-files-api.adr-correa30.workers.dev';
   try {
     const cfg = JSON.parse(localStorage.getItem('cme_r2_config') || '{}');
     r2_state.url   = cfg.url   || DEFAULT_URL;
-    r2_state.token = cfg.token || DEFAULT_TOKEN;
-  } catch(e) { r2_state.url = DEFAULT_URL; r2_state.token = DEFAULT_TOKEN; }
+    r2_state.token = cfg.token || '';
+  } catch(e) { r2_state.url = DEFAULT_URL; r2_state.token = ''; }
 }
 
 function r2_salvarConfig() {
