@@ -7384,8 +7384,9 @@ async function fazerLogin() {
         hash = _bytesToHex(buf);
       }
 
-      // Passo 3: validar server-side — retorna usuário sem campos de senha
-      const { data: validado } = await window._db.rpc('cme_validate_login', { p_username: u, p_hash: hash });
+      // Passo 3: validar server-side com rate limiting — retorna usuário sem campos de senha.
+      // cme_login_guarded envolve cme_validate_login: bloqueia após 5 tentativas em 15min (fail-open).
+      const { data: validado } = await window._db.rpc('cme_login_guarded', { p_username: u, p_hash: hash });
 
       if (validado) {
         usuario = validado;
