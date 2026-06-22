@@ -2069,7 +2069,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <table class="data-table">
             <thead><tr>
               <th>Nº</th><th>Tipo</th><th>Monitorado</th><th>Período</th><th>Servidor</th>
-              <th>Dt. Recebimento</th><th>Dt. Envio Com.</th><th>Arquivado em</th><th>Ações</th>
+              <th>Dt. Recebimento</th><th>Dt. Envio Com.</th><th>Arquivado em</th><th>Violações</th><th>Ações</th>
             </tr></thead>
             <tbody id="tbody-rel-arquivadas"></tbody>
           </table>
@@ -4343,6 +4343,11 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
                 <div style="font-size:2rem;margin-bottom:8px">🧠</div>
                 <div style="font-weight:600;font-size:1rem">Psicossocial</div>
                 <div id="r2-count-psicossocial" style="font-size:.8rem;color:#888;margin-top:4px">Carregando…</div>
+              </div>
+              <div class="r2-pasta-card" onclick="r2_abrirPasta('Relatório')">
+                <div style="font-size:2rem;margin-bottom:8px">📑</div>
+                <div style="font-weight:600;font-size:1rem">Relatório</div>
+                <div id="r2-count-relatorio" style="font-size:.8rem;color:#888;margin-top:4px">Carregando…</div>
               </div>
             </div>
           </div>
@@ -11641,7 +11646,7 @@ function renderizarRelArquivadas() {
   const tbody = document.getElementById('tbody-rel-arquivadas');
   if (!tbody) return;
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:#888">Nenhum relatório encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:#888">Nenhum relatório encontrado.</td></tr>';
     return;
   }
   tbody.innerHTML = lista.map((r,i) => `<tr>
@@ -11653,6 +11658,7 @@ function renderizarRelArquivadas() {
     <td>${(r.dataRecebimento||'').split('-').reverse().join('/')}</td>
     <td>${(r.dataEnvio||'').split('-').reverse().join('/')}</td>
     <td><strong>${(r.comEnviadoEm||'').replace('T',' ').slice(0,16)}</strong></td>
+    ${_relCelViolacoes(r)}
     <td style="white-space:nowrap">
       <button class="btn-sm btn-outline" onclick="desarquivarRelatorio('${r.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg>Desarquivar</button>
       <button class="btn-sm btn-danger"  onclick="excluirRelatorio('${r.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>
@@ -16924,7 +16930,7 @@ async function r2_novoMonitorado() {
   try { await _garantirTokenSessao(); } catch(e) {}
   // Cria cada pasta com um marcador .keep, de forma INDEPENDENTE e em paralelo:
   // uma pasta que falhe NÃO derruba o cadastro inteiro (era a causa do erro).
-  const pastas = ['Processo', 'Docs do monitorado', 'Justificativa', 'Recibos', 'Psicossocial'];
+  const pastas = ['Processo', 'Docs do monitorado', 'Justificativa', 'Recibos', 'Psicossocial', 'Relatório'];
   const resultados = await Promise.allSettled(pastas.map(p =>
     r2_api('POST', '/upload', {
       'X-Monitorado': nomeTrimmed, 'X-Pasta': p, 'X-Filename': '.keep',
@@ -16973,8 +16979,8 @@ async function r2_selecionarMonitorado(nome) {
 }
 
 async function r2_atualizarContagens(nome) {
-  const pastas = ['Processo', 'Docs do monitorado', 'Justificativa', 'Recibos', 'Psicossocial'];
-  const ids    = ['r2-count-processo', 'r2-count-docs', 'r2-count-justificativa', 'r2-count-recibos', 'r2-count-psicossocial'];
+  const pastas = ['Processo', 'Docs do monitorado', 'Justificativa', 'Recibos', 'Psicossocial', 'Relatório'];
+  const ids    = ['r2-count-processo', 'r2-count-docs', 'r2-count-justificativa', 'r2-count-recibos', 'r2-count-psicossocial', 'r2-count-relatorio'];
   for (let i = 0; i < pastas.length; i++) {
     try {
       const q = new URLSearchParams({ monitorado: nome, pasta: pastas[i] });
@@ -17320,6 +17326,11 @@ async function r2_enviarArquivos(input) {
         'Content-Type': file.type || 'application/octet-stream',
       }, file);
       enviados++;
+      // Auto-leitura: se o upload foi para a pasta "Relatório" e é PDF, lê a capa
+      // e abastece a sub-aba Arquivadas (não derruba o upload se o parse falhar).
+      if (r2_state.pasta === 'Relatório' && /\.pdf$/i.test(file.name)) {
+        try { await _relImportarDoUpload(file); } catch(eRel) { console.error('[CME] auto-relatório:', eRel); }
+      }
     } catch(e) {
       _mostrarToast(`\u{26A0}\u{FE0F} Erro ao enviar ${file.name}: ${e.message}`, 'erro');
     }
@@ -17331,6 +17342,117 @@ async function r2_enviarArquivos(input) {
   addLog(`R2: ${files.length} arquivo(s) enviado(s) para ${r2_state.monitorado}/${r2_state.pasta}`);
   await r2_carregarArquivos();
   await r2_atualizarContagens(r2_state.monitorado);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   IMPORTADOR DE RELATÓRIO (Fase A) — lê SÓ a capa (página 1) de um PDF
+   de relatório de monitoração, extrai monitorado/processo/período +
+   resumo de violações, e cria um registro arquivado em Relatório →
+   Arquivadas. Reaproveita o pdf.js já usado na Comunicação.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Extrai o texto da página 1 e devolve os campos parseados (ou null). */
+async function _relParseCapa(arrayBuffer) {
+  await _carregarScriptSE('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'pdfjsLib');
+  if (!window.pdfjsLib) throw new Error('pdf.js indisponível');
+  try { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; } catch(e) {}
+  const pdf  = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const page = await pdf.getPage(1);
+  const cont = await page.getTextContent();
+  const txt  = cont.items.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim();
+  return _relParseTexto(txt);
+}
+
+/* Parser puro do texto da capa (testável isoladamente). */
+function _relParseTexto(txt) {
+  const pick = re => { const m = txt.match(re); return m ? m[1].replace(/\s+/g,' ').trim() : ''; };
+  const toISO = d => { const m = (d||'').match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? `${m[3]}-${m[2]}-${m[1]}` : ''; };
+
+  const monitorado = pick(/MONITORAD[OA]:\s*(.+?)\s+CPF:/i) || pick(/Nome do Monitorado:\s*(.+?)\s+CPF:/i);
+  const processo   = pick(/PROCESSO\s*N[\u{00BA}\u{00B0}o.]*\s*:?\s*([\d.\-]{10,})/iu) || pick(/N[u\u{00FA}]mero do Processo:\s*([\d.\-]{10,})/iu);
+  const vara       = pick(/VARA:\s*(.+?)\s+COMARCA:/i) || pick(/Compet[e\u{00EA}]ncia:\s*(.+?)\s+Comarca:/iu);
+  const comarca    = pick(/COMARCA:\s*(.+?)\s+(?:DADOS|DATA|Este|DA MONITORA)/i);
+
+  // Período da análise: "no período de DD/MM/AAAA a DD/MM/AAAA"
+  const per = txt.match(/per[i\u{00ED}]odo\s+de\s+(\d{2}\/\d{2}\/\d{4})\s+a\s+(\d{2}\/\d{2}\/\d{4})/iu);
+  const periodoInicio = per ? toISO(per[1]) : '';
+  const periodoFim    = per ? toISO(per[2]) : '';
+
+  // RESUMO QUANTITATIVO DE VIOLAÇÕES → pares (tipo, qtd) até TOTAL
+  let violacoesPorTipo = [], violacoesDeclarado = null;
+  const resumo = txt.match(/RESUMO QUANTITATIVO[\s\S]*?Qtd\.?\s*([\s\S]*?)\s*TOTAL\s*(\d+)/i);
+  if (resumo) {
+    violacoesDeclarado = parseInt(resumo[2], 10);
+    const re = /([A-Za-z\u{00C0}-\u{00FF}()\/.,'\u{2019}\- ]+?)\s+(\d+)/gu;
+    let m;
+    while ((m = re.exec(resumo[1])) !== null) {
+      const tipo = m[1].replace(/\s+/g,' ').trim();
+      const qtd  = parseInt(m[2], 10);
+      if (tipo.length >= 3 && !/^tipo de viola/i.test(tipo) && isFinite(qtd)) violacoesPorTipo.push({ tipo, qtd });
+    }
+  }
+  const violacoesSoma = violacoesPorTipo.reduce((s,v) => s + v.qtd, 0);
+  return { monitorado, processo, vara, comarca, periodoInicio, periodoFim, violacoesPorTipo, violacoesSoma, violacoesDeclarado };
+}
+
+/* Chamado após o upload na pasta "Relatório": parseia e arquiva (idempotente). */
+async function _relImportarDoUpload(file) {
+  _mostrarToast('\u{1F4D1} Lendo a capa do relatório\u{2026}', 'sucesso');
+  const buf = await file.arrayBuffer();
+  const d   = await _relParseCapa(buf);
+  if (!d || !d.monitorado || !d.violacoesPorTipo.length) {
+    _mostrarToast('\u{26A0}\u{FE0F} Não consegui ler a capa deste relatório automaticamente. Confira o documento.', 'erro');
+    return;
+  }
+  const monitoradoNome = d.monitorado || r2_state.monitorado || '';
+  const agora = new Date().toISOString();
+  const hoje  = agora.slice(0, 10);
+  const store = getRelatorios();
+  if (!Array.isArray(store.registros)) store.registros = [];
+
+  // Idempotência: mesmo monitorado + mesmo período de análise → atualiza, não duplica.
+  let reg = store.registros.find(r => r.fonte === 'auto-relatorio'
+    && (r.monitorado||'').toLowerCase() === monitoradoNome.toLowerCase()
+    && r.periodoInicio === d.periodoInicio && r.periodoFim === d.periodoFim);
+  const novo = !reg;
+  if (novo) { reg = { id: 'rel_' + Date.now(), dataRecebimento: hoje, criadoEm: agora, criadoPor: usuarioAtual?.usuario || '' }; store.registros.push(reg); }
+
+  Object.assign(reg, {
+    tipo: 'Relatório de Violação',
+    monitorado: monitoradoNome,
+    servidor: usuarioAtual?.nome || reg.servidor || '',
+    dataEnvio: hoje,
+    periodoInicio: d.periodoInicio || '',
+    periodoFim: d.periodoFim || '',
+    processo: d.processo || '',
+    vara: d.vara || '',
+    comarca: d.comarca || '',
+    violacoesPorTipo: d.violacoesPorTipo,
+    violacoesSoma: d.violacoesSoma,
+    violacoesDeclarado: d.violacoesDeclarado,
+    origemArquivo: file.name,
+    fonte: 'auto-relatorio',
+    lidoEm: agora,
+    comEnviadoEm: reg.comEnviadoEm || agora,           // já entra arquivado
+    comEnviadoPor: reg.comEnviadoPor || (usuarioAtual?.nome || ''),
+  });
+
+  salvarStore('relatorios', store);
+  const tiposTxt = d.violacoesPorTipo.map(v => `${v.tipo}: ${v.qtd}`).join(', ');
+  const aviso = (d.violacoesDeclarado != null && d.violacoesDeclarado !== d.violacoesSoma)
+    ? ` (total declarado na capa: ${d.violacoesDeclarado})` : '';
+  _mostrarToast(`\u{2705} Relatório lido: ${monitoradoNome} \u{2014} ${d.violacoesSoma} violação(ões): ${tiposTxt}${aviso} \u{2014} ${novo ? 'arquivado' : 'atualizado'}.`, 'sucesso');
+  addLog(`Relatório auto-lido: ${monitoradoNome} (${d.violacoesSoma} violações, período ${d.periodoInicio} a ${d.periodoFim})`);
+  if (typeof renderizarRelArquivadas === 'function') renderizarRelArquivadas();
+}
+
+/* Célula "Violações" da tabela Arquivadas. */
+function _relCelViolacoes(r) {
+  if (r.violacoesSoma == null && !(r.violacoesPorTipo||[]).length) return '<td style="color:#bbb">\u{2014}</td>';
+  const tipos = (r.violacoesPorTipo||[]).map(v => esc(v.tipo) + ': ' + v.qtd).join(', ');
+  const diverge = (r.violacoesDeclarado != null && r.violacoesSoma != null && r.violacoesDeclarado !== r.violacoesSoma)
+    ? ` <span title="Total declarado na capa (${r.violacoesDeclarado}) diverge da soma dos tipos (${r.violacoesSoma})" style="color:#d29922;cursor:help">\u{26A0}\u{FE0F}</span>` : '';
+  return `<td style="font-size:.8rem;max-width:240px"><strong>${r.violacoesSoma != null ? r.violacoesSoma : ''}</strong>${diverge}${tipos ? `<div style="color:#888;font-size:.74rem;white-space:normal">${tipos}</div>` : ''}</td>`;
 }
 
 /* ── Download ─────────────────────────────────────────────────── */
