@@ -3200,6 +3200,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
                   <option value="estoque">Estoque</option>
                   <option value="triagem">Triagem</option>
                   <option value="psicossocial">Psicossocial</option>
+                  <option value="estatistica">Estatística</option>
                   <option value="admin">Administrador</option>
                 </select>
               </div>
@@ -5377,6 +5378,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <option value="relatorio">Relatório</option>
           <option value="juridico">Jurídico</option>
           <option value="gerencia">Gerência</option>
+          <option value="estatistica">Estatística</option>
           <option value="admin">Administrador</option>
         </select>
       </div>
@@ -7529,6 +7531,7 @@ const TABS_POR_NIVEL = {
   estoque:    ['dashboard', 'estoque', 'links', 'arquivos', 'psicossocial'],
   triagem:       ['dashboard', 'triagem', 'links', 'arquivos', 'psicossocial'],
   psicossocial:  ['dashboard', 'psicossocial', 'links', 'modelos', 'arquivos'],
+  estatistica:   ['dashboard', 'estatisticas', 'links', 'arquivos'],
   gerencia:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
                'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'gerencia', 'arquivos', 'estatisticas'],
   admin:      ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
@@ -7564,7 +7567,7 @@ function iniciarApp() {
   const nivelLabel = {
     admin:'ADMINISTRADOR', gerencia:'GERÊNCIA', juridico:'JURÍDICO',
     comunicacao:'COMUNICAÇÃO', plantao:'OPERADOR', estoque:'ESTOQUE',
-    triagem:'TRIAGEM', relatorio:'RELATÓRIO'
+    triagem:'TRIAGEM', relatorio:'RELATÓRIO', estatistica:'ESTATÍSTICA'
   };
   document.getElementById("role-badge").textContent = nivelLabel[nivel] || nivel.toUpperCase();
 
@@ -9552,7 +9555,7 @@ function _dashRenderPlantaoHoje() {
 }
 
 /* ═══════ DASHBOARD PESSOAL (por servidor) — gerência/admin veem o operacional ═══════ */
-const _DASH_NIVEL_LABEL = { plantao:'Operador / Plantão', comunicacao:'Comunicação', relatorio:'Relatório', juridico:'Jurídico', estoque:'Estoque', triagem:'Triagem', psicossocial:'Psicossocial', gerencia:'Gerência', admin:'Administrador' };
+const _DASH_NIVEL_LABEL = { plantao:'Operador / Plantão', comunicacao:'Comunicação', relatorio:'Relatório', juridico:'Jurídico', estoque:'Estoque', triagem:'Triagem', psicossocial:'Psicossocial', estatistica:'Estatística', gerencia:'Gerência', admin:'Administrador' };
 const _DASH_ATALHOS = {
   plantao:      [['\u{1F6A8} Casos Críticos','criticos'],['\u{1F4CB} Ocorrências','ocorrencias'],['\u{1F4DD} Modelos','modelos'],['\u{1F4C1} Arquivos','arquivos']],
   comunicacao:  [['\u{1F4E1} Comunicação','comunicacao'],['\u{1F4DD} Modelos','modelos'],['\u{1F4C1} Arquivos','arquivos']],
@@ -9561,6 +9564,7 @@ const _DASH_ATALHOS = {
   triagem:      [['\u{26A1} Triagem','triagem'],['\u{1F4C1} Arquivos','arquivos']],
   psicossocial: [['\u{1F49C} Psicossocial','psicossocial'],['\u{1F4DD} Modelos','modelos'],['\u{1F4C1} Arquivos','arquivos']],
   estoque:      [['\u{1F4E6} Estoque','estoque'],['\u{1F4C1} Arquivos','arquivos']],
+  estatistica:  [['\u{1F4C8} Estatísticas','estatisticas'],['\u{1F4C1} Arquivos','arquivos']],
 };
 
 function _dashMinhaProdutividade(u) {
@@ -9910,10 +9914,10 @@ function salvarJuridico() {
 /* ─── ADMINISTRAÇÃO ──────────────────────────────────── */
 const _NIVEL_COR  = { admin:'#1F4E78', gerencia:'#7c3aed', juridico:'#b45309',
   relatorio:'#0369a1', comunicacao:'#0f766e', plantao:'#15803d',
-  estoque:'#b91c1c', triagem:'#0891b2', psicossocial:'#db2777' };
+  estoque:'#b91c1c', triagem:'#0891b2', psicossocial:'#db2777', estatistica:'#4f46e5' };
 const _NIVEL_NOME = { admin:'Administrador', gerencia:'Gerência', juridico:'Jurídico',
   relatorio:'Relatório', comunicacao:'Comunicação', plantao:'Plantão',
-  estoque:'Estoque', triagem:'Triagem', psicossocial:'Psicossocial' };
+  estoque:'Estoque', triagem:'Triagem', psicossocial:'Psicossocial', estatistica:'Estatística' };
 
 function renderizarUsers() {
   const todos  = getUsuarios();
@@ -10026,7 +10030,7 @@ function renderizarUsers() {
   };
 
   const _icone = { admin:'\u{1F451}', gerencia:'\u{1F3E2}', juridico:'\u{2696}\u{FE0F}', relatorio:'\u{1F4CB}',
-    comunicacao:'\u{1F4E1}', plantao:'\u{1F6E1}\u{FE0F}', estoque:'\u{1F4E6}', triagem:'\u{1F50D}', psicossocial:'\u{1F9E0}' };
+    comunicacao:'\u{1F4E1}', plantao:'\u{1F6E1}\u{FE0F}', estoque:'\u{1F4E6}', triagem:'\u{1F50D}', psicossocial:'\u{1F9E0}', estatistica:'\u{1F4C8}' };
 
   document.getElementById('user-list').innerHTML = ORDEM
     .filter(n => grupos[n]?.length)
