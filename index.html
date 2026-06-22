@@ -4560,6 +4560,23 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <button class="btn-secondary" onclick="ind_render()">🔄 Atualizar</button>
           <span id="ind-periodo-label" style="font-size:.78rem;color:#1d4ed8;font-weight:600"></span>
         </div>
+        <!-- Caixa de pergunta IA -->
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:18px">
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="ind-ia-input" placeholder="Pergunte: quantos atendimentos de violência doméstica essa semana?"
+              onkeydown="if(event.key==='Enter')ind_perguntar()"
+              style="flex:1;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:.88rem">
+            <button class="btn-primary" onclick="ind_perguntar()" style="white-space:nowrap;padding:9px 18px">✨ Perguntar</button>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px">
+            <span onclick="ind_exemplo(this)" style="font-size:.76rem;padding:3px 10px;border:1px solid #e2e8f0;border-radius:20px;color:#64748b;cursor:pointer">quantas violações essa semana?</span>
+            <span onclick="ind_exemplo(this)" style="font-size:.76rem;padding:3px 10px;border:1px solid #e2e8f0;border-radius:20px;color:#64748b;cursor:pointer">quais os atendimentos de violência doméstica?</span>
+            <span onclick="ind_exemplo(this)" style="font-size:.76rem;padding:3px 10px;border:1px solid #e2e8f0;border-radius:20px;color:#64748b;cursor:pointer">quantos ofícios de vinculação foram enviados?</span>
+            <span onclick="ind_exemplo(this)" style="font-size:.76rem;padding:3px 10px;border:1px solid #e2e8f0;border-radius:20px;color:#64748b;cursor:pointer">violações de rompimento</span>
+          </div>
+          <div id="ind-ia-resposta" style="display:none;margin-top:12px;padding:12px 14px;background:#eff6ff;border:1px solid #dbeafe;border-radius:8px;font-size:.88rem;color:#1e3a8a;line-height:1.55;white-space:pre-wrap"></div>
+        </div>
+
         <div id="ind-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px"></div>
         <div id="ind-blocos" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px"></div>
         <div id="ind-detalhe" style="display:none;margin-top:18px"></div>
@@ -23715,7 +23732,8 @@ function ind_render() {
   const jurInt  = jurOcs.filter(o => (o.juridico||{}).interrompido === 'SIM').length;
   const jurAcomp = Math.max(0, jurOcs.length - jurDesv - jurInt);
 
-  _indCtx = { ocs, ofs, psiVD };
+  _indCtx = { periodoLabel: intervalo.label, ocs, ocsVD, psi, psiVD, ofs, rels,
+              porTipo, porCat, psiVit, psiMon, psiAlto, jurAcomp, jurDesv, jurInt };
 
   const vazio = '<div style="font-size:.82rem;color:#94a3b8">Nenhum registro no per\u{ED}odo.</div>';
   const blocoViol = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
@@ -23770,6 +23788,69 @@ function ind_verDetalhe(chave) {
           <td style="padding:5px 8px;color:#64748b">${_esc(l.extra||'')}</td></tr>`).join('')}</tbody>
       </table></div></div>`;
   el.style.display = 'block';
+}
+
+/* ── FASE 2: pergunta em linguagem natural sobre os indicadores ──
+   Monta um resumo agregado (digest) a partir do último render e manda
+   pergunta + resumo ao Worker (/estat-pergunta, Workers AI). A IA só lê
+   os números prontos e responde em português. */
+function _indResumo() {
+  const c = _indCtx || {};
+  const cap = (arr, n) => (arr || []).slice(0, n);
+  return {
+    periodo: c.periodoLabel || '',
+    violacoes: {
+      total: (c.ocs || []).length,
+      por_tipo: c.porTipo || [],
+      violencia_domestica: (c.ocsVD || []).length,
+      lista_violencia_domestica: cap((c.ocsVD || []).map(o => ({ nome: o.monitorado, data: o.dataAlerta, tipo: o.tipo })), 40),
+    },
+    psicossocial: {
+      total: (c.psi || []).length,
+      vitimas: c.psiVit || 0,
+      monitorados: c.psiMon || 0,
+      risco_alto: c.psiAlto || 0,
+      violencia_domestica: (c.psiVD || []).length,
+      lista_violencia_domestica: cap((c.psiVD || []).map(a => ({ nome: a.nome, data: a.dataHora || a.data, tipo: a.tipo })), 40),
+    },
+    comunicacao: {
+      enviados_por_categoria: c.porCat || [],
+      lista_enviados: cap((c.ofs || []).map(o => ({ nome: o.monitorado, data: o.geradoEm || o.data, categoria: _indCatOficio(o.modelo), oficio: (o.numero || '') + '/' + (o.ano || '') })), 60),
+    },
+    juridico: { em_acompanhamento: c.jurAcomp || 0, desvinculados: c.jurDesv || 0, interrompidos: c.jurInt || 0 },
+    relatorios_enviados: (c.rels || []).length,
+  };
+}
+
+function ind_exemplo(el) {
+  const inp = document.getElementById('ind-ia-input');
+  if (inp) inp.value = (el.textContent || '').trim();
+  ind_perguntar();
+}
+
+async function ind_perguntar() {
+  const inp = document.getElementById('ind-ia-input');
+  const out = document.getElementById('ind-ia-resposta');
+  const pergunta = (inp?.value || '').trim();
+  if (!pergunta || !out) return;
+  ind_render(); // garante que o resumo reflete o período atual
+  out.style.display = 'block';
+  out.textContent = '\u{23F3} Analisando os dados...';
+  try {
+    if (!r2_state.url) r2_carregarConfig();
+    await _garantirTokenSessao();
+    const resp = await fetch(r2_state.url.replace(/\/$/, '') + '/estat-pergunta', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + _workerToken(), 'Content-Type': 'application/json',
+                 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' },
+      body: JSON.stringify({ pergunta, resumo: _indResumo() }),
+    });
+    const j = await resp.json().catch(() => ({}));
+    if (j && j.resposta) out.textContent = j.resposta;
+    else out.textContent = '\u{26A0}\u{FE0F} ' + (j && j.error ? j.error : 'Não foi possível responder agora.');
+  } catch (e) {
+    out.textContent = '\u{26A0}\u{FE0F} Erro ao consultar a IA: ' + (e.message || e);
+  }
 }
 
 /* ═══════════════════════ DASHBOARD DE PRODUTIVIDADE ════════════════════
