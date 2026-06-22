@@ -23960,8 +23960,15 @@ function ind_render() {
   const reinc = Object.entries(reincMap).sort((a,b) => b[1]-a[1]).slice(0, 10);
   const reincMax = reinc.length ? reinc[0][1] : 1;
 
+  // Fluxo de monitoração: vinculações × desvinculações (ofícios) + capacidade (estoque)
+  const fluxoVinc  = ofs.filter(o => _indCatOficio(o.modelo) === 'Vincula\u{E7}\u{E3}o').length;
+  const fluxoDesv  = ofs.filter(o => _indCatOficio(o.modelo) === 'Desvincula\u{E7}\u{E3}o').length;
+  const fluxoSaldo = fluxoVinc - fluxoDesv;
+  let estDisp = 0; try { estDisp = (getEstoque().itens || {})['M\u{F3}dulo eletr\u{F4}nico de monitora\u{E7}\u{E3}o'] || 0; } catch(e) {}
+
   _indCtx = { periodoLabel: intervalo.label, ocs, ocsVD, psi, psiVD, ofs, rels,
               relsAuto, relViolTotal, relPorTipo, reinc,
+              fluxoVinc, fluxoDesv, fluxoSaldo, estDisp,
               porTipo, porCat, psiVit, psiMon, psiAlto, jurAcomp, jurDesv, jurInt };
 
   const vazio = '<div style="font-size:.82rem;color:#94a3b8">Nenhum registro no per\u{ED}odo.</div>';
@@ -23987,8 +23994,14 @@ function ind_render() {
       <div style="display:flex;justify-content:space-between;font-size:.83rem"><span style="color:#475569">${esc(nome)}</span><strong style="color:#1e293b">${n}</strong></div>
       <div style="height:5px;background:#fee2e2;border-radius:3px;margin-top:3px"><div style="height:100%;width:${Math.round(n/reincMax*100)}%;background:#dc2626;border-radius:3px"></div></div>
     </div>`).join('') : vazio}</div>`;
+  const _saldoCor = fluxoSaldo > 0 ? '#16a34a' : fluxoSaldo < 0 ? '#dc2626' : '#64748b';
+  const blocoFluxo = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+    <div style="font-weight:700;font-size:.92rem;margin-bottom:10px;color:#0b6e4f">\u{1F517} Fluxo de monitora\u{E7}\u{E3}o</div>
+    ${_indLinha('Vincula\u{E7}\u{F5}es', fluxoVinc, 'flux-vinc')}${_indLinha('Desvincula\u{E7}\u{F5}es', fluxoDesv, 'flux-desv')}
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:.85rem"><span style="color:#475569">Saldo no per\u{ED}odo</span><strong style="color:${_saldoCor}">${fluxoSaldo > 0 ? '+' : ''}${fluxoSaldo}</strong></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:.85rem"><span style="color:#475569">Tornozeleiras em estoque</span><strong style="color:#1F4E78">${estDisp}</strong></div></div>`;
 
-  document.getElementById('ind-blocos').innerHTML = blocoViol + blocoReinc + blocoRel + blocoPsi + blocoCom + blocoJur;
+  document.getElementById('ind-blocos').innerHTML = blocoViol + blocoFluxo + blocoReinc + blocoRel + blocoPsi + blocoCom + blocoJur;
   document.getElementById('ind-detalhe').style.display = 'none';
   _indDesenharTendencia();
 }
@@ -24023,6 +24036,10 @@ function ind_verDetalhe(chave) {
     const nome = (_indCtx.reinc && _indCtx.reinc[idx]) ? _indCtx.reinc[idx][0] : '';
     titulo = 'Viola\u{E7}\u{F5}es de ' + nome;
     linhas = (_indCtx.ocs||[]).filter(o => (o.monitorado||'').trim() === nome).map(o => ({ nome: o.monitorado, data: o.dataAlerta, extra: o.tipo || o.medida || '' }));
+  } else if (chave === 'flux-vinc' || chave === 'flux-desv') {
+    const cat = chave === 'flux-vinc' ? 'Vincula\u{E7}\u{E3}o' : 'Desvincula\u{E7}\u{E3}o';
+    titulo = 'Of\u{ED}cios de ' + cat;
+    linhas = (_indCtx.ofs||[]).filter(o => _indCatOficio(o.modelo) === cat).map(o => ({ nome: o.monitorado, data: o.geradoEm || o.data, extra: 'Of\u{ED}cio n\u{BA} ' + (o.numero||'\u{2014}') + '/' + (o.ano||'\u{2014}') }));
   }
   if (!linhas.length) { el.style.display = 'none'; return; }
   const _esc = (typeof esc === 'function') ? esc : (s => String(s||''));
@@ -24079,6 +24096,7 @@ function _indResumo() {
       lista: cap((c.relsAuto || []).map(r => ({ nome: r.monitorado, periodo_analise: (r.periodoInicio || '') + ' a ' + (r.periodoFim || ''), total: r.violacoesSoma, por_tipo: r.violacoesPorTipo })), 40),
     },
     top_reincidentes: (c.reinc || []).map(([nome, n]) => ({ nome, violacoes: n })),
+    fluxo: { vinculacoes: c.fluxoVinc || 0, desvinculacoes: c.fluxoDesv || 0, saldo: c.fluxoSaldo || 0, tornozeleiras_em_estoque: c.estDisp || 0 },
   };
 }
 
