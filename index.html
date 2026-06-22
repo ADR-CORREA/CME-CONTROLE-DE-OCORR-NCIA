@@ -4540,6 +4540,8 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           style="padding:8px 18px;border:none;border-bottom:2px solid transparent;background:none;font-weight:500;color:#94a3b8;cursor:pointer;margin-bottom:-2px;border-radius:6px 6px 0 0;font-size:.9rem">🧠 Psicossocial</button>
         <button id="estat-tab-cruz" onclick="estat_mudarModo('cruzamento')"
           style="padding:8px 18px;border:none;border-bottom:2px solid transparent;background:none;font-weight:500;color:#94a3b8;cursor:pointer;margin-bottom:-2px;border-radius:6px 6px 0 0;font-size:.9rem">🔗 Cruzamento</button>
+        <button id="estat-tab-mapa" onclick="estat_mudarModo('mapa')"
+          style="padding:8px 18px;border:none;border-bottom:2px solid transparent;background:none;font-weight:500;color:#94a3b8;cursor:pointer;margin-bottom:-2px;border-radius:6px 6px 0 0;font-size:.9rem">🗺️ Mapa</button>
         <button id="estat-tab-excel" onclick="estat_mudarModo('excel')"
           style="padding:8px 18px;border:none;border-bottom:2px solid transparent;background:none;font-weight:500;color:#94a3b8;cursor:pointer;margin-bottom:-2px;border-radius:6px 6px 0 0;font-size:.9rem">📊 Gerador Excel</button>
         <button id="estat-tab-prod" onclick="estat_mudarModo('produtividade')"
@@ -4597,6 +4599,20 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         </div>
         <div id="ind-blocos" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px"></div>
         <div id="ind-detalhe" style="display:none;margin-top:18px"></div>
+      </div>
+
+      <!-- MODO: Mapa (por município do Amapá) -->
+      <div id="estat-modo-mapa" style="display:none">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+          <span style="font-size:.85rem;color:#475569;font-weight:600">Camada:</span>
+          <div style="display:inline-flex;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden">
+            <button id="mapa-cam-mon" onclick="mapa_setCamada('monitorados')" style="padding:6px 14px;border:none;background:#eff6ff;color:#1d4ed8;font-size:.84rem;font-weight:600;cursor:pointer">👥 Monitorados</button>
+            <button id="mapa-cam-viol" onclick="mapa_setCamada('violacoes')" style="padding:6px 14px;border:none;background:none;color:#64748b;font-size:.84rem;cursor:pointer">⚠️ Violações</button>
+          </div>
+          <span id="mapa-status" style="font-size:.8rem;color:#94a3b8"></span>
+        </div>
+        <div id="mapa-leaflet" style="height:480px;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#eef2f7"></div>
+        <div id="mapa-legenda" style="font-size:.74rem;color:#94a3b8;margin-top:8px">Tamanho do círculo = quantidade. Dados de "Monitorados" vêm do cadastro (aba Monitorados); "Violações" cruzam as ocorrências com o município do cadastro.</div>
       </div>
 
       <!-- MODO: Produtividade -->
@@ -23694,6 +23710,8 @@ function estat_mudarModo(modo) {
   if (_prodEl) _prodEl.style.display = modo === 'produtividade' ? '' : 'none';
   const _indEl = document.getElementById('estat-modo-indicadores');
   if (_indEl) _indEl.style.display = modo === 'indicadores' ? '' : 'none';
+  const _mapaEl = document.getElementById('estat-modo-mapa');
+  if (_mapaEl) _mapaEl.style.display = modo === 'mapa' ? '' : 'none';
 
   // Botão importar (visível só nas abas de dados)
   document.getElementById('estat-import-label').style.display = modo === 'monitorados'  ? '' : 'none';
@@ -23701,13 +23719,14 @@ function estat_mudarModo(modo) {
   document.getElementById('estat-btn-export').style.display   = 'none';
 
   // Tabs visuais
-  ['ind','mon','psi','cruz','excel','prod'].forEach(t => {
+  ['ind','mon','psi','cruz','mapa','excel','prod'].forEach(t => {
     const tab = document.getElementById(`estat-tab-${t}`);
     if (!tab) return;
     const ativo = (t === 'ind'   && modo === 'indicadores')  ||
                   (t === 'mon'   && modo === 'monitorados')  ||
                   (t === 'psi'   && modo === 'psicossocial') ||
                   (t === 'cruz'  && modo === 'cruzamento')   ||
+                  (t === 'mapa'  && modo === 'mapa')         ||
                   (t === 'excel' && modo === 'excel')        ||
                   (t === 'prod'  && modo === 'produtividade');
     tab.style.borderBottomColor = ativo ? '#4f46e5' : 'transparent';
@@ -23723,6 +23742,7 @@ function estat_mudarModo(modo) {
     excel:        'Gerador de Estatísticas Excel — Sistema Akiles',
     produtividade:'Produtividade por setor e por servidor',
     indicadores:  'Indicadores gerais — visão cruzada dos módulos',
+    mapa:         'Mapa de monitorados e violações por município do Amapá',
   };
   document.getElementById('estat-subtitle').textContent = subtitles[modo] || '';
 
@@ -23730,6 +23750,86 @@ function estat_mudarModo(modo) {
   if (modo === 'cruzamento') cruz_atualizar();
   if (modo === 'produtividade') prod_render();
   if (modo === 'indicadores') ind_render();
+  if (modo === 'mapa') mapa_inicializar();
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   MODO: MAPA — monitorados e violações por município do Amapá (Leaflet).
+   Sem coordenadas no dado → usa o "Município Residencial" do cadastro e
+   plota nas 16 cidades do AP (coordenadas fixas). Violações: join
+   ocorrência → cadastro pelo nome do monitorado.
+   ════════════════════════════════════════════════════════════════════ */
+const AMAPA_MUNICIPIOS = {
+  'macapa':[-0.0349,-51.0694], 'santana':[-0.0583,-51.1817], 'laranjal do jari':[-0.8003,-52.5183],
+  'oiapoque':[3.8417,-51.8350], 'mazagao':[-0.1153,-51.2894], 'porto grande':[0.7128,-51.4136],
+  'tartarugalzinho':[1.5067,-50.9094], 'vitoria do jari':[-1.1308,-52.4244], 'pedra branca do amapari':[0.7772,-51.9494],
+  'calcoene':[2.5039,-50.9508], 'amapa':[2.0528,-50.7956], 'ferreira gomes':[0.8569,-51.1797],
+  'cutias':[0.9722,-50.8003], 'itaubal':[0.6033,-50.6981], 'pracuuba':[1.7411,-50.7900], 'serra do navio':[0.9011,-52.0036],
+};
+let _mapaLeaflet = null, _mapaMarkers = null, _mapaCamada = 'monitorados';
+
+function _mapaNorm(s) {
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\/.*/,'').replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();
+}
+function _mapaContarMonitorados() {
+  const cnt = {};
+  (_estatDados||[]).forEach(r => { const k = _mapaNorm(r[ESTAT_COLUNAS.municipio]); if (k) cnt[k] = (cnt[k]||0)+1; });
+  return cnt;
+}
+function _mapaContarViolacoes() {
+  const munDe = {};
+  (_estatDados||[]).forEach(r => { const nome = _mapaNorm(r[ESTAT_COLUNAS.nome]); const mun = _mapaNorm(r[ESTAT_COLUNAS.municipio]); if (nome && mun) munDe[nome] = mun; });
+  const cnt = {};
+  (getOcorrencias()||[]).forEach(o => { const k = munDe[_mapaNorm(o.monitorado)]; if (k) cnt[k] = (cnt[k]||0)+1; });
+  return cnt;
+}
+function mapa_setCamada(camada) {
+  _mapaCamada = camada;
+  const m = document.getElementById('mapa-cam-mon'), v = document.getElementById('mapa-cam-viol');
+  if (m && v) { const a = camada === 'monitorados';
+    m.style.background = a ? '#eff6ff' : 'none'; m.style.color = a ? '#1d4ed8' : '#64748b'; m.style.fontWeight = a ? '600' : '400';
+    v.style.background = !a ? '#fef2f2' : 'none'; v.style.color = !a ? '#b91c1c' : '#64748b'; v.style.fontWeight = !a ? '600' : '400'; }
+  _mapaDesenhar();
+}
+function _mapaDesenhar() {
+  if (!_mapaLeaflet || typeof L === 'undefined') return;
+  if (_mapaMarkers) _mapaMarkers.clearLayers(); else _mapaMarkers = L.layerGroup().addTo(_mapaLeaflet);
+  const cnt = _mapaCamada === 'violacoes' ? _mapaContarViolacoes() : _mapaContarMonitorados();
+  const cor = _mapaCamada === 'violacoes' ? '#dc2626' : '#1d4ed8';
+  const valores = Object.values(cnt); const max = valores.length ? Math.max(...valores) : 1;
+  let total = 0, comCoord = 0, semCoord = 0;
+  Object.entries(cnt).forEach(([k,n]) => {
+    total += n;
+    const co = AMAPA_MUNICIPIOS[k];
+    if (!co) { semCoord++; return; }
+    comCoord++;
+    const raio = Math.max(7, Math.min(38, 7 + Math.sqrt(n/max) * 31));
+    const nomeBonito = k.replace(/\b\w/g, c => c.toUpperCase());
+    L.circleMarker(co, { radius: raio, color: cor, weight: 1, fillColor: cor, fillOpacity: 0.45 })
+      .bindPopup(`<b>${nomeBonito}</b><br>${n} ${_mapaCamada === 'violacoes' ? 'viola\u{E7}\u{E3}o(\u{F5}es)' : 'monitorado(s)'}`)
+      .addTo(_mapaMarkers);
+  });
+  const st = document.getElementById('mapa-status');
+  if (st) {
+    if (!(_estatDados||[]).length) st.textContent = '\u{26A0}\u{FE0F} Importe o cadastro na aba "Monitorados" para popular o mapa.';
+    else st.textContent = `${total} ${_mapaCamada === 'violacoes' ? 'viola\u{E7}\u{F5}es' : 'monitorados'} em ${comCoord} munic\u{ED}pio(s)` + (semCoord ? ` \u{2022} ${semCoord} fora do AP/sem coord.` : '');
+  }
+}
+function mapa_inicializar() {
+  const initMapa = () => {
+    if (typeof L === 'undefined') return;
+    if (!_mapaLeaflet) {
+      _mapaLeaflet = L.map('mapa-leaflet', { scrollWheelZoom: false }).setView([0.9, -51.4], 6);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 12, attribution: '\u{00A9} OpenStreetMap' }).addTo(_mapaLeaflet);
+    }
+    setTimeout(() => { try { _mapaLeaflet.invalidateSize(); } catch(e) {} _mapaDesenhar(); }, 250);
+  };
+  if (typeof L === 'undefined') {
+    if (!document.getElementById('leaflet-css')) {
+      const lk = document.createElement('link'); lk.id = 'leaflet-css'; lk.rel = 'stylesheet'; lk.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(lk);
+    }
+    const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; s.onload = initMapa; document.head.appendChild(s);
+  } else { initMapa(); }
 }
 
 /* ══════════════════════════════════════════════════════════════════
