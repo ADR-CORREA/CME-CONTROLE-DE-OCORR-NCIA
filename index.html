@@ -4583,6 +4583,18 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         </div>
 
         <div id="ind-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px"></div>
+        <div id="ind-tendencia-card" style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+            <div style="font-weight:700;font-size:.92rem;color:#b45309">📈 Tendência de violações</div>
+            <div style="display:inline-flex;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
+              <button id="ind-tend-mes"  onclick="ind_setTendencia('mes')"  style="padding:5px 12px;border:none;background:#eff6ff;color:#1d4ed8;font-size:.78rem;font-weight:600;cursor:pointer">12 meses</button>
+              <button id="ind-tend-dia"  onclick="ind_setTendencia('dia')"  style="padding:5px 12px;border:none;background:none;color:#64748b;font-size:.78rem;cursor:pointer">Dia da semana</button>
+              <button id="ind-tend-hora" onclick="ind_setTendencia('hora')" style="padding:5px 12px;border:none;background:none;color:#64748b;font-size:.78rem;cursor:pointer">Hora</button>
+            </div>
+          </div>
+          <div style="position:relative;height:200px"><canvas id="ind-chart-tendencia"></canvas></div>
+          <div style="font-size:.72rem;color:#94a3b8;margin-top:6px">Violações registradas em Ocorrências (todas as datas). Independente do filtro de período acima.</div>
+        </div>
         <div id="ind-blocos" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px"></div>
         <div id="ind-detalhe" style="display:none;margin-top:18px"></div>
       </div>
@@ -23803,10 +23815,71 @@ function ind_onPeriodoChange() {
   ind_render();
 }
 
-function _indCard(label, valor, cor) {
+function _indCard(label, valor, cor, delta) {
+  let d = '';
+  if (delta) {
+    const seta = delta.dir === 'up' ? '\u{2191}' : delta.dir === 'down' ? '\u{2193}' : '\u{2192}';
+    d = `<div style="font-size:.72rem;color:${delta.cor};margin-top:3px">${seta} ${delta.txt} <span style="color:#cbd5e1">vs. anterior</span></div>`;
+  }
   return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px">
     <div style="font-size:.78rem;color:#64748b;margin-bottom:4px">${label}</div>
-    <div style="font-size:1.6rem;font-weight:700;color:${cor||'#1e293b'}">${valor}</div></div>`;
+    <div style="font-size:1.6rem;font-weight:700;color:${cor||'#1e293b'}">${valor}</div>${d}</div>`;
+}
+
+/* Janela equivalente imediatamente anterior (p/ o comparativo ↑↓). */
+function _indIntervaloAnterior(intervalo) {
+  if (!intervalo || !intervalo.ini || !intervalo.fim) return null;
+  const dur = intervalo.fim.getTime() - intervalo.ini.getTime();
+  const fimAnt = new Date(intervalo.ini.getTime() - 1);
+  const iniAnt = new Date(intervalo.ini.getTime() - 1 - dur);
+  return { ini: iniAnt, fim: fimAnt };
+}
+
+/* Delta % entre atual e anterior. ruimSubir=true → subir é vermelho. */
+function _indDelta(atual, anterior, ruimSubir) {
+  if (anterior === 0) return atual > 0 ? { dir:'up', txt:'novo', cor: ruimSubir ? '#dc2626' : '#94a3b8' } : null;
+  const pct = Math.round((atual - anterior) / anterior * 100);
+  const dir = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
+  let cor = '#94a3b8';
+  if (dir === 'up')   cor = ruimSubir ? '#dc2626' : '#94a3b8';
+  if (dir === 'down') cor = ruimSubir ? '#16a34a' : '#94a3b8';
+  return { dir, txt: (pct > 0 ? '+' : '') + pct + '%', cor };
+}
+
+/* Gráfico de tendência (12 meses / dia da semana / hora) — usa TODAS as
+   ocorrências, independente do filtro de período. Reaproveita Chart.js. */
+let _indTendencia = 'mes';
+function ind_setTendencia(modo) {
+  _indTendencia = modo;
+  ['mes','dia','hora'].forEach(m => {
+    const b = document.getElementById('ind-tend-' + m);
+    if (b) { const a = m === modo; b.style.background = a ? '#eff6ff' : 'none'; b.style.color = a ? '#1d4ed8' : '#64748b'; b.style.fontWeight = a ? '600' : '400'; }
+  });
+  _indDesenharTendencia();
+}
+function _indDesenharTendencia() {
+  const ocsAll = getOcorrencias() || [];
+  const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  let labels = [], values = [];
+  if (_indTendencia === 'dia') {
+    const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'], cnt = [0,0,0,0,0,0,0];
+    ocsAll.forEach(o => { const dt = _indParseData(o.dataAlerta); if (dt) cnt[dt.getDay()]++; });
+    labels = dias; values = cnt;
+  } else if (_indTendencia === 'hora') {
+    const b = { 'Madrugada (0-6h)':0, 'Manhã (6-12h)':0, 'Tarde (12-18h)':0, 'Noite (18-24h)':0 };
+    ocsAll.forEach(o => { const m = String(o.dataAlerta||'').match(/T(\d{2})/); if (m) { const h = +m[1]; const k = h<6?'Madrugada (0-6h)':h<12?'Manhã (6-12h)':h<18?'Tarde (12-18h)':'Noite (18-24h)'; b[k]++; } });
+    labels = Object.keys(b); values = Object.values(b);
+  } else {
+    const hoje = new Date(); const buckets = [];
+    for (let i = 11; i >= 0; i--) { const d = new Date(hoje.getFullYear(), hoje.getMonth()-i, 1); buckets.push({ key: d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'), label: MESES[d.getMonth()] + '/' + String(d.getFullYear()).slice(2) }); }
+    const cnt = {};
+    ocsAll.forEach(o => { const dt = _indParseData(o.dataAlerta); if (dt) { const k = dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0'); cnt[k] = (cnt[k]||0) + 1; } });
+    labels = buckets.map(b => b.label); values = buckets.map(b => cnt[b.key] || 0);
+  }
+  const desenhar = () => { try { _estat_criarChart('ind-chart-tendencia', 'bar', labels, values, '#d97706'); } catch(e) {} };
+  if (typeof Chart === 'undefined') {
+    const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js'; s.onload = desenhar; document.head.appendChild(s);
+  } else { desenhar(); }
 }
 
 function _indLinha(label, valor, chave) {
@@ -23842,13 +23915,31 @@ function ind_render() {
   relsAuto.forEach(r => (r.violacoesPorTipo || []).forEach(v => { relTipoMap[v.tipo] = (relTipoMap[v.tipo] || 0) + (v.qtd || 0); }));
   const relPorTipo = Object.entries(relTipoMap).sort((a,b) => b[1]-a[1]);
 
+  // Comparativo vs. período anterior equivalente (não há para "Tudo")
+  const ant = _indIntervaloAnterior(intervalo);
+  let dViol, dViolRel, dVD, dPsi, dOf, dRel;
+  if (ant) {
+    const ocsA  = ocsAll.filter(o => _indNoPeriodo(o.dataAlerta, ant));
+    const psiA  = psiAll.filter(a => _indNoPeriodo(a.dataHora || a.data, ant));
+    const ofsA  = ofsAll.filter(o => _indNoPeriodo(o.geradoEm || o.data, ant));
+    const relsA = relsAll.filter(r => r.comEnviadoEm && _indNoPeriodo(r.comEnviadoEm, ant));
+    const relsAutoA = relsAll.filter(r => r.fonte === 'auto-relatorio' && Array.isArray(r.violacoesPorTipo) && _indNoPeriodo(r.lidoEm || r.comEnviadoEm, ant));
+    const relViolA  = relsAutoA.reduce((s,r) => s + (r.violacoesSoma || 0), 0);
+    dViol    = _indDelta(ocs.length, ocsA.length, true);
+    dViolRel = _indDelta(relViolTotal, relViolA, true);
+    dVD      = _indDelta(ocsVD.length, ocsA.filter(o => o.medida === 'Protetiva').length, true);
+    dPsi     = _indDelta(psi.length, psiA.length, false);
+    dOf      = _indDelta(ofs.length, ofsA.length, false);
+    dRel     = _indDelta(rels.length, relsA.length, false);
+  }
+
   document.getElementById('ind-kpis').innerHTML =
-    _indCard('Viola\u{E7}\u{F5}es (ocorr.)', ocs.length, '#b45309') +
-    _indCard('Viola\u{E7}\u{F5}es (relat.)', relViolTotal, '#c2410c') +
-    _indCard('Viol\u{EA}ncia dom\u{E9}stica', ocsVD.length, '#dc2626') +
-    _indCard('Atend. psicossociais', psi.length, '#6a1b9a') +
-    _indCard('Of\u{ED}cios enviados', ofs.length, '#1F4E78') +
-    _indCard('Relat\u{F3}rios enviados', rels.length, '#0b6e4f');
+    _indCard('Viola\u{E7}\u{F5}es (ocorr.)', ocs.length, '#b45309', dViol) +
+    _indCard('Viola\u{E7}\u{F5}es (relat.)', relViolTotal, '#c2410c', dViolRel) +
+    _indCard('Viol\u{EA}ncia dom\u{E9}stica', ocsVD.length, '#dc2626', dVD) +
+    _indCard('Atend. psicossociais', psi.length, '#6a1b9a', dPsi) +
+    _indCard('Of\u{ED}cios enviados', ofs.length, '#1F4E78', dOf) +
+    _indCard('Relat\u{F3}rios enviados', rels.length, '#0b6e4f', dRel);
 
   const agrupar = (arr, fn) => { const m = {}; arr.forEach(x => { const k = fn(x) || '\u{2014}'; m[k] = (m[k]||0)+1; }); return m; };
   const ordena = obj => Object.entries(obj).sort((a,b) => b[1]-a[1]);
@@ -23863,8 +23954,14 @@ function ind_render() {
   const jurInt  = jurOcs.filter(o => (o.juridico||{}).interrompido === 'SIM').length;
   const jurAcomp = Math.max(0, jurOcs.length - jurDesv - jurInt);
 
+  // Top reincidentes: monitorados com mais violações (ocorrências) no período
+  const reincMap = {};
+  ocs.forEach(o => { const n = (o.monitorado||'').trim(); if (n) reincMap[n] = (reincMap[n]||0) + 1; });
+  const reinc = Object.entries(reincMap).sort((a,b) => b[1]-a[1]).slice(0, 10);
+  const reincMax = reinc.length ? reinc[0][1] : 1;
+
   _indCtx = { periodoLabel: intervalo.label, ocs, ocsVD, psi, psiVD, ofs, rels,
-              relsAuto, relViolTotal, relPorTipo,
+              relsAuto, relViolTotal, relPorTipo, reinc,
               porTipo, porCat, psiVit, psiMon, psiAlto, jurAcomp, jurDesv, jurInt };
 
   const vazio = '<div style="font-size:.82rem;color:#94a3b8">Nenhum registro no per\u{ED}odo.</div>';
@@ -23884,9 +23981,16 @@ function ind_render() {
   const blocoJur = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
     <div style="font-weight:700;font-size:.92rem;margin-bottom:10px;color:#475569">\u{2696}\u{FE0F} Jur\u{ED}dico</div>
     ${_indLinha('Em acompanhamento', jurAcomp)}${_indLinha('Desvinculados', jurDesv)}${_indLinha('Interrompidos', jurInt)}</div>`;
+  const blocoReinc = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+    <div style="font-weight:700;font-size:.92rem;margin-bottom:10px;color:#dc2626">\u{1F501} Top reincidentes (per\u{ED}odo)</div>
+    ${reinc.length ? reinc.map(([nome,n],i) => `<div onclick="ind_verDetalhe('reinc:${i}')" style="cursor:pointer;padding:4px 0;border-bottom:1px solid #f1f5f9">
+      <div style="display:flex;justify-content:space-between;font-size:.83rem"><span style="color:#475569">${esc(nome)}</span><strong style="color:#1e293b">${n}</strong></div>
+      <div style="height:5px;background:#fee2e2;border-radius:3px;margin-top:3px"><div style="height:100%;width:${Math.round(n/reincMax*100)}%;background:#dc2626;border-radius:3px"></div></div>
+    </div>`).join('') : vazio}</div>`;
 
-  document.getElementById('ind-blocos').innerHTML = blocoViol + blocoRel + blocoPsi + blocoCom + blocoJur;
+  document.getElementById('ind-blocos').innerHTML = blocoViol + blocoReinc + blocoRel + blocoPsi + blocoCom + blocoJur;
   document.getElementById('ind-detalhe').style.display = 'none';
+  _indDesenharTendencia();
 }
 
 /* Lista detalhada clicável (ex.: ofícios de Vinculação enviados no período). */
@@ -23914,6 +24018,11 @@ function ind_verDetalhe(chave) {
       const per = (r.periodoInicio && r.periodoFim) ? (fmtD(r.periodoInicio) + ' a ' + fmtD(r.periodoFim)) : '';
       return { nome: r.monitorado, data: r.lidoEm || r.comEnviadoEm, extra: (v ? v.qtd + ' ' : '') + (per ? '(' + per + ')' : '') };
     });
+  } else if (chave.indexOf('reinc:') === 0) {
+    const idx = +chave.slice(6);
+    const nome = (_indCtx.reinc && _indCtx.reinc[idx]) ? _indCtx.reinc[idx][0] : '';
+    titulo = 'Viola\u{E7}\u{F5}es de ' + nome;
+    linhas = (_indCtx.ocs||[]).filter(o => (o.monitorado||'').trim() === nome).map(o => ({ nome: o.monitorado, data: o.dataAlerta, extra: o.tipo || o.medida || '' }));
   }
   if (!linhas.length) { el.style.display = 'none'; return; }
   const _esc = (typeof esc === 'function') ? esc : (s => String(s||''));
@@ -23969,6 +24078,7 @@ function _indResumo() {
       violacoes_por_tipo: c.relPorTipo || [],
       lista: cap((c.relsAuto || []).map(r => ({ nome: r.monitorado, periodo_analise: (r.periodoInicio || '') + ' a ' + (r.periodoFim || ''), total: r.violacoesSoma, por_tipo: r.violacoesPorTipo })), 40),
     },
+    top_reincidentes: (c.reinc || []).map(([nome, n]) => ({ nome, violacoes: n })),
   };
 }
 
