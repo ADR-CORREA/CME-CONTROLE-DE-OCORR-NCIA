@@ -4525,8 +4525,10 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         </div>
       </div>
 
-      <!-- Abas internas: Monitorados / Psicossocial -->
-      <div style="display:flex;gap:4px;border-bottom:2px solid #e2e8f0;margin-bottom:20px;margin-top:4px">
+      <!-- Abas internas -->
+      <div style="display:flex;gap:4px;border-bottom:2px solid #e2e8f0;margin-bottom:20px;margin-top:4px;flex-wrap:wrap">
+        <button id="estat-tab-ind" onclick="estat_mudarModo('indicadores')"
+          style="padding:8px 18px;border:none;border-bottom:2px solid transparent;background:none;font-weight:500;color:#94a3b8;cursor:pointer;margin-bottom:-2px;border-radius:6px 6px 0 0;font-size:.9rem">📈 Indicadores</button>
         <button id="estat-tab-mon" onclick="estat_mudarModo('monitorados')"
           style="padding:8px 18px;border:none;border-bottom:2px solid #4f46e5;background:none;font-weight:600;color:#4f46e5;cursor:pointer;margin-bottom:-2px;border-radius:6px 6px 0 0;font-size:.9rem">👥 Monitorados</button>
         <button id="estat-tab-psi" onclick="estat_mudarModo('psicossocial')"
@@ -4537,6 +4539,30 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           style="padding:8px 18px;border:none;border-bottom:2px solid transparent;background:none;font-weight:500;color:#94a3b8;cursor:pointer;margin-bottom:-2px;border-radius:6px 6px 0 0;font-size:.9rem">📊 Gerador Excel</button>
         <button id="estat-tab-prod" onclick="estat_mudarModo('produtividade')"
           style="padding:8px 18px;border:none;border-bottom:2px solid transparent;background:none;font-weight:500;color:#94a3b8;cursor:pointer;margin-bottom:-2px;border-radius:6px 6px 0 0;font-size:.9rem">🏆 Produtividade</button>
+      </div>
+
+      <!-- MODO: Indicadores (visão cruzada dos módulos) -->
+      <div id="estat-modo-indicadores" style="display:none">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+          <label style="font-size:.85rem;color:#475569;font-weight:600">Período:</label>
+          <select id="ind-periodo" onchange="ind_onPeriodoChange()" style="padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:.88rem">
+            <option value="hoje">Hoje</option>
+            <option value="semana" selected>Esta semana</option>
+            <option value="mes">Este mês</option>
+            <option value="ano">Este ano</option>
+            <option value="dia">Dia específico…</option>
+            <option value="semana-esp">Semana específica…</option>
+            <option value="mes-esp">Mês específico…</option>
+            <option value="tudo">Tudo</option>
+          </select>
+          <input type="date" id="ind-data" onchange="ind_render()" style="display:none;padding:6px 9px;border:1px solid #cbd5e1;border-radius:8px;font-size:.88rem">
+          <input type="month" id="ind-mes" onchange="ind_render()" style="display:none;padding:6px 9px;border:1px solid #cbd5e1;border-radius:8px;font-size:.88rem">
+          <button class="btn-secondary" onclick="ind_render()">🔄 Atualizar</button>
+          <span id="ind-periodo-label" style="font-size:.78rem;color:#1d4ed8;font-weight:600"></span>
+        </div>
+        <div id="ind-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px"></div>
+        <div id="ind-blocos" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px"></div>
+        <div id="ind-detalhe" style="display:none;margin-top:18px"></div>
       </div>
 
       <!-- MODO: Produtividade -->
@@ -23515,6 +23541,8 @@ function estat_mudarModo(modo) {
   if (_excelEl) _excelEl.style.display = modo === 'excel' ? '' : 'none';
   const _prodEl = document.getElementById('estat-modo-produtividade');
   if (_prodEl) _prodEl.style.display = modo === 'produtividade' ? '' : 'none';
+  const _indEl = document.getElementById('estat-modo-indicadores');
+  if (_indEl) _indEl.style.display = modo === 'indicadores' ? '' : 'none';
 
   // Botão importar (visível só nas abas de dados)
   document.getElementById('estat-import-label').style.display = modo === 'monitorados'  ? '' : 'none';
@@ -23522,10 +23550,11 @@ function estat_mudarModo(modo) {
   document.getElementById('estat-btn-export').style.display   = 'none';
 
   // Tabs visuais
-  ['mon','psi','cruz','excel','prod'].forEach(t => {
+  ['ind','mon','psi','cruz','excel','prod'].forEach(t => {
     const tab = document.getElementById(`estat-tab-${t}`);
     if (!tab) return;
-    const ativo = (t === 'mon'   && modo === 'monitorados')  ||
+    const ativo = (t === 'ind'   && modo === 'indicadores')  ||
+                  (t === 'mon'   && modo === 'monitorados')  ||
                   (t === 'psi'   && modo === 'psicossocial') ||
                   (t === 'cruz'  && modo === 'cruzamento')   ||
                   (t === 'excel' && modo === 'excel')        ||
@@ -23542,12 +23571,205 @@ function estat_mudarModo(modo) {
     cruzamento:   'Cruzamento Monitorados × Psicossocial',
     excel:        'Gerador de Estatísticas Excel — Sistema Akiles',
     produtividade:'Produtividade por setor e por servidor',
+    indicadores:  'Indicadores gerais — visão cruzada dos módulos',
   };
   document.getElementById('estat-subtitle').textContent = subtitles[modo] || '';
 
   // Ao entrar no cruzamento, atualiza automaticamente
   if (modo === 'cruzamento') cruz_atualizar();
   if (modo === 'produtividade') prod_render();
+  if (modo === 'indicadores') ind_render();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MODO: INDICADORES — visão cruzada (violações, psicossocial,
+   comunicação, jurídico). Lê das stores já carregadas no _cache
+   (mesmo padrão da Produtividade). Período por _indIntervalo().
+   ══════════════════════════════════════════════════════════════════ */
+let _indCtx = {};
+
+/* Categoria do ofício a partir do id do modelo (Vinculação, Desvinculação, …). */
+function _indCatOficio(modeloId) {
+  const m = (typeof COM_MODELOS !== 'undefined') ? COM_MODELOS.find(x => x.id === modeloId) : null;
+  return m ? m.cat : 'Outros';
+}
+
+/* Parse de data (ISO, datetime-local, dd/mm/aaaa) -> Date(00:00) ou null. */
+function _indParseData(v) {
+  if (!v) return null;
+  const s = String(v);
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);          // ISO / datetime-local
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  m = s.match(/(\d{2})\/(\d{2})\/(\d{4})/);             // dd/mm/aaaa
+  if (m) return new Date(+m[3], +m[2]-1, +m[1]);
+  const t = Date.parse(s);
+  return isNaN(t) ? null : new Date(t);
+}
+
+/* Intervalo [ini, fim] do período (mesma lógica da Produtividade, ids ind-*). */
+function _indIntervalo() {
+  const periodo = document.getElementById('ind-periodo')?.value || 'semana';
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const fimDe = d => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
+  const fmt = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  if (periodo === 'hoje') return { ini: hoje, fim: fimDe(hoje), label: 'Hoje \u{2014} ' + fmt(hoje) };
+  if (periodo === 'semana') {
+    const ini = new Date(hoje); const seg = (ini.getDay()+6)%7; ini.setDate(ini.getDate()-seg);
+    const fim = fimDe(new Date(ini.getFullYear(), ini.getMonth(), ini.getDate()+6));
+    return { ini, fim, label: 'Semana \u{2014} ' + fmt(ini) + ' a ' + fmt(fim) };
+  }
+  if (periodo === 'mes') {
+    const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    const fim = fimDe(new Date(hoje.getFullYear(), hoje.getMonth()+1, 0));
+    return { ini, fim, label: 'M\u{EA}s \u{2014} ' + meses[hoje.getMonth()] + '/' + hoje.getFullYear() };
+  }
+  if (periodo === 'ano') {
+    return { ini: new Date(hoje.getFullYear(),0,1), fim: fimDe(new Date(hoje.getFullYear(),11,31)), label: 'Ano \u{2014} ' + hoje.getFullYear() };
+  }
+  if (periodo === 'dia') {
+    const dv = document.getElementById('ind-data')?.value;
+    if (dv) { const p = dv.split('-').map(Number); const ini = new Date(p[0],p[1]-1,p[2]); return { ini, fim: fimDe(ini), label: 'Dia \u{2014} ' + fmt(ini) }; }
+    return { ini:null, fim:null, label:'\u{26A0}\u{FE0F} Selecione um dia' };
+  }
+  if (periodo === 'semana-esp') {
+    const dv = document.getElementById('ind-data')?.value;
+    if (!dv) return { ini:null, fim:null, label:'\u{26A0}\u{FE0F} Selecione uma data da semana' };
+    const p = dv.split('-').map(Number); const base = new Date(p[0],p[1]-1,p[2]); base.setHours(0,0,0,0);
+    const seg = (base.getDay()+6)%7;
+    const ini = new Date(base.getFullYear(), base.getMonth(), base.getDate()-seg);
+    const fim = fimDe(new Date(ini.getFullYear(), ini.getMonth(), ini.getDate()+6));
+    return { ini, fim, label: 'Semana \u{2014} ' + fmt(ini) + ' a ' + fmt(fim) };
+  }
+  if (periodo === 'mes-esp') {
+    const mv = document.getElementById('ind-mes')?.value;
+    if (!mv) return { ini:null, fim:null, label:'\u{26A0}\u{FE0F} Selecione um m\u{EA}s' };
+    const p = mv.split('-').map(Number);
+    return { ini: new Date(p[0],p[1]-1,1), fim: fimDe(new Date(p[0],p[1],0)), label: 'M\u{EA}s \u{2014} ' + meses[p[1]-1] + '/' + p[0] };
+  }
+  return { ini:null, fim:null, label:'Tudo (todos os per\u{ED}odos)' };
+}
+
+function _indNoPeriodo(v, intervalo) {
+  if (!intervalo.ini) return true;
+  const d = _indParseData(v);
+  return d && d >= intervalo.ini && d <= intervalo.fim;
+}
+
+function ind_onPeriodoChange() {
+  const v = document.getElementById('ind-periodo')?.value;
+  const dt = document.getElementById('ind-data'), mes = document.getElementById('ind-mes');
+  if (dt) dt.style.display = (v === 'dia' || v === 'semana-esp') ? '' : 'none';
+  if (mes) mes.style.display = (v === 'mes-esp') ? '' : 'none';
+  ind_render();
+}
+
+function _indCard(label, valor, cor) {
+  return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px">
+    <div style="font-size:.78rem;color:#64748b;margin-bottom:4px">${label}</div>
+    <div style="font-size:1.6rem;font-weight:700;color:${cor||'#1e293b'}">${valor}</div></div>`;
+}
+
+function _indLinha(label, valor, chave) {
+  const c = chave ? ` onclick="ind_verDetalhe('${chave}')"` : '';
+  const cur = chave ? ';cursor:pointer' : '';
+  return `<div${c} style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:.85rem${cur}">
+    <span style="color:#475569">${label}${chave ? ' <span style="color:#cbd5e1">\u{203A}</span>' : ''}</span><span style="font-weight:700;color:#1e293b">${valor}</span></div>`;
+}
+
+function ind_render() {
+  const intervalo = _indIntervalo();
+  const lbl = document.getElementById('ind-periodo-label');
+  if (lbl) lbl.textContent = intervalo.label || '';
+
+  const ocsAll  = getOcorrencias() || [];
+  const psiAll  = (getPsi().atendimentos) || [];
+  const ofsAll  = (carregarStore('oficios', { registros: [] }).registros) || [];
+  const relsAll = (getRelatorios().registros) || [];
+
+  const ocs  = ocsAll.filter(o => _indNoPeriodo(o.dataAlerta, intervalo));
+  const psi  = psiAll.filter(a => _indNoPeriodo(a.dataHora || a.data, intervalo));
+  const ofs  = ofsAll.filter(o => _indNoPeriodo(o.geradoEm || o.data, intervalo));
+  const rels = relsAll.filter(r => r.comEnviadoEm && _indNoPeriodo(r.comEnviadoEm, intervalo));
+
+  const ocsVD = ocs.filter(o => o.medida === 'Protetiva');
+  const psiVD = psi.filter(a => /protetiva|dpp/i.test(a.medida || '') || a.publico === 'V\u{ED}tima');
+
+  document.getElementById('ind-kpis').innerHTML =
+    _indCard('Viola\u{E7}\u{F5}es', ocs.length, '#b45309') +
+    _indCard('Viol\u{EA}ncia dom\u{E9}stica', ocsVD.length, '#dc2626') +
+    _indCard('Atend. psicossociais', psi.length, '#6a1b9a') +
+    _indCard('Of\u{ED}cios enviados', ofs.length, '#1F4E78') +
+    _indCard('Relat\u{F3}rios enviados', rels.length, '#0b6e4f');
+
+  const agrupar = (arr, fn) => { const m = {}; arr.forEach(x => { const k = fn(x) || '\u{2014}'; m[k] = (m[k]||0)+1; }); return m; };
+  const ordena = obj => Object.entries(obj).sort((a,b) => b[1]-a[1]);
+
+  const porTipo = ordena(agrupar(ocs, o => o.tipo));
+  const porCat  = ordena(agrupar(ofs, o => _indCatOficio(o.modelo)));
+  const psiVit  = psi.filter(a => a.publico === 'V\u{ED}tima').length;
+  const psiMon  = psi.filter(a => a.publico === 'Monitorado').length;
+  const psiAlto = psi.filter(a => a.risco === 'Alto').length;
+  const jurOcs  = ocsAll.filter(o => o.prodoc === 'SIM' && _indNoPeriodo(o.dataAlerta, intervalo));
+  const jurDesv = jurOcs.filter(o => (o.juridico||{}).desvinculado === 'SIM').length;
+  const jurInt  = jurOcs.filter(o => (o.juridico||{}).interrompido === 'SIM').length;
+  const jurAcomp = Math.max(0, jurOcs.length - jurDesv - jurInt);
+
+  _indCtx = { ocs, ofs, psiVD };
+
+  const vazio = '<div style="font-size:.82rem;color:#94a3b8">Nenhum registro no per\u{ED}odo.</div>';
+  const blocoViol = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+    <div style="font-weight:700;font-size:.92rem;margin-bottom:10px;color:#b45309">\u{26A0}\u{FE0F} Viola\u{E7}\u{F5}es por tipo</div>
+    ${porTipo.length ? porTipo.map(([t,n]) => _indLinha(t, n, 'oc-tipo:'+t)).join('') : vazio}</div>`;
+  const blocoPsi = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+    <div style="font-weight:700;font-size:.92rem;margin-bottom:10px;color:#6a1b9a">\u{1F9E0} Psicossocial</div>
+    ${_indLinha('V\u{ED}timas (DPP)', psiVit)}${_indLinha('Monitorados', psiMon)}${_indLinha('Viol\u{EA}ncia dom\u{E9}stica', psiVD.length, 'psi-vd')}${_indLinha('Risco alto', psiAlto)}</div>`;
+  const blocoCom = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+    <div style="font-weight:700;font-size:.92rem;margin-bottom:10px;color:#1F4E78">\u{1F4E4} Comunica\u{E7}\u{E3}o \u{2014} enviados</div>
+    ${porCat.length ? porCat.map(([c,n]) => _indLinha(c, n, 'of-cat:'+c)).join('') : vazio}</div>`;
+  const blocoJur = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+    <div style="font-weight:700;font-size:.92rem;margin-bottom:10px;color:#475569">\u{2696}\u{FE0F} Jur\u{ED}dico</div>
+    ${_indLinha('Em acompanhamento', jurAcomp)}${_indLinha('Desvinculados', jurDesv)}${_indLinha('Interrompidos', jurInt)}</div>`;
+
+  document.getElementById('ind-blocos').innerHTML = blocoViol + blocoPsi + blocoCom + blocoJur;
+  document.getElementById('ind-detalhe').style.display = 'none';
+}
+
+/* Lista detalhada clicável (ex.: ofícios de Vinculação enviados no período). */
+function ind_verDetalhe(chave) {
+  const el = document.getElementById('ind-detalhe');
+  if (!el) return;
+  const fmtD = v => { const d = _indParseData(v); return d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '\u{2014}'; };
+  let titulo = '', linhas = [];
+  if (chave.indexOf('oc-tipo:') === 0) {
+    const t = chave.slice(8);
+    titulo = 'Viola\u{E7}\u{F5}es \u{2014} ' + t;
+    linhas = (_indCtx.ocs||[]).filter(o => (o.tipo||'\u{2014}') === t).map(o => ({ nome: o.monitorado, data: o.dataAlerta, extra: o.medida || '' }));
+  } else if (chave.indexOf('of-cat:') === 0) {
+    const c = chave.slice(7);
+    titulo = 'Of\u{ED}cios enviados \u{2014} ' + c;
+    linhas = (_indCtx.ofs||[]).filter(o => _indCatOficio(o.modelo) === c).map(o => ({ nome: o.monitorado, data: o.geradoEm || o.data, extra: 'Of\u{ED}cio n\u{BA} ' + (o.numero||'\u{2014}') + '/' + (o.ano||'\u{2014}') }));
+  } else if (chave === 'psi-vd') {
+    titulo = 'Atendimentos de viol\u{EA}ncia dom\u{E9}stica (psicossocial)';
+    linhas = (_indCtx.psiVD||[]).map(a => ({ nome: a.nome, data: a.dataHora || a.data, extra: a.tipo || a.publico || '' }));
+  }
+  if (!linhas.length) { el.style.display = 'none'; return; }
+  const _esc = (typeof esc === 'function') ? esc : (s => String(s||''));
+  el.innerHTML = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-weight:700;font-size:.92rem;color:#1e293b">${titulo} <span style="color:#64748b;font-weight:500">(${linhas.length})</span></div>
+      <button onclick="document.getElementById('ind-detalhe').style.display='none'" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1.1rem">\u{2715}</button>
+    </div>
+    <div style="max-height:320px;overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+        <thead><tr style="text-align:left;color:#64748b;border-bottom:1px solid #e2e8f0">
+          <th style="padding:5px 8px">Monitorado</th><th style="padding:5px 8px">Data</th><th style="padding:5px 8px">Detalhe</th></tr></thead>
+        <tbody>${linhas.map(l => `<tr style="border-bottom:1px solid #f1f5f9">
+          <td style="padding:5px 8px">${_esc(l.nome||'\u{2014}')}</td>
+          <td style="padding:5px 8px;white-space:nowrap">${fmtD(l.data)}</td>
+          <td style="padding:5px 8px;color:#64748b">${_esc(l.extra||'')}</td></tr>`).join('')}</tbody>
+      </table></div></div>`;
+  el.style.display = 'block';
 }
 
 /* ═══════════════════════ DASHBOARD DE PRODUTIVIDADE ════════════════════
