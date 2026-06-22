@@ -7575,7 +7575,7 @@ function iniciarApp() {
   // Pré-carrega monitorados em background após login — busca instantânea quando abrir Arquivos
   setTimeout(() => {
     r2_carregarConfig();
-    if (r2_state.url && r2_state.token) _r2CarregarTodosSilencioso();
+    if (_r2Pronto()) _r2CarregarTodosSilencioso();
   }, 2000);
 
   // Backup automático diário das stores no R2 (1x/dia, após o cache carregar)
@@ -15806,6 +15806,13 @@ function _r2SessionToken() {
   return null;
 }
 function _workerToken() { return _r2SessionToken() || r2_state.token; }
+/* "Pronto" = temos a URL e ou um token (sessão/legado) ou credenciais p/ emitir
+   um. Substitui a checagem antiga !r2_state.token, que passou a dar falso "R2 não
+   configurado" quando o token legado hardcoded foi removido — a auth real agora
+   usa o token de sessão do Worker (emitido no login e renovado por _garantirTokenSessao). */
+function _r2Pronto() {
+  return !!r2_state.url && (!!_workerToken() || (!!_sessionUser && !!_sessionHash));
+}
 async function _obterTokenSessao() {
   if (!_sessionUser || !_sessionHash) return null;
   try {
@@ -15875,7 +15882,7 @@ function r2_fecharConfig() {
 
 /* ── API helper ───────────────────────────────────────────────── */
 async function r2_api(method, path, headers = {}, body = null) {
-  if (!r2_state.url || !r2_state.token) throw new Error('R2 não configurado.');
+  if (!_r2Pronto()) throw new Error('R2 não configurado.');
   await _garantirTokenSessao(); // renova o token de sessão do Worker se tiver expirado
   const base = r2_state.url.replace(/\/$/, '');
   const res = await fetch(base + path, {
@@ -15902,7 +15909,7 @@ async function r2_api(method, path, headers = {}, body = null) {
 async function r2_inicializarAba() {
   r2_carregarConfig();
   const aviso = document.getElementById('r2-aviso-config');
-  if (!r2_state.url || !r2_state.token) {
+  if (!_r2Pronto()) {
     aviso.style.display = 'block';
     document.getElementById('r2-lista-mon').innerHTML =
       '<div style="color:#aaa;font-size:.85rem;text-align:center;padding:20px 0">Configure a conexão.</div>';
@@ -16683,7 +16690,7 @@ async function r2_importarZip(input) {
   const file = input.files[0];
   input.value = '';
   if (!file) return;
-  if (!r2_state.url || !r2_state.token) {
+  if (!_r2Pronto()) {
     return _mostrarToast('\u{26A0}\u{FE0F} Configure o R2 antes de importar.', 'erro');
   }
   if (typeof JSZip === 'undefined') {
@@ -16862,7 +16869,7 @@ async function r2_novoMonitorado() {
   const nome = prompt('Nome do monitorado:');
   if (!nome || !nome.trim()) return;
   const nomeTrimmed = nome.trim();
-  if (!r2_state.url || !r2_state.token) {
+  if (!_r2Pronto()) {
     _mostrarToast('\u{26A0}\u{FE0F} Armazenamento (R2) não configurado. Recarregue a página e tente de novo.', 'erro');
     return;
   }
