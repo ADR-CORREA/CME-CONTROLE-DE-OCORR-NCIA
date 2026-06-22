@@ -16933,7 +16933,7 @@ async function r2_novoMonitorado() {
   const pastas = ['Processo', 'Docs do monitorado', 'Justificativa', 'Recibos', 'Psicossocial', 'Relatório'];
   const resultados = await Promise.allSettled(pastas.map(p =>
     r2_api('POST', '/upload', {
-      'X-Monitorado': nomeTrimmed, 'X-Pasta': p, 'X-Filename': '.keep',
+      'X-Monitorado': nomeTrimmed, 'X-Pasta': encodeURIComponent(p), 'X-Filename': '.keep',
       'Content-Type': 'application/octet-stream',
     }, new Blob([]))
   ));
@@ -17321,7 +17321,7 @@ async function r2_enviarArquivos(input) {
     try {
       await r2_api('POST', '/upload', {
         'X-Monitorado': r2_state.monitorado,
-        'X-Pasta':      r2_state.pasta,
+        'X-Pasta':      encodeURIComponent(r2_state.pasta),
         'X-Filename':   encodeURIComponent(nomeEnv),
         'Content-Type': file.type || 'application/octet-stream',
       }, file);
