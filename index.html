@@ -4565,6 +4565,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
           <input type="date" id="ind-data" onchange="ind_render()" style="display:none;padding:6px 9px;border:1px solid #cbd5e1;border-radius:8px;font-size:.88rem">
           <input type="month" id="ind-mes" onchange="ind_render()" style="display:none;padding:6px 9px;border:1px solid #cbd5e1;border-radius:8px;font-size:.88rem">
           <button class="btn-secondary" onclick="ind_render()">🔄 Atualizar</button>
+          <button class="btn-secondary" onclick="ind_gerarPDF()">📄 Relatório PDF</button>
           <span id="ind-periodo-label" style="font-size:.78rem;color:#1d4ed8;font-weight:600"></span>
         </div>
         <!-- Caixa de pergunta IA -->
@@ -24231,6 +24232,75 @@ function _indResumo() {
       top_descarregamento: (c.batRank || []).map(([nome, n]) => ({ nome, descarregamentos: n })),
     },
   };
+}
+
+/* Relatório executivo de Indicadores em PDF (1 página, via HTML + print). */
+function ind_gerarPDF() {
+  ind_render();
+  const r = _indResumo(), c = _indCtx || {};
+  const now = new Date();
+  const dt = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const _e = (typeof esc === 'function') ? esc : (s => String(s == null ? '' : s));
+  const kpi = (l, n) => `<div class="kpi"><div class="l">${l}</div><div class="n">${n}</div></div>`;
+  const card = (t, rows) => `<div class="card"><h3>${t}</h3><table>${rows || '<tr><td style="color:#999">\u{2014}</td></tr>'}</table></div>`;
+  const linhasKV  = arr => (arr || []).map(([k, v]) => `<tr><td>${_e(k)}</td><td class="v">${v}</td></tr>`).join('');
+  const linhasObj = (arr, kf, vf) => (arr || []).map(o => `<tr><td>${_e(kf(o))}</td><td class="v">${vf(o)}</td></tr>`).join('');
+
+  const fluxoRows = `<tr><td>Vinculações</td><td class="v">${r.fluxo.vinculacoes}</td></tr><tr><td>Desvinculações</td><td class="v">${r.fluxo.desvinculacoes}</td></tr><tr><td>Saldo</td><td class="v">${r.fluxo.saldo > 0 ? '+' : ''}${r.fluxo.saldo}</td></tr><tr><td>Tornozeleiras em estoque</td><td class="v">${r.fluxo.tornozeleiras_em_estoque}</td></tr>`;
+  const psiRows = `<tr><td>Vítimas (DPP)</td><td class="v">${r.psicossocial.vitimas}</td></tr><tr><td>Monitorados</td><td class="v">${r.psicossocial.monitorados}</td></tr><tr><td>Violência doméstica</td><td class="v">${r.psicossocial.violencia_domestica}</td></tr><tr><td>Risco alto</td><td class="v">${r.psicossocial.risco_alto}</td></tr>`;
+  const jurRows = `<tr><td>Em acompanhamento</td><td class="v">${r.juridico.em_acompanhamento}</td></tr><tr><td>Desvinculados</td><td class="v">${r.juridico.desvinculados}</td></tr><tr><td>Interrompidos</td><td class="v">${r.juridico.interrompidos}</td></tr>`;
+  const batRows = `<tr><td colspan="2" style="color:#64748b;font-size:9px">${r.bateria.descarregamentos_relatorios} descarreg. (relat.) \u{2022} ${r.bateria.carregadores_em_estoque} carregadores</td></tr>` + linhasObj(r.bateria.top_descarregamento, o => o.nome, o => o.descarregamentos);
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório Executivo — Indicadores CME</title>
+<style>
+*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;margin:0;padding:0}
+body{color:#1e293b;font-size:11px}
+.hdr{background:#1e3a5f;color:#fff;padding:12px 18px}
+.hdr h1{font-size:15px;font-weight:bold}.hdr .sub{font-size:10px;opacity:.85;margin-top:2px}
+.meta{display:flex;justify-content:space-between;padding:6px 18px;background:#eef2f7;font-size:10px;color:#475569}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 18px}
+.kpi{border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px}
+.kpi .l{font-size:9px;color:#64748b}.kpi .n{font-size:18px;font-weight:bold;color:#1e3a5f}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 18px 10px}
+.card{border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px}
+.card h3{font-size:10px;color:#1e3a5f;border-bottom:1px solid #e2e8f0;padding-bottom:3px;margin-bottom:4px}
+.card table{width:100%;font-size:10px;border-collapse:collapse}.card td{padding:1px 0}
+.card td.v{text-align:right;font-weight:bold}
+.ft{padding:8px 18px;font-size:8px;color:#94a3b8;border-top:1px solid #e2e8f0;text-align:center}
+.no-print{margin:10px 18px;padding:8px 16px;background:#1e3a5f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px}
+@media print{.no-print{display:none}}
+</style></head><body>
+<div class="hdr"><h1>Relatório Executivo de Indicadores</h1><div class="sub">Central de Monitoramento Eletrônico — CME / IAPEN-AP</div></div>
+<div class="meta"><span><b>Período:</b> ${r.periodo || 'Tudo'}</span><span><b>Gerado em:</b> ${dt}</span></div>
+<div class="kpis">
+  ${kpi('Violações (ocorrências)', r.violacoes.total)}
+  ${kpi('Violações (relatórios)', r.relatorios_violacao.total_violacoes)}
+  ${kpi('Violência doméstica', r.violacoes.violencia_domestica)}
+  ${kpi('Atend. psicossociais', r.psicossocial.total)}
+  ${kpi('Ofícios enviados', (c.ofs||[]).length)}
+  ${kpi('Relatórios arquivados', (c.rels||[]).length)}
+  ${kpi('Saldo (vinc - desv)', (r.fluxo.saldo > 0 ? '+' : '') + r.fluxo.saldo)}
+  ${kpi('Tornozeleiras em estoque', r.fluxo.tornozeleiras_em_estoque)}
+</div>
+<div class="grid">
+  ${card('Violações por tipo (ocorrências)', linhasKV(r.violacoes.por_tipo))}
+  ${card('Violações por tipo (relatórios)', linhasKV(r.relatorios_violacao.violacoes_por_tipo))}
+  ${card('Fluxo de monitoração', fluxoRows)}
+  ${card('Top reincidentes', linhasObj((r.top_reincidentes||[]).slice(0,8), o => o.nome, o => o.violacoes))}
+  ${card('Bateria / adesão', batRows)}
+  ${card('Psicossocial', psiRows)}
+  ${card('Comunicação — enviados', linhasKV(r.comunicacao.enviados_por_categoria))}
+  ${card('Jurídico', jurRows)}
+</div>
+<div class="ft">CME / IAPEN-AP — Av. Machado de Assis, 372, Centro, Macapá-AP — Documento gerado automaticamente pelo sistema de monitoração.</div>
+<button class="no-print" onclick="window.print()">Imprimir / Salvar como PDF</button>
+<script>window.onload=function(){var b=document.body;var ph=1040,pw=794;var sv=b.style.width;b.style.width=pw+'px';var h=b.scrollHeight;b.style.width=sv;if(h>ph){b.style.zoom=((ph*0.98)/h).toFixed(4);}setTimeout(function(){window.print();},500);};<\/script>
+</body></html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { _mostrarToast('\u{26A0}\u{FE0F} Permita pop-ups para gerar o PDF.', 'erro'); return; }
+  w.document.write(html);
+  w.document.close();
 }
 
 function ind_exemplo(el) {
