@@ -18144,8 +18144,25 @@ async function rv_botaoLote() {
 async function rv_capturarViaMotor(ids) {
   const btn = document.getElementById('rv-bulk-btn');
   const txtOrig = btn ? btn.textContent : '';
-  if (btn) { btn.disabled = true; btn.textContent = '\u{1F916} Capturando no AKILES…'; }
-  _mostrarToast(`\u{1F916} Capturando ${ids.length} mapa(s) no AKILES… pode levar alguns minutos. Não feche a janela do robô.`);
+  if (btn) { btn.disabled = true; btn.textContent = '\u{1F916} Capturando 0/' + ids.length + '…'; }
+  _mostrarToast(`\u{1F916} Capturando ${ids.length} mapa(s) no AKILES… pode levar alguns minutos.`);
+
+  // Acompanha o progresso pelo /health do robô enquanto a captura roda e mostra
+  // "Capturando X/Y…" no botão. Como o robô agora roda invisível (sem janela),
+  // é aqui que você acompanha o andamento.
+  let _capturando = true;
+  (async () => {
+    while (_capturando) {
+      try {
+        const h = await (await fetch(_RV_MOTOR + '/health')).json();
+        const p = h && h.progresso;
+        if (p && p.total && btn && _capturando) {
+          btn.textContent = '\u{1F916} Capturando ' + p.feitos + '/' + p.total + '…';
+        }
+      } catch {}
+      await new Promise(res => setTimeout(res, 1000));
+    }
+  })();
 
   try {
     const r = await fetch(_RV_MOTOR + '/capturar', {
@@ -18170,6 +18187,7 @@ async function rv_capturarViaMotor(ids) {
   } catch (e) {
     _mostrarToast('Não consegui falar com o robô. Ele ainda está ligado? (' + e.message + ')', 'erro');
   } finally {
+    _capturando = false;
     if (btn) { btn.disabled = false; btn.textContent = txtOrig; }
   }
 }
