@@ -2128,6 +2128,16 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
               <button onclick="rv_marcarTodos(false)" style="font-size:.75rem;padding:3px 10px;border:1px solid #999;border-radius:5px;background:#fff;color:#555;cursor:pointer">✗ Desmarcar todos</button>
             </div>
           </div>
+          <!-- Barra de progresso da captura (robô invisível) -->
+          <div id="rv-progresso" style="display:none;margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;font-size:.72rem;color:#15803d;margin-bottom:3px">
+              <span id="rv-progresso-txt">Capturando…</span>
+              <span id="rv-progresso-pct" style="font-variant-numeric:tabular-nums">0%</span>
+            </div>
+            <div style="height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden">
+              <div id="rv-progresso-bar" style="height:100%;width:0%;background:#16a34a;border-radius:999px;transition:width .3s"></div>
+            </div>
+          </div>
           <div id="rv-lista-monitorados" style="max-height:260px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px"></div>
 
           <!-- Botão gerar -->
@@ -18144,21 +18154,29 @@ async function rv_botaoLote() {
 async function rv_capturarViaMotor(ids) {
   const btn = document.getElementById('rv-bulk-btn');
   const txtOrig = btn ? btn.textContent : '';
-  if (btn) { btn.disabled = true; btn.textContent = '\u{1F916} Capturando 0/' + ids.length + '…'; }
+  const barra = document.getElementById('rv-progresso');
+  const _setBarra = (feitos, total) => {
+    const pct = total ? Math.round(feitos / total * 100) : 0;
+    const b = document.getElementById('rv-progresso-bar');
+    const t = document.getElementById('rv-progresso-txt');
+    const pc = document.getElementById('rv-progresso-pct');
+    if (b) b.style.width = pct + '%';
+    if (t) t.textContent = `Capturando ${feitos}/${total}…`;
+    if (pc) pc.textContent = pct + '%';
+  };
+  if (btn) { btn.disabled = true; btn.textContent = '\u{1F916} Capturando…'; }
+  if (barra) { barra.style.display = 'block'; _setBarra(0, ids.length); }
   _mostrarToast(`\u{1F916} Capturando ${ids.length} mapa(s) no AKILES… pode levar alguns minutos.`);
 
-  // Acompanha o progresso pelo /health do robô enquanto a captura roda e mostra
-  // "Capturando X/Y…" no botão. Como o robô agora roda invisível (sem janela),
-  // é aqui que você acompanha o andamento.
+  // Acompanha o progresso pelo /health do robô e atualiza a barra de %. Como o
+  // robô agora roda invisível (sem janela), é aqui que você acompanha.
   let _capturando = true;
   (async () => {
     while (_capturando) {
       try {
         const h = await (await fetch(_RV_MOTOR + '/health')).json();
         const p = h && h.progresso;
-        if (p && p.total && btn && _capturando) {
-          btn.textContent = '\u{1F916} Capturando ' + p.feitos + '/' + p.total + '…';
-        }
+        if (p && p.total && _capturando) _setBarra(p.feitos, p.total);
       } catch {}
       await new Promise(res => setTimeout(res, 1000));
     }
@@ -18188,6 +18206,7 @@ async function rv_capturarViaMotor(ids) {
     _mostrarToast('Não consegui falar com o robô. Ele ainda está ligado? (' + e.message + ')', 'erro');
   } finally {
     _capturando = false;
+    if (barra) barra.style.display = 'none';
     if (btn) { btn.disabled = false; btn.textContent = txtOrig; }
   }
 }
