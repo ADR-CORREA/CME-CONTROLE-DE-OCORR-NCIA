@@ -1187,6 +1187,37 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 <!-- Supabase: carrega do PRÓPRIO domínio (à prova de bloqueio de CDN). Se o arquivo
      local falhar, o onerror cai para o CDN; o init ainda tenta CDNs alternativos. -->
 <script src="./vendor/supabase.min.js" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2';s.crossOrigin='anonymous';document.head.appendChild(s);"></script>
+<style id="cme-tema-dark">
+/* Tema escuro — camada reversivel: remover este <style> + <script id="cme-tema-js"> + o botao #btn-tema restaura tudo. */
+html[data-theme="dark"]{ background:#0d1117; filter: invert(1) hue-rotate(180deg); }
+html[data-theme="dark"] img,
+html[data-theme="dark"] video,
+html[data-theme="dark"] iframe,
+html[data-theme="dark"] .leaflet-container,
+html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotate(180deg); }
+</style>
+<script id="cme-tema-js">
+(function(){
+  function aplicar(t){
+    var root=document.documentElement;
+    if(t==='dark') root.setAttribute('data-theme','dark'); else root.removeAttribute('data-theme');
+    var ic=document.getElementById('tema-icone');
+    if(ic) ic.textContent=(t==='dark')?String.fromCodePoint(0x2600,0xFE0F):String.fromCodePoint(0x1F319);
+    var b=document.getElementById('btn-tema');
+    if(b) b.title=(t==='dark')?'Tema escuro (clique para claro)':'Tema claro (clique para escuro)';
+  }
+  window.toggleTema=function(){
+    var dark=document.documentElement.getAttribute('data-theme')==='dark';
+    var novo=dark?'claro':'dark';
+    try{ localStorage.setItem('cme-tema',novo); }catch(e){}
+    aplicar(novo);
+  };
+  try{ if(localStorage.getItem('cme-tema')==='dark') document.documentElement.setAttribute('data-theme','dark'); }catch(e){}
+  document.addEventListener('DOMContentLoaded',function(){
+    aplicar(document.documentElement.getAttribute('data-theme')==='dark'?'dark':'claro');
+  });
+})();
+</script>
 </head>
 <body>
 
@@ -1286,6 +1317,7 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
         <div class="avatar" id="user-avatar">P</div>
         <span id="user-display">Usuário</span>
       </div>
+      <button class="btn-logout" id="btn-tema" onclick="toggleTema()" title="Alternar tema claro / escuro" aria-label="Alternar tema claro e escuro" style="margin-right:6px;min-width:34px"><span id="tema-icone">🌙</span></button>
       <button class="btn-logout" onclick="ass_abrirMinha()" title="Cadastrar ou atualizar a minha assinatura" style="margin-right:6px">✍️ Minha assinatura</button>
       <button class="btn-logout" onclick="fazerLogout()">Sair</button>
     </div>
