@@ -17902,7 +17902,7 @@ let _rv_planilha = '';    // nome do arquivo
 let _rv_imagens = {};     // { idOc: dataURL } — print do mapa do AKILES por violação de zona
 let _rv_pasteAlvo = null; // idOc do slot "armado" para colar (Ctrl+V)
 let _rv_mapsAbertos = {}; // { groupIndex: true } — painéis de mapas expandidos
-let _rv_idGrupo = {};     // { idOc: groupIndex } — lookup p/ atualizar contadores
+let _rv_idGrupo = {};     // { idOc: [groupIndex,...] } — um idOc pode estar em vários grupos (mesmo monitorado, 2 processos)
 
 // ── Inicializar painel ────────────────────────────────────────
 function rv_inicializar() {
@@ -18035,7 +18035,10 @@ function rv_renderizarLista() {
     const tipos = [...new Set(g.map(x => x.tipo))].length;
     // Violações de zona (inclusão/exclusão) — são as que recebem o print do mapa
     const zonas = g.filter(x => /zona/i.test(x.tipo || ''));
-    zonas.forEach(z => { _rv_idGrupo[String(z.idOc || '')] = i; });
+    // um idOc pode estar em VÁRIOS grupos (mesmo monitorado em 2 processos), por
+    // isso guardamos uma LISTA de grupos por idOc — senão o último sobrescreve e
+    // marcar um grupo não capturaria o mapa (idOc apontava pro grupo errado).
+    zonas.forEach(z => { const k = String(z.idOc || ''); (_rv_idGrupo[k] = _rv_idGrupo[k] || []).push(i); });
     const nZ = zonas.length;
     const f  = zonas.filter(x => _rv_imagens[String(x.idOc || '')]).length;
     const mapsBtn = nZ
@@ -18123,10 +18126,19 @@ const _RV_MOTOR = 'http://localhost:8787';
 async function rv_botaoLote() {
   // Só os monitorados SELECIONADOS (o mesmo checkbox usado pra gerar o relatório):
   // captura/importa o mapa apenas de quem está marcado na lista.
-  const ids = Object.keys(_rv_idGrupo).filter(id => {
-    const chk = document.getElementById('rv-chk-' + _rv_idGrupo[id]);
-    return chk && chk.checked;
+  // Coleta os idOcs de zona dos grupos MARCADOS direto dos grupos (não do
+  // _rv_idGrupo, que mapeia 1 idOc → vários grupos). Set dedup: se o mesmo idOc
+  // estiver em 2 grupos marcados, captura uma vez só (o mapa é o mesmo no AKILES).
+  const idsSet = new Set();
+  _rv_grupos.forEach((g, i) => {
+    const chk = document.getElementById('rv-chk-' + i);
+    if (!chk || !chk.checked) return;
+    g.filter(x => /zona/i.test(x.tipo || '')).forEach(x => {
+      const idOc = String(x.idOc || '').trim();
+      if (idOc) idsSet.add(idOc);
+    });
   });
+  const ids = [...idsSet];
   if (!ids.length) { _mostrarToast('Marque ao menos um monitorado com violação de zona.', 'erro'); return; }
 
   let motorLigado = false;
@@ -18281,8 +18293,8 @@ function _rvAtualizarSlot(id) {
       ? `<img src="${img}" style="max-width:100%;max-height:100%;object-fit:cover"><span onclick="event.stopPropagation();rv_removerImg('${id}')" title="Remover" style="position:absolute;top:2px;right:2px;background:rgba(220,38,38,.92);color:#fff;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;cursor:pointer;line-height:1">\u{00D7}</span>`
       : `<span style="font-size:.68rem;color:#94a3b8;text-align:center;padding:0 4px">\u{1F4CB} clique e Ctrl+V<br>ou arraste</span>`;
   }
-  const gi = _rv_idGrupo[id];
-  if (gi != null) _rvAtualizarContadorGrupo(gi);
+  // o idOc pode estar em vários grupos → atualiza o contador de TODOS.
+  (_rv_idGrupo[id] || []).forEach(gi => _rvAtualizarContadorGrupo(gi));
 }
 
 function _rvAtualizarContadorGrupo(i) {
