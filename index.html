@@ -10380,11 +10380,15 @@ async function salvarEdicaoUsuario() {
   if (decreto) u.decreto = decreto; else delete u.decreto;
   u.nivel   = nivel;
 
-  // Assinatura
+  // Assinatura — grava no registro do usuário E no store 'assinaturas' (a fonte
+  // que o gerador de documentos lê via _getAssinaturaDe). Sem o store, a
+  // assinatura só saía pra quem estava no registro — agora vale pra qualquer um.
   if (_editAssNovaBase64) {
     u.assinatura = _editAssNovaBase64;
+    try { _salvarAssinaturaStore(usuario, _editAssNovaBase64); } catch (e) {}
   } else if (_editAssRemover) {
     delete u.assinatura;
+    try { _salvarAssinaturaStore(usuario, null); } catch (e) {}
   }
 
   salvarUsuarios(us);
@@ -18378,13 +18382,22 @@ function rv_gerarSelecionados(modo = 'html') {
   const us = getUsuarios();
   const idxAss = parseInt(document.getElementById('rv-assinante')?.value);
   const idxGer = parseInt(document.getElementById('rv-gerente')?.value);
-  const infoAss = isNaN(idxAss) ? null : us[idxAss] || null;
+  let infoAss = isNaN(idxAss) ? null : us[idxAss] || null;
   let infoGer = isNaN(idxGer) ? null : us[idxGer] || null;
 
   if (!infoAss) { _mostrarToast('Selecione o servidor assinante.', 'erro'); return; }
 
   // Co-assinatura automática do gerente (se nenhum foi escolhido manualmente)
   if (!infoGer) infoGer = _rvCoassinar(infoAss, us);
+
+  // A assinatura pode estar no store 'assinaturas' (via "Minha assinatura") OU no
+  // registro do usuário (via Administração). _getAssinaturaDe cobre os dois — sem
+  // isso, a assinatura cadastrada pelo "Minha assinatura" não saía no documento.
+  const _rvComAss = (info) => info ? Object.assign({}, info, {
+    assinatura: ((typeof _getAssinaturaDe === 'function' && _getAssinaturaDe(info.usuario)) || info.assinatura || '')
+  }) : info;
+  infoAss = _rvComAss(infoAss);
+  if (infoGer) infoGer = _rvComAss(infoGer);
 
   if (modo === 'word') {
     (async () => {
