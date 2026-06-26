@@ -1982,6 +1982,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
         <div class="sub-tab"        id="rel-stab-aguardando" onclick="mudarSubAbaRel('aguardando')">⏳ Aguardando<span id="rel-aguard-count" style="color:#e67e22;font-weight:700"></span></div>
         <div class="sub-tab"        id="rel-stab-arquivadas" onclick="mudarSubAbaRel('arquivadas')">📁 Arquivadas</div>
         <div class="sub-tab"        id="rel-stab-gerador"    onclick="mudarSubAbaRel('gerador')">⚡ Gerador de Violações</div>
+        <div class="sub-tab"        id="rel-stab-semcom"     onclick="mudarSubAbaRel('semcom')">📵 Sem Comunicação<span id="rel-semcom-badge" class="notif-badge" style="display:none">0</span></div>
       </div>
       <!-- ── Sub-painel: Recebidos dos Críticos (fluxo) ── -->
       <div class="sub-panel" id="rel-panel-recebidos">
@@ -2201,6 +2202,46 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
           </div>
         </div>
       </div><!-- /rel-panel-gerador -->
+
+      <!-- ── Sub-painel: Sem Comunicação (controle p/ relatório ao juízo) ── -->
+      <div class="sub-panel" id="rel-panel-semcom">
+        <div class="table-wrapper">
+          <div class="table-toolbar">
+            <div class="table-search">
+              <span>🔍</span>
+              <input type="text" id="rel-semcom-busca" placeholder="Buscar nome ou registro..." oninput="renderizarRelSemCom()">
+            </div>
+            <div class="table-actions" style="align-items:center;gap:8px">
+              <label style="font-size:.82rem;color:#555">Corte:
+                <select id="rel-semcom-corte" onchange="renderizarRelSemCom()" style="padding:4px 6px;border:1px solid #ccc;border-radius:5px">
+                  <option value="7">7 dias+</option>
+                  <option value="30" selected>30 dias+</option>
+                  <option value="60">60 dias+</option>
+                  <option value="90">90 dias+</option>
+                  <option value="180">180 dias+</option>
+                </select>
+              </label>
+              <select id="rel-semcom-fstatus" onchange="renderizarRelSemCom()" style="padding:4px 6px;border:1px solid #ccc;border-radius:5px">
+                <option value="">Todos os status</option>
+                <option value="pendente">Pendente</option>
+                <option value="feito">Relatório feito</option>
+                <option value="enviado">Enviado</option>
+              </select>
+              <button class="btn-secondary" onclick="renderizarRelSemCom()">🔄 Atualizar</button>
+            </div>
+          </div>
+          <div id="rel-semcom-kpis" style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px 0;font-size:.8rem"></div>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead><tr>
+                <th>Monitorado</th><th>Registro</th><th>Dias s/ com.</th><th>Última comunicação</th><th>Status</th><th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-rel-semcom"></tbody>
+            </table>
+          </div>
+          <div style="margin-top:8px;font-size:.8rem;color:#666" id="rel-semcom-count"></div>
+        </div>
+      </div><!-- /rel-panel-semcom -->
 
     </div>
 
@@ -11548,7 +11589,7 @@ function mudarSubAbaCom(aba) {
 
 // Navegação sub-abas Relatório
 function mudarSubAbaRel(aba) {
-  ['recebidos','lista','aguardando','arquivadas','gerador'].forEach(a => {
+  ['recebidos','lista','aguardando','arquivadas','gerador','semcom'].forEach(a => {
     document.getElementById('rel-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('rel-panel-' + a)?.classList.toggle('active', a === aba);
   });
@@ -11557,6 +11598,195 @@ function mudarSubAbaRel(aba) {
   if (aba === 'aguardando') renderizarRelAguardando();
   if (aba === 'arquivadas') renderizarRelArquivadas();
   if (aba === 'gerador')    rv_inicializar();
+  if (aba === 'semcom')     renderizarRelSemCom();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   RELATÓRIO ▸ CONTROLE DE SEM COMUNICAÇÃO (relatório ao juízo)
+   Lê da MESMA base do módulo Sem Comunicação (getSemCom) — não duplica.
+   Status do relatório (pendente/feito/enviado) em store próprio.
+   ════════════════════════════════════════════════════════════════ */
+function getRelSemComStatus() { const m = carregarStore('rel_semcom_status', {}); return (m && typeof m === 'object') ? m : {}; }
+function _setRelSemComStatus(registro, patch) {
+  const m = Object.assign({}, getRelSemComStatus());
+  m[registro] = Object.assign({}, m[registro], patch);
+  salvarStore('rel_semcom_status', m);
+}
+function _relSemComStatusDe(registro) { const st = getRelSemComStatus()[registro]; return (st && st.status) || 'pendente'; }
+function _relSemComCorte() { return parseInt(document.getElementById('rel-semcom-corte')?.value) || 30; }
+function _relSemComEsc(s) { return String(s == null ? '' : s).replace(/['"\\<>]/g, ''); }
+function _relSemComDataHora(iso) { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? String(iso) : d.toLocaleString('pt-BR'); }
+
+// Monitorados sem comunicação ATIVOS acima do corte (todas as áreas), ordenados por dias desc.
+function _relSemComLista() {
+  const corte = _relSemComCorte();
+  return (getSemCom().monitorados || [])
+    .filter(m => m.situacao !== 'desvinculado' && _diasSemComAtual(m) >= corte)
+    .sort((a, b) => _diasSemComAtual(b) - _diasSemComAtual(a));
+}
+
+function renderizarRelSemCom() {
+  const tbody = document.getElementById('tbody-rel-semcom');
+  if (!tbody) return;
+  const busca   = (document.getElementById('rel-semcom-busca')?.value || '').toLowerCase().trim();
+  const fStatus = document.getElementById('rel-semcom-fstatus')?.value || '';
+  const base = _relSemComLista();
+  let lista = base.slice();
+  if (busca)   lista = lista.filter(m => (m.nome||'').toLowerCase().includes(busca) || String(m.registro||'').includes(busca));
+  if (fStatus) lista = lista.filter(m => _relSemComStatusDe(m.registro) === fStatus);
+
+  const cont = { pendente:0, feito:0, enviado:0 };
+  base.forEach(m => { cont[_relSemComStatusDe(m.registro)]++; });
+  const kpis = document.getElementById('rel-semcom-kpis');
+  if (kpis) kpis.innerHTML =
+    `<span style="background:#eef2ff;padding:3px 10px;border-radius:6px">Total: <b>${base.length}</b></span>` +
+    `<span style="background:#fef2f2;padding:3px 10px;border-radius:6px;color:#b91c1c">Pendentes: <b>${cont.pendente}</b></span>` +
+    `<span style="background:#eff6ff;padding:3px 10px;border-radius:6px;color:#1d4ed8">Relatório feito: <b>${cont.feito}</b></span>` +
+    `<span style="background:#f0fdf4;padding:3px 10px;border-radius:6px;color:#15803d">Enviados: <b>${cont.enviado}</b></span>`;
+
+  if (!lista.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:28px;color:#888">Nenhum monitorado sem comunicação acima de ${_relSemComCorte()} dias.</td></tr>`;
+  } else {
+    tbody.innerHTML = lista.map(m => {
+      const dias = _diasSemComAtual(m);
+      const st   = _relSemComStatusDe(m.registro);
+      const info = getRelSemComStatus()[m.registro] || {};
+      const badge = st === 'enviado' ? `<span style="background:rgba(63,185,80,.15);color:#15803d;padding:2px 8px;border-radius:2em;font-size:.72rem">Enviado</span>`
+        : st === 'feito' ? `<span style="background:rgba(56,139,253,.15);color:#1d4ed8;padding:2px 8px;border-radius:2em;font-size:.72rem">Relatório feito</span>`
+        : `<span style="background:rgba(248,81,73,.15);color:#b91c1c;padding:2px 8px;border-radius:2em;font-size:.72rem">Pendente</span>`;
+      const corDias = dias >= 180 ? 'color:#dc2626;font-weight:bold' : dias >= 60 ? 'color:#b45309;font-weight:600' : '';
+      const subData = info.em ? `<div style="font-size:.66rem;color:#999">${esc(info.por||'')}${info.por?' · ':''}${esc(_relSemComDataHora(info.enviadoEm || info.em))}</div>` : '';
+      const reg = _relSemComEsc(m.registro);
+      return `<tr>
+        <td><strong>${esc(m.nome||'—')}</strong></td>
+        <td style="font-family:var(--font-mono)">${esc(m.registro||'—')}</td>
+        <td style="font-family:var(--font-mono);${corDias}">${dias}</td>
+        <td style="font-family:var(--font-mono);font-size:.8rem">${esc(m.ultimaComunicacao||'—')}</td>
+        <td>${badge}${subData}</td>
+        <td style="white-space:nowrap">
+          <button class="btn-sm btn-outline" onclick="relSemCom_gerar('${reg}','pdf')" title="Gerar relatório (PDF)">\u{1F4C4} PDF</button>
+          <button class="btn-sm btn-outline" onclick="relSemCom_gerar('${reg}','word')" title="Gerar relatório (Word)" style="margin-left:3px">\u{1F4DD} Word</button>
+          ${st !== 'enviado' ? `<button class="btn-sm btn-outline" onclick="relSemCom_marcarEnviado('${reg}')" title="Marcar como enviado ao juízo" style="margin-left:3px">\u{2713} Enviado</button>` : ''}
+        </td>
+      </tr>`;
+    }).join('');
+  }
+  const cl = document.getElementById('rel-semcom-count');
+  if (cl) cl.textContent = `${lista.length} monitorado(s) exibido(s) · corte ${_relSemComCorte()} dias`;
+  atualizarBadgeRelSemCom();
+}
+
+function atualizarBadgeRelSemCom() {
+  const pend = _relSemComLista().filter(m => _relSemComStatusDe(m.registro) === 'pendente').length;
+  const b = document.getElementById('rel-semcom-badge');
+  if (b) { b.textContent = pend; b.style.display = pend ? 'inline-block' : 'none'; }
+}
+
+function relSemCom_marcarEnviado(registro) {
+  _setRelSemComStatus(registro, { status: 'enviado', enviadoEm: new Date().toISOString(), por: usuarioAtual?.nome || '' });
+  _mostrarToast('\u{2705} Marcado como ENVIADO ao juízo.', 'sucesso');
+  renderizarRelSemCom();
+}
+
+function relSemCom_gerar(registro, modo) {
+  const m = (getSemCom().monitorados || []).find(x => String(x.registro) === String(registro));
+  if (!m) return _mostrarToast('Monitorado não encontrado.', 'erro');
+  let infoAss = _rvListaAssinantes().find(u => u.usuario === usuarioAtual?.usuario) || usuarioAtual || null;
+  if (infoAss) infoAss = Object.assign({}, infoAss, {
+    assinatura: ((typeof _getAssinaturaDe === 'function' && _getAssinaturaDe(infoAss.usuario)) || infoAss.assinatura || '')
+  });
+  const html = _relSemComDocHTML(m, infoAss, modo === 'word');
+  if (modo === 'word') {
+    const blob = new Blob(['﻿' + html], { type: 'application/msword' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Relatorio_Sem_Comunicacao_${_relSemComEsc(m.registro)}.doc`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  } else {
+    const w = window.open('', '_blank');
+    if (!w) return _mostrarToast('Pop-up bloqueado — libere pop-ups e tente de novo.', 'erro');
+    w.document.write(html); w.document.close();
+  }
+  if (_relSemComStatusDe(m.registro) === 'pendente') {
+    _setRelSemComStatus(m.registro, { status: 'feito', em: new Date().toISOString(), por: usuarioAtual?.nome || '' });
+  }
+  renderizarRelSemCom();
+}
+
+function _relSemComDocHTML(m, infoAss, isWord) {
+  const hoje = new Date();
+  const dataExtenso = `Macapá, ${String(hoje.getDate()).padStart(2,'0')} de ${_RV_MESES[hoje.getMonth()]} de ${hoje.getFullYear()}.`;
+  const dataHora = hoje.toLocaleString('pt-BR');
+  const dias = _diasSemComAtual(m);
+  const e = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const cmeSrc   = window._CME_LOGO_B64   ? 'data:image/png;base64,' + window._CME_LOGO_B64   : '';
+  const iapenSrc = window._IAPEN_LOGO_B64 ? 'data:image/png;base64,' + window._IAPEN_LOGO_B64 : '';
+  const ultima = e(m.ultimaComunicacao || '—');
+  const assImg = (infoAss && infoAss.assinatura) ? `<img src="${infoAss.assinatura}" style="max-height:70px;max-width:200px;object-fit:contain;display:block;margin:0 auto 4px auto">` : '';
+  const blocoAss = infoAss ? `<div style="text-align:center;margin-top:8px">
+      ${assImg}
+      <div style="border-top:1px solid #000;width:260px;margin:0 auto 4px auto"></div>
+      <div style="font-weight:bold;font-size:10.5pt">${e(infoAss.nome)}</div>
+      ${infoAss.cargo  ? `<div style="font-size:10pt">${e(infoAss.cargo)}</div>` : ''}
+      ${infoAss.decreto? `<div style="font-size:9.5pt">${e(infoAss.decreto)}</div>` : ''}
+      <div style="font-size:9.5pt">Central de Monitoração Eletrônica – CME/IAPEN</div>
+    </div>` : `<div style="text-align:center;color:#999;margin-top:8px">[selecione/cadastre o assinante]</div>`;
+  const wordNs = isWord ? `xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'` : `lang="pt-BR"`;
+  const printBlock = isWord ? '' : `<div class="no-print" style="text-align:center;padding:24px"><button class="btn-print" onclick="window.print()">\u{1F5A8}\u{FE0F} Imprimir / Salvar como PDF</button><p style="font-size:9pt;color:#777;margin-top:8px">No diálogo escolha <strong>"Salvar como PDF"</strong> e desative <em>Cabeçalhos e rodapés</em>.</p></div><script>window.onload=function(){setTimeout(function(){window.print();},700);};<\/script>`;
+  return `<!DOCTYPE html><html ${wordNs}><head><meta charset="UTF-8"><title>Relatório de Falta de Comunicação — CME/IAPEN</title>
+<style>
+  @page { margin: 2cm; size: A4 portrait; }
+  *,*::before,*::after{box-sizing:border-box}
+  body{font-family:'Times New Roman',Times,serif;font-size:12pt;line-height:1.5;color:#000;margin:0;padding:0}
+  .cabecalho{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .cab-logo img{max-width:80px;max-height:80px;object-fit:contain}
+  .cab-texto{flex:1;text-align:center}
+  .t-gov{font-size:10.5pt;font-weight:bold}.t-sub{font-size:8.5pt;margin:1px 0}.t-cme{font-size:11pt;font-weight:bold;margin-top:4px}
+  .div-main{border:none;border-top:2.5px solid #000;margin:8px 0 16px 0}
+  .titulo-rel{font-size:13pt;font-weight:bold;text-align:center;text-transform:uppercase;margin:0 0 16px 0}
+  .corpo{margin:7px 0;text-align:justify;text-indent:1.25cm}
+  .ident-bloco{border-left:3px solid #000;padding:8px 14px;background:#f7f7f7;margin:12px 0;font-size:11pt}
+  .ident-bloco p{margin:3px 0}
+  .rodape{margin-top:30px;border-top:1px solid #000;padding-top:8px;text-align:center;font-size:8.5pt;color:#444}
+  .rodape p{margin:2px 0}
+  .btn-print{display:block;margin:0 auto;padding:12px 36px;background:#1F4E78;color:#fff;border:none;border-radius:8px;font-size:13pt;cursor:pointer;font-family:Arial}
+  @media print{.no-print{display:none !important}}
+</style></head><body>
+  <div class="cabecalho">
+    <div class="cab-logo">${cmeSrc?`<img src="${cmeSrc}" alt="CME">`:''}</div>
+    <div class="cab-texto">
+      <div class="t-gov">GOVERNO DO ESTADO DO AMAPÁ</div>
+      <div class="t-sub">SECRETARIA DE ESTADO DE JUSTIÇA E SEGURANÇA PÚBLICA</div>
+      <div class="t-sub">INSTITUTO DE ADMINISTRAÇÃO PENITENCIÁRIA DO AMAPÁ</div>
+      <div class="t-cme">CENTRAL DE MONITORAMENTO ELETRÔNICO – CME</div>
+    </div>
+    <div class="cab-logo">${iapenSrc?`<img src="${iapenSrc}" alt="IAPEN">`:''}</div>
+  </div>
+  <hr class="div-main">
+  <div class="titulo-rel">Relatório de Falta de Comunicação do Equipamento de Monitoração Eletrônica</div>
+  <div class="ident-bloco">
+    <p><b>Monitorado(a):</b> ${e(m.nome)}</p>
+    <p><b>Registro/Matrícula:</b> ${e(m.registro)}</p>
+    ${m.unidade?`<p><b>Unidade:</b> ${e(m.unidade)}</p>`:''}
+    <p><b>Última comunicação registrada:</b> ${ultima}</p>
+    <p><b>Tempo sem comunicação:</b> ${dias} dia(s)</p>
+  </div>
+  <p class="corpo">A Central de Monitoramento Eletrônico — CME/IAPEN-AP, no exercício de suas atribuições de acompanhamento da medida de monitoração eletrônica, vem informar a Vossa Excelência que o equipamento de monitoração do(a) monitorado(a) acima identificado(a) encontra-se SEM COMUNICAÇÃO com o sistema oficial AKILES AP.</p>
+  <p class="corpo">Conforme os registros extraídos do referido sistema, a última comunicação válida do equipamento ocorreu em ${ultima}, totalizando ${dias} dia(s) de interrupção até a presente data, o que impossibilita o acompanhamento da localização e dos deslocamentos do(a) monitorado(a) durante esse período.</p>
+  <p class="corpo">A interrupção da comunicação pode decorrer de diversas causas — tais como descarregamento da bateria sem recarga, desligamento, rompimento, permanência em local sem sinal, ou ainda evasão do(a) monitorado(a) —, não sendo possível a esta Central precisar tecnicamente a causa sem a devida apuração.</p>
+  <p class="corpo">As informações contidas neste relatório foram extraídas diretamente do Sistema AKILES AP, plataforma oficial de monitoramento eletrônico adotada por esta Central, reproduzidas na íntegra, sem qualquer modificação, supressão ou acréscimo de conteúdo.</p>
+  <p class="corpo">Dessa forma, encaminham-se as presentes informações para conhecimento e deliberação da autoridade judicial competente, permanecendo esta Central à disposição para os esclarecimentos que se fizerem necessários.</p>
+  <div style="text-align:right;margin-top:24px;font-size:11pt">${dataExtenso}</div>
+  <div style="margin-top:28px">${blocoAss}</div>
+  <div class="rodape">
+    <p>CENTRAL DE MONITORAMENTO ELETRÔNICO – CME</p>
+    <p>Av. Machado de Assis, 372 – Centro – CEP: 68900-066, Macapá-AP</p>
+    <p>E-mail: cme@iapen.ap.gov.br | Telefone: (96) 98415-2844</p>
+    <p style="color:#aaa;margin-top:4px">Gerado em ${dataHora}</p>
+  </div>
+  ${printBlock}
+</body></html>`;
 }
 
 // Navegação sub-abas Gerência
