@@ -17971,11 +17971,15 @@ function rv_importarPlanilha(input) {
   _rv_planilha = file.name;
   const reader = new FileReader();
   reader.onload = e => {
-    let rows = [];
+    let rows = [], rowsData = [];
     try {
       const wb  = XLSX.read(e.target.result, { type: 'array', cellDates: true, raw: false });
       const ws  = wb.Sheets[wb.SheetNames[0]];
       rows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: false });
+      // A data com raw:false vem como TEXTO formatado — e no .xlsx isso perde a HORA
+      // (a célula renderiza só a data). Lemos a mesma planilha com raw:true+cellDates
+      // para a coluna de data vir como Date (com hora), preservando o horário real.
+      rowsData = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true, cellDates: true });
     } catch(err) {
       _mostrarToast('Erro ao ler o arquivo: ' + err.message, 'erro'); return;
     }
@@ -18018,7 +18022,7 @@ function rv_importarPlanilha(input) {
     }
 
     // Normalizar linhas
-    rows = rows.map(r => ({
+    rows = rows.map((r, i) => ({
       nome:        fixEnc(r[cNome]),
       processo:    fixEnc(r[cProc]),
       cpf:         fixEnc(r[cCpf]),
@@ -18026,7 +18030,7 @@ function rv_importarPlanilha(input) {
       comarca:     fixEnc(r[cComarca]),
       tipo:        fixEnc(r[cTipo]),
       idOc:        fixEnc(r[cId]),
-      ocorreu:     (r[cOcorreu] || '').toString().trim(),
+      ocorreu:     _rvOcorreuComHora(rowsData[i] ? rowsData[i][cOcorreu] : null, r[cOcorreu]),
       duracao:     fixEnc(r[cDur]),
       endereco:    cEndereco ? fixEnc(r[cEndereco]) : '',
       contato:     cContato  ? fixEnc(r[cContato])  : '',
@@ -18453,6 +18457,16 @@ function _rvTc(pXml,o){ o=o||{}; let pr='<w:tcPr>'; if(o.w)pr+=`<w:tcW w:w="${o.
 function _rvTcTxt(text,o){ o=o||{}; return _rvTc(_rvPara([_rvRun(text,{b:o.b,font:o.font,size:o.size})],{jc:o.jc}),o); }
 function _rvFmtCpf(c){ const d=String(c||'').replace(/\D/g,''); if(!d)return ''; const p=d.padStart(11,'0'); return `${p.slice(0,3)}.${p.slice(3,6)}.${p.slice(6,9)}-${p.slice(9)}`; }
 function _rvParseDurMin(s){ s=String(s||'').trim(); if(!s||s==='nan')return 0; const d=(s.match(/(\d+)\s*d/)||[0,0])[1]*1440; const h=(s.match(/(\d+)\s*h/)||[0,0])[1]*60; const m=(s.match(/(\d+)\s*min/)||[0,0])[1]*1; return (+d)+(+h)+(+m); }
+// Monta a string da ocorrência preservando a HORA. Quando a planilha traz a data
+// como Date (raw:true), formata DD/MM/AAAA HH:MM; senão usa o texto já formatado
+// (que no CSV já vem com a hora). Conserta o bug do .xlsx que vinha 00:00.
+function _rvOcorreuComHora(rawVal, fmtVal){
+  if(rawVal instanceof Date && !isNaN(rawVal)){
+    const p=n=>String(n).padStart(2,'0');
+    return `${p(rawVal.getDate())}/${p(rawVal.getMonth()+1)}/${rawVal.getFullYear()} ${p(rawVal.getHours())}:${p(rawVal.getMinutes())}`;
+  }
+  return String(fmtVal||'').trim();
+}
 function _rvFmtOcorreu(v){
   if(v==null||v===''||String(v).trim().toLowerCase()==='nan')return '';
   const dias=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
