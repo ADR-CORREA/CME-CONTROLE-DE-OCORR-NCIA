@@ -17940,13 +17940,25 @@ let _rv_pasteAlvo = null; // idOc do slot "armado" para colar (Ctrl+V)
 let _rv_mapsAbertos = {}; // { groupIndex: true } — painéis de mapas expandidos
 let _rv_idGrupo = {};     // { idOc: [groupIndex,...] } — um idOc pode estar em vários grupos (mesmo monitorado, 2 processos)
 
+// Lista de assinantes = usuários do sistema + GARANTE o servidor logado (anexa
+// usuarioAtual se ele não estiver na lista — ex.: lista ainda carregando ou
+// veio incompleta). Usada no dropdown E na geração, pra os índices baterem.
+function _rvListaAssinantes() {
+  const us = (getUsuarios() || []).slice();
+  if (usuarioAtual && usuarioAtual.usuario && !us.some(u => u.usuario === usuarioAtual.usuario)) {
+    us.push(usuarioAtual);
+  }
+  return us;
+}
+
 // ── Inicializar painel ────────────────────────────────────────
 function rv_inicializar() {
   // Popular selects de assinantes com usuários do sistema
-  const us = getUsuarios();
-  const opts = us.map((u,i) =>
-    `<option value="${i}">${u.nome}${u.cargo ? ' — '+u.cargo : ''}${u.assinatura ? ' \u{2705}' : ' \u{26A0}\u{FE0F}'}</option>`
-  ).join('');
+  const us = _rvListaAssinantes();
+  const opts = us.map((u,i) => {
+    const temAss = u.assinatura || (typeof _getAssinaturaDe === 'function' && _getAssinaturaDe(u.usuario));
+    return `<option value="${i}">${u.nome}${u.cargo ? ' — '+u.cargo : ''}${temAss ? ' \u{2705}' : ' \u{26A0}\u{FE0F}'}</option>`;
+  }).join('');
   const sel1 = document.getElementById('rv-assinante');
   const sel2 = document.getElementById('rv-gerente');
   if (sel1) { sel1.innerHTML = '<option value="">-- Selecione o servidor --</option>' + opts; }
@@ -17964,8 +17976,9 @@ function rv_atualizarAssinante() {
   if (!sel || !aviso) return;
   const idx = parseInt(sel.value);
   if (isNaN(idx)) { aviso.style.display = 'none'; return; }
-  const us = getUsuarios();
-  aviso.style.display = us[idx]?.assinatura ? 'none' : '';
+  const us = _rvListaAssinantes();
+  const _u = us[idx];
+  aviso.style.display = (_u && (_u.assinatura || (typeof _getAssinaturaDe === 'function' && _getAssinaturaDe(_u.usuario)))) ? 'none' : '';
 }
 
 // ── Importar planilha AKILES ──────────────────────────────────
@@ -18378,8 +18391,8 @@ function rv_gerarSelecionados(modo = 'html') {
   );
   if (!selecionados.length) { _mostrarToast('Selecione ao menos um monitorado.', 'erro'); return; }
 
-  // Obter info de assinantes
-  const us = getUsuarios();
+  // Obter info de assinantes (mesma lista do dropdown — inclui o logado)
+  const us = _rvListaAssinantes();
   const idxAss = parseInt(document.getElementById('rv-assinante')?.value);
   const idxGer = parseInt(document.getElementById('rv-gerente')?.value);
   let infoAss = isNaN(idxAss) ? null : us[idxAss] || null;
