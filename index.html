@@ -1358,6 +1358,9 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
         </div>
       </div>
 
+      <!-- Calendário de compromissos (Gerência) — de cara no Dashboard (admin/gerência) -->
+      <div id="dash-calendario" style="margin-bottom:16px"></div>
+
       <!-- Guarnição de serviço hoje (escala automática dos plantões) -->
       <div id="dash-plantao-hoje" style="display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,#eff6ff,#f8fafc);border:1px solid #bfdbfe;border-left:5px solid #1d4ed8;border-radius:12px;padding:14px 18px;margin-bottom:16px">
         <span style="font-size:1.7rem;line-height:1">🛡️</span>
@@ -2249,6 +2252,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
     <div class="tab-panel" id="panel-gerencia">
       <div class="sub-tabs">
         <div class="sub-tab active" id="ger-stab-agenda" onclick="mudarSubAbaGer('agenda')">📋 Agenda</div>
+        <div class="sub-tab" id="ger-stab-calendario" onclick="mudarSubAbaGer('calendario')">📅 Calendário</div>
         <div class="sub-tab" id="ger-stab-arquivados" onclick="mudarSubAbaGer('arquivados')">📁 Arquivados</div>
       </div>
       <div class="sub-panel active" id="ger-panel-agenda">
@@ -2298,6 +2302,14 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
             <tbody id="tbody-ger-arquivados"></tbody>
           </table>
         </div>
+      </div>
+
+      <!-- ── Sub-painel: Calendário de Compromissos (sync Google na Fase 2) ── -->
+      <div class="sub-panel" id="ger-panel-calendario">
+        <div class="table-toolbar" style="margin-bottom:14px">
+          <div style="font-weight:600;color:var(--az1)">📅 Calendário de Compromissos</div>
+        </div>
+        <div id="ger-calendario"></div>
       </div>
     </div>
 
@@ -7783,6 +7795,13 @@ function mudarAba(aba) {
 /* ─── ATUALIZAR TUDO ─────────────────────────────────── */
 function atualizarTudo() {
   atualizarDashboard();
+  try {
+    const _dcal = document.getElementById('dash-calendario');
+    if (_dcal) {
+      if (['admin','gerencia'].includes(usuarioAtual?.nivel)) { _dcal.style.display = ''; cal_renderMini('dash-calendario'); }
+      else _dcal.style.display = 'none';
+    }
+  } catch (e) {}
   renderizarCriticos();
   renderizarOcorrencias();
   renderizarJuridico();
@@ -11791,12 +11810,149 @@ function _relSemComDocHTML(m, infoAss, isWord) {
 
 // Navegação sub-abas Gerência
 function mudarSubAbaGer(aba) {
-  ['agenda','arquivados'].forEach(a => {
+  ['agenda','arquivados','calendario'].forEach(a => {
     document.getElementById('ger-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('ger-panel-' + a)?.classList.toggle('active', a === aba);
   });
   if (aba === 'agenda')     renderizarGerencia();
   if (aba === 'arquivados') renderizarGerArquivados();
+  if (aba === 'calendario') cal_render('ger-calendario');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   CALENDÁRIO DE COMPROMISSOS — Gerência (Fase 1: CME/Supabase).
+   Fase 2 (Google Agenda via conta de serviço no Worker) pluga aqui.
+   Store 'compromissos' é compartilhado (sub-gerente + gerente).
+   ════════════════════════════════════════════════════════════════ */
+function getCompromissos() { const a = carregarStore('compromissos', []); return Array.isArray(a) ? a : []; }
+function salvarCompromissos(a) { salvarStore('compromissos', a); }
+const _CAL_MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+let _calRef = null, _calSel = null;
+function _calHojeISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function _calISO(a, m, d) { return `${a}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+function _calFmtBR(iso) { const p = String(iso||'').split('-'); return p.length===3 ? `${p[2]}/${p[1]}/${p[0]}` : iso; }
+function _calCor(ag) { return ag==='gerente' ? '#8957e5' : ag==='ambas' ? '#0891b2' : '#1d4ed8'; }
+function _calLabel(ag) { return ag==='gerente' ? 'Agenda do gerente' : ag==='ambas' ? 'Ambas (você + gerente)' : 'Minha agenda'; }
+function _calDoDia(iso) { return getCompromissos().filter(c => c.data === iso).sort((a,b) => (a.hora||'').localeCompare(b.hora||'')); }
+function _calInit() { if (!_calRef) { const d = new Date(); _calRef = { ano:d.getFullYear(), mes:d.getMonth() }; } if (!_calSel) _calSel = _calHojeISO(); }
+function _calRerender() { if (document.getElementById('ger-calendario')) cal_render('ger-calendario'); if (document.getElementById('dash-calendario')) cal_renderMini('dash-calendario'); }
+function cal_mes(delta) { _calInit(); let m=_calRef.mes+delta, a=_calRef.ano; if(m<0){m=11;a--;} if(m>11){m=0;a++;} _calRef={ano:a,mes:m}; _calRerender(); }
+function cal_selDia(iso) { _calSel = iso; _calRerender(); }
+
+function _calGridHTML() {
+  _calInit();
+  const { ano, mes } = _calRef, hoje = _calHojeISO();
+  const primeiro = new Date(ano, mes, 1).getDay(), nDias = new Date(ano, mes+1, 0).getDate();
+  const porDia = {};
+  getCompromissos().forEach(c => { (porDia[c.data] = porDia[c.data] || new Set()).add(c.agenda||'minha'); });
+  let cells = '';
+  for (let i = 0; i < primeiro; i++) cells += `<div></div>`;
+  for (let d = 1; d <= nDias; d++) {
+    const iso = _calISO(ano, mes, d), isHoje = iso===hoje, isSel = iso===_calSel;
+    const dots = porDia[iso] ? `<div style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);display:flex;gap:2px">${[...porDia[iso]].slice(0,3).map(ag=>`<span style="width:5px;height:5px;border-radius:50%;background:${isSel?'#fff':_calCor(ag)}"></span>`).join('')}</div>` : '';
+    const bg = isSel ? 'background:#1F4E78;color:#fff;font-weight:600' : isHoje ? 'background:#eff6ff;color:#1d4ed8;font-weight:600' : '';
+    cells += `<div onclick="cal_selDia('${iso}')" style="position:relative;padding:8px 0;border-radius:8px;cursor:pointer;${bg}">${d}${dots}</div>`;
+  }
+  return `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <button onclick="cal_mes(-1)" style="border:1px solid #e2e8f0;background:#fff;border-radius:6px;width:30px;height:30px;cursor:pointer;color:#64748b">&lsaquo;</button>
+      <div style="font-weight:600;font-size:15px">${_CAL_MESES[mes]} de ${ano}</div>
+      <button onclick="cal_mes(1)" style="border:1px solid #e2e8f0;background:#fff;border-radius:6px;width:30px;height:30px;cursor:pointer;color:#64748b">&rsaquo;</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:11px;color:#94a3b8;text-align:center;margin-bottom:4px"><div>D</div><div>S</div><div>T</div><div>Q</div><div>Q</div><div>S</div><div>S</div></div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:13px">${cells}</div>
+    <div style="display:flex;gap:14px;margin-top:12px;font-size:11px;color:#64748b">
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#1d4ed8"></span> Minha</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#8957e5"></span> Gerente</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#0891b2"></span> Ambas</span>
+    </div>`;
+}
+
+function _calDiaPanelHTML() {
+  _calInit();
+  const iso = _calSel, lista = _calDoDia(iso);
+  const dt = new Date(iso + 'T12:00:00');
+  const diaSem = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'][isNaN(dt)?0:dt.getDay()];
+  const ehHoje = iso === _calHojeISO();
+  const itens = lista.length ? lista.map(c => `<div style="background:#fff;border:1px solid #e2e8f0;border-left:3px solid ${_calCor(c.agenda)};border-radius:8px;padding:9px 12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="font-family:ui-monospace,monospace;font-size:12px;color:${_calCor(c.agenda)};font-weight:600">${esc(c.hora||'—')}</div>
+        <span onclick="cal_excluir('${esc(c.id)}')" title="Excluir" style="cursor:pointer;color:#cbd5e1;font-size:14px">&times;</span>
+      </div>
+      <div style="font-size:13px;font-weight:500">${esc(c.titulo||'(sem título)')}</div>
+      ${c.descricao?`<div style="font-size:11.5px;color:#64748b;margin-top:2px">${esc(c.descricao)}</div>`:''}
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px">${_calLabel(c.agenda)}</div>
+    </div>`).join('') : `<div style="color:#94a3b8;font-size:12.5px;padding:6px 0">Nenhum compromisso neste dia.</div>`;
+  return `<div style="font-size:12px;color:#64748b">${diaSem}</div>
+    <div style="font-weight:600;font-size:15px;margin-bottom:12px">${_calFmtBR(iso)}${ehHoje?' &mdash; Hoje':''}</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">${itens}</div>
+    <div style="border-top:1px solid #e2e8f0;padding-top:12px">
+      <div style="font-size:12px;font-weight:600;color:#1F4E78;margin-bottom:8px">&#10133; Novo compromisso</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+        <input type="date" id="cal-f-data" value="${iso}" style="border:1px solid #cbd5e1;border-radius:6px;padding:6px 8px;font-size:12px">
+        <input type="time" id="cal-f-hora" style="border:1px solid #cbd5e1;border-radius:6px;padding:6px 8px;font-size:12px">
+      </div>
+      <input id="cal-f-titulo" placeholder="O que é o compromisso..." style="width:100%;border:1px solid #cbd5e1;border-radius:6px;padding:6px 8px;font-size:12px;margin-bottom:6px;box-sizing:border-box">
+      <input id="cal-f-desc" placeholder="Observação (opcional)" style="width:100%;border:1px solid #cbd5e1;border-radius:6px;padding:6px 8px;font-size:12px;margin-bottom:6px;box-sizing:border-box">
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="cal-f-agenda" style="flex:1;border:1px solid #cbd5e1;border-radius:6px;padding:6px 8px;font-size:12px">
+          <option value="ambas">Ambas (você + gerente)</option><option value="minha">Minha agenda</option><option value="gerente">Agenda do gerente</option>
+        </select>
+        <button onclick="cal_salvar()" style="background:#1f883d;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer">Salvar</button>
+      </div>
+      <div style="font-size:10.5px;color:#94a3b8;margin-top:6px">Salvo no CME (compartilhado). <span style="color:#cbd5e1">Sincronização Google: Fase 2.</span></div>
+    </div>`;
+}
+
+function cal_render(elId) {
+  const el = document.getElementById(elId || 'ger-calendario');
+  if (!el) return;
+  el.innerHTML = `<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:0;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#fff;max-width:760px">
+      <div style="padding:16px;border-right:1px solid #eef2f7">${_calGridHTML()}</div>
+      <div style="padding:16px;background:#f8fafc">${_calDiaPanelHTML()}</div>
+    </div>`;
+}
+
+function cal_renderMini(elId) {
+  const el = document.getElementById(elId || 'dash-calendario');
+  if (!el) return;
+  _calInit();
+  const lista = _calDoDia(_calHojeISO());
+  const itens = lista.length ? lista.map(c => `<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9">
+      <span style="font-family:ui-monospace,monospace;font-size:12px;color:${_calCor(c.agenda)};font-weight:600;min-width:42px">${esc(c.hora||'—')}</span>
+      <span style="font-size:12.5px;flex:1">${esc(c.titulo||'')}</span>
+      <span style="width:8px;height:8px;border-radius:50%;background:${_calCor(c.agenda)}"></span>
+    </div>`).join('') : `<div style="color:#94a3b8;font-size:12px;padding:8px 0">Nenhum compromisso hoje.</div>`;
+  el.innerHTML = `<div style="display:grid;grid-template-columns:1.1fr 1fr;gap:14px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px">
+      <div>${_calGridHTML()}</div>
+      <div>
+        <div style="font-size:.74rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">&#128197; Compromissos de hoje</div>
+        ${itens}
+        <div style="margin-top:8px"><span onclick="mudarAba('gerencia');setTimeout(function(){mudarSubAbaGer('calendario')},80)" style="font-size:11.5px;color:#1d4ed8;cursor:pointer">Abrir calendário completo &rarr;</span></div>
+      </div>
+    </div>`;
+}
+
+function cal_salvar() {
+  const data = document.getElementById('cal-f-data')?.value;
+  const hora = document.getElementById('cal-f-hora')?.value || '';
+  const titulo = (document.getElementById('cal-f-titulo')?.value || '').trim();
+  const desc = (document.getElementById('cal-f-desc')?.value || '').trim();
+  const agenda = document.getElementById('cal-f-agenda')?.value || 'ambas';
+  if (!data) return _mostrarToast('Escolha a data.', 'erro');
+  if (!titulo) return _mostrarToast('Escreva o que é o compromisso.', 'erro');
+  const arr = getCompromissos();
+  arr.push({ id: 'cmp_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), data, hora, titulo, descricao: desc, agenda, criadoPor: usuarioAtual?.nome||'', criadoEm: new Date().toISOString() });
+  salvarCompromissos(arr);
+  _calSel = data;
+  _mostrarToast('\u{2705} Compromisso salvo!', 'sucesso');
+  _calRerender();
+}
+
+function cal_excluir(id) {
+  if (!confirm('Excluir este compromisso?')) return;
+  salvarCompromissos(getCompromissos().filter(c => c.id !== id));
+  _mostrarToast('Compromisso excluído.', 'sucesso');
+  _calRerender();
 }
 
 // ── Badge de notificação ──────────────────────────────
