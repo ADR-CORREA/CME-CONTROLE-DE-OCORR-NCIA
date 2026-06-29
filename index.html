@@ -18580,23 +18580,17 @@ async function rv_botaoLote() {
   const ids = [...idsSet];
   if (!ids.length) { _mostrarToast('Marque ao menos um monitorado com violação de zona.', 'erro'); return; }
 
-  let motorLigado = false;
-  try {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 900);
-    const r = await fetch(_RV_MOTOR + '/health', { signal: ctrl.signal });
-    clearTimeout(t);
-    motorLigado = r.ok;
-  } catch { motorLigado = false; }
+  // captura só os slots ainda VAZIOS — re-clicar completa o que faltou.
+  const faltam = ids.filter(id => !_rv_imagens[id]);
+  if (!faltam.length) { _mostrarToast('\u{2705} Todos os mapas já foram capturados.', 'sucesso'); return; }
 
-  if (motorLigado) {
-    // captura só os slots ainda VAZIOS — re-clicar completa o que faltou sem
-    // refazer os que já têm mapa.
-    const faltam = ids.filter(id => !_rv_imagens[id]);
-    if (!faltam.length) { _mostrarToast('\u{2705} Todos os mapas já foram capturados.', 'sucesso'); return; }
-    rv_capturarViaMotor(faltam);
+  // Captura pela NUVEM (fila no Worker): funciona no CME normal (github.io), em
+  // qualquer navegador, SEM localhost e sem bloqueio. O robô precisa estar LIGADO
+  // (ele atende a fila). Se não houver conexão com o servidor, cai no manual.
+  if (typeof _r2Pronto === 'function' && _r2Pronto()) {
+    rv_capturarViaCloud(faltam);
   } else {
-    // motor desligado → método manual (selecionar pasta de prints)
+    _mostrarToast('Sem conexão com o servidor — importando prints manualmente.', 'erro');
     document.getElementById('rv-bulk-input').click();
   }
 }
@@ -18661,6 +18655,58 @@ async function rv_capturarViaMotor(ids) {
     if (btn) { btn.disabled = false; btn.textContent = txtOrig; }
   }
 }
+
+// Captura pela NUVEM: cria um job no Worker; o robô (ligado) atende a fila,
+// captura no AKILES e devolve as imagens. Funciona no github.io, sem localhost.
+async function rv_capturarViaCloud(ids) {
+  const btn = document.getElementById('rv-bulk-btn');
+  const txtOrig = btn ? btn.textContent : '';
+  const barra = document.getElementById('rv-progresso');
+  const setBarra = (feitos, total) => {
+    const pct = total ? Math.round(feitos / total * 100) : 0;
+    const b = document.getElementById('rv-progresso-bar'), t = document.getElementById('rv-progresso-txt'), pc = document.getElementById('rv-progresso-pct');
+    if (b) b.style.width = pct + '%'; if (t) t.textContent = `Capturando ${feitos}/${total}…`; if (pc) pc.textContent = pct + '%';
+  };
+  if (btn) { btn.disabled = true; btn.textContent = '\u{1F916} Enviando ao robô…'; }
+  if (barra) { barra.style.display = 'block'; setBarra(0, ids.length); }
+  _mostrarToast(`\u{1F916} Enviando ${ids.length} mapa(s) ao robô (pela nuvem)… o robô precisa estar LIGADO.`);
+  const base = r2_state.url.replace(/\/$/, '');
+  const H = { 'Authorization': 'Bearer ' + _workerToken() };
+  let jobId = null;
+  try {
+    const r = await fetch(base + '/robo/job', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, H), body: JSON.stringify({ ids }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.jobId) { _mostrarToast(d.erro || d.error || 'Erro ao enviar o pedido ao servidor.', 'erro'); return; }
+    jobId = d.jobId;
+    const inseridos = new Set();
+    let ultProg = -1, semProg = 0, voltas = 0;
+    for (;;) {
+      await new Promise(res => setTimeout(res, 2000));
+      voltas++;
+      let j;
+      try { const jr = await fetch(base + '/robo/job?id=' + encodeURIComponent(jobId), { headers: H }); if (!jr.ok) break; j = await jr.json(); } catch (e) { continue; }
+      setBarra(j.progresso || 0, j.total || ids.length);
+      for (const idOc of (j.prontos || [])) {
+        if (inseridos.has(idOc)) continue;
+        try { const ir = await fetch(base + '/robo/img?id=' + encodeURIComponent(jobId) + '&idOc=' + encodeURIComponent(idOc), { headers: H }); if (ir.ok) { _rvSetImg(idOc, await _blobToDataURL(await ir.blob())); inseridos.add(idOc); } } catch (e) {}
+      }
+      if (j.status === 'concluido') break;
+      if ((j.progresso || 0) !== ultProg) { ultProg = j.progresso || 0; semProg = 0; } else { semProg++; }
+      if (j.status === 'pendente' && semProg >= 18) { _mostrarToast('\u{26A0}\u{FE0F} O robô não respondeu. Ele está LIGADO no seu PC? (LIGAR ROBO.bat)', 'erro'); break; }
+      if (voltas >= 150) break; // trava de segurança (~5 min)
+    }
+    const n = inseridos.size;
+    _mostrarToast(n ? `\u{2705} Captura concluída! ${n} mapa(s) recebido(s).` : 'Nenhum mapa recebido — confira se o robô está ligado.', n ? 'sucesso' : 'erro');
+    if (n) _rvBeep();
+  } catch (e) {
+    _mostrarToast('Não consegui falar com o servidor: ' + e.message, 'erro');
+  } finally {
+    if (jobId) { try { await fetch(base + '/robo/job?id=' + encodeURIComponent(jobId), { method: 'DELETE', headers: H }); } catch (e) {} }
+    if (barra) barra.style.display = 'none';
+    if (btn) { btn.disabled = false; btn.textContent = txtOrig; }
+  }
+}
+function _blobToDataURL(blob) { return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); }); }
 
 function _rvBeep() {
   try {
