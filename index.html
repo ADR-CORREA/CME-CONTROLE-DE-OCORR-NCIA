@@ -1340,6 +1340,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
     <div class="nav-tab" onclick="mudarAba('psicossocial')"><svg viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg> Psicossocial</div>
     <div class="nav-tab" onclick="mudarAba('arquivos')"><svg viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9L9.6 3.9A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg> Arquivos</div>
     <div class="nav-tab gerencia-only" onclick="mudarAba('estatisticas')"><svg viewBox="0 0 24 24"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg> Estatísticas</div>
+    <div class="nav-tab gerencia-only" onclick="mudarAba('mandado')"><svg viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 11V5a2 2 0 0 1 2-2h7l5 5v3"/><circle cx="11.5" cy="16.5" r="3.5"/><path d="m21 21-3-3"/></svg> Mandado de Prisão</div>
   </div>
 
   <!-- CONTEÚDO PRINCIPAL -->
@@ -5253,6 +5254,64 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
       </div>
     </div>
 
+    <!-- ─── MANDADO DE PRISÃO (cruzamento BNMP) ─── -->
+    <div class="tab-panel" id="panel-mandado">
+      <div class="dash-header">
+        <div>
+          <div class="dash-title">🔒 Mandado de Prisão — Cruzamento BNMP</div>
+          <div style="font-size:.82rem;color:#64748b;margin-top:2px">Cruza a lista de mandados de prisão (BNMP) com os monitorados e aponta <b>CONFIRMADOS</b> (nome exato) e <b>PROVÁVEIS</b> (nomes semelhantes, para revisão).</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px">
+        <!-- Card: Mandados -->
+        <div style="background:#fff;border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow)">
+          <div style="font-weight:700;color:var(--az1);font-size:.95rem;margin-bottom:6px">1) Lista de Mandados (BNMP)</div>
+          <div style="font-size:.8rem;color:#64748b;margin-bottom:12px">Planilha de mandados de prisão. Aceita <b>.xlsx, .xls ou .csv</b>.</div>
+          <label style="display:inline-block;background:#1d4ed8;color:#fff;border-radius:8px;padding:8px 16px;font-size:.85rem;font-weight:700;cursor:pointer">
+            📁 Escolher arquivo de mandados
+            <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="mp_arquivoMandados(this)">
+          </label>
+          <div id="mp-mandados-status" style="margin-top:10px;font-size:.82rem;color:#64748b">Nenhum arquivo carregado.</div>
+        </div>
+
+        <!-- Card: Monitorados -->
+        <div style="background:#fff;border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow)">
+          <div style="font-weight:700;color:var(--az1);font-size:.95rem;margin-bottom:6px">2) Lista de Monitorados</div>
+          <div style="font-size:.8rem;color:#64748b;margin-bottom:12px">De onde vêm os monitorados a comparar:</div>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:.85rem">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="radio" name="mp-fonte-mon" value="sistema" checked onchange="mp_fonteMonitorados('sistema')"> Usar monitorados do sistema (CME)
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="radio" name="mp-fonte-mon" value="arquivo" onchange="mp_fonteMonitorados('arquivo')"> Enviar arquivo (.xlsx/.xls/.csv)
+            </label>
+          </div>
+          <div id="mp-mon-arquivo-wrap" style="display:none;margin-top:10px">
+            <label style="display:inline-block;background:#0ea5e9;color:#fff;border-radius:8px;padding:8px 16px;font-size:.85rem;font-weight:700;cursor:pointer">
+              📁 Escolher arquivo de monitorados
+              <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="mp_arquivoMonitorados(this)">
+            </label>
+          </div>
+          <div id="mp-monitorados-status" style="margin-top:10px;font-size:.82rem;color:#64748b"></div>
+        </div>
+      </div>
+
+      <!-- Ação -->
+      <div style="display:flex;align-items:center;gap:12px;margin:18px 0 8px;flex-wrap:wrap">
+        <button onclick="mp_cruzar()" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:.92rem;font-weight:700;cursor:pointer">🚨 Cruzar mandados × monitorados</button>
+        <button id="mp-btn-export" onclick="mp_exportarExcel()" style="display:none;background:#fff;color:#15803d;border:1px solid #16a34a;border-radius:8px;padding:10px 18px;font-size:.88rem;font-weight:700;cursor:pointer">⬇️ Exportar Excel (3 abas)</button>
+        <div id="mp-status" style="font-size:.85rem;color:#64748b"></div>
+      </div>
+
+      <!-- Resultados -->
+      <div id="mp-resultados" style="display:none">
+        <div id="mp-resumo" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px"></div>
+        <div id="mp-sec-confirmados" style="margin-bottom:18px"></div>
+        <div id="mp-sec-provaveis"></div>
+      </div>
+    </div>
+
   </div><!-- /main -->
 </div><!-- /app -->
 
@@ -7710,13 +7769,13 @@ const TABS_POR_NIVEL = {
   psicossocial:  ['dashboard', 'psicossocial', 'links', 'modelos', 'arquivos'],
   estatistica:   ['dashboard', 'estatisticas', 'links', 'arquivos'],
   gerencia:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
-               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'gerencia', 'arquivos', 'estatisticas'],
+               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'gerencia', 'arquivos', 'estatisticas', 'mandado'],
   admin:      ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
-               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia', 'admin', 'arquivos', 'estatisticas'],
+               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia', 'admin', 'arquivos', 'estatisticas', 'mandado'],
 };
 
 const _TAB_MAP = { dashboard:0, criticos:1, ocorrencias:2, juridico:3, comunicacao:4,
-                   estoque:5, triagem:6, relatorio:7, links:8, modelos:9, gerencia:10, admin:11, psicossocial:12, arquivos:13, estatisticas:14 };
+                   estoque:5, triagem:6, relatorio:7, links:8, modelos:9, gerencia:10, admin:11, psicossocial:12, arquivos:13, estatisticas:14, mandado:15 };
 
 function aplicarVisibilidadeTabs(nivel) {
   const permitidas = TABS_POR_NIVEL[nivel] || TABS_POR_NIVEL['plantao'];
@@ -7775,7 +7834,7 @@ function mudarAba(aba) {
   document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
   const tabs = document.querySelectorAll(".nav-tab");
-  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, comunicacao: 4, estoque: 5, triagem: 6, relatorio: 7, links: 8, modelos: 9, gerencia: 10, admin: 11, psicossocial: 12, arquivos: 13, estatisticas: 14 };
+  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, comunicacao: 4, estoque: 5, triagem: 6, relatorio: 7, links: 8, modelos: 9, gerencia: 10, admin: 11, psicossocial: 12, arquivos: 13, estatisticas: 14, mandado: 15 };
   if (tabs[map[aba]]) tabs[map[aba]].classList.add("active");
   const panel = document.getElementById("panel-" + aba);
   if (panel) panel.classList.add("active");
@@ -7795,6 +7854,7 @@ function mudarAba(aba) {
   if (aba === "admin") { renderizarUsers(); renderizarLogs(); _adminAuditCache = null; admin_mudarTabAudit('sistema'); }
   if (aba === "arquivos") { r2_inicializarAba(); }
   if (aba === "estatisticas") { estat_inicializar(); }
+  if (aba === "mandado") { mp_inicializar(); }
 }
 
 /* ─── ATUALIZAR TUDO ─────────────────────────────────── */
@@ -14759,6 +14819,214 @@ function renderizarLinks() {
       </div>
     </a>
   `).join('');
+}
+
+/* ═══════════════════════ MÓDULO MANDADO DE PRISÃO (cruzamento BNMP) ═══════════════════════ */
+// Porta do sistema Python (cruzar_bnmp_pdf.py): cruza nomes de MANDADOS de prisão
+// com os MONITORADOS → CONFIRMADOS (exato) + PROVÁVEIS (fuzzy >= 90). Entrada por
+// planilha (XLS/XLSX/CSV). Só gerência e admin têm acesso (TABS_POR_NIVEL).
+let _mpMandados = null;        // { nomes:[], arquivo:'' }
+let _mpMonitoradosArq = null;  // { nomes:[], arquivo:'' }
+let _mpFonteMon = 'sistema';   // 'sistema' | 'arquivo'
+let _mpResultado = null;       // { confirmados, provaveis, resumo }
+
+const _MP_STOPWORDS = new Set(["PROCESSO","PROCEDIMENTO","COMARCA","VARA","JUIZ","JUIZA","MAGISTRADO","MANDADO","PRISAO","CNJ","SEEU","TJAP","IAPEN","IEPEN","CME","ENDERECO","NASCIMENTO","DATA","CPF","RG","MAE","PAI","NATURALIDADE","UF","ESTADO","BRASIL","PODER","JUDICIARIO","MINISTERIO","PUBLICO","DEFENSORIA","ADVOGADO","ART","LEI","DECRETO","RELATORIO","PAGINA","NOME","FILIACAO","GENITORA","GENITOR","SEXO","IDADE","ALCUNHA","VULGO"]);
+const _MP_NOME_RX = /[A-ZÀ-Ü]{2,}(?:\s+[A-ZÀ-Ü]{2,}){1,6}/g;
+
+function _mpEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function _mpNormalizar(s){
+  if(s==null) return '';
+  s=String(s).trim().toUpperCase().replace(/ /g,' ');
+  s=s.normalize('NFKD').replace(/[̀-ͯ]/g,'').replace(/Ç/g,'C');
+  return s.replace(/[^A-Z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+}
+
+// Filtra um candidato a nome (>=2 palavras, sem dígitos, não cabeçalho institucional).
+function _mpLimparNome(nome){
+  const n=_mpNormalizar(nome);
+  const parts=n.split(' ').filter(Boolean);
+  if(parts.length<2) return '';
+  let stop=0; for(const p of parts) if(_MP_STOPWORDS.has(p)) stop++;
+  if(stop>=2) return '';
+  if(/\d/.test(n)) return '';
+  return n;
+}
+
+function _mpExtrairNomesDeTexto(texto){
+  if(!texto) return [];
+  const cands=String(texto).toUpperCase().match(_MP_NOME_RX)||[];
+  const vistos=new Set(), nomes=[];
+  for(const c of cands){ const n=_mpLimparNome(c); if(n && !vistos.has(n)){ vistos.add(n); nomes.push(n); } }
+  return nomes;
+}
+
+function _mpLerArquivo(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=(e)=>{ try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      resolve(XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false}));
+    }catch(err){ reject(err); } };
+    r.onerror=reject;
+    r.readAsArrayBuffer(file);
+  });
+}
+
+// Tira nomes de linhas (array-of-arrays): acha a coluna "Nome"; se não houver, varre tudo.
+function _mpNomesDeRows(rows){
+  if(!rows || !rows.length) return [];
+  const header=(rows[0]||[]).map(c=>_mpNormalizar(c));
+  let colNome=-1;
+  for(let i=0;i<header.length;i++){ if(/NOME/.test(header[i]) && !/(MAE|PAI|FILIACAO|GENITOR)/.test(header[i])){ colNome=i; break; } }
+  if(colNome<0){ return _mpExtrairNomesDeTexto(rows.map(r=>(r||[]).join(' ')).join('\n')); }
+  const vistos=new Set(), nomes=[];
+  for(let i=1;i<rows.length;i++){ const n=_mpLimparNome((rows[i]||[])[colNome]); if(n && !vistos.has(n)){ vistos.add(n); nomes.push(n); } }
+  return nomes;
+}
+
+// Fuzzy (Levenshtein → ratio + token-sort), equivalente ao rapidfuzz/difflib do Python.
+function _mpLeven(a,b){
+  const m=a.length,n=b.length; if(!m) return n; if(!n) return m;
+  let prev=new Array(n+1),cur=new Array(n+1);
+  for(let j=0;j<=n;j++) prev[j]=j;
+  for(let i=1;i<=m;i++){ cur[0]=i;
+    for(let j=1;j<=n;j++){ const cost=a.charCodeAt(i-1)===b.charCodeAt(j-1)?0:1; cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+cost); }
+    const t=prev; prev=cur; cur=t;
+  }
+  return prev[n];
+}
+function _mpRatio(a,b){ if(!a&&!b) return 100; const max=Math.max(a.length,b.length)||1; return Math.round((1-_mpLeven(a,b)/max)*100); }
+function _mpTokenSort(a,b){ return _mpRatio(a.split(' ').filter(Boolean).sort().join(' '), b.split(' ').filter(Boolean).sort().join(' ')); }
+function _mpFuzzy(a,b){ return Math.max(_mpRatio(a,b),_mpTokenSort(a,b)); }
+
+function _mpNomesMonitoradosSistema(){
+  let lista=[]; try{ lista=(getSemCom().monitorados||[]); }catch(e){}
+  const vistos=new Set(), nomes=[];
+  for(const m of lista){ const n=_mpLimparNome(m && m.nome); if(n && !vistos.has(n)){ vistos.add(n); nomes.push(n); } }
+  return nomes;
+}
+
+function mp_inicializar(){
+  _mpResultado=null;
+  const res=document.getElementById('mp-resultados'); if(res) res.style.display='none';
+  const exp=document.getElementById('mp-btn-export'); if(exp) exp.style.display='none';
+  const st=document.getElementById('mp-status'); if(st) st.textContent='';
+  _mpAtualizarStatusMon();
+}
+
+function mp_fonteMonitorados(tipo){
+  _mpFonteMon=tipo;
+  const w=document.getElementById('mp-mon-arquivo-wrap'); if(w) w.style.display = tipo==='arquivo' ? '' : 'none';
+  _mpAtualizarStatusMon();
+}
+
+function _mpAtualizarStatusMon(){
+  const el=document.getElementById('mp-monitorados-status'); if(!el) return;
+  if(_mpFonteMon==='sistema'){
+    el.innerHTML='Usando <b>'+_mpNomesMonitoradosSistema().length+'</b> monitorado(s) do sistema (Sem Comunicação/CME).';
+  }else{
+    el.innerHTML = _mpMonitoradosArq ? ('Arquivo: <b>'+_mpEsc(_mpMonitoradosArq.arquivo)+'</b> — '+_mpMonitoradosArq.nomes.length+' nome(s).') : 'Nenhum arquivo de monitorados carregado.';
+  }
+}
+
+async function mp_arquivoMandados(input){
+  const f=input.files&&input.files[0]; if(!f) return;
+  const st=document.getElementById('mp-mandados-status'); if(st) st.textContent='Lendo '+f.name+'…';
+  try{ const nomes=_mpNomesDeRows(await _mpLerArquivo(f)); _mpMandados={nomes,arquivo:f.name};
+    if(st) st.innerHTML='Arquivo: <b>'+_mpEsc(f.name)+'</b> — <b>'+nomes.length+'</b> nome(s) de mandado.';
+  }catch(e){ _mpMandados=null; if(st) st.innerHTML='<span style="color:#dc2626">Erro ao ler: '+_mpEsc(e.message||String(e))+'</span>'; }
+}
+
+async function mp_arquivoMonitorados(input){
+  const f=input.files&&input.files[0]; if(!f) return;
+  const st=document.getElementById('mp-monitorados-status'); if(st) st.textContent='Lendo '+f.name+'…';
+  try{ const nomes=_mpNomesDeRows(await _mpLerArquivo(f)); _mpMonitoradosArq={nomes,arquivo:f.name}; _mpAtualizarStatusMon();
+  }catch(e){ _mpMonitoradosArq=null; if(st) st.innerHTML='<span style="color:#dc2626">Erro ao ler: '+_mpEsc(e.message||String(e))+'</span>'; }
+}
+
+function mp_cruzar(){
+  if(!_mpMandados || !_mpMandados.nomes.length){ _mostrarToast('Carregue a planilha de mandados primeiro.','erro'); return; }
+  const nomesMon = _mpFonteMon==='sistema' ? _mpNomesMonitoradosSistema() : (_mpMonitoradosArq ? _mpMonitoradosArq.nomes : []);
+  if(!nomesMon.length){ _mostrarToast(_mpFonteMon==='sistema' ? 'Não há monitorados no sistema (importe na aba Jurídico/Sem Comunicação) ou envie um arquivo.' : 'Carregue a planilha de monitorados.','erro'); return; }
+  const st=document.getElementById('mp-status'); if(st) st.textContent='Cruzando… aguarde.';
+  setTimeout(()=>_mpCruzarExec(nomesMon), 30);
+}
+
+function _mpCruzarExec(nomesMon){
+  const MIN=90;
+  const setMan=new Set(_mpMandados.nomes);
+  const confirmados=[], provaveis=[], confSet=new Set();
+  for(const n of nomesMon){ if(setMan.has(n)){ confirmados.push({monitorado:n,mandado:n,tipo:'EXATO',score:100}); confSet.add(n); } }
+  for(const n of nomesMon){
+    if(confSet.has(n)) continue;
+    let best=null;
+    for(const m of _mpMandados.nomes){
+      if(m===n) continue;
+      if(Math.abs(m.length-n.length) > Math.max(m.length,n.length)*0.25) continue; // não pode ser >=90%
+      const sc=_mpFuzzy(n,m);
+      if(sc>=MIN && (!best || sc>best.score)) best={mandado:m,score:sc};
+    }
+    if(best) provaveis.push({monitorado:n,mandado:best.mandado,tipo:'FUZZY',score:best.score});
+  }
+  provaveis.sort((a,b)=>b.score-a.score);
+  _mpResultado={ confirmados, provaveis, resumo:{
+    data_execucao: new Date().toLocaleString('pt-BR'),
+    fonte_monitorados: _mpFonteMon==='sistema' ? 'Sistema (CME)' : (_mpMonitoradosArq?_mpMonitoradosArq.arquivo:''),
+    arquivo_mandados: _mpMandados.arquivo,
+    nomes_monitorados: nomesMon.length,
+    nomes_mandados: _mpMandados.nomes.length,
+    confirmados_total: confirmados.length,
+    provaveis_total: provaveis.length,
+    fuzzy_score_min: MIN
+  }};
+  _mpRender();
+  const st=document.getElementById('mp-status'); if(st) st.textContent='';
+  if(confirmados.length) _mostrarToast('\u{1F6A8} '+confirmados.length+' monitorado(s) com mandado de prisão CONFIRMADO!','erro');
+  else _mostrarToast('Cruzamento concluído: nenhum confirmado. '+provaveis.length+' provável(is) para revisar.','sucesso');
+}
+
+function _mpRender(){
+  const r=_mpResultado; if(!r) return;
+  document.getElementById('mp-resultados').style.display='';
+  document.getElementById('mp-btn-export').style.display='';
+  const card=(cor,bg,label,val)=>'<div style="flex:1;min-width:150px;background:'+bg+';border:1px solid '+cor+'33;border-radius:10px;padding:14px"><div style="font-size:1.7rem;font-weight:800;color:'+cor+'">'+val+'</div><div style="font-size:.75rem;color:#475569;text-transform:uppercase;letter-spacing:.04em;margin-top:2px">'+label+'</div></div>';
+  document.getElementById('mp-resumo').innerHTML =
+    card('#dc2626','#fef2f2','Confirmados (mandado ativo)',r.confirmados.length) +
+    card('#d97706','#fffbeb','Prováveis (revisar)',r.provaveis.length) +
+    card('#0369a1','#f0f9ff','Monitorados comparados',r.resumo.nomes_monitorados) +
+    card('#475569','#f8fafc','Mandados na lista',r.resumo.nomes_mandados);
+  document.getElementById('mp-sec-confirmados').innerHTML = _mpTabela('\u{1F6A8} CONFIRMADOS — monitorados com mandado de prisão (nome exato)','#dc2626', r.confirmados, true);
+  document.getElementById('mp-sec-provaveis').innerHTML = _mpTabela('\u{26A0}\u{FE0F} PROVÁVEIS — nomes semelhantes (revisar manualmente)','#d97706', r.provaveis, false);
+}
+
+function _mpTabela(titulo,cor,lista,exato){
+  let h='<div style="font-weight:700;color:'+cor+';font-size:.95rem;margin-bottom:8px">'+titulo+' ('+lista.length+')</div>';
+  if(!lista.length) return h+'<div style="font-size:.85rem;color:#64748b;background:#f8fafc;border-radius:8px;padding:14px">Nenhum registro.</div>';
+  h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.85rem"><thead><tr style="background:#f1f5f9;text-align:left">'
+    +'<th style="padding:8px 10px;border-bottom:1px solid #e2e8f0">Monitorado</th>'
+    +'<th style="padding:8px 10px;border-bottom:1px solid #e2e8f0">Mandado (nome encontrado)</th>'
+    +(exato?'':'<th style="padding:8px 10px;border-bottom:1px solid #e2e8f0">Semelhança</th>')
+    +'</tr></thead><tbody>';
+  for(const x of lista){
+    h+='<tr><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;font-weight:600">'+_mpEsc(x.monitorado)+'</td>'
+      +'<td style="padding:7px 10px;border-bottom:1px solid #f1f5f9">'+_mpEsc(x.mandado)+'</td>'
+      +(exato?'':'<td style="padding:7px 10px;border-bottom:1px solid #f1f5f9"><b>'+x.score+'%</b></td>')+'</tr>';
+  }
+  return h+'</tbody></table></div>';
+}
+
+function mp_exportarExcel(){
+  if(!_mpResultado){ _mostrarToast('Faça o cruzamento primeiro.','erro'); return; }
+  const r=_mpResultado;
+  const vazio=[{MONITORADO:'',MANDADO:'',MATCH:'',SCORE:''}];
+  const map=l=>l.map(x=>({MONITORADO:x.monitorado,MANDADO:x.mandado,MATCH:x.tipo,SCORE:x.score}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r.confirmados.length?map(r.confirmados):vazio), 'CONFIRMADOS');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r.provaveis.length?map(r.provaveis):vazio), 'PROVAVEIS');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Object.entries(r.resumo).map(([k,v])=>({CHAVE:k,VALOR:v}))), 'RESUMO');
+  XLSX.writeFile(wb, 'cruzamento_mandados_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 
 /* ═══════════════════════ MÓDULO MODELOS ═══════════════════════ */
