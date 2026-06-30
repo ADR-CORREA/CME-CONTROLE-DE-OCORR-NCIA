@@ -2419,6 +2419,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
               <option>ALTERAÇÃO ENDEREÇO/ZONA</option>
               <option>VINCULAÇÃO – DPP</option>
               <option>DESVINCULAÇÃO – DPP</option>
+              <option>TERMO DE DEVOLUÇÃO – DPP</option>
               <option>COMPARECIMENTO NA CENTRAL</option>
             </select>
           </div>
@@ -2600,6 +2601,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
                   <option value="upr-nao-comparecimento">Termo de Não Comparecimento</option>
                   <option value="upr-oficio">Ofício ao Juízo — Manifestação da Vítima</option>
                   <option value="upr-ausencia">Termo de Ausência de Interesse em Receber UPR</option>
+                  <option value="upr-devolucao">Termo de Devolução da UPR pela Vítima</option>
                 </optgroup>
               </select>
             </div>
@@ -14826,11 +14828,11 @@ function gerarModelo() {
   // Mostrar/ocultar campos dinâmicos
   const camposTNZ         = ['TROCA/SUBSTITUIÇÃO DE TORNOZELEIRA'];
   const camposTNZUnit     = ['VINCULAÇÃO','VINCULAÇÃO JVD','DESVINCULAÇÃO','INSPEÇÃO DE TORNOZELEIRA','TEMPO LIMITE AUSÊNCIA GPRS','TERMO DE ROMPIMENTO DE TORNOZELEIRA'];
-  const camposDPP         = ['VINCULAÇÃO – DPP','DESVINCULAÇÃO – DPP'];
+  const camposDPP         = ['VINCULAÇÃO – DPP','DESVINCULAÇÃO – DPP','TERMO DE DEVOLUÇÃO – DPP'];
   const camposZona        = ['JUSTIFICATIVA DE SAÍDA DE ZONA','JUSTIFICATIVA ATESTADO MÉDICO','ALTERAÇÃO ENDEREÇO/ZONA','TERMO DE ROMPIMENTO DE TORNOZELEIRA'];
   const camposPermuta     = ['PERMUTA SERVIDOR/PLANTÃO'];
   const camposComparec    = ['COMPARECIMENTO NA CENTRAL'];
-  const camposCPF         = ['COMPARECIMENTO NA CENTRAL','TERMO DE ROMPIMENTO DE TORNOZELEIRA'];
+  const camposCPF         = ['COMPARECIMENTO NA CENTRAL','TERMO DE ROMPIMENTO DE TORNOZELEIRA','TERMO DE DEVOLUÇÃO – DPP'];
 
   const setDisplay = (id, show) => {
     const el = document.getElementById(id);
@@ -15060,6 +15062,34 @@ O dispositivo foi recolhido por esta Central de Monitoramento Eletrônico, encer
 Servidor responsável pela desvinculação: ${servidor}
 Policial Penal
 Plantão: ${plantao}`,
+
+    'TERMO DE DEVOLUÇÃO – DPP': `
+Registramos nesta data (${dataFmt}) a DEVOLUÇÃO ESPONTÂNEA do DISPOSITIVO DE PROTEÇÃO PESSOAL (DPP) — "Botão do Pânico" — pela usuária/vítima abaixo identificada, que o utilizou durante a vigência da medida protetiva:
+
+• USUÁRIA/VÍTIMA: ${monit}
+• CPF: ${cpf}
+• PROCESSO/ALVARÁ: ${processo}
+• Nº DE SÉRIE/IMEI DO DPP: ${dpp}
+• DATA DA DEVOLUÇÃO: ${dataFmt}
+
+A usuária/vítima compareceu espontaneamente a esta Central de Monitoramento Eletrônico e DEVOLVEU o referido dispositivo, declarando não mais necessitar de sua utilização. O equipamento foi recebido por esta Central e encaminhado ao setor competente para triagem e manutenção, encerrando-se a disponibilização do "Botão do Pânico".
+
+A usuária/vítima foi orientada de que a devolução encerra o monitoramento preventivo por meio do DPP, podendo, caso volte a necessitar da medida, comparecer novamente à CME ou requerer ao Juízo competente.
+
+Servidor responsável pelo recebimento: ${servidor}
+Policial Penal
+Plantão: ${plantao}
+
+
+_____________________________________________
+${monit}
+Usuária/Vítima
+
+
+_____________________________________________
+${servidor}
+Policial Penal
+Assinatura do Servidor`,
 
     'COMPARECIMENTO NA CENTRAL': `
 DECLARAMOS que o (a) monitorado (a) abaixo identificado (a) compareceu pessoalmente à CENTRAL DE MONITORAMENTO ELETRÔNICO — CME/IAPEN-AP na data e horário indicados:
@@ -16018,6 +16048,35 @@ A presente manifestação é feita de forma livre, consciente e espontânea, est
 
 ${_assinaturaVitimaTec()}`;
 
+  } else if (modelo === 'upr-devolucao') {
+    const cpf = _mV('multi-cpf-vitima') || '___.___.___-__';
+    texto =
+`GOVERNO DO ESTADO DO AMAPÁ
+SECRETARIA DE ESTADO DE JUSTIÇA E SEGURANÇA PÚBLICA
+INSTITUTO DE ADMINISTRAÇÃO PENITENCIÁRIA DO AMAPÁ
+CENTRAL DE MONITORAMENTO ELETRÔNICO – CME
+
+${_linha(60)}
+
+TERMO DE DEVOLUÇÃO DA UNIDADE DE RASTREAMENTO PREVENTIVO – UPR
+
+${_linha(60)}
+
+Nome da vítima: ${vitima}
+Processo nº:    ${processo}
+Ação:           Medidas Protetivas de Urgência – Lei nº 11.340/2006 (Lei Maria da Penha)
+Agressor:       ${reu}
+
+Eu, ${vitima}, portadora do CPF nº ${cpf}, na condição de vítima no processo supracitado, declaro que recebi da Central de Monitoramento Eletrônico – CME a Unidade de Rastreamento Preventivo – UPR ("Botão do Pânico"), a qual utilizei durante o período de vigência da medida protetiva.
+
+Declaro que, na presente data, compareço espontaneamente a esta Central e DEVOLVO o referido dispositivo, por não mais necessitar de sua utilização, sendo o equipamento entregue em condições regulares de funcionamento.
+
+Declaro, ainda, estar ciente de que a devolução encerra o monitoramento preventivo por meio da UPR e que tal decisão será comunicada ao Juízo competente, podendo, caso volte a necessitar da medida, comparecer novamente à CME ou requerer ao Juízo competente.
+
+A presente manifestação é feita de forma livre, consciente e espontânea.
+
+${_assinaturaVitimaTec()}`;
+
   } else {
     texto = '';
   }
@@ -16079,7 +16138,8 @@ function imprimirModeloMulti() {
     'upr-orientacao':'Termo de Orientação UPR',
     'upr-nao-comparecimento':'Termo de Não Comparecimento',
     'upr-oficio':'Ofício ao Juízo',
-    'upr-ausencia':'Termo de Ausência de Interesse em Receber UPR'
+    'upr-ausencia':'Termo de Ausência de Interesse em Receber UPR',
+    'upr-devolucao':'Termo de Devolução UPR'
   };
   const tituloDoc = nomes[modelo] || 'Documento';
 
