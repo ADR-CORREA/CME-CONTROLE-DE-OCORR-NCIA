@@ -5299,14 +5299,28 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
 
       <!-- Ação -->
       <div style="display:flex;align-items:center;gap:12px;margin:18px 0 8px;flex-wrap:wrap">
-        <button onclick="mp_cruzar()" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:.92rem;font-weight:700;cursor:pointer">🚨 Cruzar mandados × monitorados</button>
+        <button id="mp-btn-cruzar" onclick="mp_cruzar()" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:.92rem;font-weight:700;cursor:pointer">🚨 Cruzar mandados × monitorados</button>
         <button id="mp-btn-export" onclick="mp_exportarExcel()" style="display:none;background:#fff;color:#15803d;border:1px solid #16a34a;border-radius:8px;padding:10px 18px;font-size:.88rem;font-weight:700;cursor:pointer">⬇️ Exportar Excel (3 abas)</button>
         <div id="mp-status" style="font-size:.85rem;color:#64748b"></div>
       </div>
 
+      <!-- Barra de progresso do cruzamento (fuzzy pode demorar em bases grandes) -->
+      <div id="mp-progresso" style="display:none;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:.72rem;color:#b91c1c;margin-bottom:3px">
+          <span id="mp-progresso-txt">Comparando…</span>
+          <span id="mp-progresso-pct" style="font-variant-numeric:tabular-nums">0%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden">
+            <div id="mp-progresso-bar" style="height:100%;width:0%;background:#dc2626;border-radius:999px;transition:width .2s"></div>
+          </div>
+          <button id="mp-cancelar-btn" type="button" onclick="mp_cancelarCruzamento()" title="Cancelar o cruzamento" style="flex:none;font-size:.7rem;padding:2px 10px;border:1px solid #dc2626;border-radius:5px;background:#fff;color:#dc2626;cursor:pointer;white-space:nowrap">&times; Cancelar</button>
+        </div>
+      </div>
+
       <!-- Resultados -->
       <div id="mp-resultados" style="display:none">
-        <div id="mp-resumo" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px"></div>
+        <div id="mp-resumo" style="margin-bottom:16px"></div>
         <div id="mp-sec-confirmados" style="margin-bottom:18px"></div>
         <div id="mp-sec-provaveis"></div>
       </div>
@@ -14861,29 +14875,59 @@ function _mpExtrairNomesDeTexto(texto){
   return nomes;
 }
 
+// Lê o WORKBOOK inteiro (não fixa em "a primeira aba") — planilhas reais do
+// AKILES/BNMP costumam ter uma aba de "capa"/título antes da aba com os dados
+// (ex.: Sheet1 = título, Sheet2 = dados reais). Quem decide qual aba usar é
+// _mpNomesDeWorkbook, que varre todas.
 function _mpLerArquivo(file){
   return new Promise((resolve,reject)=>{
     const r=new FileReader();
-    r.onload=(e)=>{ try{
-      const wb=XLSX.read(e.target.result,{type:'array'});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      resolve(XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false}));
-    }catch(err){ reject(err); } };
+    r.onload=(e)=>{ try{ resolve(XLSX.read(e.target.result,{type:'array'})); }catch(err){ reject(err); } };
     r.onerror=reject;
     r.readAsArrayBuffer(file);
   });
 }
 
-// Tira nomes de linhas (array-of-arrays): acha a coluna "Nome"; se não houver, varre tudo.
-function _mpNomesDeRows(rows){
-  if(!rows || !rows.length) return [];
-  const header=(rows[0]||[]).map(c=>_mpNormalizar(c));
-  let colNome=-1;
-  for(let i=0;i<header.length;i++){ if(/NOME/.test(header[i]) && !/(MAE|PAI|FILIACAO|GENITOR)/.test(header[i])){ colNome=i; break; } }
-  if(colNome<0){ return _mpExtrairNomesDeTexto(rows.map(r=>(r||[]).join(' ')).join('\n')); }
-  const vistos=new Set(), nomes=[];
-  for(let i=1;i<rows.length;i++){ const n=_mpLimparNome((rows[i]||[])[colNome]); if(n && !vistos.has(n)){ vistos.add(n); nomes.push(n); } }
-  return nomes;
+// Acha a coluna cujo cabeçalho é "Nome" (exato, não "Nome da Mãe"/"Nome do Pai").
+function _mpAcharColunaNome(headerRow){
+  const header=(headerRow||[]).map(c=>_mpNormalizar(c));
+  for(let i=0;i<header.length;i++){
+    const h=header[i];
+    if(/\bNOME\b/.test(h) && !/(MAE|PAI|GENITOR|FILIACAO)/.test(h)) return i;
+  }
+  return -1;
+}
+
+// Procura a LINHA de cabeçalho dentro das primeiras ~20 linhas da aba (relatórios
+// do BNMP/AKILES costumam ter 2-4 linhas de título antes do cabeçalho de verdade).
+// Retorna {nomes, headerLinha, coluna} ou null se a aba não tem coluna "Nome".
+function _mpNomesDeSheetRows(rows){
+  if(!rows || !rows.length) return null;
+  const limite=Math.min(rows.length,20);
+  for(let h=0;h<limite;h++){
+    const col=_mpAcharColunaNome(rows[h]);
+    if(col<0) continue;
+    const vistos=new Set(), nomes=[];
+    for(let i=h+1;i<rows.length;i++){ const n=_mpLimparNome((rows[i]||[])[col]); if(n && !vistos.has(n)){ vistos.add(n); nomes.push(n); } }
+    return { nomes, headerLinha:h, coluna:col };
+  }
+  return null;
+}
+
+// Varre TODAS as abas do workbook. Usa a primeira aba onde acha uma coluna
+// "Nome" clara (evita ler a aba de capa/título). Se NENHUMA aba tiver coluna
+// "Nome", cai para extração livre de texto na aba com MAIS linhas (evita pegar
+// a aba de capa, que é sempre pequena).
+function _mpNomesDeWorkbook(wb){
+  let melhorRows=null, melhorLen=-1, melhorAba='';
+  for(const nomeAba of wb.SheetNames){
+    const ws=wb.Sheets[nomeAba];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+    if(rows.length>melhorLen){ melhorLen=rows.length; melhorRows=rows; melhorAba=nomeAba; }
+    const r=_mpNomesDeSheetRows(rows);
+    if(r && r.nomes.length) return { nomes:r.nomes, aba:nomeAba, modo:'coluna' };
+  }
+  return { nomes:_mpExtrairNomesDeTexto((melhorRows||[]).map(r=>(r||[]).join(' ')).join('\n')), aba:melhorAba, modo:'texto-livre' };
 }
 
 // Fuzzy (Levenshtein → ratio + token-sort), equivalente ao rapidfuzz/difflib do Python.
@@ -14927,49 +14971,97 @@ function _mpAtualizarStatusMon(){
   if(_mpFonteMon==='sistema'){
     el.innerHTML='Usando <b>'+_mpNomesMonitoradosSistema().length+'</b> monitorado(s) do sistema (Sem Comunicação/CME).';
   }else{
-    el.innerHTML = _mpMonitoradosArq ? ('Arquivo: <b>'+_mpEsc(_mpMonitoradosArq.arquivo)+'</b> — '+_mpMonitoradosArq.nomes.length+' nome(s).') : 'Nenhum arquivo de monitorados carregado.';
+    el.innerHTML = _mpMonitoradosArq
+      ? ('Arquivo: <b>'+_mpEsc(_mpMonitoradosArq.arquivo)+'</b> — '+_mpMonitoradosArq.nomes.length+' nome(s) <span style="color:#94a3b8">(aba "'+_mpEsc(_mpMonitoradosArq.aba||'')+'")</span>.'
+         + (!_mpMonitoradosArq.nomes.length ? '<br><span style="color:#dc2626">Nenhum nome encontrado — confira se a planilha tem uma coluna "Nome".</span>' : ''))
+      : 'Nenhum arquivo de monitorados carregado.';
   }
 }
 
 async function mp_arquivoMandados(input){
   const f=input.files&&input.files[0]; if(!f) return;
   const st=document.getElementById('mp-mandados-status'); if(st) st.textContent='Lendo '+f.name+'…';
-  try{ const nomes=_mpNomesDeRows(await _mpLerArquivo(f)); _mpMandados={nomes,arquivo:f.name};
-    if(st) st.innerHTML='Arquivo: <b>'+_mpEsc(f.name)+'</b> — <b>'+nomes.length+'</b> nome(s) de mandado.';
+  try{
+    const r=_mpNomesDeWorkbook(await _mpLerArquivo(f));
+    _mpMandados={nomes:r.nomes, arquivo:f.name};
+    if(st) st.innerHTML='Arquivo: <b>'+_mpEsc(f.name)+'</b> — <b>'+r.nomes.length+'</b> nome(s) de mandado <span style="color:#94a3b8">(aba "'+_mpEsc(r.aba)+'")</span>.'
+      + (!r.nomes.length ? '<br><span style="color:#dc2626">Nenhum nome encontrado — confira se a planilha tem uma coluna "Nome".</span>' : '');
   }catch(e){ _mpMandados=null; if(st) st.innerHTML='<span style="color:#dc2626">Erro ao ler: '+_mpEsc(e.message||String(e))+'</span>'; }
 }
 
 async function mp_arquivoMonitorados(input){
   const f=input.files&&input.files[0]; if(!f) return;
   const st=document.getElementById('mp-monitorados-status'); if(st) st.textContent='Lendo '+f.name+'…';
-  try{ const nomes=_mpNomesDeRows(await _mpLerArquivo(f)); _mpMonitoradosArq={nomes,arquivo:f.name}; _mpAtualizarStatusMon();
+  try{
+    const r=_mpNomesDeWorkbook(await _mpLerArquivo(f));
+    _mpMonitoradosArq={nomes:r.nomes, arquivo:f.name, aba:r.aba};
+    _mpAtualizarStatusMon();
   }catch(e){ _mpMonitoradosArq=null; if(st) st.innerHTML='<span style="color:#dc2626">Erro ao ler: '+_mpEsc(e.message||String(e))+'</span>'; }
+}
+
+let _mpCancelarFlag = false;
+function mp_cancelarCruzamento(){
+  _mpCancelarFlag = true;
+  const c=document.getElementById('mp-cancelar-btn'); if(c){ c.disabled=true; c.textContent='Cancelando…'; }
 }
 
 function mp_cruzar(){
   if(!_mpMandados || !_mpMandados.nomes.length){ _mostrarToast('Carregue a planilha de mandados primeiro.','erro'); return; }
   const nomesMon = _mpFonteMon==='sistema' ? _mpNomesMonitoradosSistema() : (_mpMonitoradosArq ? _mpMonitoradosArq.nomes : []);
   if(!nomesMon.length){ _mostrarToast(_mpFonteMon==='sistema' ? 'Não há monitorados no sistema (importe na aba Jurídico/Sem Comunicação) ou envie um arquivo.' : 'Carregue a planilha de monitorados.','erro'); return; }
-  const st=document.getElementById('mp-status'); if(st) st.textContent='Cruzando… aguarde.';
-  setTimeout(()=>_mpCruzarExec(nomesMon), 30);
+  _mpCruzarExec(nomesMon);
 }
 
-function _mpCruzarExec(nomesMon){
+// Cruzamento em PEDAÇOS (setTimeout entre lotes) — bases grandes (ex.: ~1000
+// monitorados x ~3000 mandados) levam dezenas de segundos no fuzzy; processar
+// tudo de uma vez trava a aba sem feedback. Aqui a tela permanece responsiva,
+// mostra progresso real e permite cancelar. A precisão NÃO muda — mesmo
+// algoritmo de antes, só roda em lotes.
+async function _mpCruzarExec(nomesMon){
   const MIN=90;
+  const btn=document.getElementById('mp-btn-cruzar'); const txtOrig=btn?btn.textContent:'';
+  const barra=document.getElementById('mp-progresso');
+  const setBarra=(feitos,total,label)=>{
+    const pct=total?Math.round(feitos/total*100):0;
+    const b=document.getElementById('mp-progresso-bar'),t=document.getElementById('mp-progresso-txt'),pc=document.getElementById('mp-progresso-pct');
+    if(b) b.style.width=pct+'%'; if(t) t.textContent=label||('Comparando '+feitos+'/'+total+'…'); if(pc) pc.textContent=pct+'%';
+  };
+  _mpCancelarFlag=false;
+  const cbtn=document.getElementById('mp-cancelar-btn'); if(cbtn){ cbtn.disabled=false; cbtn.innerHTML='&times; Cancelar'; }
+  if(btn){ btn.disabled=true; btn.textContent='Cruzando…'; }
+  if(barra){ barra.style.display=''; setBarra(0,nomesMon.length,'Comparando…'); }
+
   const setMan=new Set(_mpMandados.nomes);
-  const confirmados=[], provaveis=[], confSet=new Set();
+  const confirmados=[], confSet=new Set();
   for(const n of nomesMon){ if(setMan.has(n)){ confirmados.push({monitorado:n,mandado:n,tipo:'EXATO',score:100}); confSet.add(n); } }
-  for(const n of nomesMon){
-    if(confSet.has(n)) continue;
-    let best=null;
-    for(const m of _mpMandados.nomes){
-      if(m===n) continue;
-      if(Math.abs(m.length-n.length) > Math.max(m.length,n.length)*0.25) continue; // não pode ser >=90%
-      const sc=_mpFuzzy(n,m);
-      if(sc>=MIN && (!best || sc>best.score)) best={mandado:m,score:sc};
+
+  // Pré-computa o "token-sort" de cada mandado UMA vez (antes eram até milhões
+  // de recomputações — mesma string sendo reordenada de novo a cada comparação).
+  const mandadosPrep = _mpMandados.nomes.map(m => ({ n:m, ts:m.split(' ').filter(Boolean).sort().join(' ') }));
+
+  const pendentes = nomesMon.filter(n => !confSet.has(n));
+  const provaveis=[];
+  const LOTE=15; // monitorados por "fatia" antes de devolver o controle à tela
+  let cancelado=false;
+
+  for(let i=0;i<pendentes.length;i+=LOTE){
+    if(_mpCancelarFlag){ cancelado=true; break; }
+    const fatia=pendentes.slice(i,i+LOTE);
+    for(const n of fatia){
+      const nTs=n.split(' ').filter(Boolean).sort().join(' ');
+      let best=null;
+      for(const mp of mandadosPrep){
+        const m=mp.n; if(m===n) continue;
+        if(Math.abs(m.length-n.length) > Math.max(m.length,n.length)*0.25) continue; // não pode ser >=90%
+        const sc=Math.max(_mpRatio(n,m), _mpRatio(nTs,mp.ts));
+        if(sc>=MIN && (!best || sc>best.score)) best={mandado:m,score:sc};
+      }
+      if(best) provaveis.push({monitorado:n,mandado:best.mandado,tipo:'FUZZY',score:best.score});
     }
-    if(best) provaveis.push({monitorado:n,mandado:best.mandado,tipo:'FUZZY',score:best.score});
+    setBarra(Math.min(i+LOTE,pendentes.length), pendentes.length);
+    await new Promise(res=>setTimeout(res,0)); // devolve o controle à tela (sem travar)
   }
+
   provaveis.sort((a,b)=>b.score-a.score);
   _mpResultado={ confirmados, provaveis, resumo:{
     data_execucao: new Date().toLocaleString('pt-BR'),
@@ -14979,10 +15071,14 @@ function _mpCruzarExec(nomesMon){
     nomes_mandados: _mpMandados.nomes.length,
     confirmados_total: confirmados.length,
     provaveis_total: provaveis.length,
-    fuzzy_score_min: MIN
+    fuzzy_score_min: MIN,
+    cruzamento_cancelado: cancelado
   }};
   _mpRender();
+  if(barra) barra.style.display='none';
+  if(btn){ btn.disabled=false; btn.textContent=txtOrig; }
   const st=document.getElementById('mp-status'); if(st) st.textContent='';
+  if(cancelado){ _mostrarToast('\u{23F9}\u{FE0F} Cruzamento cancelado — resultado parcial exibido.','erro'); return; }
   if(confirmados.length) _mostrarToast('\u{1F6A8} '+confirmados.length+' monitorado(s) com mandado de prisão CONFIRMADO!','erro');
   else _mostrarToast('Cruzamento concluído: nenhum confirmado. '+provaveis.length+' provável(is) para revisar.','sucesso');
 }
@@ -14992,11 +15088,16 @@ function _mpRender(){
   document.getElementById('mp-resultados').style.display='';
   document.getElementById('mp-btn-export').style.display='';
   const card=(cor,bg,label,val)=>'<div style="flex:1;min-width:150px;background:'+bg+';border:1px solid '+cor+'33;border-radius:10px;padding:14px"><div style="font-size:1.7rem;font-weight:800;color:'+cor+'">'+val+'</div><div style="font-size:.75rem;color:#475569;text-transform:uppercase;letter-spacing:.04em;margin-top:2px">'+label+'</div></div>';
-  document.getElementById('mp-resumo').innerHTML =
+  const avisoCancelado = r.resumo.cruzamento_cancelado
+    ? '<div style="background:#fffbeb;border:1px solid #fbbf24;color:#92400e;border-radius:8px;padding:10px 14px;font-size:.83rem;margin-bottom:12px">\u{26A0}\u{FE0F} Cruzamento CANCELADO antes de terminar — os PROVÁVEIS abaixo são um resultado PARCIAL (nem todos os monitorados foram comparados). Os CONFIRMADOS (nome exato) estão completos.</div>'
+    : '';
+  document.getElementById('mp-resumo').innerHTML = avisoCancelado +
+    '<div style="display:flex;gap:12px;flex-wrap:wrap;width:100%">' +
     card('#dc2626','#fef2f2','Confirmados (mandado ativo)',r.confirmados.length) +
     card('#d97706','#fffbeb','Prováveis (revisar)',r.provaveis.length) +
     card('#0369a1','#f0f9ff','Monitorados comparados',r.resumo.nomes_monitorados) +
-    card('#475569','#f8fafc','Mandados na lista',r.resumo.nomes_mandados);
+    card('#475569','#f8fafc','Mandados na lista',r.resumo.nomes_mandados) +
+    '</div>';
   document.getElementById('mp-sec-confirmados').innerHTML = _mpTabela('\u{1F6A8} CONFIRMADOS — monitorados com mandado de prisão (nome exato)','#dc2626', r.confirmados, true);
   document.getElementById('mp-sec-provaveis').innerHTML = _mpTabela('\u{26A0}\u{FE0F} PROVÁVEIS — nomes semelhantes (revisar manualmente)','#d97706', r.provaveis, false);
 }
