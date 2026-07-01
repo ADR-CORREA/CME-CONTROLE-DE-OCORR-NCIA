@@ -3033,6 +3033,21 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
             </div>
             <div id="com-consulta-lista" style="max-height:560px;overflow:auto"></div>
           </div>
+
+          <!-- Conferência: ofícios em ARQUIVOS (R2) que não estão no registro acima -->
+          <div style="background:#fff;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);margin-top:14px">
+            <div style="font-weight:700;color:var(--az1);font-size:.95rem;margin-bottom:6px;border-bottom:1px solid #e0e6ed;padding-bottom:8px">
+              📁 Conferir ofícios em Arquivos que faltam no registro
+            </div>
+            <div style="font-size:.8rem;color:#64748b;margin:10px 0">
+              Varre os arquivos de cada monitorado (aba <b>Arquivos</b>/R2), identifica os que parecem ofício pelo nome e lista os cujo número <b>não aparece</b> no registro acima. É <b>só leitura</b> — não grava nada. Pode levar alguns minutos se houver muitos monitorados.
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <button id="com-conf-btn" onclick="com_conferirArquivos()" style="background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:.87rem;font-weight:700;cursor:pointer">🔍 Conferir arquivos × registro</button>
+              <button id="com-conf-cancelar" onclick="com_confCancelar()" style="display:none;background:#fff;color:#dc2626;border:1px solid #dc2626;border-radius:8px;padding:9px 14px;font-size:.85rem;font-weight:700;cursor:pointer">&times; Cancelar</button>
+            </div>
+            <div id="com-conf-resultado" style="margin-top:12px;font-size:.85rem"></div>
+          </div>
         </div><!-- /com-view-consultar -->
       </div><!-- /mod-panel-comunicacao -->
 
@@ -21088,6 +21103,74 @@ function com_mudarView(v) {
     tc.style.fontWeight = ehGerar ? '600' : '700';
   }
   if (!ehGerar) com_renderConsulta();
+}
+
+// ── Conferência: ofícios em ARQUIVOS (R2) que não estão no registro ──────────
+// Só LEITURA (não grava nada). Varre os arquivos de cada monitorado, acha os que
+// parecem ofício pelo nome, extrai o número e compara com oficios.registros.
+let _comConfCancelar = false;
+function com_confCancelar(){ _comConfCancelar = true; const b=document.getElementById('com-conf-cancelar'); if(b){ b.disabled=true; b.textContent='Cancelando…'; } }
+
+function _comConfPareceOficio(nome){ return /of[íi]cio/i.test(nome) || /(^|[^a-zç])of[\s._-]*n?[ºo.]?\s*\d/i.test(nome); }
+function _comConfExtrai(nome){
+  const s=String(nome).toLowerCase();
+  const mn = s.match(/of[íi]cio[\s._-]*n?[ºo.]?\s*(\d{1,5})/) || s.match(/(?:^|[^a-zç])of[\s._-]*n?[ºo.]?\s*(\d{1,5})/) || s.match(/\b(\d{1,5})[\s._-]*[\/-][\s._-]*20\d{2}/);
+  const ma = s.match(/\b(\d{1,5})[\s._-]*[\/-][\s._-]*(20\d{2})/);
+  return { numero: mn ? parseInt(mn[1]) : null, ano: ma ? parseInt(ma[2]) : null };
+}
+
+async function com_conferirArquivos(){
+  const alvo=document.getElementById('com-conf-resultado');
+  const btn=document.getElementById('com-conf-btn');
+  const cbtn=document.getElementById('com-conf-cancelar');
+  if(!alvo) return;
+  if(typeof _r2Pronto!=='function' || !_r2Pronto()){ alvo.innerHTML='<span style="color:#dc2626">Arquivos (R2) não configurado ou você não está logado.</span>'; return; }
+
+  const regs=(com_getOficios().registros)||[];
+  const regNum=new Set(), regNumAno=new Set();
+  regs.forEach(r=>{ const n=parseInt(r.numero), a=parseInt(r.ano); if(n){ regNum.add(n); if(a) regNumAno.add(n+'|'+a); } });
+
+  if(!r2_state.monitorados || !r2_state.monitorados.length){ alvo.textContent='Carregando lista de monitorados…'; try{ await _r2CarregarTodosSilencioso(); }catch(e){} }
+  const mons=r2_state.monitorados||[];
+  if(!mons.length){ alvo.innerHTML='<span style="color:#dc2626">Nenhum monitorado encontrado no R2.</span>'; return; }
+
+  _comConfCancelar=false;
+  if(btn) btn.disabled=true;
+  if(cbtn){ cbtn.style.display=''; cbtn.disabled=false; cbtn.innerHTML='&times; Cancelar'; }
+
+  const faltantes=[]; let scanned=0, comOficio=0;
+  const LOTE=5; // 5 pastas por vez (concorrência) — mais rápido sem sobrecarregar
+  for(let i=0;i<mons.length && !_comConfCancelar;i+=LOTE){
+    const fatia=mons.slice(i,i+LOTE);
+    const res=await Promise.all(fatia.map(async mon=>{
+      try{ const r=await r2_api('GET','/list?monitorado='+encodeURIComponent(mon.nome)); return {mon, arqs:r.arquivos||[]}; }catch(e){ return {mon, arqs:[]}; }
+    }));
+    for(const {mon,arqs} of res){
+      for(const a of arqs){
+        if(!a.nome || a.nome==='.keep') continue;
+        if(!_comConfPareceOficio(a.nome)) continue;
+        comOficio++;
+        const {numero,ano}=_comConfExtrai(a.nome);
+        if(!numero) continue;
+        const registrado = ano ? regNumAno.has(numero+'|'+ano) : regNum.has(numero);
+        if(!registrado) faltantes.push({numero,ano,monitorado:mon.nome,arquivo:a.nome});
+      }
+    }
+    scanned=Math.min(i+LOTE, mons.length);
+    alvo.innerHTML='<div style="color:#1d4ed8">\u{23F3} Escaneando arquivos… ('+scanned+'/'+mons.length+')</div>';
+  }
+
+  if(cbtn) cbtn.style.display='none';
+  if(btn) btn.disabled=false;
+
+  faltantes.sort((a,b)=>(a.numero-b.numero)||String(a.monitorado).localeCompare(b.monitorado));
+  const parcial = _comConfCancelar ? '<div style="background:#fffbeb;border:1px solid #fbbf24;color:#92400e;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:.82rem">\u{23F9}\u{FE0F} Verificação CANCELADA — resultado PARCIAL (nem todas as pastas foram vistas).</div>' : '';
+  const resumo='<div style="font-size:.82rem;color:#64748b;margin-bottom:8px">Pastas vistas: <b>'+scanned+'/'+mons.length+'</b> &nbsp;·&nbsp; arquivos que parecem ofício: <b>'+comOficio+'</b> &nbsp;·&nbsp; faltando no registro: <b style="color:#dc2626">'+faltantes.length+'</b></div>';
+  if(!faltantes.length){ alvo.innerHTML=parcial+resumo+'<div style="color:#16a34a;font-size:.9rem">\u{2705} Nenhum ofício em arquivo ficou de fora do registro (pelos nomes analisados).</div>'; return; }
+  let h=parcial+resumo+'<div style="font-size:.76rem;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:7px 10px;margin-bottom:10px">\u{26A0}\u{FE0F} Baseado no NOME do arquivo — pode haver falso positivo (documento que só cita um ofício) ou número extraído errado. Revise antes de considerar.</div>';
+  h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.83rem"><thead><tr style="background:#f1f5f9;text-align:left"><th style="padding:7px 9px;border-bottom:1px solid #e2e8f0">Nº</th><th style="padding:7px 9px;border-bottom:1px solid #e2e8f0">Ano</th><th style="padding:7px 9px;border-bottom:1px solid #e2e8f0">Monitorado (pasta)</th><th style="padding:7px 9px;border-bottom:1px solid #e2e8f0">Arquivo</th></tr></thead><tbody>';
+  for(const f of faltantes){ h+='<tr><td style="padding:6px 9px;border-bottom:1px solid #f1f5f9;font-weight:700;color:#1F4E78">'+f.numero+'</td><td style="padding:6px 9px;border-bottom:1px solid #f1f5f9">'+(f.ano||'—')+'</td><td style="padding:6px 9px;border-bottom:1px solid #f1f5f9">'+com_esc(f.monitorado)+'</td><td style="padding:6px 9px;border-bottom:1px solid #f1f5f9;word-break:break-all">'+com_esc(f.arquivo)+'</td></tr>'; }
+  alvo.innerHTML=h+'</tbody></table></div>';
 }
 
 function com_renderConsulta() {
