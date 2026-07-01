@@ -18954,7 +18954,7 @@ function _rvDataCurta(v) {
   if (v == null || v === '') return '';
   const s = String(v).trim(); let m;
   if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return `${String(+m[3]).padStart(2,'0')}/${String(+m[2]).padStart(2,'0')}/${m[1].slice(2)}`;
-  if ((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/))) return `${String(+m[1]).padStart(2,'0')}/${String(+m[2]).padStart(2,'0')}/${m[3].slice(-2)}`;
+  if ((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/))) { const [D,Mo]=_rvDiaMes(+m[1],+m[2]); return `${String(D).padStart(2,'0')}/${String(Mo).padStart(2,'0')}/${m[3].slice(-2)}`; }
   return s.slice(0, 16);
 }
 
@@ -19380,12 +19380,20 @@ function _rvParseDurMin(s){ s=String(s||'').trim(); if(!s||s==='nan')return 0; c
 // Monta a string da ocorrência preservando a HORA. Quando a planilha traz a data
 // como Date (raw:true), formata DD/MM/AAAA HH:MM; senão usa o texto já formatado
 // (que no CSV já vem com a hora). Conserta o bug do .xlsx que vinha 00:00.
+// Corrige data que veio em formato US (MM/DD) quando o "mês" é > 12 — caso
+// inequívoco. O AKILES exporta em DD/MM (padrão BR); em máquinas com região EUA
+// a data às vezes vaza como MM/DD. Casos ambíguos (ambos <=12) ficam como BR.
+function _rvDiaMes(a, b){ return (b > 12 && a <= 12) ? [b, a] : [a, b]; }
 function _rvOcorreuComHora(rawVal, fmtVal){
   if(rawVal instanceof Date && !isNaN(rawVal)){
     const p=n=>String(n).padStart(2,'0');
     return `${p(rawVal.getDate())}/${p(rawVal.getMonth()+1)}/${rawVal.getFullYear()} ${p(rawVal.getHours())}:${p(rawVal.getMinutes())}`;
   }
-  return String(fmtVal||'').trim();
+  // Texto: normaliza para BR (corrigindo US quando inequívoco) em vez de ecoar cru.
+  const s=String(fmtVal||'').trim(), m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if(m){ let[D,Mo]=_rvDiaMes(+m[1],+m[2]); let Y=+m[3]; if(Y<100)Y+=2000; const p=n=>String(n).padStart(2,'0');
+    return m[4]!=null ? `${p(D)}/${p(Mo)}/${Y} ${p(+m[4])}:${m[5]}` : `${p(D)}/${p(Mo)}/${Y}`; }
+  return s;
 }
 function _rvFmtOcorreu(v){
   if(v==null||v===''||String(v).trim().toLowerCase()==='nan')return '';
@@ -19394,7 +19402,7 @@ function _rvFmtOcorreu(v){
   if(v instanceof Date && !isNaN(v)){Y=v.getFullYear();Mo=v.getMonth()+1;D=v.getDate();H=v.getHours();Mi=v.getMinutes();ok=true;}
   else{ const s=String(v).trim();
     if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/))){Y=+m[1];Mo=+m[2];D=+m[3];H=+(m[4]||0);Mi=+(m[5]||0);ok=true;}
-    else if((m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ T](\d{1,2}):(\d{2}))?/))){D=+m[1];Mo=+m[2];Y=+m[3];if(Y<100)Y+=2000;H=+(m[4]||0);Mi=+(m[5]||0);ok=true;}
+    else if((m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ T](\d{1,2}):(\d{2}))?/))){[D,Mo]=_rvDiaMes(+m[1],+m[2]);Y=+m[3];if(Y<100)Y+=2000;H=+(m[4]||0);Mi=+(m[5]||0);ok=true;}
   }
   if(!ok)return String(v);
   const dt=new Date(Y,Mo-1,D,H,Mi); if(isNaN(dt))return String(v);
@@ -19407,7 +19415,7 @@ function _rvParseDate(v){
   if(v instanceof Date)return isNaN(v)?null:v;
   const s=String(v).trim(); let m,Y,Mo,D,H=0,Mi=0;
   if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/))){Y=+m[1];Mo=+m[2];D=+m[3];H=+(m[4]||0);Mi=+(m[5]||0);}
-  else if((m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ T](\d{1,2}):(\d{2}))?/))){D=+m[1];Mo=+m[2];Y=+m[3];if(Y<100)Y+=2000;H=+(m[4]||0);Mi=+(m[5]||0);}
+  else if((m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ T](\d{1,2}):(\d{2}))?/))){[D,Mo]=_rvDiaMes(+m[1],+m[2]);Y=+m[3];if(Y<100)Y+=2000;H=+(m[4]||0);Mi=+(m[5]||0);}
   else return null;
   const dt=new Date(Y,Mo-1,D,H,Mi); return isNaN(dt)?null:dt;
 }
