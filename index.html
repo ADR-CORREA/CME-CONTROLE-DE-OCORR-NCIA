@@ -9830,7 +9830,7 @@ function _dashMinhaProdutividade(u) {
   const mesAtual = new Date().toISOString().slice(0,7);
   return PROD_METRICS.map(m => {
     const store = carregarStore(m.store, null);
-    const arr = (store && Array.isArray(store[m.arr])) ? store[m.arr] : [];
+    const arr = _prodArrDe(store, m);
     let ano = 0, mes = 0;
     arr.forEach(rec => {
       if (!_prodMatch(rec, m, u)) return;
@@ -20883,9 +20883,26 @@ async function com_registrarOficio(dados) {
     }
   }
   const o = com_getOficios();
+  // LOG de produtividade (append-only): semeia do histórico (registros) na 1ª vez
+  // — ANTES de mexer nos registros, pra não duplicar o evento desta geração.
+  if (!Array.isArray(o.eventos)) {
+    o.eventos = o.registros.map(r => ({
+      numero: r.numero, ano: r.ano, geradoPor: r.geradoPor || '',
+      geradoEm: r.geradoEm || r.data || '', monitorado: r.monitorado || '',
+      processo: r.processo || '', modelo: r.modelo || '', assunto: r.assunto || ''
+    }));
+  }
+  // Numeração: upsert por (numero, ano) — 1 registro por número (inalterado).
   const i = o.registros.findIndex(r => r.numero === dados.numero && r.ano === dados.ano);
   if (i >= 0) o.registros[i] = { ...o.registros[i], ...dados };
   else o.registros.push(dados);
+  // Produtividade: o evento desta geração SEMPRE entra — conta mesmo se o número
+  // repetir (é isto que faz os duplicados contarem na produtividade).
+  o.eventos.push({
+    numero: dados.numero, ano: dados.ano, geradoPor: dados.geradoPor || '',
+    geradoEm: dados.geradoEm || '', monitorado: dados.monitorado || '',
+    processo: dados.processo || '', modelo: dados.modelo || '', assunto: dados.assunto || ''
+  });
   com_salvarOficios(o);
 }
 /* Chamado ao gerar o ofício (ambos os fluxos). Upsert por (numero, ano):
@@ -25382,12 +25399,21 @@ async function ind_perguntar() {
    criadoPor / responsavel / profissional). Registros cujo autor não bate
    com nenhum servidor cadastrado entram em "Não identificado". */
 const PROD_METRICS = [
-  { key:'oficios',    setor:'Comunicação',  label:'Ofícios',      store:'oficios',      arr:'registros',    who:'geradoPor',  tipo:'nome',    dataF:'geradoEm', cor:'#1F4E78' },
+  { key:'oficios',    setor:'Comunicação',  label:'Ofícios',      store:'oficios',      arr:'eventos', arrFallback:'registros', who:'geradoPor',  tipo:'nome',    dataF:'geradoEm', cor:'#1F4E78' },
   { key:'relatorios', setor:'Relatório',    label:'Relatórios',   store:'relatorios',   arr:'registros',    who:'criadoPor',  tipo:'usuario', dataF:'criadoEm', cor:'#7B0000' },
   { key:'triagem',    setor:'Triagem',      label:'Triagens',     store:'triagem',      arr:'atendimentos', who:'criadoPor',  tipo:'usuario', dataF:'criadoEm', cor:'#0B6E4F' },
   { key:'psi',        setor:'Psicossocial', label:'Atendimentos', store:'psicossocial', arr:'atendimentos', who:'profissional', tipo:'nome',  dataF:'criadoEm', cor:'#6A1B9A' },
   { key:'gerencia',   setor:'Gerência',     label:'Demandas',     store:'gerencia',     arr:'demandas',     who:'responsavel', tipo:'nome',   dataF:'criadoEm', cor:'#B45309' },
 ];
+
+/* Array de registros p/ a produtividade. Ofícios usam o log append-only 'eventos'
+   (conta CADA geração, mesmo com nº repetido); se ainda não existe, cai para
+   'registros' (histórico), sem regressão na contagem antiga. */
+function _prodArrDe(store, m) {
+  if (store && Array.isArray(store[m.arr])) return store[m.arr];
+  if (store && m.arrFallback && Array.isArray(store[m.arrFallback])) return store[m.arrFallback];
+  return [];
+}
 
 function _prodAno(rec, m) {
   const d = rec[m.dataF] || rec.criadoEm || rec.geradoEm || rec.data || '';
@@ -25485,7 +25511,7 @@ function prod_render() {
   const anosSet = new Set();
   PROD_METRICS.forEach(m => {
     const store = carregarStore(m.store, null);
-    const arr = (store && Array.isArray(store[m.arr])) ? store[m.arr] : [];
+    const arr = _prodArrDe(store, m);
     dados[m.key] = arr;
     arr.forEach(r => { const a = _prodAno(r, m); if (a) anosSet.add(a); });
   });
