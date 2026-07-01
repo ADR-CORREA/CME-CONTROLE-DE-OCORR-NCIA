@@ -20928,6 +20928,21 @@ function com_sugerirNumero(forcar) {
     com_atualizarPreview();
   }
 }
+/* Avança o número do ofício no campo para o PRÓXIMO, logo APÓS gerar — senão o
+   próximo ofício repetia o mesmo número (o avanço só acontecia no "Limpar").
+   Otimista (numeroUsado+1) para não depender do round-trip do registro no
+   servidor, evitando corrida; reconcilia com com_proximoNumero se houver salto.
+   NÃO apaga nada: só mexe no campo visível; o registro do ofício segue intacto. */
+function com_avancarNumero(numeroUsado) {
+  const el = document.getElementById('com-of-numero');
+  if (!el) return;
+  const usado = parseInt(String(numeroUsado).replace(/\D/g, '')) || 0;
+  el.value = String(Math.max(usado + 1, com_proximoNumero(com_anoForm())));
+  _comNumeroManual = false;
+  com_atualizarAvisoNumero();
+  try { com_atualizarPreview(); } catch (e) {}
+}
+
 /* Realtime: outro PC gerou um ofício. Se a Comunicação está aberta e o número que
    este usuário vê foi tomado por OUTRA pessoa logada, avança automático (ou avisa). */
 function com_sincronizarNumeroRemoto() {
@@ -21446,7 +21461,10 @@ function com_gerarOficio(ov) {
 </html>`;
 
   // Registra o ofício na numeração (sincroniza entre PCs) antes de abrir
-  if (!ov) { try { com_registrarGerado(numero, dataOficio, modelo, { dest, nomeMon, processo, signat, saudacao, cargo, decreto, campos }); } catch(e) { console.warn('[CME] registro de ofício falhou:', e); } }
+  if (!ov) {
+    try { com_registrarGerado(numero, dataOficio, modelo, { dest, nomeMon, processo, signat, saudacao, cargo, decreto, campos }); } catch(e) { console.warn('[CME] registro de ofício falhou:', e); }
+    com_avancarNumero(numero); // avança p/ o próximo número — evita repetir o mesmo ofício
+  }
 
   const blob    = new Blob([doc], {type:'text/html;charset=utf-8'});
   const _okOf = _entregarDoc(blob, `oficio-${numero||'cme'}.html`);
@@ -23499,6 +23517,7 @@ async function _comGerarPDFExec() {
         signat: document.getElementById('com-of-signatario').value.trim()
       });
     } catch(e) { console.warn('[CME] registro de ofício falhou:', e); }
+    com_avancarNumero(num); // avança p/ o próximo número — evita repetir o mesmo ofício
 
     const _nAnex = pdfAnexos.length + _imgOk;
     const msg = _okPdf
