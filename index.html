@@ -20247,6 +20247,17 @@ const COM_MODELOS = [
       `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME, informo que <b>${c.nome_monitorado}</b> recebeu o Dispositivo de Proteção Preventiva - DPP, denominado "Botão do Pânico", desta Central de Monitoramento na data do dia <b>${c.data_vinculacao}</b>, em cumprimento à Decisão contida nos Autos.`,
       `Em anexo segue o Termo de Guarda e Responsabilidade e o expediente acima citado.`,
     ]},
+  { id:'vinc-devol-desvinc-dpp', cat:'Vinculação', nome:'Vinculação + Devolução e Desvinculação — Botão do Pânico (DPP)',
+    assunto:'Informa vinculação do DPP - Botão do Pânico, devolução e desvinculação ao Sistema de Monitoração Eletrônica',
+    campos:[
+      {id:'data_vinculacao', label:'Data da vinculação', tipo:'date'},
+      {id:'data_devolucao',  label:'Data da devolução',  tipo:'date'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME, informo que <b>${c.nome_monitorado}</b> foi vinculado (a) na Central de Monitoramento para uso do "Botão do Pânico", na data do dia <b>${c.data_vinculacao}</b>, em cumprimento à Decisão contida nos Autos.`,
+      `E na oportunidade, informa ainda que, foi realizada a devolução do Dispositivo Eletrônico denominado "Botão do Pânico", nesta Central de Monitoramento, na data do dia <b>${c.data_devolucao}</b>, e sendo feita a desvinculação ao sistema de monitoramento eletrônico - AKILES.`,
+      `Em anexo segue o Termo de Guarda e Responsabilidade e Termo de Devolução Espontânea do Dispositivo de Proteção Preventiva/DPP.`,
+    ]},
   { id:'vinc-atualiza-cadastro', cat:'Vinculação', nome:'Vinculação — Atualização do Cadastro (VEP)',
     assunto:'Vinculação — Atualização do Cadastro',
     campos:[
