@@ -21000,7 +21000,11 @@ function com_registrarGerado(numero, dataStr, modelo, extras) {
     cargo:       extras.cargo || '',
     decreto:     extras.decreto || '',
     campos:      extras.campos || null,
-    assinatura:  usuarioAtual?.assinatura || '',   // imagem da assinatura do signatário (p/ visualização fiel)
+    // NÃO guardamos mais a imagem base64 da assinatura aqui (inchava o store —
+    // 91% dos 3,76 MB eram assinaturas, quebrando o salvamento no Supabase e
+    // fazendo os números de ofício repetirem). Guardamos só o LOGIN do signatário
+    // e buscamos a assinatura do perfil dele na hora de visualizar.
+    signatarioUsuario: usuarioAtual?.usuario || '',
     geradoPor:   usuarioAtual?.nome || '?',
     geradoEm:    new Date().toISOString()
   });
@@ -21081,6 +21085,18 @@ function com_atualizarAvisoNumero() {
   }
 }
 function com_esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* Busca a assinatura (imagem) pelo NOME do signatário — usado na visualização de
+   ofícios novos, que não guardam mais a imagem no registro (só o login). */
+function _comAssinaturaDeNome(nome){
+  if(!nome) return null;
+  try {
+    const alvo = String(nome).trim().toLowerCase();
+    const u = (getUsuarios()||[]).find(x => String(x.nome||'').trim().toLowerCase() === alvo);
+    if (u) return _getAssinaturaDe(u.usuario);
+  } catch(e){}
+  return null;
+}
 
 /* ─── Seleção de número anterior (lista dos já enviados, em vermelho) ── */
 function com_numerosUsados() {
@@ -21382,7 +21398,11 @@ function com_gerarOficio(ov) {
   const decreto    = ov ? (ov.decreto || '')        : _f('com-of-decreto').value.trim();
   // Na visualização usa a assinatura salva no registro (a do signatário original);
   // ao gerar, usa a do usuário logado.
-  const assImgCapturada = ov ? (ov.assinatura || null) : (usuarioAtual?.assinatura || null);
+  // Assinatura na visualização: registros ANTIGOS têm a imagem salva (ov.assinatura);
+  // os NOVOS guardam só o login do signatário → busca a assinatura do perfil dele.
+  const assImgCapturada = ov
+    ? (ov.assinatura || _getAssinaturaDe(ov.signatarioUsuario) || _comAssinaturaDeNome(ov.signatario) || null)
+    : (usuarioAtual?.assinatura || null);
 
   if (!ov) {
     if (!modeloId)  return _mostrarToast('\u{26A0}\u{FE0F} Selecione o modelo de ofício.','erro');
