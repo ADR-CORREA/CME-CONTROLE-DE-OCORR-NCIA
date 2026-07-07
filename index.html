@@ -18860,6 +18860,11 @@ function rv_importarPlanilha(input) {
     const cEndereco= pick(['Endereço','Endereco']);
     const cContato = pick(['Contato','Telefone','Celular','Fone']);
 
+    // Detecta se a COLUNA de data está em US (MM/DD) ou BR (DD/MM), olhando TODAS
+    // as datas do texto original. Resolve a ambiguidade de datas com dia <=12 (que
+    // o SheetJS às vezes converte em Date com interpretação US, invertendo dia↔mês).
+    const _colDataUS = cOcorreu ? _rvDetectarColunaUS(rows.map(r => r[cOcorreu])) : false;
+
     if (!cNome || !cProc) {
       _mostrarToast('Colunas "Nome" e "Processo" não encontradas na planilha.', 'erro'); return;
     }
@@ -18880,7 +18885,7 @@ function rv_importarPlanilha(input) {
       comarca:     fixEnc(r[cComarca]),
       tipo:        fixEnc(r[cTipo]),
       idOc:        fixEnc(r[cId]),
-      ocorreu:     _rvOcorreuComHora(rowsData[i] ? rowsData[i][cOcorreu] : null, r[cOcorreu]),
+      ocorreu:     _rvOcorreuNorm(r[cOcorreu], rowsData[i] ? rowsData[i][cOcorreu] : null, _colDataUS),
       duracao:     fixEnc(r[cDur]),
       endereco:    cEndereco ? fixEnc(r[cEndereco]) : '',
       contato:     cContato  ? fixEnc(r[cContato])  : '',
@@ -19399,6 +19404,48 @@ function _rvParseDurMin(s){ s=String(s||'').trim(); if(!s||s==='nan')return 0; c
 // inequívoco. O AKILES exporta em DD/MM (padrão BR); em máquinas com região EUA
 // a data às vezes vaza como MM/DD. Casos ambíguos (ambos <=12) ficam como BR.
 function _rvDiaMes(a, b){ return (b > 12 && a <= 12) ? [b, a] : [a, b]; }
+
+// Olha TODAS as datas do texto e decide se a coluna está em US (MM/DD) ou BR
+// (DD/MM): uma data com 1º número > 12 prova BR; com 2º número > 12 prova US.
+// Empate/nenhum → BR (padrão AKILES). Resolve a ambiguidade das datas com dia<=12.
+function _rvDetectarColunaUS(textos){
+  let br = 0, us = 0;
+  for (const t of (textos || [])) {
+    const m = String(t || '').match(/^\s*(\d{1,2})\/(\d{1,2})\//);
+    if (!m) continue;
+    const a = +m[1], b = +m[2];
+    if (a > 12 && b <= 12) br++;
+    else if (b > 12 && a <= 12) us++;
+  }
+  return us > br;
+}
+
+// Normaliza a data da ocorrência para "DD/MM/AAAA HH:MM" (BR), usando o formato
+// detectado da coluna. Fonte da verdade = TEXTO original (não o Date do SheetJS,
+// que inverte datas ambíguas). A HORA vem do texto ou, se faltar (comum no xlsx),
+// do objeto Date. Se não houver texto de data, usa o Date (célula de data real).
+function _rvOcorreuNorm(txt, dateObj, colUS){
+  const s = String(txt || '').trim();
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if (m) {
+    let D, Mo;
+    if (colUS) { Mo = +m[1]; D = +m[2]; } else { D = +m[1]; Mo = +m[2]; }
+    if (Mo > 12 && D <= 12) { const t = D; D = Mo; Mo = t; } // rede de segurança
+    let Y = +m[3]; if (Y < 100) Y += 2000;
+    let H = m[4], Mi = m[5];
+    if (H == null && dateObj instanceof Date && !isNaN(dateObj)) {
+      H = String(dateObj.getHours()).padStart(2, '0');
+      Mi = String(dateObj.getMinutes()).padStart(2, '0');
+    }
+    const p = n => String(n).padStart(2, '0');
+    return (H != null) ? `${p(D)}/${p(Mo)}/${Y} ${p(+H)}:${Mi}` : `${p(D)}/${p(Mo)}/${Y}`;
+  }
+  if (dateObj instanceof Date && !isNaN(dateObj)) {
+    const p = n => String(n).padStart(2, '0');
+    return `${p(dateObj.getDate())}/${p(dateObj.getMonth()+1)}/${dateObj.getFullYear()} ${p(dateObj.getHours())}:${p(dateObj.getMinutes())}`;
+  }
+  return s;
+}
 function _rvOcorreuComHora(rawVal, fmtVal){
   if(rawVal instanceof Date && !isNaN(rawVal)){
     const p=n=>String(n).padStart(2,'0');
