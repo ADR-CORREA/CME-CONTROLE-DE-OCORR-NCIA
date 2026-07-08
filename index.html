@@ -21538,6 +21538,10 @@ function com_gerarOficio(ov) {
     margin: 0 auto 2px;
   }
   .ass-nome  { border-top: 1px solid #000; padding-top: 6px; font-weight: bold; font-size: 11.5pt; margin: 0; line-height: 1.25; }
+  /* Com assinatura capturada (protocolo digital), a linha acima do nome fica
+     redundante — a imagem já assina visualmente. Sem imagem, mantém a linha
+     (documento vai ser assinado à mão). */
+  .ass-bloco.tem-ass .ass-nome { border-top: none; padding-top: 0; }
   .ass-cargo { font-size: 11pt; margin: 2px 0 0 0; }
   .ass-dec   { font-size: 11pt; margin: 2px 0 0 0; }
 
@@ -21612,7 +21616,7 @@ function com_gerarOficio(ov) {
 
   <!-- margin-top:auto posiciona a assinatura em ~80% da folha -->
   <div class="ass-area">
-    <div class="ass-bloco">
+    <div class="ass-bloco${assImgCapturada ? ' tem-ass' : ''}">
       ${assImgCapturada ? `<img class="ass-img" src="${assImgCapturada}" alt="Assinatura">` : ''}
       <p class="ass-nome">${esc(signat)}</p>
       <p class="ass-cargo">${esc(cargo)}</p>
