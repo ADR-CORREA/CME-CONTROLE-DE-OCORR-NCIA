@@ -10207,7 +10207,7 @@ function renderizarUsers() {
   const counts = {};
   todos.forEach(u => { counts[u.nivel || 'plantao'] = (counts[u.nivel || 'plantao']||0) + 1; });
 
-  const ORDEM_KPI = ['admin','gerencia','juridico','relatorio','comunicacao','plantao','estoque','triagem','psicossocial'];
+  const ORDEM_KPI = ['admin','gerencia','juridico','relatorio','comunicacao','plantao','estoque','triagem','psicossocial','estatistica'];
   const kpiBox = document.getElementById('admin-kpis');
   if (kpiBox) {
     const cardTotal = `
@@ -10246,7 +10246,7 @@ function renderizarUsers() {
   }
 
   // Ordem de exibição das categorias
-  const ORDEM = ['admin','gerencia','juridico','relatorio','comunicacao','plantao','estoque','triagem','psicossocial'];
+  const ORDEM = ['admin','gerencia','juridico','relatorio','comunicacao','plantao','estoque','triagem','psicossocial','estatistica'];
 
   // Agrupar por nível
   const grupos = {};
