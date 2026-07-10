@@ -8553,7 +8553,11 @@ function _scListaArea(dados, area){ return (dados.monitorados || []).filter(m =>
 // 'comunicou' (voltou a se comunicar — marcado na SINCRONIZAÇÃO do import, quando
 // a pessoa some do relatório novo do AKILES). É a base da contagem/lista ativa,
 // pra o CME refletir o relatório REAL do AKILES (e não acumular ex-sem-comunicação).
-function _scEmAberto(m){ return !!m && _scEmAberto(m) && m.situacao !== 'comunicou'; }
+function _scEmAberto(m){ return !!m && m.situacao !== 'desvinculado' && m.situacao !== 'comunicou'; }
+// Normaliza o nº de registro (exports novos do AKILES vêm com zeros à esquerda:
+// "002851222"; o store tem "2851222"). Sem isso, nenhum registro bateria e a
+// sincronização marcaria todo mundo como "comunicou" (zerava a lista).
+function _scNormReg(r){ return String(r == null ? '' : r).trim().replace(/^0+(?=\d)/, ''); }
 // Prefixos de DOM por área — Jurídico usa os IDs originais (sc/scde),
 // Psicossocial usa IDs espelhados (psc/pscde).
 const _SC_CFG = {
@@ -9089,6 +9093,10 @@ function importarExcelSemCom(input, area) {
     }
 
     // ── 3. Parse HTML ──────────────────────────────────────
+    // PRÉ-LIMPEZA: exports novos do AKILES vêm com <b> NÃO fechado grudado no
+    // </td> (ex.: "<td><b>Tempo sem comunicacao</td>"). Isso engolia as linhas
+    // seguintes e o parser lia 0 dados (zerava a lista). Fecha o <b> antes.
+    text = text.replace(/<b>([^<]*?)<\/td>/g, '<b>$1</b></td>');
     const doc = new DOMParser().parseFromString(text, 'text/html');
 
     // Escolhe a tabela com mais linhas (tabela de dados do AKILES)
@@ -9152,7 +9160,7 @@ function importarExcelSemCom(input, area) {
       if (cells.length < 2) { pulados++; continue; }
       const gc = idx => (idx >= 0 && idx < cells.length) ? cells[idx].textContent.trim() : '';
       const nome     = gc(cNome);
-      const registro = gc(cReg);
+      const registro = _scNormReg(gc(cReg));
       if (!nome || !registro || !/\d/.test(registro)) { pulados++; continue; } // pula linhas sem dados válidos
       // Importa TODAS as linhas (DPP e não-DPP). O filtro de exibição roteia
       // DPP → Psicossocial e não-DPP → Jurídico, então NADA some no import,
@@ -9166,7 +9174,7 @@ function importarExcelSemCom(input, area) {
 
       registrosNoRelatorio.add(String(registro));
 
-      const idx = dados.monitorados.findIndex(m => m.registro === registro);
+      const idx = dados.monitorados.findIndex(m => _scNormReg(m.registro) === registro);
       if (idx >= 0) {
         // Atualiza só campos vindos do AKILES — preserva tratativas, desvinculação, situação
         Object.assign(dados.monitorados[idx], { nome, ultimaComunicacao: dataUlt, tempoSemCom: tempo, intervalo, unidade, diasSemCom: dias, atualizadoEm: agora });
@@ -9193,8 +9201,17 @@ function importarExcelSemCom(input, area) {
     // do AKILES em vez de acumular ex-sem-comunicação. Desvinculado é ação manual,
     // não é mexido aqui.
     let voltaram = 0;
+    // 🛡️ GUARDA ANTI-CATÁSTROFE: só sincroniza se o arquivo trouxe registros DE
+    // VERDADE. Se o parse falhar (0 registros lidos), NÃO marca ninguém como
+    // 'comunicou' — senão zerava a lista inteira (foi o que aconteceu quando o
+    // formato do AKILES mudou e o parser lia 0 linhas).
+    if (registrosNoRelatorio.size === 0) {
+      _mostrarToast('\u{26A0}\u{FE0F} Não consegui ler NENHUM registro do arquivo (formato inesperado). NADA foi alterado — a lista foi preservada.', 'erro');
+      input.value = '';
+      return;
+    }
     dados.monitorados.forEach(m => {
-      if (!registrosNoRelatorio.has(String(m.registro)) && m.situacao !== 'desvinculado' && m.situacao !== 'comunicou') {
+      if (!registrosNoRelatorio.has(_scNormReg(m.registro)) && m.situacao !== 'desvinculado' && m.situacao !== 'comunicou') {
         m.situacao = 'comunicou';
         m.comunicouEm = agora;
         voltaram++;
