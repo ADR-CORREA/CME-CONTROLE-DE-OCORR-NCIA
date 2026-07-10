@@ -8079,8 +8079,8 @@ function _dashSetores(ocs, jm){
   const box=document.getElementById('dash-sectors'); if(!box) return;
   const todayK=new Date().toISOString().slice(0,10), monthK=todayK.slice(0,7);
   const sc=_scListaArea(getSemCom(),'juridico'); // exclui DPP (competência do Psicossocial)
-  const semComCrit=sc.filter(m=>m.situacao!=='desvinculado' && (Number(m.diasSemCom)||0)>=7).length;
-  const jur180=sc.filter(m=>m.situacao!=='desvinculado' && _diasSemComAtual(m)>=180).length; // ≥180 dias sem comunicação (Akiles) — mesma base do KPI sc-kpi-180d
+  const semComCrit=sc.filter(m=>_scEmAberto(m) && (Number(m.diasSemCom)||0)>=7).length;
+  const jur180=sc.filter(m=>_scEmAberto(m) && _diasSemComAtual(m)>=180).length; // ≥180 dias sem comunicação (Akiles) — mesma base do KPI sc-kpi-180d
   const ofc=(getOFC().registros)||[];
   const ofcVenc=ofc.filter(r=>(r.status||'')!=='Concluído' && r.prazoFinal && String(r.prazoFinal).slice(0,10)<todayK).length;
   const aguard=ocs.filter(o=>o.prodoc!=='SIM' && _etapaOc(o)==='comunicacao').length;
@@ -8549,6 +8549,11 @@ function _scMoverArea(id, destino) {
   _mostrarToast(destino === 'psicossocial' ? '\u{2705} Movido para Psicossocial (DPP).' : '\u{2705} Movido para Jurídico.', 'sucesso');
 }
 function _scListaArea(dados, area){ return (dados.monitorados || []).filter(m => _scEhMembro(m, area)); }
+// "Em aberto" = ATUALMENTE sem comunicação: nem desvinculado (ação manual) nem
+// 'comunicou' (voltou a se comunicar — marcado na SINCRONIZAÇÃO do import, quando
+// a pessoa some do relatório novo do AKILES). É a base da contagem/lista ativa,
+// pra o CME refletir o relatório REAL do AKILES (e não acumular ex-sem-comunicação).
+function _scEmAberto(m){ return !!m && _scEmAberto(m) && m.situacao !== 'comunicou'; }
 // Prefixos de DOM por área — Jurídico usa os IDs originais (sc/scde),
 // Psicossocial usa IDs espelhados (psc/pscde).
 const _SC_CFG = {
@@ -9140,6 +9145,7 @@ function importarExcelSemCom(input, area) {
     } catch(e) { console.warn('[CME] backup pré-import falhou:', e.message); }
 
     let novos = 0, atualizados = 0, pulados = 0, nJur = 0, nPsi = 0;
+    const registrosNoRelatorio = new Set(); // registros presentes NESTE relatório do AKILES
 
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const cells = Array.from(rows[i].querySelectorAll('td'));
@@ -9158,10 +9164,15 @@ function importarExcelSemCom(input, area) {
       const unidade  = gc(cUnidade);
       const dias     = _parseDiasSemCom(tempo);
 
+      registrosNoRelatorio.add(String(registro));
+
       const idx = dados.monitorados.findIndex(m => m.registro === registro);
       if (idx >= 0) {
         // Atualiza só campos vindos do AKILES — preserva tratativas, desvinculação, situação
         Object.assign(dados.monitorados[idx], { nome, ultimaComunicacao: dataUlt, tempoSemCom: tempo, intervalo, unidade, diasSemCom: dias, atualizadoEm: agora });
+        // Reapareceu no relatório: se estava marcado 'comunicou', voltou a ficar
+        // SEM comunicação → reativa (desvinculado permanece, é ação manual).
+        if (dados.monitorados[idx].situacao === 'comunicou') dados.monitorados[idx].situacao = 'ativo';
         atualizados++;
       } else {
         dados.monitorados.push({
@@ -9176,6 +9187,20 @@ function importarExcelSemCom(input, area) {
       }
     }
 
+    // SINCRONIZAÇÃO com o AKILES: quem NÃO está no relatório novo voltou a se
+    // comunicar. Marca 'comunicou' (NÃO deleta — preserva tratativas/desvinculação/
+    // histórico) para sair da contagem ativa. Assim o CME reflete o relatório REAL
+    // do AKILES em vez de acumular ex-sem-comunicação. Desvinculado é ação manual,
+    // não é mexido aqui.
+    let voltaram = 0;
+    dados.monitorados.forEach(m => {
+      if (!registrosNoRelatorio.has(String(m.registro)) && m.situacao !== 'desvinculado' && m.situacao !== 'comunicou') {
+        m.situacao = 'comunicou';
+        m.comunicouEm = agora;
+        voltaram++;
+      }
+    });
+
     dados.ultimaImportacao = agora;
     if (!dados.ultimaImportArea) dados.ultimaImportArea = {};
     // O import popula AS DUAS áreas (o filtro só separa na exibição)
@@ -9186,7 +9211,7 @@ function importarExcelSemCom(input, area) {
     renderizarSemCom(area);
     input.value = '';
     const _desvinc = (dados.monitorados||[]).filter(m => m.situacao === 'desvinculado').length;
-    _mostrarToast(`\u{2705} Importado: ${nJur} Jurídico + ${nPsi} DPP→Psicossocial (${novos} novos, ${atualizados} atualizados). ${_desvinc} desvinculado(s) preservado(s).`, 'sucesso');
+    _mostrarToast(`\u{2705} Importado: ${nJur} Jurídico + ${nPsi} DPP→Psicossocial (${novos} novos, ${atualizados} atualizados). ${voltaram} voltaram a comunicar (saíram da contagem). ${_desvinc} desvinculado(s) preservado(s).`, 'sucesso');
   };
 
   reader.onerror = () => { _mostrarToast('Erro ao ler o arquivo. Tente novamente.', 'erro'); input.value = ''; };
@@ -9217,11 +9242,11 @@ function atualizarBadgeSemCom() {
   };
   // Jurídico (exclui DPP)
   const jur = _scListaArea(dados, 'juridico');
-  _set('jur-semcom-badge', jur.filter(m => _diasSemComAtual(m) >= 180 && m.situacao !== 'desvinculado').length);
+  _set('jur-semcom-badge', jur.filter(m => _diasSemComAtual(m) >= 180 && _scEmAberto(m)).length);
   _set('sc-desvinc-badge', jur.filter(m => m.situacao === 'desvinculado').length, '#16a34a');
   // Psicossocial (só DPP)
   const psi = _scListaArea(dados, 'psicossocial');
-  _set('psi-semcom-badge', psi.filter(m => _diasSemComAtual(m) >= 180 && m.situacao !== 'desvinculado').length);
+  _set('psi-semcom-badge', psi.filter(m => _diasSemComAtual(m) >= 180 && _scEmAberto(m)).length);
   _set('psc-desvinc-badge', psi.filter(m => m.situacao === 'desvinculado').length, '#16a34a');
 }
 
@@ -9344,13 +9369,13 @@ function renderizarSemCom(area) {
   // Base já filtrada pela área (Jurídico exclui DPP; Psicossocial só DPP)
   const all = _scListaArea(dados, area);
   // Desvinculados ficam SÓ na sub-aba Desvinculados — somem da lista de Ativos
-  let lista = all.filter(m => m.situacao !== 'desvinculado');
+  let lista = all.filter(m => _scEmAberto(m));
   if (fNome)     lista = lista.filter(m => m.nome.toLowerCase().includes(fNome));
   if (fReg)      lista = lista.filter(m => m.registro.toLowerCase().includes(fReg));
   if (fIntervalo) lista = lista.filter(m => (m.intervalo||'').toLowerCase().includes(fIntervalo));
   if (fSituacao === 'desvinculado') lista = lista.filter(m => m.situacao === 'desvinculado');
-  else if (fSituacao === 'tratativa') lista = lista.filter(m => (m.tratativas||[]).length > 0 && m.situacao !== 'desvinculado');
-  else if (fSituacao === 'ativo')    lista = lista.filter(m => m.situacao !== 'desvinculado');
+  else if (fSituacao === 'tratativa') lista = lista.filter(m => (m.tratativas||[]).length > 0 && _scEmAberto(m));
+  else if (fSituacao === 'ativo')    lista = lista.filter(m => _scEmAberto(m));
   if (fDiasMin > 0) lista = lista.filter(m => _diasSemComAtual(m) >= fDiasMin);
 
   // Ordenar: maiores dias primeiro (críticos no topo)
@@ -9358,12 +9383,12 @@ function renderizarSemCom(area) {
 
   // KPIs — calculados dinamicamente (escopo da área)
   const kpi = (suf, v) => { const el = document.getElementById(cfg.pfx+'-kpi-'+suf); if (el) el.textContent = v; };
-  kpi('total',  all.filter(m => m.situacao !== 'desvinculado').length);
+  kpi('total',  all.filter(m => _scEmAberto(m)).length);
   kpi('4h',     all.filter(m => _diasSemComAtual(m) === 0).length);
   kpi('1d',     all.filter(m => { const d = _diasSemComAtual(m); return d >= 1 && d < 7; }).length);
   kpi('7d',     all.filter(m => { const d = _diasSemComAtual(m); return d >= 7 && d < 30; }).length);
   kpi('30d',    all.filter(m => { const d = _diasSemComAtual(m); return d >= 30 && d < 180; }).length);
-  kpi('180d',   all.filter(m => _diasSemComAtual(m) >= 180 && m.situacao !== 'desvinculado').length);
+  kpi('180d',   all.filter(m => _diasSemComAtual(m) >= 180 && _scEmAberto(m)).length);
   kpi('desvinc', all.filter(m => m.situacao === 'desvinculado').length);
 
   // Última importação (timestamp da área, com fallback ao global)
@@ -11737,7 +11762,7 @@ function _relSemComDataHora(iso) { if (!iso) return ''; const d = new Date(iso);
 function _relSemComLista() {
   const corte = _relSemComCorte();
   return (getSemCom().monitorados || [])
-    .filter(m => m.situacao !== 'desvinculado' && _diasSemComAtual(m) >= corte)
+    .filter(m => _scEmAberto(m) && _diasSemComAtual(m) >= corte)
     .sort((a, b) => _diasSemComAtual(b) - _diasSemComAtual(a));
 }
 
