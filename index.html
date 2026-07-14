@@ -23628,7 +23628,7 @@ async function _comGerarPDFExec() {
 
     // ── Assinatura ───────────────────────────────────────────────
     if (y > pageH - mB - 35) { doc.addPage(); y = mT; }
-    const assW = tw * 0.55, assC = mL + tw / 2, assX = assC - assW / 2;
+    const assC = mL + tw / 2;
     if (assImg) {
       try {
         // Converte PNG\u{2192}JPEG branco + calcula dimensões pela proporção real
@@ -23654,8 +23654,9 @@ async function _comGerarPDFExec() {
         y += imgH + 1;
       } catch(e) {}
     }
-    doc.setDrawColor(0); doc.setLineWidth(0.3);
-    doc.line(assX, y, assX + assW, y); y += 4;
+    // Sem traço acima do nome: a Comunicação já protocola com assinatura própria,
+    // então a linha (para assinar à mão) é desnecessária — igual ao HTML (b04dde4).
+    y += 4;
     doc.setFont('times', 'bold'); doc.setFontSize(12); doc.setTextColor(0);
     if (signat) { doc.text(signat, assC, y, { align: 'center' }); y += 5; }
     doc.setFont('times', 'normal'); doc.setFontSize(10);
