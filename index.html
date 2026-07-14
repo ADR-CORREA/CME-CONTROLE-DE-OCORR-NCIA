@@ -19214,7 +19214,13 @@ async function rv_capturarViaCloud(ids) {
       if (j.status === 'concluido') break;
       if ((j.progresso || 0) !== ultProg) { ultProg = j.progresso || 0; semProg = 0; } else { semProg++; }
       if (j.status === 'pendente' && semProg >= 24) { _mostrarToast('\u{26A0}\u{FE0F} O robô não respondeu. Ele está LIGADO no seu PC? (LIGAR ROBO.bat)', 'erro'); break; }
-      if (voltas >= 280) break; // trava de segurança (~7 min)
+      // Aborta SÓ se o robô estagnar (parar de produzir mapas por muito tempo) —
+      // NUNCA por tempo total. Antes havia um teto fixo (voltas>=280 ≈ 12 min) que
+      // apagava o job no MEIO de lotes grandes mesmo com o robô trabalhando: só
+      // ~11 de 38 saíam. Agora um lote de 100 roda até o fim enquanto avança;
+      // semProg>=120 (~5 min sem NENHUM mapa novo) = robô travou de verdade.
+      if (semProg >= 120) { _mostrarToast('\u{26A0}\u{FE0F} O robô parou de responder no meio da captura. Veja a janela do robô e tente de novo.', 'erro'); break; }
+      if (voltas >= 6000) break; // guarda anti-loop (só se algo travar de vez, ~4h)
     }
     const n = inseridos.size;
     if (cancelado) {
