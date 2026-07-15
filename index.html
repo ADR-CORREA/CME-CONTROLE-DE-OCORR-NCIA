@@ -10393,6 +10393,23 @@ function removerUsuario(loginId) {
   if (idx === -1) { _mostrarToast('Usuário não encontrado.', 'erro'); return; }
   addLog(`Removeu usuário ${us[idx].nome} (${usuarioAtual?.nome || '?'})`,
     { action: 'excluir', modulo: 'Usuários', alvo: us[idx].nome });
+  // PRESERVA O HISTÓRICO: o servidor sai do cadastro (não loga mais, some da
+  // lista), mas o que ele PRODUZIU continua íntegro. Os ofícios já guardam nome
+  // e documento como texto; o que se perderia é a ASSINATURA do perfil. Então:
+  // 1) espelha a assinatura no store próprio (chaveado pelo login, que a
+  //    exclusão não toca) — assim _getAssinaturaDe() segue achando;
+  // 2) arquiva a identidade (texto, sem imagem) para o fallback por nome e como
+  //    trilha de auditoria de quem foi excluído, quando e por quem.
+  try {
+    const ex_u = us[idx];
+    if (ex_u.assinatura && !_assMap()[ex_u.usuario]) _salvarAssinaturaStore(ex_u.usuario, ex_u.assinatura);
+    const ex = carregarStore('ex_usuarios', {}) || {};
+    ex[ex_u.usuario] = {
+      usuario: ex_u.usuario, nome: ex_u.nome || '', cargo: ex_u.cargo || '',
+      excluidoEm: new Date().toISOString(), excluidoPor: usuarioAtual?.nome || '?',
+    };
+    salvarStore('ex_usuarios', ex);
+  } catch (e) { console.warn('[CME] arquivo do ex-usuário falhou:', e); }
   us.splice(idx, 1);
   salvarUsuarios(us);
   renderizarUsers();
@@ -21145,6 +21162,11 @@ function _comAssinaturaDeNome(nome){
     const alvo = String(nome).trim().toLowerCase();
     const u = (getUsuarios()||[]).find(x => String(x.nome||'').trim().toLowerCase() === alvo);
     if (u) return _getAssinaturaDe(u.usuario);
+    // Servidor já EXCLUÍDO: acha o login pelo arquivo de ex-servidores, para o
+    // ofício antigo dele continuar exibindo a assinatura (histórico preservado).
+    const ex = carregarStore('ex_usuarios', {}) || {};
+    const k = Object.keys(ex).find(k => String(ex[k]?.nome || '').trim().toLowerCase() === alvo);
+    if (k) return _getAssinaturaDe(k);
   } catch(e){}
   return null;
 }
