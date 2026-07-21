@@ -2860,7 +2860,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
             <!-- Modelo -->
             <div class="form-field">
               <label>Modelo de Ofício</label>
-              <select id="com-of-modelo" onchange="_comTextoBloqueado=false;_comCorpoEditado=false;_comRestaurarCorpo();com_atualizarCampos();com_sugerirNumero();com_atualizarPreview()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+              <select id="com-of-modelo" onchange="com_onModeloTrocado()" style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem">
                 <option value="">Selecione o modelo...</option>
               </select>
             </div>
@@ -20334,6 +20334,16 @@ const COM_COMARCAS = [
 
 /* ─── 20 Modelos de Ofício ──────────────────────────────────── */
 const COM_MODELOS = [
+  /* ── LIVRE (sem modelo — assunto e corpo digitados à mão) ──── */
+  { id:'livre', cat:'✏️ Livre (sem modelo)', nome:'✏️ Livre — digitar o assunto e o texto', assunto:'', livre:true, campos:[],
+    // O corpo vem do que o usuário digita no textarea; na visualização, do texto
+    // salvo no registro (campos._corpoLivre). Quebra em parágrafos por linha em branco.
+    corpo:(c)=>{
+      let t = (c && typeof c._corpoLivre === 'string') ? c._corpoLivre
+            : (document.getElementById('com-of-corpo')?.value || '');
+      t = String(t).trim();
+      return t ? t.split(/\n{2,}/).map(s => s.trim()).filter(Boolean) : [''];
+    }},
   /* ── VINCULAÇÃO ───────────────────────────────────────────── */
   { id:'vinc-tornozeleira', cat:'Vinculação', nome:'Vinculação — Tornozeleira Eletrônica',
     assunto:'Vinculação ao Sistema de Monitoração Eletrônica',
@@ -20889,6 +20899,20 @@ function com_atualizarDestinatario() {
   document.getElementById('com-of-destinatario').value = com_gerarDestinatario(comarca, vara);
 }
 
+/* Handler da troca de modelo: refaz corpo/campos/número/prévia. No modo LIVRE,
+   começa com o corpo EM BRANCO para o usuário escrever do zero (sem herdar o
+   texto do modelo anterior). */
+function com_onModeloTrocado() {
+  _comTextoBloqueado = false;
+  _comCorpoEditado   = false;
+  const m  = COM_MODELOS.find(x => x.id === document.getElementById('com-of-modelo').value);
+  const ct = document.getElementById('com-of-corpo');
+  if (ct && m && m.id === 'livre') ct.value = '';
+  _comRestaurarCorpo();
+  com_atualizarCampos();
+  com_sugerirNumero();
+  com_atualizarPreview();
+}
 function com_atualizarCampos() {
   const m   = COM_MODELOS.find(x => x.id === document.getElementById('com-of-modelo').value);
   // Assunto: ao trocar de modelo, preenche o campo com o assunto padrão do
@@ -21533,8 +21557,15 @@ function com_gerarOficio(ov) {
     if (!modeloId)  return _mostrarToast('\u{26A0}\u{FE0F} Selecione o modelo de ofício.','erro');
     if (!dest)      return _mostrarToast('\u{26A0}\u{FE0F} Selecione comarca e vara.','erro');
     if (!numero)    return _mostrarToast('\u{26A0}\u{FE0F} Informe o número do ofício.','erro');
-    if (!nomeMon)   return _mostrarToast('\u{26A0}\u{FE0F} Informe o nome do monitorado.','erro');
-    if (!processo)  return _mostrarToast('\u{26A0}\u{FE0F} Informe o número do processo.','erro');
+    // No modo LIVRE nome/processo são opcionais (casos atípicos), mas o assunto e
+    // o corpo digitados são obrigatórios. Nos demais modelos, nome e processo são.
+    if (modeloId === 'livre') {
+      if (!(document.getElementById('com-of-assunto')?.value.trim())) return _mostrarToast('\u{26A0}\u{FE0F} Informe o assunto (tema) do ofício.','erro');
+      if (!(document.getElementById('com-of-corpo')?.value.trim())) return _mostrarToast('\u{26A0}\u{FE0F} Escreva o texto do ofício.','erro');
+    } else {
+      if (!nomeMon)   return _mostrarToast('\u{26A0}\u{FE0F} Informe o nome do monitorado.','erro');
+      if (!processo)  return _mostrarToast('\u{26A0}\u{FE0F} Informe o número do processo.','erro');
+    }
 
     // Anti-corrida: se OUTRA pessoa logada gerou esse número enquanto você preenchia,
     // oferece avançar para o próximo livre (evita dois ofícios com o mesmo número).
@@ -21571,6 +21602,9 @@ function com_gerarOficio(ov) {
       if (c.tipo === 'date' && val) val = com_fmtData(val);
       campos[c.id] = val;
     });
+    // Modo LIVRE: guarda o texto digitado no registro (campos._corpoLivre), para
+    // reabrir/visualizar o ofício depois com o mesmo corpo (não há modelo p/ recriar).
+    if (modelo.livre) campos._corpoLivre = document.getElementById('com-of-corpo')?.value || '';
   }
   // Rede de segurança: nenhum campo do modelo pode renderizar "undefined"
   // (ex.: ofício antigo salvo antes de o campo existir). Completa o que faltar.
