@@ -20997,7 +20997,41 @@ function com_getOficios() {
   const o = carregarStore('oficios', null);
   return (o && Array.isArray(o.registros)) ? o : { registros: [] };
 }
-function com_salvarOficios(o) { salvarStore('oficios', o); }
+/* Enxuga o store de ofícios ANTES de salvar: remove a IMAGEM base64 da assinatura
+   presa nos registros antigos (inchava 3,75 MB → quebrava o save no Supabase →
+   o número do ofício repetia). LOSSLESS: para cada registro com imagem, acha o
+   login do signatário (login salvo ou pelo nome no cadastro), PRESERVA a
+   assinatura no store próprio (chaveado pelo login) e só então remove a imagem —
+   os ofícios antigos seguem exibindo a assinatura (via signatarioUsuario /
+   _comAssinaturaDeNome). Se não for recuperável, MANTÉM a imagem (nunca perde). */
+function _comEnxugarAssinaturas(o) {
+  try {
+    if (!o || !Array.isArray(o.registros)) return;
+    const users = (typeof getUsuarios === 'function' ? getUsuarios() : []) || [];
+    o.registros.forEach(r => {
+      if (!r || !r.assinatura || String(r.assinatura).length < 500) return;
+      let login = r.signatarioUsuario || '';
+      if (!login && r.signatario) {
+        const alvo = String(r.signatario).trim().toLowerCase();
+        const u = users.find(x => String(x.nome || '').trim().toLowerCase() === alvo);
+        if (u) login = u.usuario;
+      }
+      if (!login) return;                                   // sem como recuperar → mantém a imagem
+      const preservada = _getAssinaturaDe(login);
+      if (!preservada) {                                    // cadastro não tem → preserva ESTA e remove
+        _salvarAssinaturaStore(login, r.assinatura);
+        r.signatarioUsuario = r.signatarioUsuario || login;
+        delete r.assinatura;
+      } else if (preservada === r.assinatura) {             // idêntica à do cadastro → redundante, remove
+        r.signatarioUsuario = r.signatarioUsuario || login;
+        delete r.assinatura;
+      }
+      // else: cadastro tem uma assinatura DIFERENTE → mantém a imagem embutida
+      // (não altera nem um byte do ofício já protocolado).
+    });
+  } catch (e) { console.warn('[CME] enxugar assinaturas falhou:', e); }
+}
+function com_salvarOficios(o) { _comEnxugarAssinaturas(o); salvarStore('oficios', o); }
 
 function com_anoForm() {
   const d = document.getElementById('com-of-data')?.value || '';
