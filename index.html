@@ -2943,6 +2943,14 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
               </select>
             </div>
 
+            <!-- Assunto (editável) -->
+            <div class="form-field">
+              <label>Assunto <span style="font-weight:400;color:#94a3b8">(editável — preenchido pelo modelo)</span></label>
+              <input type="text" id="com-of-assunto" oninput="com_atualizarPreview()"
+                style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
+                placeholder="Escolha o modelo — você pode editar o assunto aqui">
+            </div>
+
             <!-- Campos dinâmicos do modelo -->
             <div id="com-of-campos-dinamicos"></div>
 
@@ -20883,6 +20891,10 @@ function com_atualizarDestinatario() {
 
 function com_atualizarCampos() {
   const m   = COM_MODELOS.find(x => x.id === document.getElementById('com-of-modelo').value);
+  // Assunto: ao trocar de modelo, preenche o campo com o assunto padrão do
+  // modelo (editável — a Comunicação pode digitar um próprio depois).
+  const assEl = document.getElementById('com-of-assunto');
+  if (assEl) assEl.value = m ? (m.assunto || '') : '';
   const div = document.getElementById('com-of-campos-dinamicos');
   if (!m || !m.campos.length) { div.innerHTML = ''; return; }
   const temWide = m.campos.some(c => c.tipo === 'textarea' || c.tipo === 'lista' || c.tipo === 'lista-par');
@@ -20991,6 +21003,12 @@ function com_anoForm() {
   const d = document.getElementById('com-of-data')?.value || '';
   return /^\d{4}/.test(d) ? parseInt(d.slice(0,4)) : new Date().getFullYear();
 }
+/* Assunto do ofício: o campo editável tem prioridade; vazio cai no padrão do
+   modelo. Usado na geração (HTML/PDF), na prévia e no registro do ofício. */
+function com_assuntoForm(modelo) {
+  const v = (document.getElementById('com-of-assunto')?.value || '').trim();
+  return v || (modelo && modelo.assunto) || '';
+}
 function com_proximoNumero(ano) {
   ano = parseInt(ano) || new Date().getFullYear();
   const regs = com_getOficios().registros.filter(r => r.ano === ano);
@@ -21061,7 +21079,7 @@ function com_registrarGerado(numero, dataStr, modelo, extras) {
     comarca:     document.getElementById('com-of-comarca')?.value || '',
     vara:        document.getElementById('com-of-vara')?.value || '',
     modelo:      modelo?.id || '',
-    assunto:     modelo?.assunto || '',
+    assunto:     com_assuntoForm(modelo),
     signatario:  extras.signat || '',
     // Campos extras para reconstruir o documento na visualização:
     saudacao:    extras.saudacao || '',
@@ -21503,6 +21521,9 @@ function com_gerarOficio(ov) {
 
   const modelo = COM_MODELOS.find(m => m.id === modeloId);
   if (!modelo) return _mostrarToast('\u{26A0}\u{FE0F} Modelo do ofício não encontrado.','erro');
+  // Assunto: na visualização usa o salvo no registro; ao gerar, o campo editável
+  // (com fallback ao padrão do modelo).
+  const assunto = ov ? (ov.assunto || modelo.assunto || '') : com_assuntoForm(modelo);
 
   // Coletar campos dinâmicos (do registro salvo na visualização, ou do form)
   let campos;
@@ -21676,7 +21697,7 @@ function com_gerarOficio(ov) {
   <p class="dest-titulo">A Sua Excel&#234;ncia o (a) Senhor (a)</p>
   <p class="dest-nome">${esc(dest)}.</p>
 
-  <p class="ref-assunto"><strong>Assunto:</strong> ${esc(modelo.assunto)}.</p>
+  <p class="ref-assunto"><strong>Assunto:</strong> ${esc(assunto)}.</p>
   <p class="ref-processo"><strong>Processo n&#176;. ${esc(processo)}</strong></p>
 
   <p class="saudacao">${esc(saudacao)}</p>
@@ -21852,7 +21873,7 @@ function com_atualizarPreview() {
     `A Sua Excelência o (a) Senhor (a)`,
     dest ? `${dest}.` : '____.',
     '',
-    `Assunto: ${modelo.assunto}.`,
+    `Assunto: ${com_assuntoForm(modelo)}.`,
     `Processo nº: ${processo || '____'}.`,
     '',
     saudacao,
@@ -23518,13 +23539,14 @@ async function _comGerarPDFExec() {
     // ── Assunto / Processo ───────────────────────────────────────
     const modeloId = document.getElementById('com-of-modelo')?.value || '';
     const modelo   = COM_MODELOS.find(m => m.id === modeloId);
-    if (modelo?.assunto) {
+    const assuntoPdf = com_assuntoForm(modelo);
+    if (assuntoPdf) {
       doc.setFont('times', 'bold'); doc.setFontSize(12); doc.setTextColor(0);
       const assLbl = 'Assunto: ';
       const assLblW = doc.getTextWidth(assLbl);
       doc.text(assLbl, mL, y);
       doc.setFont('times', 'normal');
-      const assLines = doc.splitTextToSize(modelo.assunto + '.', tw - assLblW);
+      const assLines = doc.splitTextToSize(assuntoPdf + '.', tw - assLblW);
       doc.text(assLines[0], mL + assLblW, y);
       if (assLines.length > 1) { y += 6; doc.text(assLines.slice(1).join(' '), mL, y); }
       y += 6; // Assunto colado ao Processo (sem espaçamento entre eles)
