@@ -18203,6 +18203,20 @@ function r2_renderizarProcesso(arquivos) {
 }
 
 /* ── Upload com categoria (pasta Processo) ────────────────────── */
+/* Mensagem de erro de upload em português claro — distingue falha de conexão,
+   sessão expirada e arquivo grande demais, para o servidor saber o que fazer
+   (em vez do "Failed to fetch" cru). */
+function _r2MsgErroUpload(e, nomeArq) {
+  const m = String((e && e.message) || e || '');
+  if (/Failed to fetch|NetworkError|network error|load failed|ERR_INTERNET|ERR_NETWORK|ERR_CONNECTION|timed? ?out/i.test(m))
+    return `Falha de conexão ao enviar "${nomeArq}". Verifique sua internet e tente novamente.`;
+  if (/HTTP 401|HTTP 403|token|sess[aã]o/i.test(m))
+    return `Sua sessão pode ter expirado. Saia e entre de novo, depois reenvie "${nomeArq}".`;
+  if (/HTTP 413|too large|muito grande|payload/i.test(m))
+    return `"${nomeArq}" é grande demais para o servidor. Reduza ou compacte o arquivo.`;
+  return `Erro ao enviar "${nomeArq}": ${m}`;
+}
+
 async function r2_enviarComCategoria(input, categoria) {
   const files = Array.from(input.files);
   if (!files.length) return;
@@ -18220,13 +18234,13 @@ async function r2_enviarComCategoria(input, categoria) {
     const nomeComCat = `[${categoria}] ${encodeURIComponent(file.name)}`;
     try {
       await r2_api('POST', '/upload', {
-        'X-Monitorado': r2_state.monitorado,
-        'X-Pasta':      r2_state.pasta,
+        'X-Monitorado': encodeURIComponent(r2_state.monitorado),
+        'X-Pasta':      encodeURIComponent(r2_state.pasta),
         'X-Filename':   nomeComCat,
         'Content-Type': file.type || 'application/octet-stream',
       }, file);
     } catch(e) {
-      _mostrarToast(`\u{26A0}\u{FE0F} Erro ao enviar ${file.name}: ${e.message}`, 'erro');
+      _mostrarToast(`\u{26A0}\u{FE0F} ${_r2MsgErroUpload(e, file.name)}`, 'erro');
     }
   }
   bar.style.width = '100%';
@@ -18295,10 +18309,16 @@ async function r2_enviarArquivos(input) {
         if (!resp) { pulados++; continue; }
       }
     } catch(e) { /* ignora erro na verificação, continua upload */ }
+    // Aviso de arquivo muito grande: o limite de corpo do Cloudflare é ~100 MB;
+    // acima disso o envio falha antes de chegar ao R2, mesmo com internet boa.
+    if (file.size > 95 * 1024 * 1024) {
+      const seguir = confirm(`\u{26A0}\u{FE0F} "${file.name}" tem ${(file.size / 1048576).toFixed(0)} MB. Arquivos acima de ~100 MB podem não ser aceitos pelo servidor. Tentar mesmo assim?`);
+      if (!seguir) { pulados++; continue; }
+    }
     txt.textContent = `Enviando (${i + 1}/${files.length}): ${file.name}`;
     try {
       await r2_api('POST', '/upload', {
-        'X-Monitorado': r2_state.monitorado,
+        'X-Monitorado': encodeURIComponent(r2_state.monitorado),
         'X-Pasta':      encodeURIComponent(r2_state.pasta),
         'X-Filename':   encodeURIComponent(nomeEnv),
         'Content-Type': file.type || 'application/octet-stream',
@@ -18310,11 +18330,11 @@ async function r2_enviarArquivos(input) {
         try { await _relImportarDoUpload(file); } catch(eRel) { console.error('[CME] auto-relatório:', eRel); }
       }
     } catch(e) {
-      _mostrarToast(`\u{26A0}\u{FE0F} Erro ao enviar ${file.name}: ${e.message}`, 'erro');
+      _mostrarToast(`\u{26A0}\u{FE0F} ${_r2MsgErroUpload(e, file.name)}`, 'erro');
     }
   }
   bar.style.width = '100%';
-  txt.textContent = `\u{2705} ${enviados} enviado(s)${pulados ? `, ${pulados} ignorado(s) (duplicata)` : ''}!`;
+  txt.textContent = `\u{2705} ${enviados} enviado(s)${pulados ? `, ${pulados} ignorado(s)` : ''}!`;
   setTimeout(() => { wrap.style.display = 'none'; bar.style.width = '0%'; }, 2500);
   input.value = '';
   addLog(`R2: ${files.length} arquivo(s) enviado(s) para ${r2_state.monitorado}/${r2_state.pasta}`);
