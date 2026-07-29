@@ -23721,7 +23721,24 @@ async function _comGerarPDFExec() {
       flushWord();
       return words;
     };
-    const _runW  = (r)  => { doc.setFont('times', r.b ? 'bold' : 'normal'); return doc.getTextWidth(r.t); };
+    // LARGURA SEM KERNING. O jsPDF MEDE a palavra inteira aplicando kerning
+    // (fica mais estreita), mas DESENHA sem kerning (fica mais larga). A palavra
+    // então invadia o espaço seguinte e as palavras saíam GRUDADAS no PDF — o
+    // nome do monitorado, em negrito, era o caso visível ("IDELVANDA SILVATEXEIRA":
+    // "IDELVAN" media 18,41mm mas ocupava 19,52mm, comendo o espaço de 1,32mm).
+    // Somar letra a letra devolve a largura real usada na renderização.
+    const _wCache = new Map();
+    const _txtW = (t, bold) => {
+      const k = (bold ? 'b|' : 'n|') + t;
+      let v = _wCache.get(k);
+      if (v === undefined) {
+        doc.setFont('times', bold ? 'bold' : 'normal');
+        v = 0; for (const ch of String(t)) v += doc.getTextWidth(ch);
+        _wCache.set(k, v);
+      }
+      return v;
+    };
+    const _runW  = (r)  => _txtW(r.t, r.b);
     const _wordW = (wd) => wd.reduce((a, r) => a + _runW(r), 0);
     doc.setFont('times', 'normal'); const _spW = doc.getTextWidth(' ');
 
@@ -23753,8 +23770,25 @@ async function _comGerarPDFExec() {
         const wordsW    = line.words.reduce((a, wd) => a + _wordW(wd), 0);
         const spaceW    = (!isLast && gaps > 0) ? (lineAvail - wordsW) / gaps : _spW; // justifica (menos a última linha)
         let xx = x0;
-        for (const wd of line.words) {
-          for (const r of wd) { doc.setFont('times', r.b ? 'bold' : 'normal'); doc.text(r.t, xx, y); xx += doc.getTextWidth(r.t); }
+        for (let wi = 0; wi < line.words.length; wi++) {
+          const wd = line.words[wi];
+          for (let ri = 0; ri < wd.length; ri++) {
+            const r = wd[ri];
+            doc.setFont('times', r.b ? 'bold' : 'normal');
+            // ESPAÇO REAL no PDF: o texto era desenhado palavra por palavra SEM
+            // nenhum caractere de espaço (o espaço era só a lacuna de posição).
+            // Ao copiar o texto ou converter o PDF, as palavras saíam GRUDADAS
+            // (ex.: nome do monitorado em negrito virando "IDELVANDASILVATEXEIRA").
+            // Anexar o espaço na última parte da palavra insere o caractere de
+            // verdade; o visual NÃO muda, pois cada palavra é posicionada em xx
+            // absoluto (o espaço final apenas ocupa a lacuna já existente).
+            // O espaço vai na ÚLTIMA parte de cada palavra — inclusive na última
+            // palavra da linha, senão o fim de uma linha grudaria no início da
+            // seguinte ("MonitoramentoEletrônico") ao copiar/converter o PDF.
+            const ehUltimaParte = (ri === wd.length - 1);
+            doc.text(ehUltimaParte ? (r.t + ' ') : r.t, xx, y);
+            xx += _txtW(r.t, r.b);   // avanço pela largura REAL (sem kerning)
+          }
           xx += spaceW;
         }
         y += lineH;
