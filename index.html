@@ -2919,7 +2919,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
               <div class="form-field">
                 <label>Nome do Monitorado</label>
-                <input type="text" id="com-of-nome" oninput="com_onCampoInput()"
+                <input type="text" id="com-of-nome" oninput="com_onCampoInput()" onblur="com_limparCampoNome(this)"
                   style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box"
                   placeholder="NOME COMPLETO EM MAIÚSCULAS">
               </div>
@@ -20684,10 +20684,19 @@ function com_fmtDataLonga(s) {
 
 /* Padroniza o NEGRITO do corpo de QUALQUER modelo de ofício: remove negrito manual e
    re-aplica em (1) nome do monitorado e (2) datas dd/mm/aaaa. Vale p/ todos os modelos. */
+/* Remove caracteres INVISIVEIS (zero-width) e normaliza espacos unicode
+   (nbsp, espaco fino, ideografico...) em espaco comum. Nomes copiados de PDF/PJe
+   costumam trazer esses caracteres: no navegador parecem normais, mas no PDF as
+   palavras saem coladas (ex.: nome grudado no texto). Nao altera texto limpo. */
+function _comLimparInvisiveis(t) {
+  return String(t == null ? '' : t)
+    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '')                 // largura zero
+    .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' '); // espacos exoticos -> comum
+}
 function _comNegritoCorpo(p, nome) {
-  let s = String(p).replace(/<\/?b>/gi, '');            // zera negrito manual p/ padronizar
+  let s = _comLimparInvisiveis(p).replace(/<\/?b>/gi, '');  // zera negrito manual p/ padronizar
   s = s.replace(/(\d{2}\/\d{2}\/\d{4})/g, '<b>$1</b>'); // datas em negrito
-  const nm = String(nome || '').trim();
+  const nm = _comLimparInvisiveis(nome).trim();
   if (nm.length >= 3) {
     const escRe = nm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     // Fronteira por \p{L}\p{N}: evita negrito no meio de palavra (ex.: sobrenome curto dentro de outra palavra)
@@ -21863,6 +21872,16 @@ function com_destravarCorpo() {
 function com_onCampoInput() {
   com_destravarCorpo();
   com_atualizarPreview();
+}
+
+/* Ao SAIR do campo do nome: higieniza o que foi colado (caracteres invisíveis e
+   espaços exóticos vindos de PDF/PJe) e colapsa espaços repetidos. Assim o nome
+   já entra correto no ofício e no registro salvo, não só na hora de gerar. */
+function com_limparCampoNome(el) {
+  if (!el) return;
+  const antes = el.value;
+  const depois = _comLimparInvisiveis(antes).replace(/\s{2,}/g, ' ').trim();
+  if (depois !== antes) { el.value = depois; com_atualizarPreview(); }
 }
 
 /* Restaura o corpo do texto a partir do modelo */
