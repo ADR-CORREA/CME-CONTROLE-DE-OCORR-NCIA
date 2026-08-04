@@ -2982,6 +2982,13 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
               <input type="text" id="com-of-signatario" placeholder="Nome do signatário" oninput="com_atualizarPreview()"
                 style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
             </div>
+            <!-- Confere a assinatura ANTES de gerar: mostra qual imagem vai sair
+                 no documento, para ninguém assinar com a assinatura de outro. -->
+            <div id="com-ass-confere" style="display:none;margin:-4px 0 10px;padding:8px 10px;border-radius:7px;border:1px solid #e2e8f0;background:#f8fafc">
+              <div style="font-size:.7rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Assinatura que vai no documento</div>
+              <img id="com-ass-confere-img" alt="Assinatura" style="display:none;max-height:44px;max-width:190px;object-fit:contain;background:#fff;border-radius:4px">
+              <div id="com-ass-confere-msg" style="font-size:.74rem;line-height:1.45;margin-top:5px"></div>
+            </div>
             <div class="form-field">
               <label>Cargo</label>
               <input type="text" id="com-of-cargo" placeholder="Cargo do signatário" oninput="com_atualizarPreview()"
@@ -3226,6 +3233,12 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
               <label>Signatário</label>
               <input type="text" id="jur-signatario" placeholder="Nome do signatário" oninput="jur_gerarTexto()"
                 style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
+            </div>
+            <!-- Confere a assinatura ANTES de gerar (mesma lógica da Comunicação) -->
+            <div id="jur-ass-confere" style="display:none;margin:-4px 0 10px;padding:8px 10px;border-radius:7px;border:1px solid #e2e8f0;background:#f8fafc">
+              <div style="font-size:.7rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Assinatura que vai no documento</div>
+              <img id="jur-ass-confere-img" alt="Assinatura" style="display:none;max-height:44px;max-width:190px;object-fit:contain;background:#fff;border-radius:4px">
+              <div id="jur-ass-confere-msg" style="font-size:.74rem;line-height:1.45;margin-top:5px"></div>
             </div>
             <div class="form-field">
               <label>Cargo</label>
@@ -10668,6 +10681,28 @@ function _assinaturaDoLogado() {
     if (u) { const a = _getAssinaturaDe(u); if (a) return a; }
   } catch (e) {}
   return (usuarioAtual && usuarioAtual.assinatura) || null;
+}
+
+/* Mostra no formulário a assinatura que sairá no documento, para CONFERÊNCIA
+   antes de gerar. Nasceu do caso em que um ofício saiu com o nome de um servidor
+   e a assinatura de outro (imagem errada cadastrada no perfil): com a miniatura
+   à vista, o próprio servidor percebe antes de protocolar. */
+function _mostrarAssinaturaConfere(idWrap, idImg, idMsg) {
+  const wrap = document.getElementById(idWrap);
+  const img  = document.getElementById(idImg);
+  const msg  = document.getElementById(idMsg);
+  if (!wrap || !img || !msg) return;
+  const ass = _assinaturaDoLogado();
+  wrap.style.display = 'block';
+  if (ass) {
+    img.src = ass; img.style.display = 'block';
+    msg.innerHTML = 'Confira se esta assinatura &eacute; a <strong>sua</strong>. Se for de outra pessoa, avise a administra&ccedil;&atilde;o <u>antes</u> de gerar o documento.';
+    msg.style.color = '#92400e';
+  } else {
+    img.removeAttribute('src'); img.style.display = 'none';
+    msg.innerHTML = 'Voc&ecirc; ainda n&atilde;o tem assinatura cadastrada &mdash; o documento sair&aacute; apenas com o seu nome e cargo.';
+    msg.style.color = '#64748b';
+  }
 }
 
 async function _salvarAssinaturaStore(usuario, dataUrl) {
@@ -20955,6 +20990,8 @@ function com_init() {
   // nunca herda o decreto de outro servidor que usou a tela antes.
   const decEl = document.getElementById('com-of-decreto');
   if (decEl) decEl.value = usuarioAtual?.decreto || '';
+  // Miniatura da assinatura que sairá no documento (conferência)
+  try { _mostrarAssinaturaConfere('com-ass-confere', 'com-ass-confere-img', 'com-ass-confere-msg'); } catch (e) {}
   _cmeComboInit('com-of-comarca');
   _cmeComboInit('com-of-vara');
   com_setupDropZone(); // inicializa drag-and-drop de anexos
@@ -22544,6 +22581,8 @@ function jur_init() {
   // o decreto de outro servidor que usou a tela antes.
   const jurDecEl = document.getElementById('jur-decreto');
   if (jurDecEl) jurDecEl.value = usuarioAtual?.decreto || '';
+  // Miniatura da assinatura que sairá no documento (conferência)
+  try { _mostrarAssinaturaConfere('jur-ass-confere', 'jur-ass-confere-img', 'jur-ass-confere-msg'); } catch (e) {}
 }
 
 function jur_atualizarVaras() {
