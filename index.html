@@ -2982,13 +2982,6 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
               <input type="text" id="com-of-signatario" placeholder="Nome do signatário" oninput="com_atualizarPreview()"
                 style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
             </div>
-            <!-- Confere a assinatura ANTES de gerar: mostra qual imagem vai sair
-                 no documento, para ninguém assinar com a assinatura de outro. -->
-            <div id="com-ass-confere" style="display:none;margin:-4px 0 10px;padding:8px 10px;border-radius:7px;border:1px solid #e2e8f0;background:#f8fafc">
-              <div style="font-size:.7rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Assinatura que vai no documento</div>
-              <img id="com-ass-confere-img" alt="Assinatura" style="display:none;max-height:44px;max-width:190px;object-fit:contain;background:#fff;border-radius:4px">
-              <div id="com-ass-confere-msg" style="font-size:.74rem;line-height:1.45;margin-top:5px"></div>
-            </div>
             <div class="form-field">
               <label>Cargo</label>
               <input type="text" id="com-of-cargo" placeholder="Cargo do signatário" oninput="com_atualizarPreview()"
@@ -3233,12 +3226,6 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
               <label>Signatário</label>
               <input type="text" id="jur-signatario" placeholder="Nome do signatário" oninput="jur_gerarTexto()"
                 style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
-            </div>
-            <!-- Confere a assinatura ANTES de gerar (mesma lógica da Comunicação) -->
-            <div id="jur-ass-confere" style="display:none;margin:-4px 0 10px;padding:8px 10px;border-radius:7px;border:1px solid #e2e8f0;background:#f8fafc">
-              <div style="font-size:.7rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Assinatura que vai no documento</div>
-              <img id="jur-ass-confere-img" alt="Assinatura" style="display:none;max-height:44px;max-width:190px;object-fit:contain;background:#fff;border-radius:4px">
-              <div id="jur-ass-confere-msg" style="font-size:.74rem;line-height:1.45;margin-top:5px"></div>
             </div>
             <div class="form-field">
               <label>Cargo</label>
@@ -9864,7 +9851,7 @@ ${(fatores||encam)?`<h2>Vulnerabilidade e Encaminhamentos</h2>${fatores}${encam}
 <h2>Registro Técnico</h2>
 ${bloco('Descrição',a.descricao)}${bloco('Análise Técnica',a.analise)}${bloco('Providência',a.providencia)}${bloco('Observações',a.obs)}
 <div class="data">${dataExt}</div>
-<div class="ass"><div class="ln"></div><div class="nm">${esc(a.profissional||'_______________________________')}</div><div class="cg">Equipe Multidisciplinar – CME/IAPEN-AP</div></div>
+<div class="ass"><div class="nm">${esc(a.profissional||'_______________________________')}</div><div class="cg">Equipe Multidisciplinar – CME/IAPEN-AP</div></div>
 <div class="rodape">Av. Machado de Assis, 372 – Centro, CEP 68900-066 – Macapá-AP &nbsp;|&nbsp; cme@iapen.ap.gov.br &nbsp;|&nbsp; (96) 98415-2844</div>
 <div class="no-print"><button class="btn-imp" onclick="window.print()">Imprimir / Salvar como PDF</button><p style="font-size:9pt;color:#777">No diálogo, escolha <strong>"Salvar como PDF"</strong>.</p></div>
 <script>window.onload=function(){setTimeout(function(){window.print();},600);};<\/script>
@@ -10675,34 +10662,27 @@ function _getAssinaturaDe(usuario) {
    guardava a imagem de OUTRO servidor, o documento saía com o nome de um e a
    assinatura de outro. Aqui o mapa (cadastrado pelo próprio servidor) tem
    prioridade e a consulta ocorre com tudo já carregado. */
+/* ⚑ INTERRUPTOR: imprimir ou não a IMAGEM da assinatura nos documentos.
+   Decisão da CME (04/08/2026): NÃO imprimir. Os documentos saem apenas com
+   NOME + CARGO (sem linha acima do nome) — as assinaturas são apostas no
+   protocolo. Isso também elimina o risco de um documento sair com a assinatura
+   de outro servidor (caso do ofício com o nome de uma e a assinatura de outra).
+   Para voltar a imprimir, basta trocar para true. */
+const _IMPRIMIR_ASSINATURA_NOS_DOCS = false;
+
 function _assinaturaDoLogado() {
+  if (!_IMPRIMIR_ASSINATURA_NOS_DOCS) return null;
   try {
     const u = usuarioAtual && usuarioAtual.usuario;
     if (u) { const a = _getAssinaturaDe(u); if (a) return a; }
   } catch (e) {}
   return (usuarioAtual && usuarioAtual.assinatura) || null;
 }
-
-/* Mostra no formulário a assinatura que sairá no documento, para CONFERÊNCIA
-   antes de gerar. Nasceu do caso em que um ofício saiu com o nome de um servidor
-   e a assinatura de outro (imagem errada cadastrada no perfil): com a miniatura
-   à vista, o próprio servidor percebe antes de protocolar. */
-function _mostrarAssinaturaConfere(idWrap, idImg, idMsg) {
-  const wrap = document.getElementById(idWrap);
-  const img  = document.getElementById(idImg);
-  const msg  = document.getElementById(idMsg);
-  if (!wrap || !img || !msg) return;
-  const ass = _assinaturaDoLogado();
-  wrap.style.display = 'block';
-  if (ass) {
-    img.src = ass; img.style.display = 'block';
-    msg.innerHTML = 'Confira se esta assinatura &eacute; a <strong>sua</strong>. Se for de outra pessoa, avise a administra&ccedil;&atilde;o <u>antes</u> de gerar o documento.';
-    msg.style.color = '#92400e';
-  } else {
-    img.removeAttribute('src'); img.style.display = 'none';
-    msg.innerHTML = 'Voc&ecirc; ainda n&atilde;o tem assinatura cadastrada &mdash; o documento sair&aacute; apenas com o seu nome e cargo.';
-    msg.style.color = '#64748b';
-  }
+/* Zera a imagem de assinatura de um objeto {nome,cargo,assinatura} usado pelos
+   geradores de Relatório (HTML e Word), preservando nome e cargo. */
+function _semAssinatura(info) {
+  if (!info || _IMPRIMIR_ASSINATURA_NOS_DOCS) return info;
+  return Object.assign({}, info, { assinatura: null });
 }
 
 async function _salvarAssinaturaStore(usuario, dataUrl) {
@@ -11953,6 +11933,7 @@ function relSemCom_gerar(registro, modo) {
   if (infoAss) infoAss = Object.assign({}, infoAss, {
     assinatura: ((typeof _getAssinaturaDe === 'function' && _getAssinaturaDe(infoAss.usuario)) || infoAss.assinatura || '')
   });
+  infoAss = _semAssinatura(infoAss);   // documento sai só com nome e cargo
   const html = _relSemComDocHTML(m, infoAss, modo === 'word');
   if (modo === 'word') {
     const blob = new Blob(['﻿' + html], { type: 'application/msword' });
@@ -11984,7 +11965,6 @@ function _relSemComDocHTML(m, infoAss, isWord) {
   const assImg = (infoAss && infoAss.assinatura) ? `<img src="${infoAss.assinatura}" style="max-height:70px;max-width:200px;object-fit:contain;display:block;margin:0 auto 4px auto">` : '';
   const blocoAss = infoAss ? `<div style="text-align:center;margin-top:8px">
       ${assImg}
-      <div style="border-top:1px solid #000;width:260px;margin:0 auto 4px auto"></div>
       <div style="font-weight:bold;font-size:10.5pt">${e(infoAss.nome)}</div>
       ${infoAss.cargo  ? `<div style="font-size:10pt">${e(infoAss.cargo)}</div>` : ''}
       ${infoAss.decreto? `<div style="font-size:9.5pt">${e(infoAss.decreto)}</div>` : ''}
@@ -19496,6 +19476,9 @@ function rv_gerarSelecionados(modo = 'html') {
   }) : info;
   infoAss = _rvComAss(infoAss);
   if (infoGer) infoGer = _rvComAss(infoGer);
+  // Documento sai só com NOME e CARGO (sem imagem de assinatura) — HTML e Word.
+  infoAss = _semAssinatura(infoAss);
+  if (infoGer) infoGer = _semAssinatura(infoGer);
 
   if (modo === 'word') {
     (async () => {
@@ -20059,7 +20042,6 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
       : '';
     return `<div style="text-align:center;margin-top:8px">
       ${assImg}
-      <div style="border-top:1px solid #000;width:260px;margin:0 auto 4px auto"></div>
       <div style="font-weight:bold;font-size:10.5pt">${esc(info.nome)}</div>
       ${info.cargo  ? `<div style="font-size:10pt">${esc(info.cargo)}</div>` : ''}
       ${info.cress  ? `<div style="font-size:9.5pt">${esc(info.cress)}</div>` : ''}
@@ -20990,8 +20972,6 @@ function com_init() {
   // nunca herda o decreto de outro servidor que usou a tela antes.
   const decEl = document.getElementById('com-of-decreto');
   if (decEl) decEl.value = usuarioAtual?.decreto || '';
-  // Miniatura da assinatura que sairá no documento (conferência)
-  try { _mostrarAssinaturaConfere('com-ass-confere', 'com-ass-confere-img', 'com-ass-confere-msg'); } catch (e) {}
   _cmeComboInit('com-of-comarca');
   _cmeComboInit('com-of-vara');
   com_setupDropZone(); // inicializa drag-and-drop de anexos
@@ -21666,13 +21646,12 @@ function com_gerarOficio(ov) {
   const signat     = ov ? (ov.signatario || '')     : _f('com-of-signatario').value.trim();
   const cargo      = _cargoSignatario(ov ? (ov.cargo || '') : (_f('com-of-cargo')?.value || ''), signat);
   const decreto    = ov ? (ov.decreto || '')        : _f('com-of-decreto').value.trim();
-  // Na visualização usa a assinatura salva no registro (a do signatário original);
-  // ao gerar, usa a do usuário logado.
-  // Assinatura na visualização: registros ANTIGOS têm a imagem salva (ov.assinatura);
-  // os NOVOS guardam só o login do signatário → busca a assinatura do perfil dele.
-  const assImgCapturada = ov
+  // Imagem de assinatura: desligada por _IMPRIMIR_ASSINATURA_NOS_DOCS (o documento
+  // sai só com nome e cargo). Vale também para a VISUALIZAÇÃO de ofícios antigos,
+  // para que reimprimir um ofício não traga de volta a assinatura gravada nele.
+  const assImgCapturada = !_IMPRIMIR_ASSINATURA_NOS_DOCS ? null : (ov
     ? (ov.assinatura || _getAssinaturaDe(ov.signatarioUsuario) || _comAssinaturaDeNome(ov.signatario) || null)
-    : (_assinaturaDoLogado());
+    : (_assinaturaDoLogado()));
 
   if (!ov) {
     if (!modeloId)  return _mostrarToast('\u{26A0}\u{FE0F} Selecione o modelo de ofício.','erro');
@@ -22581,8 +22560,6 @@ function jur_init() {
   // o decreto de outro servidor que usou a tela antes.
   const jurDecEl = document.getElementById('jur-decreto');
   if (jurDecEl) jurDecEl.value = usuarioAtual?.decreto || '';
-  // Miniatura da assinatura que sairá no documento (conferência)
-  try { _mostrarAssinaturaConfere('jur-ass-confere', 'jur-ass-confere-img', 'jur-ass-confere-msg'); } catch (e) {}
 }
 
 function jur_atualizarVaras() {
