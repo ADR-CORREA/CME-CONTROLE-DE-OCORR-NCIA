@@ -10655,6 +10655,21 @@ function _getAssinaturaDe(usuario) {
   try { const u = getUsuarios().find(x => x.usuario === usuario); if (u && u.assinatura) return u.assinatura; } catch (e) {}
   return null;
 }
+/* Assinatura de QUEM ESTÁ GERANDO o documento, resolvida NA HORA da geração.
+   Antes os geradores usavam usuarioAtual.assinatura, preenchida no login (linha
+   ~7852) — e nesse momento o mapa de assinaturas ainda podia não ter carregado,
+   fazendo cair no campo "assinatura" do CADASTRO do usuário. Quando esse campo
+   guardava a imagem de OUTRO servidor, o documento saía com o nome de um e a
+   assinatura de outro. Aqui o mapa (cadastrado pelo próprio servidor) tem
+   prioridade e a consulta ocorre com tudo já carregado. */
+function _assinaturaDoLogado() {
+  try {
+    const u = usuarioAtual && usuarioAtual.usuario;
+    if (u) { const a = _getAssinaturaDe(u); if (a) return a; }
+  } catch (e) {}
+  return (usuarioAtual && usuarioAtual.assinatura) || null;
+}
+
 async function _salvarAssinaturaStore(usuario, dataUrl) {
   if (!usuario) return;
   // ANTI-PERDA: o mapa era montado só a partir do CACHE. Com o cache ainda não
@@ -15823,7 +15838,7 @@ function baixarModeloPDF() {
   });
 
   // Capturar assinatura ANTES do loop (garante acesso correto ao objeto)
-  const assImgCapturada = usuarioAtual?.assinatura || null;
+  const assImgCapturada = _assinaturaDoLogado();
 
   // Corpo HTML
   let bodyHtml = '';
@@ -16627,7 +16642,7 @@ function imprimirModeloMulti() {
 
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-  const assImgCapturada = usuarioAtual?.assinatura || null;
+  const assImgCapturada = _assinaturaDoLogado();
 
   // ── Parser do textarea ────────────────────────────────────────────────────
   const linhas = ta.value.split('\n');
@@ -21620,7 +21635,7 @@ function com_gerarOficio(ov) {
   // os NOVOS guardam só o login do signatário → busca a assinatura do perfil dele.
   const assImgCapturada = ov
     ? (ov.assinatura || _getAssinaturaDe(ov.signatarioUsuario) || _comAssinaturaDeNome(ov.signatario) || null)
-    : (usuarioAtual?.assinatura || null);
+    : (_assinaturaDoLogado());
 
   if (!ov) {
     if (!modeloId)  return _mostrarToast('\u{26A0}\u{FE0F} Selecione o modelo de ofício.','erro');
@@ -22655,7 +22670,7 @@ function jur_gerarDoc() {
   const signat   = (document.getElementById('jur-signatario')?.value || '').trim();
   const cargo    = _cargoSignatario(document.getElementById('jur-cargo')?.value, signat);
   const decreto  = (document.getElementById('jur-decreto')?.value || '').trim();
-  const assImg   = usuarioAtual?.assinatura || null;
+  const assImg   = _assinaturaDoLogado();
   const _jAgora = new Date(); const _jDataHora = _jAgora.toLocaleString('pt-BR');
 
   const esc = s => String(s||'')
@@ -22788,7 +22803,7 @@ function jur_gerarPDF() {
   if (!txt) { _mostrarToast('\u{26A0}\u{FE0F} Nenhum texto para gerar. Selecione um modelo primeiro.', 'erro'); return; }
 
   const signat  = (document.getElementById('jur-signatario')?.value || '').trim();
-  const assImg  = usuarioAtual?.assinatura || null;
+  const assImg  = _assinaturaDoLogado();
   const _jAgora = new Date();
   const _jDataHora = _jAgora.toLocaleString('pt-BR');
 
@@ -23645,7 +23660,7 @@ async function _comGerarPDFExec() {
     const signat   = (document.getElementById('com-of-signatario')?.value || '').trim();
     const cargo    = _cargoSignatario(document.getElementById('com-of-cargo')?.value, signat);
     const decreto  = (document.getElementById('com-of-decreto')?.value  || '').trim();
-    const assImg   = usuarioAtual?.assinatura || null;
+    const assImg   = _assinaturaDoLogado();
 
     const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
     let dataLonga = '';
