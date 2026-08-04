@@ -2989,7 +2989,11 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
             </div>
             <div class="form-field" id="com-of-decreto-wrap" style="display:none">
               <label>Decreto de Nomeação</label>
-              <input type="text" id="com-of-decreto" value="5953/2025-GEA" oninput="com_atualizarPreview()"
+              <!-- SEM valor fixo: o decreto vem do perfil de quem está logado
+                   (com_init). Havia "5953/2025-GEA" chumbado aqui — o decreto de
+                   OUTRO servidor — e quem não tinha decreto próprio cadastrado
+                   assinava o ofício com o decreto alheio embaixo do seu nome. -->
+              <input type="text" id="com-of-decreto" value="" placeholder="Preenchido do seu cadastro" oninput="com_atualizarPreview()"
                 style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
             </div>
           </div><!-- /form col -->
@@ -3230,7 +3234,9 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
             </div>
             <div class="form-field" id="jur-decreto-wrap" style="display:none">
               <label>Decreto de Nomeação</label>
-              <input type="text" id="jur-decreto" value="5953/2025-GEA" oninput="jur_gerarTexto()"
+              <!-- SEM valor fixo (era "5953/2025-GEA", decreto de OUTRO servidor):
+                   vem do perfil de quem está logado. -->
+              <input type="text" id="jur-decreto" value="" placeholder="Preenchido do seu cadastro" oninput="jur_gerarTexto()"
                 style="width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;box-sizing:border-box">
             </div>
           </div><!-- /form col -->
@@ -7106,6 +7112,11 @@ const _STORES_PROTEGIDAS = {
   triagem:     v => (v && Array.isArray(v.atendimentos))   ? v.atendimentos.length  : -1,
   gerencia:    v => (v && Array.isArray(v.demandas))       ? v.demandas.length      : -1,
   estoque:     v => (v && Array.isArray(v.movimentacoes))  ? v.movimentacoes.length : -1,
+  // Assinaturas dos servidores (mapa login -> imagem). Entrou na proteção depois
+  // de o store ir de 4 assinaturas para 1: o save monta o mapa a partir do CACHE
+  // e, com o cache ainda não carregado, gravava só a assinatura recém-cadastrada,
+  // apagando a dos demais.
+  assinaturas: v => (v && typeof v === 'object' && !Array.isArray(v)) ? Object.keys(v).length : -1,
 };
 
 function _upsertStoreDireto(chave, valor) {
@@ -10644,9 +10655,23 @@ function _getAssinaturaDe(usuario) {
   try { const u = getUsuarios().find(x => x.usuario === usuario); if (u && u.assinatura) return u.assinatura; } catch (e) {}
   return null;
 }
-function _salvarAssinaturaStore(usuario, dataUrl) {
+async function _salvarAssinaturaStore(usuario, dataUrl) {
   if (!usuario) return;
-  const m = Object.assign({}, _assMap());
+  // ANTI-PERDA: o mapa era montado só a partir do CACHE. Com o cache ainda não
+  // carregado, ele valia {} e a gravação apagava a assinatura de TODOS os outros
+  // servidores (foi o que levou o store de 4 assinaturas para 1). Agora relê do
+  // servidor e MESCLA antes de gravar; o que já está em cache tem prioridade.
+  let base = _assMap();
+  if (window._db) {
+    try {
+      const { data, error } = await window._db.from('store')
+        .select('value').eq('key', 'cme_assinaturas').maybeSingle();
+      if (!error && data && data.value && typeof data.value === 'object' && !Array.isArray(data.value)) {
+        base = Object.assign({}, data.value, base);
+      }
+    } catch (e) { /* sem rede: segue com o cache e a proteção do store cobre */ }
+  }
+  const m = Object.assign({}, base);
   if (dataUrl) m[usuario] = dataUrl; else delete m[usuario];
   salvarStore('assinaturas', m);
 }
@@ -20896,14 +20921,25 @@ function com_init() {
   // Signatário e cargo do operador logado
   const signatEl = document.getElementById('com-of-signatario');
   const cargoEl  = document.getElementById('com-of-cargo');
-  if (signatEl && !signatEl.value && usuarioAtual?.nome)  signatEl.value = usuarioAtual.nome;
-  if (cargoEl  && !cargoEl.value  && usuarioAtual?.cargo) cargoEl.value  = usuarioAtual.cargo;
+  // SEMPRE o servidor logado. Antes só preenchia com o campo VAZIO
+  // (!signatEl.value): ao trocar de usuário sem recarregar a página (computador
+  // compartilhado), o nome/cargo do servidor ANTERIOR continuava no formulário e
+  // o documento saía assinado por OUTRA pessoa. Agora, se o nome no campo não é
+  // o de quem está logado, é corrigido (junto com o cargo).
+  if (signatEl && usuarioAtual?.nome && signatEl.value.trim() !== usuarioAtual.nome.trim()) {
+    signatEl.value = usuarioAtual.nome;
+    if (cargoEl) cargoEl.value = usuarioAtual?.cargo || '';
+  } else if (cargoEl && !cargoEl.value && usuarioAtual?.cargo) {
+    cargoEl.value = usuarioAtual.cargo;
+  }
   // Decreto: visível só para gerência e admin; auto-preenche do perfil do usuário
   const temDecreto = ['gerencia', 'admin'].includes(usuarioAtual?.nivel);
   const decWrap = document.getElementById('com-of-decreto-wrap');
   if (decWrap) decWrap.style.display = temDecreto ? '' : 'none';
+  // Sempre reflete o decreto de QUEM ESTÁ LOGADO (vazio se ele não tiver):
+  // nunca herda o decreto de outro servidor que usou a tela antes.
   const decEl = document.getElementById('com-of-decreto');
-  if (decEl && usuarioAtual?.decreto) decEl.value = usuarioAtual.decreto;
+  if (decEl) decEl.value = usuarioAtual?.decreto || '';
   _cmeComboInit('com-of-comarca');
   _cmeComboInit('com-of-vara');
   com_setupDropZone(); // inicializa drag-and-drop de anexos
@@ -21060,6 +21096,10 @@ function com_getOficios() {
 function _comEnxugarAssinaturas(o) {
   try {
     if (!o || !Array.isArray(o.registros)) return;
+    // Só mexe com o mapa de assinaturas CARREGADO. Sem isso, rodando com o cache
+    // vazio, a preservação abaixo gravaria um mapa incompleto e apagaria a
+    // assinatura dos outros servidores (roda a cada ofício gerado).
+    if (!_cache.hasOwnProperty('assinaturas')) return;
     const users = (typeof getUsuarios === 'function' ? getUsuarios() : []) || [];
     o.registros.forEach(r => {
       if (!r || !r.assinatura || String(r.assinatura).length < 500) return;
@@ -22470,14 +22510,25 @@ function jur_init() {
   // Signatário e cargo do operador logado
   const signatEl = document.getElementById('jur-signatario');
   const cargoEl  = document.getElementById('jur-cargo');
-  if (signatEl && !signatEl.value && usuarioAtual?.nome)  signatEl.value = usuarioAtual.nome;
-  if (cargoEl  && !cargoEl.value  && usuarioAtual?.cargo) cargoEl.value  = usuarioAtual.cargo;
+  // SEMPRE o servidor logado. Antes só preenchia com o campo VAZIO
+  // (!signatEl.value): ao trocar de usuário sem recarregar a página (computador
+  // compartilhado), o nome/cargo do servidor ANTERIOR continuava no formulário e
+  // o documento saía assinado por OUTRA pessoa. Agora, se o nome no campo não é
+  // o de quem está logado, é corrigido (junto com o cargo).
+  if (signatEl && usuarioAtual?.nome && signatEl.value.trim() !== usuarioAtual.nome.trim()) {
+    signatEl.value = usuarioAtual.nome;
+    if (cargoEl) cargoEl.value = usuarioAtual?.cargo || '';
+  } else if (cargoEl && !cargoEl.value && usuarioAtual?.cargo) {
+    cargoEl.value = usuarioAtual.cargo;
+  }
   // Decreto: visível só para gerência e admin; auto-preenche do perfil do usuário
   const temDecreto = ['gerencia', 'admin'].includes(usuarioAtual?.nivel);
   const decWrap = document.getElementById('jur-decreto-wrap');
   if (decWrap) decWrap.style.display = temDecreto ? '' : 'none';
+  // Sempre o decreto de QUEM ESTÁ LOGADO (vazio se ele não tiver) — nunca herda
+  // o decreto de outro servidor que usou a tela antes.
   const jurDecEl = document.getElementById('jur-decreto');
-  if (jurDecEl && usuarioAtual?.decreto) jurDecEl.value = usuarioAtual.decreto;
+  if (jurDecEl) jurDecEl.value = usuarioAtual?.decreto || '';
 }
 
 function jur_atualizarVaras() {
