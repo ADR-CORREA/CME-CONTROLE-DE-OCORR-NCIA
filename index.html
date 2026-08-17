@@ -16010,7 +16010,7 @@ function baixarModeloPDF() {
   /* ── Bloco de assinatura ── */
   /* margin-top:auto no .ass-area empurra o conjunto data+assinatura
      para o fundo do flex-column, posicionando per ABNT */
-  .ass-area  { margin-top: auto; padding-top: 6px; }
+  .ass-area  { margin-top: ${_IMPRIMIR_ASSINATURA_NOS_DOCS ? 'auto' : '34px'}; padding-top: 6px; }
   .ass-bloco {
     margin-top: 6pt;
     text-align: center;
@@ -21790,7 +21790,9 @@ function com_gerarOficio(ov) {
      para o fundo da .conteudo, posicionando a assinatura
      em aprox. 80% da altura da folha.
      ─────────────────────────────────────────────────── */
-  .ass-area { margin-top: auto; padding-top: 6px; }
+  /* margin-top:auto empurrava o nome para o PÉ da folha, reservando espaço para a
+     assinatura à mão. Sem a imagem, isso virava um vão enorme depois do texto. */
+  .ass-area { margin-top: ${_IMPRIMIR_ASSINATURA_NOS_DOCS ? 'auto' : '34px'}; padding-top: 6px; }
   .data-ext { text-align: right; margin: 0 0 28px 0; }
   .ass-bloco { width: 72%; max-width: 115mm; text-align: center; margin: 0 auto; }
   .ass-img {
@@ -22907,7 +22909,7 @@ function jur_gerarPDF() {
   .cab-linha { font-size: 10pt; font-weight: bold; margin: 1px 0; color: #000; }
   .sep-linha { height: 1px; background: #000; margin: 8px 0 28px 0; }
   .conteudo  { flex: 1; display: flex; flex-direction: column; }
-  .ass-area  { margin-top: auto; padding-top: 10px; }
+  .ass-area  { margin-top: ${_IMPRIMIR_ASSINATURA_NOS_DOCS ? 'auto' : '34px'}; padding-top: 10px; }
   .rodape-doc {
     border-top: 1px solid #000; padding-top: 6px; text-align: center;
     font-size: 8pt; color: #444; margin-top: 16px;
@@ -23887,9 +23889,17 @@ async function _comGerarPDFExec() {
     doc.text(semMaisLines, mL + ABNT_INDENT, y); y += semMaisLines.length * 5.5 + 10; // espaço moderado antes de "Respeitosamente,"
     doc.text('Respeitosamente,', mL + ABNT_INDENT, y); y += 6;
 
-    // ── Empurra assinatura para ~80% da área útil da folha A4 ────
-    const yAssin = mT + (pageH - mT - mB) * 0.80;
-    if (y < yAssin) y = yAssin;
+    // O bloco do nome segue logo abaixo de "Respeitosamente,". Antes era empurrado
+    // para ~80% da altura da folha, reservando espaço para a assinatura à mão —
+    // como o documento não imprime mais a imagem, aquilo virou um vão enorme entre
+    // o texto e o nome. Quando a assinatura estiver ligada
+    // (_IMPRIMIR_ASSINATURA_NOS_DOCS), o empurrão volta a valer.
+    if (_IMPRIMIR_ASSINATURA_NOS_DOCS) {
+      const yAssin = mT + (pageH - mT - mB) * 0.80;
+      if (y < yAssin) y = yAssin;
+    } else {
+      y += 10;   // respiro discreto antes do nome
+    }
 
     // (a data agora vai no topo, logo abaixo do número do ofício)
 
