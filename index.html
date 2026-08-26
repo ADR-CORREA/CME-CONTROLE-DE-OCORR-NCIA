@@ -3558,6 +3558,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
             <button class="btn-secondary" onclick="abrirModalEstoque('saida')">⬇ Saída</button>
             <button class="btn-secondary" onclick="abrirModalEstoque('devolucao')">↩ Devolução</button>
             <button class="btn-danger"    onclick="abrirModalEstoque('baixa')">✕ Baixa</button>
+            <button class="btn-danger" id="est-btn-recontagem" style="display:none" onclick="zerarEstoqueRecontagem()" title="Zera os saldos e os números de série para recadastro do zero. O histórico de movimentações é mantido.">🧮 Zerar contagem</button>
           </div>
         </div>
       </div>
@@ -14026,7 +14027,10 @@ function _buildSerialEstadoMap(est, itemTipo) {
   const atuais = (est.seriais || {})[itemTipo] || [];
   const map = {};
   // Movimentos do mais novo para o mais antigo (para pegar o estado da última entrada)
-  const movs = [...(est.movimentacoes || [])].sort((a, b) => (b.ts || b.id || '').localeCompare(a.ts || a.id || ''));
+  const _corte = est.recontagemEm || '';
+  const movs = [...(est.movimentacoes || [])]
+    .filter(m => !_corte || (m.ts || '') >= _corte)
+    .sort((a, b) => (b.ts || b.id || '').localeCompare(a.ts || a.id || ''));
   atuais.forEach(serial => {
     // Encontra a movimentação de Entrada/Devolução mais recente que incluiu este serial
     const mov = movs.find(m =>
@@ -14045,8 +14049,12 @@ function _recalcularItensPorEstado(d) {
   const reutilizado = {};
   // Inicializa todos os itens conhecidos com 0
   Object.keys(EST_PADRAO.itens).forEach(k => { novo[k] = 0; reutilizado[k] = 0; });
-  // Para itens NÃO-serializados: processa movimentações em ordem cronológica
-  const movs = [...(d.movimentacoes || [])].sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+  // Para itens NÃO-serializados: processa movimentações em ordem cronológica.
+  // Movimentações anteriores ao marco de recontagem ficam no histórico, mas não contam no saldo.
+  const corte = d.recontagemEm || '';
+  const movs = [...(d.movimentacoes || [])]
+    .filter(m => !corte || (m.ts || '') >= corte)
+    .sort((a, b) => (a.data || '').localeCompare(b.data || ''));
   movs.forEach(m => {
     const tipo = m.item || '';
     if (ITENS_COM_SERIAL.includes(tipo)) return; // tratado via registros abaixo
@@ -14101,6 +14109,40 @@ function salvarEstoque(d) {
   salvarStore('estoque', d);
 }
 
+/* ─ Recontagem (zerar saldos, manter histórico) ─────────
+   Apaga saldos, números de série e IMEIs para recadastro do zero e grava o
+   marco `recontagemEm`. As movimentações anteriores continuam no histórico,
+   mas deixam de contar no saldo (ver corte em _recalcularItensPorEstado). */
+function zerarEstoqueRecontagem() {
+  if (!usuarioAtual || usuarioAtual.nivel !== 'admin') { alert('Apenas o administrador pode zerar a contagem do estoque.'); return; }
+  if (!carregarStore('estoque', null)) { alert('Os dados do estoque ainda não carregaram. Recarregue a página (F5) e tente de novo.'); return; }
+  const est  = getEstoque();
+  const nMov = (est.movimentacoes || []).length;
+  const msg = 'ZERAR A CONTAGEM DO ESTOQUE\n\n'
+            + 'Serão apagados: todos os saldos, números de série e IMEIs cadastrados.\n'
+            + 'Será MANTIDO: o histórico de ' + nMov + ' movimentação(ões).\n\n'
+            + 'Depois disso o estoque começa em zero e você recadastra tudo pela Entrada.\n\nConfirma?';
+  if (!confirm(msg)) return;
+  if (prompt('Para confirmar, digite ZERAR:') !== 'ZERAR') { alert('Operação cancelada — nada foi alterado.'); return; }
+
+  // Rede de segurança: guarda o estoque inteiro antes de zerar
+  salvarStore('estoque_backup_recontagem', {
+    em: new Date().toISOString(),
+    por: (usuarioAtual && usuarioAtual.nome) || '',
+    dados: JSON.parse(JSON.stringify(est))
+  });
+
+  Object.keys(est.itens).forEach(k => { est.itens[k] = 0; });
+  est.seriais      = {};
+  est.registros    = {};
+  est.recontagemEm = new Date().toISOString();
+  salvarEstoque(est);
+
+  try { addLog('Estoque: contagem zerada para recontagem (histórico de ' + nMov + ' movimentações mantido)'); } catch (e) {}
+  renderizarEstoque();
+  alert('Contagem zerada.\n\nO estoque está em zero — cadastre os itens pelo botão "Entrada".\nO histórico anterior continua na tabela de movimentações, marcado em cinza.');
+}
+
 /* ─ Helpers ────────────────────────────────────────────── */
 function estChave(tipo, tamanho) { return tipo === 'Cinta' ? 'Cinta_' + tamanho : tipo; }
 function estMinItem(tipo)        { return tipo === 'Cinta' ? EST_MINIMO['Cinta'] : (EST_MINIMO[tipo] || 0); }
@@ -14116,6 +14158,8 @@ function renderizarEstoque() {
   /* Permissão visual */
   const podAlt = podeAlterarEstoque();
   document.getElementById('est-btns-acao').style.display   = podAlt ? 'flex' : 'none';
+  const _btnRec = document.getElementById('est-btn-recontagem');
+  if (_btnRec) _btnRec.style.display = (usuarioAtual && usuarioAtual.nivel === 'admin') ? '' : 'none';
   document.getElementById('est-aviso-perm').style.display  = podAlt ? 'none' : 'block';
 
   /* KPIs */
@@ -14152,9 +14196,12 @@ function renderizarEstoque() {
   const semEst = Object.keys(EST_PADRAO.itens).filter(k => (itens[k] || 0) <= 0).map(k =>
     k.startsWith('Cinta_') ? 'Cinta ' + k.replace('Cinta_', '') : k
   );
-  document.getElementById('est-alertas').innerHTML = semEst.length
-    ? `<div class="est-alerta-box">\u{26A0}\u{FE0F} <strong>Itens SEM estoque (${semEst.length}):</strong> ${semEst.join(', ')}</div>`
+  const avisoRec = est.recontagemEm
+    ? `<div class="est-alerta-box" style="background:#eef4ff;border-color:#b6cdf7;color:#1a4fa3">\u{1F9EE} <strong>Recontagem em ${new Date(est.recontagemEm).toLocaleString('pt-BR')}:</strong> o saldo abaixo conta apenas as movimentações a partir dessa data. O histórico anterior continua registrado, mas não entra no saldo.</div>`
     : '';
+  document.getElementById('est-alertas').innerHTML = avisoRec + (semEst.length
+    ? `<div class="est-alerta-box">\u{26A0}\u{FE0F} <strong>Itens SEM estoque (${semEst.length}):</strong> ${semEst.join(', ')}</div>`
+    : '');
 
   /* Tabela Tornozeleira */
   const tbTorn   = document.getElementById('tbody-est-torn');
@@ -14292,7 +14339,8 @@ function renderizarEstoque() {
       ? `<button class="btn-sm btn-danger" onclick="excluirMovEstoque('${m.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>`
       : '';
     const acoes = (btnVer || btnDel) ? `${btnVer}${btnDel}` : '—';
-    return `<tr>
+    const antesRec = est.recontagemEm && (m.ts || '') < est.recontagemEm;
+    return `<tr${antesRec ? ' style="background:#fafafa;color:#8b949e" title="Anterior à recontagem — não entra no saldo atual"' : ''}>
       <td style="white-space:nowrap;font-size:.8rem">${new Date(m.ts).toLocaleString('pt-BR')}</td>
       <td><span class="badge ${badgeMov[m.tipo]||''}">${m.tipo}</span></td>
       <td>${m.categoria||''}</td>
