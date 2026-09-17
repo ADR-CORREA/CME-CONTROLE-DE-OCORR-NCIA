@@ -17070,6 +17070,8 @@ function _r2NormBusca(s) {
   return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[-_]/g,' ').trim();
 }
 const _R2_MON_VISIVEIS = 80; // máx itens renderizados sem busca ativa
+// Termos de busca já revalidados contra o servidor (evita revalidar em laço).
+const _r2BuscasRevalidadas = new Set();
 
 function _r2AplicarFiltro(q) {
   const f = _r2NormBusca(q);
@@ -17086,6 +17088,18 @@ function _r2AplicarFiltro(q) {
   if (f) {
     // Com busca: filtra todos os 10k em memória
     filtrados = todos.filter(m => _r2NormBusca(m.nome).includes(f) || (m.slug||'').includes(f.replace(/\s/g,'-')));
+    // Nada encontrado pode ser CACHE VELHO (pasta criada agora, ainda fora da
+    // lista guardada). Antes de afirmar que não existe, descarta o cache e relê
+    // do servidor UMA vez por termo — ao terminar, _r2CarregarTodosSilencioso
+    // reaplica este filtro sozinho.
+    if (!filtrados.length && !_r2Carregando && !_r2BuscasRevalidadas.has(f)) {
+      _r2BuscasRevalidadas.add(f);
+      _r2MonCacheInvalidar();
+      document.getElementById('r2-lista-mon').innerHTML =
+        '<div style="color:#aaa;font-size:.85rem;text-align:center;padding:16px">Conferindo no servidor…</div>';
+      _r2CarregarTodosSilencioso();
+      return;
+    }
   } else {
     // Sem busca: mostra só os primeiros N para não travar o DOM
     filtrados = todos.slice(0, _R2_MON_VISIVEIS);
@@ -18034,7 +18048,11 @@ async function r2_novoMonitorado() {
     ? `\u{2705} Monitorado "${nomeTrimmed}" criado (${ok}/${pastas.length} pastas; reabra se faltar alguma).`
     : `\u{2705} Monitorado "${nomeTrimmed}" criado!`, 'sucesso');
   addLog(`R2: monitorado criado — ${nomeTrimmed} (${ok}/${pastas.length} pastas)`);
-  try { await r2_carregarMonitorados(); await r2_selecionarMonitorado(nomeTrimmed); } catch(e) {}
+  // Pasta NOVA: descarta o cache local (30 min) e relê do servidor. Sem isso a
+  // lista voltava do cache e o monitorado recém-criado não aparecia na busca
+  // ("Nenhum resultado para ...") mesmo com a pasta já criada no R2.
+  _r2MonCacheInvalidar();
+  try { await r2_carregarMonitorados(true); await r2_selecionarMonitorado(nomeTrimmed); } catch(e) {}
 }
 
 /* ── Navegação ────────────────────────────────────────────────── */
