@@ -8583,6 +8583,30 @@ function _scNormReg(r){ return String(r == null ? '' : r).trim().replace(/^0+(?=
 // "80377072- DPP", "080377072"); comparando o texto, mudar a grafia criava uma
 // pessoa nova e deixava as tratativas presas no registro antigo.
 function _scChaveReg(r){ return String(r == null ? '' : r).replace(/\D/g, '').replace(/^0+(?=\d)/, ''); }
+// Junta fichas da MESMA pessoa (mesmo número com grafias diferentes — zeros à
+// esquerda ou "DPP"). Fica uma por pessoa: desvinculada > em aberto > "voltou a
+// comunicar"; empate → a atualizada por último. As tratativas das demais e a
+// reclassificação manual (areaManual) passam para ela. Retorna quantas saíram.
+function _scMesclarDuplicatas(dados) {
+  const grupos = new Map();
+  dados.monitorados.forEach(m => { const c = _scChaveReg(m.registro); if (!grupos.has(c)) grupos.set(c, []); grupos.get(c).push(m); });
+  const peso = m => m.situacao === 'desvinculado' ? 2 : _scEmAberto(m) ? 1 : 0;
+  const remover = new Set();
+  grupos.forEach(g => {
+    if (g.length < 2) return;
+    const fica = g.slice().sort((a, b) => peso(b) - peso(a) || String(b.atualizadoEm || '').localeCompare(String(a.atualizadoEm || '')))[0];
+    const vistas = new Set((fica.tratativas || []).map(t => JSON.stringify(t)));
+    g.forEach(o => {
+      if (o === fica) return;
+      (o.tratativas || []).forEach(t => { const k = JSON.stringify(t); if (!vistas.has(k)) { vistas.add(k); (fica.tratativas = fica.tratativas || []).push(t); } });
+      if (!fica.areaManual && o.areaManual) fica.areaManual = o.areaManual;
+      remover.add(o);
+    });
+    (fica.tratativas || []).sort((a, b) => String(a.data || '').localeCompare(String(b.data || '')));
+  });
+  if (remover.size) dados.monitorados = dados.monitorados.filter(m => !remover.has(m));
+  return remover.size;
+}
 // Prefixos de DOM por área — Jurídico usa os IDs originais (sc/scde),
 // Psicossocial usa IDs espelhados (psc/pscde).
 const _SC_CFG = {
@@ -9241,6 +9265,11 @@ function importarExcelSemCom(input, area) {
       input.value = '';
       return;
     }
+    // Junta duplicatas antigas da mesma pessoa. Cópia no banco antes de apagar.
+    const _dupGrupos = new Set(), _temDup = dados.monitorados.some(m => { const c = _scChaveReg(m.registro); if (_dupGrupos.has(c)) return true; _dupGrupos.add(c); return false; });
+    if (_temDup) salvarStore('semcomunicacao_backup_mescla', { em: agora, por: usuarioAtual?.nome || '', dados: JSON.parse(JSON.stringify(dados)) });
+    const mesclados = _temDup ? _scMesclarDuplicatas(dados) : 0;
+
     dados.monitorados.forEach(m => {
       if (!registrosNoRelatorio.has(_scChaveReg(m.registro)) && m.situacao !== 'desvinculado' && m.situacao !== 'comunicou') {
         m.situacao = 'comunicou';
@@ -9259,7 +9288,7 @@ function importarExcelSemCom(input, area) {
     renderizarSemCom(area);
     input.value = '';
     const _desvinc = (dados.monitorados||[]).filter(m => m.situacao === 'desvinculado').length;
-    _mostrarToast(`\u{2705} Importado: ${nJur} Jurídico + ${nPsi} DPP→Psicossocial (${novos} novos, ${atualizados} atualizados). ${voltaram} voltaram a comunicar (saíram da contagem). ${_desvinc} desvinculado(s) preservado(s).`, 'sucesso');
+    _mostrarToast(`\u{2705} Importado: ${nJur} Jurídico + ${nPsi} DPP→Psicossocial (${novos} novos, ${atualizados} atualizados). ${voltaram} voltaram a comunicar (saíram da contagem). ${_desvinc} desvinculado(s) preservado(s).${mesclados ? ` ${mesclados} ficha(s) duplicada(s) juntada(s).` : ''}`, 'sucesso');
   };
 
   reader.onerror = () => { _mostrarToast('Erro ao ler o arquivo. Tente novamente.', 'erro'); input.value = ''; };
@@ -11860,12 +11889,22 @@ function mudarSubAbaRel(aba) {
    Status do relatório (pendente/feito/enviado) em store próprio.
    ════════════════════════════════════════════════════════════════ */
 function getRelSemComStatus() { const m = carregarStore('rel_semcom_status', {}); return (m && typeof m === 'object') ? m : {}; }
+// Status do relatório pelo registro; se a grafia mudou (zeros, "DPP") acha pelos
+// números — senão um "enviado ao juízo" voltava a aparecer como pendente.
+function _relSemComInfo(registro) {
+  const mapa = getRelSemComStatus();
+  if (mapa[registro]) return mapa[registro];
+  const c = _scChaveReg(registro), ordem = { enviado: 2, feito: 1 };
+  const ks = Object.keys(mapa).filter(k => _scChaveReg(k) === c)
+    .sort((a, b) => (ordem[mapa[b] && mapa[b].status] || 0) - (ordem[mapa[a] && mapa[a].status] || 0));
+  return ks.length ? mapa[ks[0]] : null;
+}
 function _setRelSemComStatus(registro, patch) {
   const m = Object.assign({}, getRelSemComStatus());
-  m[registro] = Object.assign({}, m[registro], patch);
+  m[registro] = Object.assign({}, _relSemComInfo(registro), patch);
   salvarStore('rel_semcom_status', m);
 }
-function _relSemComStatusDe(registro) { const st = getRelSemComStatus()[registro]; return (st && st.status) || 'pendente'; }
+function _relSemComStatusDe(registro) { const st = _relSemComInfo(registro); return (st && st.status) || 'pendente'; }
 function _relSemComCorte() { return parseInt(document.getElementById('rel-semcom-corte')?.value) || 30; }
 function _relSemComEsc(s) { return String(s == null ? '' : s).replace(/['"\\<>]/g, ''); }
 function _relSemComDataHora(iso) { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? String(iso) : d.toLocaleString('pt-BR'); }
@@ -11903,7 +11942,7 @@ function renderizarRelSemCom() {
     tbody.innerHTML = lista.map(m => {
       const dias = _diasSemComAtual(m);
       const st   = _relSemComStatusDe(m.registro);
-      const info = getRelSemComStatus()[m.registro] || {};
+      const info = _relSemComInfo(m.registro) || {};
       const badge = st === 'enviado' ? `<span style="background:rgba(63,185,80,.15);color:#15803d;padding:2px 8px;border-radius:2em;font-size:.72rem">Enviado</span>`
         : st === 'feito' ? `<span style="background:rgba(56,139,253,.15);color:#1d4ed8;padding:2px 8px;border-radius:2em;font-size:.72rem">Relatório feito</span>`
         : `<span style="background:rgba(248,81,73,.15);color:#b91c1c;padding:2px 8px;border-radius:2em;font-size:.72rem">Pendente</span>`;
