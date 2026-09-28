@@ -8578,6 +8578,11 @@ function _scEmAberto(m){ return !!m && m.situacao !== 'desvinculado' && m.situac
 // "002851222"; o store tem "2851222"). Sem isso, nenhum registro bateria e a
 // sincronização marcaria todo mundo como "comunicou" (zerava a lista).
 function _scNormReg(r){ return String(r == null ? '' : r).trim().replace(/^0+(?=\d)/, ''); }
+// Chave de COMPARAÇÃO do registro: só os dígitos, sem zeros à esquerda. O AKILES
+// escreve o mesmo registro de vários jeitos ("DPP-80377072", "80377072-DPP",
+// "80377072- DPP", "080377072"); comparando o texto, mudar a grafia criava uma
+// pessoa nova e deixava as tratativas presas no registro antigo.
+function _scChaveReg(r){ return String(r == null ? '' : r).replace(/\D/g, '').replace(/^0+(?=\d)/, ''); }
 // Prefixos de DOM por área — Jurídico usa os IDs originais (sc/scde),
 // Psicossocial usa IDs espelhados (psc/pscde).
 const _SC_CFG = {
@@ -9052,16 +9057,14 @@ function _parseDiasSemCom(tempoStr) {
   return mDays ? parseInt(mDays[1]) : 0;
 }
 
-// Calcula dias dinamicamente a partir da data da última comunicação.
-// Cresce automaticamente a cada dia sem precisar reimportar o Excel.
+// Dias INTEIROS sem comunicação, contados de AGORA (períodos de 24h) — o mesmo
+// "N days" que o AKILES mostra. Cresce sozinho sem reimportar o Excel.
+// Antes contava a partir da meia-noite: quem parou de comunicar hoje ficava com
+// -1 dia (fora de todos os cartões) e a coluna Dias ficava 1 abaixo do Tempo.
 function _diasSemComAtual(m) {
   if (m.ultimaComunicacao) {
     const ultima = new Date(m.ultimaComunicacao);
-    if (!isNaN(ultima)) {
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-      return Math.floor((hoje - ultima) / 86400000);
-    }
+    if (!isNaN(ultima)) return Math.max(0, Math.floor((Date.now() - ultima) / 86400000));
   }
   return m.diasSemCom || 0; // fallback se não houver data
 }
@@ -9192,12 +9195,20 @@ function importarExcelSemCom(input, area) {
       const unidade  = gc(cUnidade);
       const dias     = _parseDiasSemCom(tempo);
 
-      registrosNoRelatorio.add(String(registro));
+      const chave = _scChaveReg(registro);
+      registrosNoRelatorio.add(chave);
 
-      const idx = dados.monitorados.findIndex(m => _scNormReg(m.registro) === registro);
+      const cands = [];
+      dados.monitorados.forEach((m, j) => { if (_scChaveReg(m.registro) === chave) cands.push(j); });
+      // Duplicata antiga (mesma pessoa gravada com grafias diferentes): atualiza a
+      // que está em aberto; senão a desvinculada; senão a primeira.
+      const idx = cands.find(j => _scEmAberto(dados.monitorados[j]))
+               ?? cands.find(j => dados.monitorados[j].situacao !== 'comunicou')
+               ?? (cands.length ? cands[0] : -1);
       if (idx >= 0) {
-        // Atualiza só campos vindos do AKILES — preserva tratativas, desvinculação, situação
-        Object.assign(dados.monitorados[idx], { nome, ultimaComunicacao: dataUlt, tempoSemCom: tempo, intervalo, unidade, diasSemCom: dias, atualizadoEm: agora });
+        // Atualiza só campos vindos do AKILES — preserva tratativas, desvinculação, situação.
+        // O registro acompanha a grafia atual (é dela que sai a marcação DPP).
+        Object.assign(dados.monitorados[idx], { registro, nome, ultimaComunicacao: dataUlt, tempoSemCom: tempo, intervalo, unidade, diasSemCom: dias, atualizadoEm: agora });
         // Reapareceu no relatório: se estava marcado 'comunicou', voltou a ficar
         // SEM comunicação → reativa (desvinculado permanece, é ação manual).
         if (dados.monitorados[idx].situacao === 'comunicou') dados.monitorados[idx].situacao = 'ativo';
@@ -9231,7 +9242,7 @@ function importarExcelSemCom(input, area) {
       return;
     }
     dados.monitorados.forEach(m => {
-      if (!registrosNoRelatorio.has(_scNormReg(m.registro)) && m.situacao !== 'desvinculado' && m.situacao !== 'comunicou') {
+      if (!registrosNoRelatorio.has(_scChaveReg(m.registro)) && m.situacao !== 'desvinculado' && m.situacao !== 'comunicou') {
         m.situacao = 'comunicou';
         m.comunicouEm = agora;
         voltaram++;
@@ -9420,12 +9431,15 @@ function renderizarSemCom(area) {
 
   // KPIs — calculados dinamicamente (escopo da área)
   const kpi = (suf, v) => { const el = document.getElementById(cfg.pfx+'-kpi-'+suf); if (el) el.textContent = v; };
-  kpi('total',  all.filter(m => _scEmAberto(m)).length);
-  kpi('4h',     all.filter(m => _diasSemComAtual(m) === 0).length);
-  kpi('1d',     all.filter(m => { const d = _diasSemComAtual(m); return d >= 1 && d < 7; }).length);
-  kpi('7d',     all.filter(m => { const d = _diasSemComAtual(m); return d >= 7 && d < 30; }).length);
-  kpi('30d',    all.filter(m => { const d = _diasSemComAtual(m); return d >= 30 && d < 180; }).length);
-  kpi('180d',   all.filter(m => _diasSemComAtual(m) >= 180 && _scEmAberto(m)).length);
+  // Faixas contam só quem está EM ABERTO — antes somavam também quem já voltou a
+  // comunicar e os desvinculados (ex.: 430 em "+4 horas" com 238 no total).
+  const aberto = all.filter(m => _scEmAberto(m));
+  kpi('total',  aberto.length);
+  kpi('4h',     aberto.filter(m => _diasSemComAtual(m) === 0).length);
+  kpi('1d',     aberto.filter(m => { const d = _diasSemComAtual(m); return d >= 1 && d < 7; }).length);
+  kpi('7d',     aberto.filter(m => { const d = _diasSemComAtual(m); return d >= 7 && d < 30; }).length);
+  kpi('30d',    aberto.filter(m => { const d = _diasSemComAtual(m); return d >= 30 && d < 180; }).length);
+  kpi('180d',   aberto.filter(m => _diasSemComAtual(m) >= 180).length);
   kpi('desvinc', all.filter(m => m.situacao === 'desvinculado').length);
 
   // Última importação (timestamp da área, com fallback ao global)
