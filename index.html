@@ -1649,6 +1649,9 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
             ✅ Desvinculados
             <span id="sc-desvinc-badge" class="notif-badge" style="display:none;background:#16a34a">0</span>
           </div>
+          <div class="sub-tab" id="sc-stab-arquivados" onclick="mudarSubAbaSemCom('arquivados','juridico')" style="font-size:.88rem" title="Quem voltou a comunicar — resolvidos">
+            🗄️ Arquivados <span id="sc-arq-qtd" style="color:#94a3b8;font-weight:400"></span>
+          </div>
         </div>
 
         <!-- ── Painel: Ativos ── -->
@@ -1817,6 +1820,69 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
             </table>
           </div>
         </div><!-- /sc-panel-desvinculados -->
+
+        <!-- ── Painel: Arquivados (voltaram a comunicar) ── -->
+        <div class="sub-panel" id="sc-panel-arquivados" style="padding:0">
+          <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
+            <div style="font-weight:600;color:#475569">🗄️ Arquivados — voltaram a comunicar</div>
+            <div class="table-actions">
+              <button class="btn-secondary" onclick="renderizarSemComArquivados('juridico')">🔄 Atualizar</button>
+              <button class="btn-secondary" onclick="exportarArquivadosExcel('juridico')">📥 Exportar Excel</button>
+            </div>
+          </div>
+          <div style="font-size:.8rem;color:#64748b;margin:6px 0 0">Automático: quem não aparece no Excel novo do AKILES vem para cá com todo o histórico. Se voltar a aparecer sem comunicação, retorna para Ativos com as tratativas.</div>
+
+          <div class="tri-filtros" style="margin-top:8px">
+            <div class="tri-filtros-title">🔍 Filtros</div>
+            <div class="tri-filtros-grid">
+              <div class="form-field" style="margin:0">
+                <label>Nome</label>
+                <input type="text" id="scar-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemComArquivados('juridico')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Registro</label>
+                <input type="text" id="scar-f-registro" placeholder="Nº registro..." oninput="renderizarSemComArquivados('juridico')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Arquivado de</label>
+                <input type="date" id="scar-f-inicio" onchange="renderizarSemComArquivados('juridico')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Arquivado até</label>
+                <input type="date" id="scar-f-fim" onchange="renderizarSemComArquivados('juridico')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Mostrar</label>
+                <select id="scar-f-trat" onchange="renderizarSemComArquivados('juridico')">
+                  <option value="">Todos</option>
+                  <option value="com">Só com tratativa</option>
+                  <option value="reinc">Ficou sem comunicar mais de 1 vez</option>
+                </select>
+              </div>
+              <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+                <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemComArquivados('juridico')">✕ Limpar</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="est-section-title" id="scar-count-label">Arquivados</div>
+          <div class="table-scroll">
+            <table class="data-table" style="font-size:.83rem">
+              <thead><tr>
+                <th>Nº</th>
+                <th>Nome</th>
+                <th>Registro</th>
+                <th>Sem comunicar desde</th>
+                <th>Dias sem com.</th>
+                <th title="Importação do AKILES em que a pessoa deixou de aparecer sem comunicação">Arquivado em</th>
+                <th title="Quantas vezes ficou sem comunicar">Vezes</th>
+                <th>Tratativas</th>
+                <th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-semcom-arq"></tbody>
+            </table>
+          </div>
+        </div><!-- /sc-panel-arquivados -->
 
       </div><!-- /jur-panel-semcom -->
 
@@ -4153,6 +4219,9 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
             ✅ Desvinculados
             <span id="psc-desvinc-badge" class="notif-badge" style="display:none;background:#16a34a">0</span>
           </div>
+          <div class="sub-tab" id="psc-stab-arquivados" onclick="mudarSubAbaSemCom('arquivados','psicossocial')" style="font-size:.88rem" title="Quem voltou a comunicar — resolvidos">
+            🗄️ Arquivados <span id="psc-arq-qtd" style="color:#94a3b8;font-weight:400"></span>
+          </div>
         </div>
 
         <!-- ── Painel: Ativos ── -->
@@ -4321,6 +4390,69 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
             </table>
           </div>
         </div><!-- /psc-panel-desvinculados -->
+
+        <!-- ── Painel: Arquivados (voltaram a comunicar) ── -->
+        <div class="sub-panel" id="psc-panel-arquivados" style="padding:0">
+          <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
+            <div style="font-weight:600;color:#475569">🗄️ Arquivados — voltaram a comunicar</div>
+            <div class="table-actions">
+              <button class="btn-secondary" onclick="renderizarSemComArquivados('psicossocial')">🔄 Atualizar</button>
+              <button class="btn-secondary" onclick="exportarArquivadosExcel('psicossocial')">📥 Exportar Excel</button>
+            </div>
+          </div>
+          <div style="font-size:.8rem;color:#64748b;margin:6px 0 0">Automático: quem não aparece no Excel novo do AKILES vem para cá com todo o histórico. Se voltar a aparecer sem comunicação, retorna para Ativos com as tratativas.</div>
+
+          <div class="tri-filtros" style="margin-top:8px">
+            <div class="tri-filtros-title">🔍 Filtros</div>
+            <div class="tri-filtros-grid">
+              <div class="form-field" style="margin:0">
+                <label>Nome</label>
+                <input type="text" id="pscar-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemComArquivados('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Registro</label>
+                <input type="text" id="pscar-f-registro" placeholder="Nº registro..." oninput="renderizarSemComArquivados('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Arquivado de</label>
+                <input type="date" id="pscar-f-inicio" onchange="renderizarSemComArquivados('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Arquivado até</label>
+                <input type="date" id="pscar-f-fim" onchange="renderizarSemComArquivados('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Mostrar</label>
+                <select id="pscar-f-trat" onchange="renderizarSemComArquivados('psicossocial')">
+                  <option value="">Todos</option>
+                  <option value="com">Só com tratativa</option>
+                  <option value="reinc">Ficou sem comunicar mais de 1 vez</option>
+                </select>
+              </div>
+              <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+                <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemComArquivados('psicossocial')">✕ Limpar</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="est-section-title" id="pscar-count-label">Arquivados</div>
+          <div class="table-scroll">
+            <table class="data-table" style="font-size:.83rem">
+              <thead><tr>
+                <th>Nº</th>
+                <th>Nome</th>
+                <th>Registro</th>
+                <th>Sem comunicar desde</th>
+                <th>Dias sem com.</th>
+                <th title="Importação do AKILES em que a pessoa deixou de aparecer sem comunicação">Arquivado em</th>
+                <th title="Quantas vezes ficou sem comunicar">Vezes</th>
+                <th>Tratativas</th>
+                <th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-pscom-arq"></tbody>
+            </table>
+          </div>
+        </div><!-- /psc-panel-arquivados -->
 
       </div><!-- /psi-panel-semcom -->
 
@@ -6089,6 +6221,10 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
           <div class="form-field"><label>Sistema</label><input class="auto-field" readonly id="vsem-desvinc-sistema"></div>
         </div>
         <div class="form-field full"><label>Observações</label><textarea class="auto-field" readonly id="vsem-desvinc-obs" rows="2" style="resize:none"></textarea></div>
+      </div>
+      <div class="form-section" id="vsem-sec-episodios" style="display:none">
+        <div class="form-section-title">Vezes anteriores sem comunicação</div>
+        <div id="vsem-episodios" style="font-size:.85rem"></div>
       </div>
       <div class="form-section">
         <div class="form-section-title">Histórico de Tratativas</div>
@@ -8587,10 +8723,24 @@ function _scChaveReg(r){ return String(r == null ? '' : r).replace(/\D/g, '').re
 // esquerda ou "DPP"). Fica uma por pessoa: desvinculada > em aberto > "voltou a
 // comunicar"; empate → a atualizada por último. As tratativas das demais e a
 // reclassificação manual (areaManual) passam para ela. Retorna quantas saíram.
+// Guarda uma vez em que a pessoa ficou sem comunicar e voltou (episódio) no
+// histórico da ficha — senão, quando ela volta a ficar sem comunicação, os dados
+// da vez anterior eram sobrescritos. O episódio é identificado pelo início da
+// falta de comunicação: mesmo início que o atual (ou já guardado) não repete.
+function _scGuardarEpisodio(fica, ep, inicioAtual) {
+  const ini = String((ep && ep.ultimaComunicacao) || '').slice(0, 16);
+  const atual = String(inicioAtual === undefined ? (fica.ultimaComunicacao || '') : (inicioAtual || '')).slice(0, 16);
+  if (!ini || ini === atual) return;
+  const h = fica.historico = fica.historico || [];
+  if (h.some(e => String(e.inicio).slice(0, 16) === ini)) return;
+  h.push({ inicio: ep.ultimaComunicacao, dias: ep.diasSemCom || 0, voltouEm: ep.comunicouEm || null });
+  h.sort((a, b) => String(a.inicio).localeCompare(String(b.inicio)));
+}
 function _scMesclarDuplicatas(dados) {
   const grupos = new Map();
   dados.monitorados.forEach(m => { const c = _scChaveReg(m.registro); if (!grupos.has(c)) grupos.set(c, []); grupos.get(c).push(m); });
   const peso = m => m.situacao === 'desvinculado' ? 2 : _scEmAberto(m) ? 1 : 0;
+  const cedo = (a, b) => (!a ? b : !b ? a : (a < b ? a : b));
   const remover = new Set();
   grupos.forEach(g => {
     if (g.length < 2) return;
@@ -8600,6 +8750,9 @@ function _scMesclarDuplicatas(dados) {
       if (o === fica) return;
       (o.tratativas || []).forEach(t => { const k = JSON.stringify(t); if (!vistas.has(k)) { vistas.add(k); (fica.tratativas = fica.tratativas || []).push(t); } });
       if (!fica.areaManual && o.areaManual) fica.areaManual = o.areaManual;
+      fica.importadoEm = cedo(fica.importadoEm, o.importadoEm);
+      (o.historico || []).forEach(e => _scGuardarEpisodio(fica, { ultimaComunicacao: e.inicio, diasSemCom: e.dias, comunicouEm: e.voltouEm }));
+      if (o.situacao === 'comunicou') _scGuardarEpisodio(fica, o);
       remover.add(o);
     });
     (fica.tratativas || []).sort((a, b) => String(a.data || '').localeCompare(String(b.data || '')));
@@ -8610,8 +8763,8 @@ function _scMesclarDuplicatas(dados) {
 // Prefixos de DOM por área — Jurídico usa os IDs originais (sc/scde),
 // Psicossocial usa IDs espelhados (psc/pscde).
 const _SC_CFG = {
-  juridico:     { pfx:'sc',  dpfx:'scde',  ultima:'semcom-ultima-importacao', tbody:'tbody-semcom',  tbodyD:'tbody-semcom-desvinc' },
-  psicossocial: { pfx:'psc', dpfx:'pscde', ultima:'pscom-ultima-importacao',  tbody:'tbody-pscom',   tbodyD:'tbody-pscom-desvinc'  },
+  juridico:     { pfx:'sc',  dpfx:'scde',  apfx:'scar',  ultima:'semcom-ultima-importacao', tbody:'tbody-semcom',  tbodyD:'tbody-semcom-desvinc', tbodyA:'tbody-semcom-arq' },
+  psicossocial: { pfx:'psc', dpfx:'pscde', apfx:'pscar', ultima:'pscom-ultima-importacao',  tbody:'tbody-pscom',   tbodyD:'tbody-pscom-desvinc',  tbodyA:'tbody-pscom-arq'  },
 };
 
 // ── Sub-abas Jurídico ──────────────────────────────────────
@@ -9230,6 +9383,8 @@ function importarExcelSemCom(input, area) {
                ?? cands.find(j => dados.monitorados[j].situacao !== 'comunicou')
                ?? (cands.length ? cands[0] : -1);
       if (idx >= 0) {
+        // Estava arquivado e voltou a ficar sem comunicação: guarda a vez anterior.
+        if (dados.monitorados[idx].situacao === 'comunicou') _scGuardarEpisodio(dados.monitorados[idx], dados.monitorados[idx], dataUlt);
         // Atualiza só campos vindos do AKILES — preserva tratativas, desvinculação, situação.
         // O registro acompanha a grafia atual (é dela que sai a marcação DPP).
         Object.assign(dados.monitorados[idx], { registro, nome, ultimaComunicacao: dataUlt, tempoSemCom: tempo, intervalo, unidade, diasSemCom: dias, atualizadoEm: agora });
@@ -9299,11 +9454,12 @@ function importarExcelSemCom(input, area) {
 function mudarSubAbaSemCom(aba, area) {
   area = area || 'juridico';
   const cfg = _SC_CFG[area];
-  ['ativos','desvinculados'].forEach(a => {
+  ['ativos','desvinculados','arquivados'].forEach(a => {
     document.getElementById(cfg.pfx + '-stab-'  + a)?.classList.toggle('active', a === aba);
     document.getElementById(cfg.pfx + '-panel-' + a)?.classList.toggle('active', a === aba);
   });
   if (aba === 'desvinculados') renderizarSemComDesvinc(area);
+  if (aba === 'arquivados')    renderizarSemComArquivados(area);
   if (aba === 'ativos')        renderizarSemCom(area);
 }
 
@@ -9325,6 +9481,8 @@ function atualizarBadgeSemCom() {
   const psi = _scListaArea(dados, 'psicossocial');
   _set('psi-semcom-badge', psi.filter(m => _diasSemComAtual(m) >= 180 && _scEmAberto(m)).length);
   _set('psc-desvinc-badge', psi.filter(m => m.situacao === 'desvinculado').length, '#16a34a');
+  // Arquivados: só a quantidade, discreta (não é pendência)
+  [['sc-arq-qtd', jur], ['psc-arq-qtd', psi]].forEach(([id, l]) => { const el = document.getElementById(id); if (el) { const n = l.filter(m => m.situacao === 'comunicou').length; el.textContent = n ? '(' + n + ')' : ''; } });
 }
 
 // ── Renderizar Desvinculados ───────────────────────────────
@@ -9388,6 +9546,92 @@ function limparFiltrosSemComDesvinc(area) {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   renderizarSemComDesvinc(area);
+}
+
+// ── Arquivados: quem VOLTOU A COMUNICAR (resolvido) ─────────
+// Automático: a importação marca 'comunicou' quem saiu do relatório do AKILES.
+// Nada é apagado — ficha, tratativas e vezes anteriores ficam aqui; se a pessoa
+// reaparecer sem comunicação, a importação a devolve para Ativos.
+function _scArquivados(dados, area) { return _scListaArea(dados, area).filter(m => m.situacao === 'comunicou'); }
+function _scDiaLocal(iso) { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('sv-SE'); }
+function _scOrdemArquivados(a, b) { return String(b.comunicouEm || '').localeCompare(String(a.comunicouEm || '')) || (b.diasSemCom || 0) - (a.diasSemCom || 0); }
+
+function renderizarSemComArquivados(area) {
+  area = area || 'juridico';
+  const cfg = _SC_CFG[area];
+  const v = id => (document.getElementById(cfg.apfx + '-f-' + id)?.value || '').toLowerCase().trim();
+  const fNome = v('nome'), fReg = v('registro'), fIni = v('inicio'), fFim = v('fim'), fMostrar = v('trat');
+
+  let lista = _scArquivados(getSemCom(), area);
+  if (fNome) lista = lista.filter(m => (m.nome || '').toLowerCase().includes(fNome));
+  if (fReg)  lista = lista.filter(m => (m.registro || '').toLowerCase().includes(fReg));
+  if (fIni)  lista = lista.filter(m => _scDiaLocal(m.comunicouEm) >= fIni);
+  if (fFim)  lista = lista.filter(m => _scDiaLocal(m.comunicouEm) && _scDiaLocal(m.comunicouEm) <= fFim);
+  if (fMostrar === 'com')   lista = lista.filter(m => (m.tratativas || []).length);
+  if (fMostrar === 'reinc') lista = lista.filter(m => (m.historico || []).length);
+  lista.sort(_scOrdemArquivados);
+
+  const countEl = document.getElementById(cfg.apfx + '-count-label');
+  if (countEl) countEl.textContent = `${lista.length} arquivado${lista.length !== 1 ? 's' : ''}`;
+  const tbody = document.getElementById(cfg.tbodyA);
+  if (!tbody) return;
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:#888">Nenhum monitorado arquivado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map((m, i) => {
+    const tratQt = (m.tratativas || []).length;
+    const vezes  = (m.historico || []).length + 1;
+    return `<tr>
+      <td>${i + 1}</td>
+      <td><strong>${esc(m.nome)}</strong></td>
+      <td style="font-family:var(--font-mono)">${esc(m.registro)}</td>
+      <td style="font-size:.82rem">${esc((m.ultimaComunicacao || '').slice(0, 16).replace('T', ' '))}</td>
+      <td style="text-align:center;font-weight:bold">${m.diasSemCom || 0}d</td>
+      <td style="font-family:var(--font-mono);font-size:.82rem">${m.comunicouEm ? new Date(m.comunicouEm).toLocaleDateString('pt-BR') : '—'}</td>
+      <td style="text-align:center">${vezes > 1 ? `<span style="color:#b45309;font-weight:600" title="Ficou sem comunicar ${vezes} vezes">${vezes}×</span>` : '1×'}</td>
+      <td style="text-align:center">${tratQt > 0 ? `<span style="background:#dbeafe;color:#1d4ed8;border-radius:3px;padding:1px 8px;font-size:.82rem">${tratQt}</span>` : '—'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-sm btn-outline" onclick="verMonitoradoSemCom('${m.id}')" title="Visualizar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function limparFiltrosSemComArquivados(area) {
+  area = area || 'juridico';
+  const ap = _SC_CFG[area].apfx;
+  ['nome', 'registro', 'inicio', 'fim', 'trat'].forEach(k => { const el = document.getElementById(ap + '-f-' + k); if (el) el.value = ''; });
+  renderizarSemComArquivados(area);
+}
+
+function exportarArquivadosExcel(area) {
+  area = area || 'juridico';
+  const lista = _scArquivados(getSemCom(), area).sort(_scOrdemArquivados);
+  if (!lista.length) { _mostrarToast('Nenhum arquivado para exportar.', 'erro'); return; }
+  const rows = lista.map((m, i) => {
+    const ult = (m.tratativas || []).length ? m.tratativas[m.tratativas.length - 1] : null;
+    return {
+      'Nº':                        i + 1,
+      'Nome':                      m.nome,
+      'Registro':                  m.registro,
+      'Sem comunicar desde':       (m.ultimaComunicacao || '').slice(0, 16).replace('T', ' '),
+      'Dias sem comunicação':      m.diasSemCom || 0,
+      'Arquivado em':              m.comunicouEm ? new Date(m.comunicouEm).toLocaleDateString('pt-BR') : '',
+      'Vezes sem comunicação':     (m.historico || []).length + 1,
+      'Unidade':                   m.unidade || '',
+      'Qtd. Tratativas':           (m.tratativas || []).length,
+      'Última Tratativa':          ult ? new Date(ult.data).toLocaleString('pt-BR') : '',
+      'Última Tratativa - Servidor':  ult ? ult.servidor : '',
+      'Última Tratativa - Descrição': ult ? ult.descricao : '',
+    };
+  });
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:4},{wch:35},{wch:14},{wch:18},{wch:10},{wch:12},{wch:8},{wch:18},{wch:8},{wch:20},{wch:25},{wch:40}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Arquivados');
+  XLSX.writeFile(wb, area === 'psicossocial' ? 'arquivados_semcom_DPP_CME.xlsx' : 'arquivados_semcom_CME.xlsx');
+  _mostrarToast('Excel exportado!', 'sucesso');
 }
 
 // Reverter desvinculação (volta para Ativos)
@@ -9631,10 +9875,16 @@ function verMonitoradoSemCom(monId) {
   document.getElementById('vsem-unidade').value   = m.unidade || '—';
   document.getElementById('vsem-ultima').value    = (m.ultimaComunicacao||'').slice(0,16).replace('T',' ');
   document.getElementById('vsem-tempo').value     = m.tempoSemCom || '—';
-  document.getElementById('vsem-dias').value      = _diasSemComAtual(m) + ' dias';
+  const _arq = m.situacao === 'comunicou';
+  document.getElementById('vsem-dias').value      = _arq ? (m.diasSemCom || 0) + ' dias (até voltar a comunicar)' : _diasSemComAtual(m) + ' dias';
   document.getElementById('vsem-intervalo').value = m.intervalo || '—';
   document.getElementById('vsem-importado').value = m.importadoEm ? new Date(m.importadoEm).toLocaleString('pt-BR') : '—';
-  document.getElementById('vsem-situacao').value  = m.situacao === 'desvinculado' ? 'Desvinculado' : m.situacao === 'ativo' ? 'Ativo' : m.situacao;
+  document.getElementById('vsem-situacao').value  = m.situacao === 'desvinculado' ? 'Desvinculado' : m.situacao === 'ativo' ? 'Ativo'
+    : _arq ? 'Arquivado — voltou a comunicar' + (m.comunicouEm ? ' (' + new Date(m.comunicouEm).toLocaleDateString('pt-BR') + ')' : '') : m.situacao;
+  const _eps = (m.historico || []).slice().reverse();
+  document.getElementById('vsem-sec-episodios').style.display = _eps.length ? '' : 'none';
+  document.getElementById('vsem-episodios').innerHTML = _eps.map(e =>
+    `<div style="border-left:3px solid #b45309;padding:5px 10px;margin-bottom:5px;background:#fffbeb">Sem comunicar desde <strong>${esc(String(e.inicio || '').slice(0, 16))}</strong> · ${e.dias || 0} dias${e.voltouEm ? ' · voltou em ' + new Date(e.voltouEm).toLocaleDateString('pt-BR') : ''}</div>`).join('');
   // Desvinculação
   const secDesvinc = document.getElementById('vsem-sec-desvinc');
   if (m.desvinculacao) {
@@ -9663,7 +9913,9 @@ function verMonitoradoSemCom(monId) {
 function exportarSemComExcel(area) {
   area = area || 'juridico';
   const dados = getSemCom();
-  const lista = _scListaArea(dados, area).sort((a,b) => (b.diasSemCom||0) - (a.diasSemCom||0));
+  // Quem já voltou a comunicar sai daqui (tem exportação própria em Arquivados).
+  const lista = _scListaArea(dados, area).filter(m => m.situacao !== 'comunicou')
+    .sort((a,b) => _diasSemComAtual(b) - _diasSemComAtual(a));
   if (!lista.length) { _mostrarToast('Nenhum registro para exportar.', 'erro'); return; }
   const rows = lista.map((m, i) => ({
     'Nº':                   i + 1,
