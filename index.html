@@ -19416,6 +19416,9 @@ function rv_importarPlanilha(input) {
     rows.forEach(r => {
       const chave = r.nome + '|||' + r.processo;
       if (!mapa[chave]) mapa[chave] = [];
+      // A planilha do AKILES às vezes repete a mesma ocorrência (linha idêntica):
+      // contava 2× no resumo e saía 2× com o mesmo mapa.
+      if (r.idOc && mapa[chave].some(o => o.idOc === r.idOc)) return;
       mapa[chave].push(r);
     });
     _rv_grupos = Object.values(mapa);
@@ -20089,8 +20092,12 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
   let vrows=`<w:tr>${_rvTcTxt('Tipo de Ocorrência',{b:true})}${_rvTcTxt('ID da Ocorrência',{b:true})}${_rvTcTxt('Ocorreu',{b:true})}${_rvTcTxt('Duração',{b:true})}</w:tr>`;
   grupo.forEach(x=>{
     const _src=_rv_imagens[String(x.idOc||'')];
-    vrows+=`<w:tr>${_rvTcTxt(String(x.tipo||''))}${_rvTcTxt(String(x.idOc||''))}${_rvTcTxt(_rvFmtOcorreu(x.ocorreu))}${_rvTcTxt(String(x.duracao||''))}</w:tr>`;
-    if(_src){ const _a=addBodyImg(_src); if(_a){ vrows+=`<w:tr>${_rvTc(_rvPara([_rvImgRun(_a.rid,_rvEmuW(_a.im,6.2))],{jc:'center'}),{span:4})}</w:tr>`; } }
+    const _a=_src?addBodyImg(_src):null;
+    // Com mapa: a linha da violação não se separa do mapa (antes o mapa caía na
+    // página seguinte e a linha ficava sozinha no rodapé, com até 10 cm em branco).
+    const _cel=`${_rvTcTxt(String(x.tipo||''))}${_rvTcTxt(String(x.idOc||''))}${_rvTcTxt(_rvFmtOcorreu(x.ocorreu))}${_rvTcTxt(String(x.duracao||''))}`;
+    vrows+=_a ? `<w:tr><w:trPr><w:cantSplit/></w:trPr>${_cel.replace(/<w:pPr>/g,'<w:pPr><w:keepNext/>')}</w:tr>` : `<w:tr>${_cel}</w:tr>`;
+    if(_a){ vrows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${_rvTc(_rvPara([_rvImgRun(_a.rid,_rvEmuW(_a.im,5.6))],{jc:'center'}),{span:4})}</w:tr>`; }
     vrows+=`<w:tr>${_rvTc(_rvPara([_rvRun('')],{}),{span:4})}</w:tr>`;
   });
   body.push(`<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>${_RV_TBLBORDERS}</w:tblPr><w:tblGrid><w:gridCol w:w="3200"/><w:gridCol w:w="2200"/><w:gridCol w:w="2600"/><w:gridCol w:w="1600"/></w:tblGrid>${vrows}</w:tbl>`);
