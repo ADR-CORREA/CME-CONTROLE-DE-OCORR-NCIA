@@ -19373,6 +19373,8 @@ function rv_importarPlanilha(input) {
     const cId      = pick(['Id_ocorrencia','ID da Ocorr','ID']);
     const cOcorreu = pick(['Data de In','Ocorreu','Data']);
     const cDur     = pick(['Dura','Tempo','Duration']);
+    const cDisp    = pick(['id_dispositivo']);
+    const cFim     = pick(['Data Final','Data de Fim','Data de Termino']);
     const cEndereco= pick(['Endereço','Endereco']);
     const cContato = pick(['Contato','Telefone','Celular','Fone']);
 
@@ -19403,6 +19405,8 @@ function rv_importarPlanilha(input) {
       idOc:        fixEnc(r[cId]),
       ocorreu:     _rvOcorreuNorm(r[cOcorreu], rowsData[i] ? rowsData[i][cOcorreu] : null, _colDataUS),
       duracao:     fixEnc(r[cDur]),
+      disp:        cDisp ? String(r[cDisp] || '').replace(/\D/g, '') : '',
+      fim:         cFim ? _rvOcorreuNorm(r[cFim], rowsData[i] ? rowsData[i][cFim] : null, _colDataUS) : '',
       endereco:    cEndereco ? fixEnc(r[cEndereco]) : '',
       contato:     cContato  ? fixEnc(r[cContato])  : '',
     })).filter(r => r.nome);
@@ -19536,16 +19540,16 @@ async function rv_botaoLote() {
   // Coleta os idOcs de zona dos grupos MARCADOS direto dos grupos (não do
   // _rv_idGrupo, que mapeia 1 idOc → vários grupos). Set dedup: se o mesmo idOc
   // estiver em 2 grupos marcados, captura uma vez só (o mapa é o mesmo no AKILES).
-  const idsSet = new Set();
+  const pedidos = new Map(); // idOc → pedido ao robô
   _rv_grupos.forEach((g, i) => {
     const chk = document.getElementById('rv-chk-' + i);
     if (!chk || !chk.checked) return;
     g.filter(x => /zona/i.test(x.tipo || '')).forEach(x => {
       const idOc = String(x.idOc || '').trim();
-      if (idOc) idsSet.add(idOc);
+      if (idOc && !pedidos.has(idOc)) pedidos.set(idOc, _rvPedidoRobo(x));
     });
   });
-  const ids = [...idsSet];
+  const ids = [...pedidos.keys()];
   if (!ids.length) { _mostrarToast('Marque ao menos um monitorado com violação de zona.', 'erro'); return; }
 
   // captura só os slots ainda VAZIOS — re-clicar completa o que faltou.
@@ -19556,11 +19560,23 @@ async function rv_botaoLote() {
   // qualquer navegador, SEM localhost e sem bloqueio. O robô precisa estar LIGADO
   // (ele atende a fila). Se não houver conexão com o servidor, cai no manual.
   if (typeof _r2Pronto === 'function' && _r2Pronto()) {
-    rv_capturarViaCloud(faltam);
+    rv_capturarViaCloud(faltam.map(id => pedidos.get(id)));
   } else {
     _mostrarToast('Sem conexão com o servidor — importando prints manualmente.', 'erro');
     document.getElementById('rv-bulk-input').click();
   }
+}
+
+// Pedido ao robô: "idOc_dispositivo_AAAAMMDDHHMM(início)_AAAAMMDDHHMM(fim)_E|I|Z".
+// Com dispositivo + horário o robô abre o trajeto DIRETO no AKILES (sem a lista
+// de ocorrências) e enquadra o mapa na zona. Sem esses dados, manda só o idOc.
+function _rvPedidoRobo(x) {
+  const idOc = String(x.idOc || '').replace(/\D/g, '');
+  const ts = d => { const m = String(d || '').match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})/); return m ? m[3] + m[2] + m[1] + m[4] + m[5] : ''; };
+  const ini = ts(x.ocorreu), fim = ts(x.fim) || ini;
+  if (!idOc || !x.disp || !ini) return idOc;
+  const tipo = /exclus/i.test(x.tipo || '') ? 'E' : /inclus/i.test(x.tipo || '') ? 'I' : 'Z';
+  return [idOc, x.disp, ini, fim, tipo].join('_');
 }
 
 // Cancelamento da captura em andamento (botão ✕ ao lado da barra). As funções de
@@ -19771,7 +19787,7 @@ function _rvImgDeArquivo(file, cb) {
   fr.readAsDataURL(file);
 }
 
-function _rvSetImg(id, dataURL) { if (!id) return; _rv_imagens[id] = dataURL; _rvAtualizarSlot(id); }
+function _rvSetImg(id, dataURL) { id = String(id || '').split('_')[0]; if (!id) return; _rv_imagens[id] = dataURL; _rvAtualizarSlot(id); }
 
 function _rvAtualizarSlot(id) {
   const slot = document.getElementById('rv-slot-' + id);
