@@ -5606,9 +5606,22 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
 
       <!-- Resultados -->
       <div id="mp-resultados" style="display:none">
+        <div id="mp-novos" style="display:none;margin-bottom:12px"></div>
+        <div id="mp-fichas-status" style="display:none;margin-bottom:12px;font-size:.85rem;border-radius:8px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;color:#075985"></div>
         <div id="mp-resumo" style="margin-bottom:16px"></div>
         <div id="mp-sec-confirmados" style="margin-bottom:18px"></div>
         <div id="mp-sec-provaveis"></div>
+      </div>
+
+      <!-- Pastas do dia (dossiê de cada cruzamento) -->
+      <div style="background:#fff;border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow);margin-top:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <div style="font-weight:700;color:var(--az1);font-size:.95rem">📁 Pastas de cruzamento</div>
+          <button type="button" onclick="_mpCarregarPastas()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:5px 12px;font-size:.8rem;cursor:pointer">🔄 Atualizar</button>
+        </div>
+        <div style="font-size:.78rem;color:#64748b;margin:4px 0 10px">Uma pasta por dia de cruzamento, com a ficha de cada monitorado com mandado (foto, qualificação, processos, violações e última comunicação, lidas do AKILES). Clique numa pasta e depois no perfil.</div>
+        <div id="mp-pastas" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+        <div id="mp-pasta" style="margin-top:14px"></div>
       </div>
     </div>
 
@@ -15803,7 +15816,10 @@ function _mpNormalizar(s){
   if(s==null) return '';
   s=String(s).trim().toUpperCase().replace(/ /g,' ');
   s=s.normalize('NFKD').replace(/[̀-ͯ]/g,'').replace(/Ç/g,'C');
-  return s.replace(/[^A-Z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+  // A exportação do BNMP às vezes chega com a letra acentuada CORROMPIDA ("ARA\uFFFDJO").
+  // Vira '#' (uma letra qualquer) em vez de quebrar a palavra em duas.
+  s=s.replace(/\uFFFD/g,'#');
+  return s.replace(/[^A-Z0-9# ]+/g,' ').replace(/\s+/g,' ').trim();
 }
 
 // Filtra um candidato a nome (>=2 palavras, sem dígitos, não cabeçalho institucional).
@@ -15832,7 +15848,16 @@ function _mpExtrairNomesDeTexto(texto){
 function _mpLerArquivo(file){
   return new Promise((resolve,reject)=>{
     const r=new FileReader();
-    r.onload=(e)=>{ try{ resolve(XLSX.read(e.target.result,{type:'array'})); }catch(err){ reject(err); } };
+    r.onload=(e)=>{ try{
+      // CSV: o leitor de planilha trata o arquivo como Latin-1 e ESTRAGA os acentos
+      // de um CSV em UTF-8 (o do BNMP): "ARAÚJO" virava "ARAÃJO" e o nome exato
+      // deixava de bater. Decodifica o texto antes (UTF-8; se não for, Windows-1252).
+      if(/\.csv$/i.test(file.name||'')){
+        let t; try{ t=new TextDecoder('utf-8',{fatal:true}).decode(e.target.result); }catch(_){ t=new TextDecoder('windows-1252').decode(e.target.result); }
+        resolve(XLSX.read(t.replace(/^﻿/,''),{type:'string'})); return;
+      }
+      resolve(XLSX.read(e.target.result,{type:'array'}));
+    }catch(err){ reject(err); } };
     r.onerror=reject;
     r.readAsArrayBuffer(file);
   });
@@ -15903,6 +15928,7 @@ function _mpNomesMonitoradosSistema(){
 }
 
 function mp_inicializar(){
+  _mpCarregarPastas();
   _mpResultado=null;
   const res=document.getElementById('mp-resultados'); if(res) res.style.display='none';
   const exp=document.getElementById('mp-btn-export'); if(exp) exp.style.display='none';
@@ -15932,8 +15958,9 @@ async function mp_arquivoMandados(input){
   const f=input.files&&input.files[0]; if(!f) return;
   const st=document.getElementById('mp-mandados-status'); if(st) st.textContent='Lendo '+f.name+'…';
   try{
-    const r=_mpNomesDeWorkbook(await _mpLerArquivo(f));
-    _mpMandados={nomes:r.nomes, arquivo:f.name};
+    const wb=await _mpLerArquivo(f);
+    const r=_mpNomesDeWorkbook(wb);
+    _mpMandados={nomes:r.nomes, arquivo:f.name, detalhes:_mpDetalhesMandados(wb)};
     if(st) st.innerHTML='Arquivo: <b>'+_mpEsc(f.name)+'</b> — <b>'+r.nomes.length+'</b> nome(s) de mandado <span style="color:#94a3b8">(aba "'+_mpEsc(r.aba)+'")</span>.'
       + (!r.nomes.length ? '<br><span style="color:#dc2626">Nenhum nome encontrado — confira se a planilha tem uma coluna "Nome".</span>' : '');
   }catch(e){ _mpMandados=null; if(st) st.innerHTML='<span style="color:#dc2626">Erro ao ler: '+_mpEsc(e.message||String(e))+'</span>'; }
@@ -15984,6 +16011,10 @@ async function _mpCruzarExec(nomesMon){
   const setMan=new Set(_mpMandados.nomes);
   const confirmados=[], confSet=new Set();
   for(const n of nomesMon){ if(setMan.has(n)){ confirmados.push({monitorado:n,mandado:n,tipo:'EXATO',score:100}); confSet.add(n); } }
+  // Nome do BNMP com letra corrompida ("ARA#JO"): '#' vale QUALQUER letra. Mesmo
+  // tamanho e todo o resto idêntico = confirmado (marcado como CURINGA).
+  const coringas=_mpMandados.nomes.filter(m=>m.includes('#')).map(m=>({ m, rx:new RegExp('^'+m.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/#/g,'[A-Z]')+'$') }));
+  for(const n of nomesMon){ if(confSet.has(n)) continue; const c=coringas.find(x=>x.m.length===n.length && x.rx.test(n)); if(c){ confirmados.push({monitorado:n,mandado:c.m,tipo:'CURINGA',score:100}); confSet.add(n); } }
 
   // Pré-computa o "token-sort" de cada mandado UMA vez (antes eram até milhões
   // de recomputações — mesma string sendo reordenada de novo a cada comparação).
@@ -16013,6 +16044,8 @@ async function _mpCruzarExec(nomesMon){
   }
 
   provaveis.sort((a,b)=>b.score-a.score);
+  const det=(_mpMandados.detalhes&&_mpMandados.detalhes.porNome)||new Map();
+  confirmados.concat(provaveis).forEach(x=>{ x.mandados=det.get(x.mandado)||[]; });
   _mpResultado={ confirmados, provaveis, resumo:{
     data_execucao: new Date().toLocaleString('pt-BR'),
     fonte_monitorados: _mpFonteMon==='sistema' ? 'Sistema (CME)' : (_mpMonitoradosArq?_mpMonitoradosArq.arquivo:''),
@@ -16031,6 +16064,7 @@ async function _mpCruzarExec(nomesMon){
   if(cancelado){ _mostrarToast('\u{23F9}\u{FE0F} Cruzamento cancelado — resultado parcial exibido.','erro'); return; }
   if(confirmados.length) _mostrarToast('\u{1F6A8} '+confirmados.length+' monitorado(s) com mandado de prisão CONFIRMADO!','erro');
   else _mostrarToast('Cruzamento concluído: nenhum confirmado. '+provaveis.length+' provável(is) para revisar.','sucesso');
+  _mpPosCruzamento(); // compara com a última pesquisa, busca as fichas e salva a pasta do dia
 }
 
 function _mpRender(){
@@ -16062,7 +16096,7 @@ function _mpTabela(titulo,cor,lista,exato){
     +'</tr></thead><tbody>';
   for(const x of lista){
     h+='<tr><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;font-weight:600">'+_mpEsc(x.monitorado)+'</td>'
-      +'<td style="padding:7px 10px;border-bottom:1px solid #f1f5f9">'+_mpEsc(x.mandado)+'</td>'
+      +'<td style="padding:7px 10px;border-bottom:1px solid #f1f5f9">'+_mpEsc(_mpNomeExib(x.mandado))+(x.tipo==='CURINGA'?' <span title="Nome com letra corrompida na planilha do BNMP — conferido letra a letra" style="font-size:.7rem;color:#92400e">(letra ilegível no BNMP)</span>':'')+'</td>'
       +(exato?'':'<td style="padding:7px 10px;border-bottom:1px solid #f1f5f9"><b>'+x.score+'%</b></td>')+'</tr>';
   }
   return h+'</tbody></table></div>';
@@ -16078,6 +16112,278 @@ function mp_exportarExcel(){
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r.provaveis.length?map(r.provaveis):vazio), 'PROVAVEIS');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Object.entries(r.resumo).map(([k,v])=>({CHAVE:k,VALOR:v}))), 'RESUMO');
   XLSX.writeFile(wb, 'cruzamento_mandados_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+/* ═══════ MANDADOS — detalhes, pasta do dia, fichas do AKILES e perfil ═══════ */
+// Lê os DETALHES de cada mandado (número, mãe, pai, nascimento, órgão…) — servem
+// para conferir a identidade e para achar mandado NOVO entre uma pesquisa e outra.
+function _mpDetalhesMandados(wb){
+  const porNome=new Map(); let total=0;
+  for(const aba of wb.SheetNames){
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[aba],{header:1,defval:'',raw:false});
+    for(let h=0;h<Math.min(rows.length,20);h++){
+      const col=_mpAcharColunaNome(rows[h]); if(col<0) continue;
+      const hd=(rows[h]||[]).map(c=>String(c||'').trim().toLowerCase());
+      const ix=rx=>hd.findIndex(x=>rx.test(x));
+      const c={ numero:ix(/^n.{0,2}mero/), alcunha:ix(/alcunha|vulgo/), mae:ix(/nome da m|^m.{1,2}e$|genitora/), pai:ix(/nome do pai|^pai$|genitor$/),
+                nasc:ix(/nascimento/), situacao:ix(/situa/), data:ix(/^data$|expedi..o$/), orgao:ix(/expedidor|^.rg.o/), peca:ix(/^pe.{1,2}a/) };
+      for(let i=h+1;i<rows.length;i++){
+        const r=rows[i]||[]; const n=_mpLimparNome(r[col]); if(!n) continue;
+        const g=k=>c[k]>=0?String(r[c[k]]==null?'':r[c[k]]).trim():'';
+        const m={ numero:g('numero'), nome:String(r[col]).trim(), alcunha:g('alcunha'), mae:g('mae'), pai:g('pai'), nascimento:g('nasc'), situacao:g('situacao'), data:g('data'), orgao:g('orgao'), peca:g('peca') };
+        if(!porNome.has(n)) porNome.set(n,[]); porNome.get(n).push(m); total++;
+      }
+      return { porNome, total };
+    }
+  }
+  return { porNome, total };
+}
+function _mpNomeExib(n){ return String(n||'').replace(/#/g,'\u00B7'); }
+function _mpB64url(s){ return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function _mpHojeISO(){ const d=new Date(), z=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()); }
+function _mpDataBR(iso){ const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m?m[3]+'/'+m[2]+'/'+m[1]:String(iso||''); }
+function _mpBase(){ return r2_state.url.replace(/\/$/,''); }
+async function _mpApi(caminho, opts){
+  const o=Object.assign({},opts||{}); o.headers=Object.assign({'Authorization':'Bearer '+_workerToken()}, o.headers||{});
+  const r=await fetch(_mpBase()+caminho,o); const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error||('erro '+r.status));
+  return d;
+}
+
+// Confere a identidade: mãe e nascimento do MANDADO x cadastro do AKILES.
+function _mpConferir(mandados, ficha){
+  const q=(ficha&&ficha.encontrado&&ficha.qualificacao)||null;
+  const res={ mae:'sem dado', nasc:'sem dado' };
+  if(!q) return res;
+  const dig=s=>String(s||'').replace(/\D/g,'');
+  for(const m of (mandados||[])){
+    const nm=_mpNormalizar(m.mae), na=_mpNormalizar(q.mae);
+    if(nm && na && !/NAO INFORMADO/.test(nm)){ const ok=_mpFuzzy(nm,na)>=85; if(ok || res.mae==='sem dado') res.mae=ok?'confere':'difere'; }
+    if(dig(m.nascimento).length>=6 && dig(q.nascimento).length>=6){ const ok=dig(m.nascimento)===dig(q.nascimento); if(ok || res.nasc==='sem dado') res.nasc=ok?'confere':'difere'; }
+  }
+  return res;
+}
+function _mpSeloIdentidade(cf){
+  if(!cf) return '';
+  if(cf.mae==='difere'||cf.nasc==='difere') return '<span style="background:#fef2f2;color:#b91c1c;border-left:3px solid #dc2626;padding:2px 7px;border-radius:3px;font-size:.7rem;font-weight:700">\u26A0 POSSÍVEL HOMÔNIMO</span>';
+  if(cf.mae==='confere'&&cf.nasc==='confere') return '<span style="background:#f0fdf4;color:#15803d;border-left:3px solid #16a34a;padding:2px 7px;border-radius:3px;font-size:.7rem;font-weight:700">\u2713 IDENTIDADE CONFERE</span>';
+  if(cf.mae==='confere'||cf.nasc==='confere') return '<span style="background:#f0fdf4;color:#15803d;border-left:3px solid #16a34a;padding:2px 7px;border-radius:3px;font-size:.7rem;font-weight:700">\u2713 '+(cf.mae==='confere'?'MÃE':'NASCIMENTO')+' CONFERE</span>';
+  return '<span style="background:#f8fafc;color:#475569;border-left:3px solid #94a3b8;padding:2px 7px;border-radius:3px;font-size:.7rem;font-weight:700">CONFERIR À MÃO</span>';
+}
+
+// Pede as fichas ao robô pela MESMA fila dos mapas ("F_" + nome). Só leitura no AKILES.
+async function _mpFichasRobo(nomes, onProg){
+  const base=_mpBase(), H={'Authorization':'Bearer '+_workerToken()};
+  const ids=nomes.map(n=>'F_'+_mpB64url(n));
+  const r=await fetch(base+'/robo/job',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({ids})});
+  const d=await r.json().catch(()=>({})); if(!r.ok||!d.jobId) throw new Error(d.error||'erro ao enviar o pedido ao robô');
+  const jobId=d.jobId, fichas={}; let naFila=0, semProg=0, ult=-1;
+  try{
+    for(;;){
+      await new Promise(res=>setTimeout(res,1500));
+      let j; try{ const jr=await fetch(base+'/robo/job?id='+encodeURIComponent(jobId),{headers:H}); if(!jr.ok) break; j=await jr.json(); }catch(e){ continue; }
+      for(const idOc of (j.prontos||[])){
+        if(fichas[idOc]) continue;
+        try{ const ir=await fetch(base+'/robo/img?id='+encodeURIComponent(jobId)+'&idOc='+encodeURIComponent(idOc),{headers:H}); if(ir.ok) fichas[idOc]=JSON.parse(await ir.text()); }catch(e){}
+      }
+      if(onProg) onProg(Object.keys(fichas).length, ids.length, j.status==='pendente'&&!(j.progresso>0));
+      if(j.status==='concluido') break;
+      if(j.status==='pendente'&&!(j.progresso>0)){ if(++naFila>=200) throw new Error('o robô não pegou o pedido em 5 minutos (o computador do robô está ligado e com internet?)'); continue; }
+      if((j.progresso||0)!==ult){ ult=j.progresso||0; semProg=0; } else if(++semProg>=120) throw new Error('o robô parou de responder');
+    }
+  } finally { try{ await fetch(base+'/robo/job?id='+encodeURIComponent(jobId),{method:'DELETE',headers:H}); }catch(e){} }
+  const porNome={}; nomes.forEach((n,i)=>{ if(fichas[ids[i]]) porNome[n]=fichas[ids[i]]; });
+  return porNome;
+}
+
+function _mpFichasStatus(html, cor){
+  const el=document.getElementById('mp-fichas-status'); if(!el) return;
+  el.style.display=html?'':'none'; el.innerHTML=html||'';
+  const c={azul:['#f0f9ff','#bae6fd','#075985'],verde:['#f0fdf4','#bbf7d0','#166534'],amarelo:['#fffbeb','#fde68a','#92400e'],vermelho:['#fef2f2','#fecaca','#991b1b']}[cor||'azul'];
+  el.style.background=c[0]; el.style.borderColor=c[1]; el.style.color=c[2];
+}
+
+// Depois do cruzamento: compara com a última pesquisa, busca as fichas e salva a pasta do dia.
+async function _mpPosCruzamento(){
+  const r=_mpResultado; if(!r || r.resumo.cruzamento_cancelado) return;
+  const itens=r.confirmados.map(x=>Object.assign({classe:'CONFIRMADO'},x)).concat(r.provaveis.map(x=>Object.assign({classe:'PROVAVEL'},x)));
+  // 1) última pesquisa salva
+  let anterior=null;
+  try{ const l=await _mpApi('/mandados/lista'); const ult=(l.pastas||[])[0]; if(ult) anterior=await _mpApi('/mandados/ler?data='+encodeURIComponent(ult.data)); }catch(e){ console.warn('[CME] mandados: última pesquisa', e.message); }
+  const numsAnt=new Set((anterior&&anterior.numeros)||[]), pessoasAnt=new Set(((anterior&&anterior.itens)||[]).map(x=>x.monitorado));
+  itens.forEach(x=>{
+    const nums=(x.mandados||[]).map(m=>m.numero).filter(Boolean);
+    x.novo = !!anterior && (nums.length ? nums.some(n=>!numsAnt.has(n)) : !pessoasAnt.has(x.monitorado));
+  });
+  const novos=itens.filter(x=>x.novo);
+  const nv=document.getElementById('mp-novos');
+  if(nv){
+    nv.style.display='';
+    nv.innerHTML = !anterior
+      ? '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:.85rem;color:#475569">Primeira pesquisa salva — a partir da próxima, o sistema avisa os mandados NOVOS em relação a esta.</div>'
+      : (novos.length
+        ? '<div style="background:#fef2f2;border:1px solid #fca5a5;border-left:4px solid #dc2626;border-radius:8px;padding:10px 14px;font-size:.88rem;color:#991b1b"><b>\u{1F195} '+novos.length+' mandado(s) NOVO(S)</b> em relação à pesquisa de '+_mpDataBR(anterior.data||'')+': '+novos.map(x=>'<b>'+_mpEsc(x.monitorado)+'</b>'+(x.classe==='PROVAVEL'?' (provável)':'')).join(', ')+'</div>'
+        : '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:.85rem;color:#166534">Nenhum mandado novo em relação à pesquisa de '+_mpDataBR(anterior.data||'')+'.</div>');
+  }
+  if(anterior && novos.length){ _mostrarToast('\u{1F195} '+novos.length+' mandado(s) NOVO(S) desde a última pesquisa!','erro'); try{ _rvBeep(); }catch(e){} }
+
+  // 2) fichas no AKILES (pelo robô)
+  const nomes=[...new Set(itens.map(x=>x.monitorado))];
+  let fichas={}, erroFichas='';
+  if(nomes.length){
+    _mpFichasStatus('\u{1F916} Buscando no AKILES a ficha de '+nomes.length+' monitorado(s) (foto, qualificação, processos, violações e última comunicação)…','azul');
+    try{
+      fichas=await _mpFichasRobo(nomes,(f,t,naFila)=>_mpFichasStatus(naFila?'\u{23F3} Aguardando o robô pegar o pedido das fichas…':'\u{1F916} Fichas recebidas: <b>'+f+'/'+t+'</b>…','azul'));
+    }catch(e){ erroFichas=e.message||String(e); }
+  }
+  // 3) monta e salva a pasta do dia
+  const data=_mpHojeISO(), fotos={};
+  const chaveDe=(x,f)=>(f&&f.registro?'R'+String(f.registro).replace(/\D/g,''):'N'+_mpNormalizar(x.monitorado).replace(/[^A-Z0-9]/g,'_')).slice(0,70);
+  const itensDossie=itens.map(x=>{
+    const f=fichas[x.monitorado]||null, chave=chaveDe(x,f);
+    if(f&&f.foto) fotos[chave]=f.foto;
+    const fs=f?Object.assign({},f,{foto:''}):null;
+    return { monitorado:x.monitorado, classe:x.classe, tipo:x.tipo, score:x.score, mandadoNome:x.mandado, mandados:x.mandados||[], novo:!!x.novo,
+             ficha:fs, fotoChave:(f&&f.foto)?chave:'', conferencia:_mpConferir(x.mandados,f) };
+  });
+  const semFicha=itensDossie.filter(x=>!x.ficha||!x.ficha.encontrado).length;
+  const dossie={ data, versao:1, itens:itensDossie,
+    numeros:[...new Set(itens.flatMap(x=>(x.mandados||[]).map(m=>m.numero)).filter(Boolean))],
+    resumo:{ confirmados:r.confirmados.length, provaveis:r.provaveis.length, novos:novos.length, semFicha,
+             arquivoMandados:r.resumo.arquivo_mandados, totalMandados:r.resumo.nomes_mandados, monitoradosComparados:r.resumo.nomes_monitorados,
+             comparadoCom:anterior?anterior.data:null } };
+  try{
+    await _mpApi('/mandados/salvar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data,dossie,fotos})});
+    _mpFichasStatus((erroFichas
+      ? '\u{26A0}\u{FE0F} Pasta de '+_mpDataBR(data)+' salva, mas SEM as fichas do AKILES ('+_mpEsc(erroFichas)+'). Abra a pasta e clique em "Buscar fichas de novo".'
+      : '\u{2705} Pasta de <b>'+_mpDataBR(data)+'</b> salva com '+itensDossie.length+' monitorado(s)'+(semFicha?' ('+semFicha+' sem ficha no AKILES)':'')+'. Abra abaixo em <b>Pastas de cruzamento</b>.'), erroFichas?'amarelo':'verde');
+    await _mpCarregarPastas();
+    mp_abrirPasta(data);
+  }catch(e){ _mpFichasStatus('\u{274C} Não consegui salvar a pasta do dia: '+_mpEsc(e.message||String(e)),'vermelho'); }
+}
+
+// ── Pastas ──
+let _mpPastaAtual=null; const _mpFotoCache={};
+async function _mpCarregarPastas(){
+  const el=document.getElementById('mp-pastas'); if(!el) return;
+  try{
+    const l=await _mpApi('/mandados/lista');
+    const ps=l.pastas||[];
+    el.innerHTML = !ps.length ? '<div style="font-size:.82rem;color:#94a3b8">Nenhuma pasta ainda — faça um cruzamento.</div>'
+      : ps.map(p=>'<button type="button" onclick="mp_abrirPasta(\''+_mpEsc(p.data)+'\')" style="text-align:left;background:'+(_mpPastaAtual&&_mpPastaAtual.data===p.data?'#eff6ff':'#fff')+';border:1px solid #cbd5e1;border-left:4px solid '+(p.novos?'#dc2626':'#1d4ed8')+';border-radius:6px;padding:8px 12px;cursor:pointer;font-size:.8rem;min-width:190px">'
+        +'<div style="font-weight:700;color:#0f172a">\u{1F4C1} '+_mpDataBR(p.data)+'</div>'
+        +'<div style="color:#64748b;margin-top:2px">'+(p.confirmados||0)+' confirmado(s) · '+(p.provaveis||0)+' provável(is)'+(p.novos?' · <b style="color:#dc2626">'+p.novos+' novo(s)</b>':'')+'</div></button>').join('');
+  }catch(e){ el.innerHTML='<div style="font-size:.82rem;color:#dc2626">Não consegui listar as pastas: '+_mpEsc(e.message)+'</div>'; }
+}
+async function _mpFoto(data, chave){
+  const k=data+'/'+chave; if(_mpFotoCache[k]) return _mpFotoCache[k];
+  const r=await fetch(_mpBase()+'/mandados/foto?data='+encodeURIComponent(data)+'&chave='+encodeURIComponent(chave),{headers:{'Authorization':'Bearer '+_workerToken()}});
+  if(!r.ok) return ''; _mpFotoCache[k]=URL.createObjectURL(await r.blob()); return _mpFotoCache[k];
+}
+async function mp_abrirPasta(data){
+  const el=document.getElementById('mp-pasta'); if(!el) return;
+  el.innerHTML='<div style="font-size:.85rem;color:#64748b">Abrindo a pasta de '+_mpDataBR(data)+'…</div>';
+  try{ _mpPastaAtual=await _mpApi('/mandados/ler?data='+encodeURIComponent(data)); }catch(e){ el.innerHTML='<div style="color:#dc2626;font-size:.85rem">'+_mpEsc(e.message)+'</div>'; return; }
+  _mpCarregarPastas();
+  const d=_mpPastaAtual, it=d.itens||[], rs=d.resumo||{};
+  const ordem=x=>(x.novo?0:2)+(x.classe==='CONFIRMADO'?0:1);
+  const lista=it.map((x,i)=>Object.assign({_i:i},x)).sort((a,b)=>ordem(a)-ordem(b));
+  el.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px">'
+    +'<div style="font-size:.88rem"><b>\u{1F4C2} Pasta de '+_mpDataBR(d.data)+'</b> <span style="color:#64748b">— '+it.length+' monitorado(s) · planilha '+_mpEsc(rs.arquivoMandados||'')+' · salva por '+_mpEsc(d.salvoPor||'')+'</span></div>'
+    +(rs.semFicha?'<button type="button" onclick="mp_rebuscarFichas()" style="background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:.8rem;font-weight:700;cursor:pointer">\u{1F916} Buscar fichas de novo ('+rs.semFicha+' sem ficha)</button>':'')
+    +'</div>'
+    +(!lista.length?'<div style="font-size:.85rem;color:#64748b">Nenhum monitorado com mandado nesta pesquisa.</div>':'')
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px">'
+    +lista.map(x=>{
+      const f=x.ficha||{}, uc=f.ultimaComunicacao;
+      return '<div onclick="mp_perfil('+x._i+')" style="cursor:pointer;display:flex;gap:10px;border:1px solid #e2e8f0;border-left:4px solid '+(x.classe==='CONFIRMADO'?'#dc2626':'#d97706')+';border-radius:6px;padding:10px;background:#fff">'
+        +'<div style="width:64px;height:80px;flex:none;background:#f1f5f9;border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:.65rem">'+(x.fotoChave?'<img data-mpfoto="'+_mpEsc(x.fotoChave)+'" alt="foto" style="width:100%;height:100%;object-fit:cover">':'sem foto')+'</div>'
+        +'<div style="min-width:0;font-size:.78rem">'
+        +'<div style="font-weight:700;color:#0f172a;font-size:.82rem">'+_mpEsc(f.nome||x.monitorado)+'</div>'
+        +'<div style="margin:3px 0;display:flex;gap:4px;flex-wrap:wrap">'
+          +'<span style="background:'+(x.classe==='CONFIRMADO'?'#fef2f2;color:#b91c1c':'#fffbeb;color:#92400e')+';padding:1px 6px;border-radius:3px;font-size:.66rem;font-weight:700">'+(x.classe==='CONFIRMADO'?'CONFIRMADO':'PROVÁVEL '+x.score+'%')+'</span>'
+          +(x.novo?'<span style="background:#dc2626;color:#fff;padding:1px 6px;border-radius:3px;font-size:.66rem;font-weight:700">NOVO</span>':'')+'</div>'
+        +_mpSeloIdentidade(x.conferencia)
+        +'<div style="color:#64748b;margin-top:4px">'+(f.encontrado?'Reg. '+_mpEsc(f.registro)+' · '+(f.violacoes||[]).length+' violação(ões)':'<span style="color:#b45309">sem ficha no AKILES</span>')+'</div>'
+        +(uc&&uc.em?'<div style="color:#64748b">Últ. comunicação: '+new Date(uc.em).toLocaleString('pt-BR')+'</div>':'')
+        +'</div></div>';
+    }).join('')+'</div>';
+  el.querySelectorAll('img[data-mpfoto]').forEach(async im=>{ const u=await _mpFoto(d.data, im.getAttribute('data-mpfoto')); if(u) im.src=u; });
+}
+async function mp_rebuscarFichas(){
+  const d=_mpPastaAtual; if(!d) return;
+  const faltam=(d.itens||[]).filter(x=>!x.ficha||!x.ficha.encontrado);
+  if(!faltam.length) return;
+  _mostrarToast('\u{1F916} Buscando '+faltam.length+' ficha(s) no AKILES…');
+  try{
+    const fichas=await _mpFichasRobo([...new Set(faltam.map(x=>x.monitorado))]);
+    const fotos={};
+    d.itens.forEach(x=>{ const f=fichas[x.monitorado]; if(!f) return;
+      const chave=(f.registro?'R'+String(f.registro).replace(/\D/g,''):'N'+_mpNormalizar(x.monitorado).replace(/[^A-Z0-9]/g,'_')).slice(0,70);
+      if(f.foto){ fotos[chave]=f.foto; x.fotoChave=chave; }
+      x.ficha=Object.assign({},f,{foto:''}); x.conferencia=_mpConferir(x.mandados,f); });
+    d.resumo=Object.assign({},d.resumo,{ semFicha:d.itens.filter(x=>!x.ficha||!x.ficha.encontrado).length });
+    const dossie=Object.assign({},d); delete dossie.salvoPor; delete dossie.salvoEm;
+    await _mpApi('/mandados/salvar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:d.data,dossie,fotos})});
+    _mostrarToast('\u{2705} Fichas atualizadas.','sucesso');
+    mp_abrirPasta(d.data);
+  }catch(e){ _mostrarToast('Não consegui buscar as fichas: '+(e.message||e),'erro'); }
+}
+
+// ── Perfil do monitorado (modal) ──
+function _mpLinha(rot,val){ return val?'<tr><td style="padding:4px 8px;color:#64748b;white-space:nowrap;vertical-align:top">'+rot+'</td><td style="padding:4px 8px;color:#0f172a">'+_mpEsc(val)+'</td></tr>':''; }
+async function mp_perfil(i){
+  const d=_mpPastaAtual; if(!d) return; const x=(d.itens||[])[i]; if(!x) return;
+  const f=x.ficha||{}, q=f.qualificacao||{}, uc=f.ultimaComunicacao, cf=x.conferencia||{};
+  const sec=t=>'<div style="font-weight:700;color:#1e3a8a;font-size:.85rem;margin:14px 0 6px;border-bottom:1px solid #e2e8f0;padding-bottom:3px">'+t+'</div>';
+  const tab=(cab,linhas)=>'<table style="width:100%;border-collapse:collapse;font-size:.76rem"><thead><tr style="background:#f1f5f9">'+cab.map(c=>'<th style="text-align:left;padding:5px 6px">'+c+'</th>').join('')+'</tr></thead><tbody>'+linhas.map(l=>'<tr>'+l.map(c=>'<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;vertical-align:top">'+_mpEsc(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+  const conf=v=>v==='confere'?'\u2713 confere':v==='difere'?'\u2717 DIFERENTE':'sem dado';
+  const viols=f.violacoes||[]; const porTipo={}; viols.forEach(v=>{ porTipo[v.tipo]=(porTipo[v.tipo]||0)+1; });
+  const horasUc=uc&&uc.em?Math.round((Date.now()-new Date(uc.em))/36e5):null;
+  const html='<div style="display:flex;gap:16px;flex-wrap:wrap">'
+    +'<div id="mp-perfil-foto" style="width:150px;height:190px;flex:none;background:#f1f5f9;border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:.75rem">sem foto</div>'
+    +'<div style="flex:1;min-width:240px">'
+      +'<div style="font-size:1.15rem;font-weight:700;color:#0f172a">'+_mpEsc(f.nome||x.monitorado)+'</div>'
+      +'<div style="margin:6px 0;display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+(x.classe==='CONFIRMADO'?'<span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:3px;font-size:.72rem;font-weight:700">MANDADO CONFIRMADO</span>':'<span style="background:#d97706;color:#fff;padding:2px 8px;border-radius:3px;font-size:.72rem;font-weight:700">PROVÁVEL ('+x.score+'%) — CONFERIR</span>')+(x.novo?'<span style="background:#7f1d1d;color:#fff;padding:2px 8px;border-radius:3px;font-size:.72rem;font-weight:700">NOVO</span>':'')+_mpSeloIdentidade(cf)+'</div>'
+      +'<table style="font-size:.8rem;border-collapse:collapse">'+_mpLinha('Registro AKILES',f.registro)+_mpLinha('Situação no AKILES',f.situacaoCadastro)+_mpLinha('Grupo',f.grupo)+_mpLinha('Nome no mandado',_mpNomeExib(x.mandadoNome))+'</table>'
+      +(!f.encontrado?'<div style="color:#b45309;font-size:.8rem;margin-top:6px">Ficha do AKILES indisponível'+(f.erro?': '+_mpEsc(f.erro):'')+'.</div>':'')
+    +'</div></div>'
+    +sec('\u{1F4CD} Última comunicação com o sistema')
+    +(uc&&uc.em?'<div style="font-size:.82rem">'+new Date(uc.em).toLocaleString('pt-BR')+' <b>('+(horasUc<1?'agora há pouco':horasUc<48?'há '+horasUc+' h':'há '+Math.round(horasUc/24)+' dias')+')</b>'
+        +(uc.lat&&uc.lon?' — <a href="https://www.google.com/maps?q='+encodeURIComponent(uc.lat+','+uc.lon)+'" target="_blank" rel="noopener">ver no mapa ('+_mpEsc((+uc.lat).toFixed(5)+', '+(+uc.lon).toFixed(5))+')</a>':'')
+        +(uc.bateriaMv?' · bateria '+Math.max(0,Math.min(100,Math.round((uc.bateriaMv-3300)/9)))+'%':'')+(uc.gpsValido===false?' · <span style="color:#b45309">GPS sem sinal válido</span>':'')+'</div>'
+      :'<div style="font-size:.82rem;color:#64748b">Sem dado.</div>')
+    +sec('\u{1F4DC} Mandado(s) de prisão (BNMP)')
+    +((x.mandados||[]).length?tab(['Número','Peça','Órgão expedidor','Data','Situação'],x.mandados.map(m=>[m.numero,m.peca,m.orgao,m.data,m.situacao])):'<div style="font-size:.8rem;color:#64748b">Sem detalhes na planilha.</div>')
+    +'<div style="font-size:.78rem;margin-top:6px"><b>Conferência de identidade</b> (mandado × AKILES): mãe '+conf(cf.mae)+' · nascimento '+conf(cf.nasc)+'</div>'
+    +((x.mandados||[]).length?tab(['Dado','No mandado','No AKILES'],[['Mãe',_mpNomeExib(x.mandados[0].mae),q.mae||''],['Pai',_mpNomeExib(x.mandados[0].pai),q.pai||''],['Nascimento',x.mandados[0].nascimento,q.nascimento||''],['Alcunha',x.mandados[0].alcunha,q.apelido||'']]):'')
+    +sec('\u{1FAAA} Qualificação')
+    +'<table style="font-size:.8rem;border-collapse:collapse">'+_mpLinha('CPF',q.cpf)+_mpLinha('RG',q.rg)+_mpLinha('Nascimento',q.nascimento+(q.localNascimento?' — '+q.localNascimento:''))+_mpLinha('Sexo',q.sexo)+_mpLinha('Mãe',q.mae)+_mpLinha('Pai',q.pai)+_mpLinha('Apelido',q.apelido)
+      +_mpLinha('Endereço',q.endereco)+_mpLinha('Endereço de trabalho',q.enderecoTrabalho)+_mpLinha('Telefone',q.telefone)
+      +(q.contatos||[]).map((c,k)=>_mpLinha('Contato '+(k+1),[c.nome,c.telefone].filter(Boolean).join(' — '))).join('')
+      +_mpLinha('Altura / peso',[q.altura,q.peso].filter(Boolean).join(' / '))+_mpLinha('Cicatrizes',q.cicatrizes)+_mpLinha('Tatuagens',q.tatuagens)
+      +_mpLinha('Monitoração',[q.inicioMonitoracao&&'início '+q.inicioMonitoracao,q.terminoMonitoracao&&'término '+q.terminoMonitoracao].filter(Boolean).join(' · '))+'</table>'
+    +sec('\u{2696}\u{FE0F} Processos')
+    +((f.processos||[]).length?tab(['Processo','Início','Término','Status'],f.processos.map(p=>[p.processo+(p.principal?' (principal)':''),p.inicio,p.termino,p.status])):'<div style="font-size:.8rem;color:#64748b">Sem dado.</div>')
+    +(q.sentenca?'<details style="margin-top:6px;font-size:.78rem"><summary style="cursor:pointer;color:#1d4ed8">Sentença / condição judicial</summary><div style="white-space:pre-wrap;margin-top:4px;color:#334155">'+_mpEsc(q.sentenca)+'</div></details>':'')
+    +sec('\u{1F6A8} Violações no AKILES ('+viols.length+')')
+    +(viols.length?'<div style="font-size:.76rem;margin-bottom:6px">'+Object.entries(porTipo).sort((a,b)=>b[1]-a[1]).map(([t,n])=>_mpEsc(t)+': <b>'+n+'</b>').join(' · ')+'</div>'
+      +tab(['Nº','Tipo','Início','Fim','Situação'],viols.slice(0,60).map(v=>[v.idOc,v.tipo,v.inicio,v.fim,v.situacao]))+(viols.length>60?'<div style="font-size:.72rem;color:#64748b;margin-top:4px">Mostrando as 60 mais recentes.</div>':'')
+      :'<div style="font-size:.8rem;color:#64748b">Nenhuma ocorrência registrada'+(f.erroViolacoes?' ('+_mpEsc(f.erroViolacoes)+')':'')+'.</div>')
+    +'<div style="font-size:.7rem;color:#94a3b8;margin-top:12px">Fonte: Sistema AKILES AP (leitura de '+(f.coletadoEm?new Date(f.coletadoEm).toLocaleString('pt-BR'):'—')+') e planilha do BNMP '+_mpEsc((d.resumo||{}).arquivoMandados||'')+'. Pasta de '+_mpDataBR(d.data)+'.</div>';
+  let ov=document.getElementById('mp-modal-perfil');
+  if(!ov){ ov=document.createElement('div'); ov.id='mp-modal-perfil'; ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow:auto'; ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); }); document.body.appendChild(ov); }
+  ov.innerHTML='<div style="background:#fff;border-radius:8px;max-width:860px;width:100%;padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.3)">'
+    +'<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:6px"><button type="button" onclick="mp_imprimirPerfil()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:5px 12px;font-size:.8rem;cursor:pointer">\u{1F5A8}\u{FE0F} Imprimir</button><button type="button" onclick="document.getElementById(\'mp-modal-perfil\').remove()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:5px 12px;font-size:.8rem;cursor:pointer">Fechar \u2715</button></div>'
+    +'<div id="mp-perfil-conteudo">'+html+'</div></div>';
+  if(x.fotoChave){ const u=await _mpFoto(d.data,x.fotoChave); const fe=document.getElementById('mp-perfil-foto'); if(u&&fe) fe.innerHTML='<img src="'+u+'" alt="foto" style="width:100%;height:100%;object-fit:cover">'; }
+}
+function mp_imprimirPerfil(){
+  const c=document.getElementById('mp-perfil-conteudo'); if(!c) return;
+  const w=window.open('','_blank'); if(!w){ _mostrarToast('Libere pop-ups para imprimir.','erro'); return; }
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Ficha — Mandado de Prisão</title><style>body{font-family:Arial,sans-serif;margin:18px;color:#0f172a}a{color:#1d4ed8}</style></head><body>'
+    +'<div style="font-size:11px;color:#475569;margin-bottom:8px">CME/IAPEN — Central de Monitoramento Eletrônico · documento de uso interno</div>'+c.innerHTML+'</body></html>');
+  w.document.close(); setTimeout(()=>{ try{ w.focus(); w.print(); }catch(e){} },600);
 }
 
 /* ═══════════════════════ MÓDULO MODELOS ═══════════════════════ */
