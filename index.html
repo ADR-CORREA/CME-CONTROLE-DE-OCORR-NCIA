@@ -3432,6 +3432,21 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
         <div id="admin-backup-status" style="width:100%;font-size:.78rem;color:#16a34a;margin-top:2px"></div>
       </div>
 
+      <!-- 📊 Desempenho dos Plantões (só administrador; dados do robô às 08h10) -->
+      <div id="pl-secao" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+          <div style="font-weight:700;color:#0f2742">📊 Desempenho dos Plantões</div>
+          <span id="pl-info" style="font-size:.78rem;color:#64748b"></span>
+          <div style="flex:1"></div>
+          <label style="font-size:.78rem;color:#64748b">Comparar
+            <select id="pl-periodo" onchange="pl_renderizar()" style="margin-left:4px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:.8rem">
+              <option value="7">últimos 7 dias</option><option value="15">últimos 15 dias</option><option value="30" selected>últimos 30 dias</option><option value="90">últimos 90 dias</option>
+            </select></label>
+        </div>
+        <div id="pl-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px"></div>
+        <div id="pl-comparativo" style="margin-top:14px"></div>
+      </div>
+
       <!-- Grid principal -->
       <div style="display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start">
 
@@ -8264,7 +8279,7 @@ function mudarAba(aba) {
   if (aba === "gerencia") { marcarGerVisto(); renderizarGerencia(); }
   if (aba === "links") renderizarLinks();
   if (aba === "modelos") renderizarModelos();
-  if (aba === "admin") { renderizarUsers(); renderizarLogs(); _adminAuditCache = null; admin_mudarTabAudit('sistema'); }
+  if (aba === "admin") { renderizarUsers(); renderizarLogs(); _adminAuditCache = null; admin_mudarTabAudit('sistema'); pl_renderizar(); }
   if (aba === "arquivos") { r2_inicializarAba(); }
   if (aba === "estatisticas") { estat_inicializar(); }
   if (aba === "mandado") { mp_inicializar(); }
@@ -10720,6 +10735,109 @@ function getPlantaoParaData(dataStr) {
   const diffDias = Math.round((data - ref) / 86400000);
   const idx = ((3 + diffDias) % 5 + 5) % 5;
   return PLANTOES[idx];
+}
+
+/* ═══════ DESEMPENHO DOS PLANTÕES (só administrador) ═══════
+   O robô lê a auditoria do AKILES às 08h10 (só leitura) e grava a chave
+   cme_plantao_auto, que o banco só entrega ao administrador. Um plantão vai das
+   08h às 08h; o dia do plantão é a data em que ele começou. */
+const _PL_EQUIPES = ['ALFA','BRAVO','CHARLIE','DELTA','ECHO'];
+const _PL_CAMPOS = ['atendimento','sms','alerta','instalacao','desinstalacao','reabertura','zona','cadastro','registro','login','consulta','confirmadas','naoConfirmadas'];
+function _plDados() { const d = carregarStore('plantao_auto', null); return (d && d.turnos) ? d : null; }
+function _plAjustes() { const a = carregarStore('plantao_equipes', {}); return (a && typeof a === 'object') ? a : {}; }
+// equipe efetiva do operador: ajuste do admin > classificação automática do robô
+function _plEhExpediente(d, op) { const aj = _plAjustes()[op]; if (aj === 'EXPEDIENTE') return true; if (aj === 'PLANTAO') return false; return ((d.operadores || {})[op] || {}).equipe === 'EXPEDIENTE'; }
+function _plDataBR(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] : iso; }
+// números de UM dia de plantão (já com os ajustes de equipe aplicados)
+function _plDia(d, dia) {
+  const t = (d.turnos || {})[dia] || {}, e = (d.expediente || {})[dia] || {};
+  const porOp = Object.assign({}, e.porOperador || {}, t.porOperador || {});
+  const tot = {}; _PL_CAMPOS.forEach(c => tot[c] = 0);
+  const ops = Object.keys(porOp).filter(op => !_plEhExpediente(d, op));
+  ops.forEach(op => _PL_CAMPOS.forEach(c => tot[c] += (porOp[op][c] || 0)));
+  const sens = (t.sensiveis || []).concat(e.sensiveis || []).filter(x => !_plEhExpediente(d, x.op)).sort((a, b) => a.ts < b.ts ? -1 : 1);
+  return { dia, equipe: t.equipe || getPlantaoParaData(dia), parcial: !!(t.parcial || e.parcial), tot, ops, porOp, sens, resp: t.respostaMedianaMin, respN: t.respostaN || 0, aguardando: t.aguardando || 0 };
+}
+function _plDiasDe(d, equipe) { return Object.keys(d.turnos || {}).concat(Object.keys(d.expediente || {})).filter((x, i, a) => a.indexOf(x) === i).filter(dia => getPlantaoParaData(dia) === equipe).sort().reverse(); }
+function pl_renderizar() {
+  const sec = document.getElementById('pl-secao'); if (!sec) return;
+  const d = _plDados();
+  if (usuarioAtual?.nivel !== 'admin') { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  const info = document.getElementById('pl-info'), cards = document.getElementById('pl-cards'), comp = document.getElementById('pl-comparativo');
+  if (!d) { info.textContent = 'Aguardando a 1ª coleta do robô (todo dia às 08h10).'; cards.innerHTML = ''; comp.innerHTML = ''; return; }
+  const hoje = d.plantaoAtual || {};
+  info.innerHTML = 'Atualizado em ' + esc(new Date(d.geradoEm).toLocaleString('pt-BR')) + ' · de serviço agora: <b style="color:' + (PLANTAO_CORES[hoje.equipe] || '#1d4ed8') + '">' + esc(hoje.equipe || '—') + '</b> (08h → 08h)';
+  const linha = (rot, val, cor) => '<div style="display:flex;justify-content:space-between;gap:6px"><span style="color:#64748b">' + rot + '</span><b style="font-family:var(--font-mono);' + (cor ? 'color:' + cor : '') + '">' + val + '</b></div>';
+  cards.innerHTML = _PL_EQUIPES.map(eq => {
+    const dias = _plDiasDe(d, eq).filter(dia => !_plDia(d, dia).parcial);
+    const cor = PLANTAO_CORES[eq] || '#1d4ed8';
+    if (!dias.length) return '<div style="border:1px solid #e2e8f0;border-top:4px solid ' + cor + ';border-radius:8px;padding:10px 12px;font-size:.8rem"><b style="color:' + cor + '">' + eq + '</b><div style="color:#94a3b8;margin-top:6px">sem plantão completo ainda</div></div>';
+    const x = _plDia(d, dias[0]);
+    return '<div onclick="pl_detalhe(\'' + eq + '\')" title="Ver o detalhe do plantão" style="cursor:pointer;border:1px solid #e2e8f0;border-top:4px solid ' + cor + ';border-radius:8px;padding:10px 12px;font-size:.8rem;display:flex;flex-direction:column;gap:3px">'
+      + '<div style="display:flex;justify-content:space-between"><b style="color:' + cor + '">' + eq + '</b><span style="color:#64748b;font-family:var(--font-mono)">' + _plDataBR(x.dia) + '</span></div>'
+      + linha('\u2714 Confirmadas', x.tot.confirmadas, '#15803d') + linha('\u2718 Não confirmadas', x.tot.naoConfirmadas, '#b45309')
+      + linha('\u2B06 Instalações', x.tot.instalacao) + linha('\u2B07 Desinstalações', x.tot.desinstalacao)
+      + linha('\u23F1 Resposta (mediana)', x.resp != null ? x.resp + ' min' : '—', x.resp > 60 ? '#b91c1c' : '')
+      + linha('Contatos (SMS + alertas)', x.tot.sms + x.tot.alerta)
+      + linha('Aguardando atendimento', x.aguardando, x.aguardando ? '#b91c1c' : '')
+      + '<div style="color:#94a3b8;font-size:.72rem;margin-top:2px">' + x.ops.length + ' operador(es) · ' + x.sens.length + ' ação(ões) sensível(is)</div></div>';
+  }).join('');
+  // comparativo: média por plantão no período (só plantões completos)
+  const nd = +(document.getElementById('pl-periodo')?.value || 30);
+  const lim = new Date(Date.now() - nd * 864e5).toISOString().slice(0, 10);
+  const lin = _PL_EQUIPES.map(eq => {
+    const xs = _plDiasDe(d, eq).filter(dia => dia >= lim).map(dia => _plDia(d, dia)).filter(x => !x.parcial);
+    const n = xs.length || 1, soma = c => xs.reduce((a, x) => a + x.tot[c], 0);
+    const resps = xs.map(x => x.resp).filter(v => v != null);
+    return { eq, n: xs.length, conf: soma('confirmadas') / n, nao: soma('naoConfirmadas') / n, inst: soma('instalacao'), desinst: soma('desinstalacao'), resp: resps.length ? Math.round(resps.reduce((a, b) => a + b, 0) / resps.length) : null, cont: (soma('sms') + soma('alerta')) / n };
+  });
+  const max = Math.max(1, ...lin.map(l => l.conf + l.nao));
+  comp.innerHTML = '<div style="font-size:.8rem;font-weight:700;color:#0f2742;margin-bottom:6px">Comparativo — média por plantão (' + nd + ' dias)</div>'
+    + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.78rem"><thead><tr style="color:#64748b;text-align:left">'
+    + '<th style="padding:4px 6px">Equipe</th><th style="padding:4px 6px">Plantões</th><th style="padding:4px 6px;min-width:180px">Violações avaliadas / plantão</th><th style="padding:4px 6px">Instal.</th><th style="padding:4px 6px">Desinst.</th><th style="padding:4px 6px">Resposta</th><th style="padding:4px 6px">Contatos / plantão</th></tr></thead><tbody>'
+    + lin.map(l => '<tr style="border-top:1px solid #f1f5f9"><td style="padding:5px 6px;font-weight:700;color:' + (PLANTAO_CORES[l.eq] || '#1d4ed8') + '">' + l.eq + '</td>'
+      + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + l.n + '</td>'
+      + '<td style="padding:5px 6px"><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:10px;background:#f1f5f9;border-radius:2px;overflow:hidden;display:flex"><div style="width:' + (l.conf / max * 100) + '%;background:#16a34a"></div><div style="width:' + (l.nao / max * 100) + '%;background:#d97706"></div></div><span style="font-family:var(--font-mono);white-space:nowrap">' + l.conf.toFixed(0) + ' \u2714 · ' + l.nao.toFixed(0) + ' \u2718</span></div></td>'
+      + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + l.inst + '</td><td style="padding:5px 6px;font-family:var(--font-mono)">' + l.desinst + '</td>'
+      + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + (l.resp != null ? l.resp + ' min' : '—') + '</td>'
+      + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + l.cont.toFixed(0) + '</td></tr>').join('')
+    + '</tbody></table></div><div style="font-size:.7rem;color:#94a3b8;margin-top:4px">\u2714 confirmadas · \u2718 não confirmadas (pela última avaliação no AKILES). Resposta = mediana do início da violação até o 1º atendimento.</div>';
+}
+function pl_detalhe(eq, diaEscolhido) {
+  const d = _plDados(); if (!d) return;
+  const dias = _plDiasDe(d, eq); if (!dias.length) return;
+  const dia = diaEscolhido && dias.includes(diaEscolhido) ? diaEscolhido : (dias.find(x => !_plDia(d, x).parcial) || dias[0]);
+  const x = _plDia(d, dia), cor = PLANTAO_CORES[eq] || '#1d4ed8', nome = op => ((d.operadores || {})[op] || {}).nome || ('operador ' + op);
+  const th = t => '<th style="text-align:left;padding:4px 6px;color:#64748b;font-weight:600">' + t + '</th>';
+  const td = (v, m) => '<td style="padding:4px 6px;' + (m ? 'font-family:var(--font-mono)' : '') + '">' + v + '</td>';
+  const ops = x.ops.slice().sort((a, b) => (x.porOp[b].atendimento || 0) - (x.porOp[a].atendimento || 0));
+  const html = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><b style="font-size:1.05rem;color:' + cor + '">' + eq + '</b>'
+    + '<select onchange="pl_detalhe(\'' + eq + '\', this.value)" style="padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px">' + dias.map(dd => '<option value="' + dd + '"' + (dd === dia ? ' selected' : '') + '>Plantão de ' + _plDataBR(dd) + (_plDia(d, dd).parcial ? ' (em andamento)' : '') + '</option>').join('') + '</select>'
+    + '<span style="font-size:.78rem;color:#64748b">08h de ' + _plDataBR(dia) + ' às 08h do dia seguinte</span></div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;font-size:.78rem;margin-bottom:12px">'
+    + [['\u2714 Confirmadas', x.tot.confirmadas, '#15803d'], ['\u2718 Não confirmadas', x.tot.naoConfirmadas, '#b45309'], ['\u2B06 Instalações', x.tot.instalacao], ['\u2B07 Desinstalações', x.tot.desinstalacao], ['Atendimentos', x.tot.atendimento], ['SMS', x.tot.sms], ['Alertas', x.tot.alerta], ['\u23F1 Resposta', x.resp != null ? x.resp + ' min' : '—'], ['Aguardando', x.aguardando]]
+      .map(([r, v, c]) => '<span style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px">' + r + ': <b style="' + (c ? 'color:' + c : '') + '">' + v + '</b></span>').join('') + '</div>'
+    + '<div style="font-weight:700;font-size:.85rem;margin:6px 0">Operadores do plantão</div>'
+    + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.76rem"><thead><tr>' + ['Operador', 'Atend.', '\u2714', '\u2718', 'SMS', 'Alertas', 'Instal.', 'Desinst.', 'Sensíveis', 'Consultas', 'Equipe'].map(th).join('') + '</tr></thead><tbody>'
+    + ops.map(op => { const o = x.porOp[op]; const ns = x.sens.filter(s => s.op === op).length; const aj = _plAjustes()[op] || '';
+        return '<tr style="border-top:1px solid #f1f5f9">' + td(esc(nome(op))) + td(o.atendimento || 0, 1) + td(o.confirmadas || 0, 1) + td(o.naoConfirmadas || 0, 1) + td(o.sms || 0, 1) + td(o.alerta || 0, 1) + td(o.instalacao || 0, 1) + td(o.desinstalacao || 0, 1) + td(ns, 1) + td(o.consulta || 0, 1)
+          + td('<select onchange="pl_ajustarEquipe(\'' + op + '\', this.value, \'' + eq + '\', \'' + dia + '\')" style="font-size:.72rem;padding:2px 4px;border:1px solid #cbd5e1;border-radius:4px"><option value=""' + (!aj ? ' selected' : '') + '>Automático (' + esc(((d.operadores || {})[op] || {}).equipe || '?') + ')</option><option value="PLANTAO"' + (aj === 'PLANTAO' ? ' selected' : '') + '>É do plantão</option><option value="EXPEDIENTE"' + (aj === 'EXPEDIENTE' ? ' selected' : '') + '>Expediente / supervisão</option></select>') + '</tr>'; }).join('')
+    + '</tbody></table></div>'
+    + '<div style="font-weight:700;font-size:.85rem;margin:14px 0 6px">Ações sensíveis (' + x.sens.length + ')</div>'
+    + (x.sens.length ? '<div style="max-height:220px;overflow-y:auto"><table style="width:100%;border-collapse:collapse;font-size:.76rem"><thead><tr>' + ['Hora', 'Operador', 'Ação', 'Ocorrência'].map(th).join('') + '</tr></thead><tbody>'
+        + x.sens.map(s => '<tr style="border-top:1px solid #f1f5f9">' + td(new Date(s.ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }), 1) + td(esc(nome(s.op))) + td(esc(s.tipo)) + td(esc(s.idOc || '—'), 1) + '</tr>').join('') + '</tbody></table></div>'
+      : '<div style="font-size:.78rem;color:#64748b">Nenhuma.</div>')
+    + '<div style="font-size:.7rem;color:#94a3b8;margin-top:10px">Fonte: auditoria do AKILES (só leitura). Quem está como "Expediente / supervisão" não entra nos números do plantão.</div>';
+  let ov = document.getElementById('pl-modal');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'pl-modal'; ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow:auto'; ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); }); document.body.appendChild(ov); }
+  ov.innerHTML = '<div style="background:#fff;border-radius:8px;max-width:980px;width:100%;padding:16px 20px;box-shadow:0 10px 40px rgba(0,0,0,.3)"><div style="display:flex;justify-content:flex-end"><button type="button" onclick="document.getElementById(\'pl-modal\').remove()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:4px 12px;cursor:pointer">Fechar \u2715</button></div>' + html + '</div>';
+}
+function pl_ajustarEquipe(op, valor, eq, dia) {
+  const a = Object.assign({}, _plAjustes());
+  if (valor) a[op] = valor; else delete a[op];
+  salvarStore('plantao_equipes', a);
+  pl_renderizar(); pl_detalhe(eq, dia);
 }
 
 /* Banner do Dashboard: guarnição/plantão de serviço hoje (usa a escala automática) */
