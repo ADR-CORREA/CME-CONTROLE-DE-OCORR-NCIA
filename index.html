@@ -3443,6 +3443,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
               <option value="7">últimos 7 dias</option><option value="15">últimos 15 dias</option><option value="30" selected>últimos 30 dias</option><option value="90">últimos 90 dias</option>
             </select></label>
         </div>
+        <div id="pl-alerta-vd" style="display:none;margin-bottom:10px"></div>
         <div id="pl-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px"></div>
         <div id="pl-comparativo" style="margin-top:14px"></div>
       </div>
@@ -10761,7 +10762,8 @@ function _plDia(d, dia) {
   return { dia, equipe: t.equipe || getPlantaoParaData(dia), parcial: !!(t.parcial || e.parcial), tot, ops, porOp, sens, resp: t.respostaMedianaMin, respN: t.respostaN || 0, aguardando: t.aguardando || 0,
            rec, recebidas, tratadas, pctTratadas: recebidas ? Math.round(tratadas / recebidas * 100) : null, emAnalise: st['Em análise'] || 0, abertas: st['Aberto'] || 0,
            automaticas: t.automaticas, humanas: t.humanas, pop: t.pop || null, pctPop: t.pop && t.pop.avaliadas ? Math.round(t.pop.noPrazo / t.pop.avaliadas * 100) : null,
-           repasse: t.repasse, graves: t.graves || null, porHora: t.porHora || null, buracos: t.buracos || null, instTestadas: t.instTestadas || 0, instAtencao: t.instAtencao || [] };
+           repasse: t.repasse, graves: t.graves || null, porHora: t.porHora || null, buracos: t.buracos || null, instTestadas: t.instTestadas || 0, instAtencao: t.instAtencao || [],
+           vd: t.vd || null, servidores: t.servidores || {}, ocServ: t.ocorrenciasPorServidor || null };
 }
 function _plDiasDe(d, equipe) { return Object.keys(d.turnos || {}).concat(Object.keys(d.expediente || {})).filter((x, i, a) => a.indexOf(x) === i).filter(dia => getPlantaoParaData(dia) === equipe).sort().reverse(); }
 function pl_renderizar() {
@@ -10773,6 +10775,18 @@ function pl_renderizar() {
   if (!d) { info.textContent = 'Aguardando a 1ª coleta do robô (todo dia às 08h10).'; cards.innerHTML = ''; comp.innerHTML = ''; return; }
   const hoje = d.plantaoAtual || {};
   info.innerHTML = 'Atualizado em ' + esc(new Date(d.geradoEm).toLocaleString('pt-BR')) + ' · de serviço agora: <b style="color:' + (PLANTAO_CORES[hoje.equipe] || '#1d4ed8') + '">' + esc(hoje.equipe || '—') + '</b> (08h → 08h)';
+  // ⚠ Violência doméstica: pendências do último plantão completo (qualquer equipe)
+  const av = document.getElementById('pl-alerta-vd');
+  if (av) {
+    const ult = Object.keys(d.turnos || {}).sort().reverse().map(dd => _plDia(d, dd)).find(x => !x.parcial && x.vd);
+    if (ult && ult.vd.pendencias.length) {
+      av.style.display = '';
+      av.innerHTML = '<div onclick="pl_detalhe(\'' + ult.equipe + '\', \'' + ult.dia + '\', true)" style="cursor:pointer;border:1px solid #fca5a5;border-left:4px solid #7c3aed;background:#faf5ff;border-radius:6px;padding:9px 12px;font-size:.82rem">'
+        + '<b style="color:#6d28d9">\u26A0 Violência doméstica — plantão ' + ult.equipe + ' de ' + _plDataBR(ult.dia) + ':</b> '
+        + ult.vd.violacoes + ' violação(ões), ' + ult.vd.pendencias.length + ' com pendência — '
+        + '<b style="color:#b91c1c">' + ult.vd.semAcao + ' sem ação de operador</b> · <b style="color:#c2410c">' + ult.vd.foraPrazo + ' fora do prazo do POP</b> · <b style="color:#a16207">' + ult.vd.semRegistro + ' confirmada(s) sem registro no perfil</b>. <u>Ver lista</u></div>';
+    } else { av.style.display = 'none'; av.innerHTML = ''; }
+  }
   const linha = (rot, val, cor) => '<div style="display:flex;justify-content:space-between;gap:6px"><span style="color:#64748b">' + rot + '</span><b style="font-family:var(--font-mono);' + (cor ? 'color:' + cor : '') + '">' + val + '</b></div>';
   cards.innerHTML = _PL_EQUIPES.map(eq => {
     const dias = _plDiasDe(d, eq).filter(dia => !_plDia(d, dia).parcial);
@@ -10782,6 +10796,7 @@ function pl_renderizar() {
     return '<div onclick="pl_detalhe(\'' + eq + '\')" title="Ver o detalhe do plantão" style="cursor:pointer;border:1px solid #e2e8f0;border-top:4px solid ' + cor + ';border-radius:8px;padding:10px 12px;font-size:.8rem;display:flex;flex-direction:column;gap:3px">'
       + '<div style="display:flex;justify-content:space-between"><b style="color:' + cor + '">' + eq + '</b><span style="color:#64748b;font-family:var(--font-mono)">' + _plDataBR(x.dia) + '</span></div>'
       + (x.recebidas != null ? linha('Recebidas', x.recebidas) + linha('Tratadas', x.pctTratadas + '%', x.pctTratadas < 90 ? '#b45309' : '#15803d') : '')
+      + (x.vd ? linha('<span style="color:#6d28d9">VD pendências</span>', x.vd.pendencias.length, x.vd.pendencias.length ? '#b91c1c' : '#15803d') : '')
       + (x.pctPop != null ? linha('No prazo POP', x.pctPop + '%', x.pctPop < 60 ? '#b91c1c' : x.pctPop < 80 ? '#b45309' : '#15803d') : '')
       + (x.repasse != null ? linha('Repasse', x.repasse, x.repasse > 20 ? '#b45309' : '') : '')
       + linha('Confirmadas', x.tot.confirmadas, '#15803d') + linha('Não confirm.', x.tot.naoConfirmadas, '#b45309')
@@ -10826,7 +10841,7 @@ function pl_renderizar() {
       + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + l.cont.toFixed(0) + '</td></tr>').join('')
     + '</tbody></table></div><div style="font-size:.7rem;color:#94a3b8;margin-top:4px">Recebidas = todas as ocorrências que entraram no plantão (qualquer tipo). % tratadas = arquivadas no AKILES. % no POP = 1ª ação do operador dentro do prazo do POP (tabela do CME), sem contar as tratadas só pelo sistema. Repasse = ocorrências do plantão sem nenhuma ação de operador até as 08h. \u2714 confirmadas · \u2718 não confirmadas (pela última avaliação). Resposta = mediana do início da violação até o 1º atendimento.</div>';
 }
-function pl_detalhe(eq, diaEscolhido) {
+function pl_detalhe(eq, diaEscolhido, focoVD) {
   const d = _plDados(); if (!d) return;
   const dias = _plDiasDe(d, eq); if (!dias.length) return;
   const dia = diaEscolhido && dias.includes(diaEscolhido) ? diaEscolhido : (dias.find(x => !_plDia(d, x).parcial) || dias[0]);
@@ -10845,6 +10860,23 @@ function pl_detalhe(eq, diaEscolhido) {
         + '<div><div style="font-weight:700;font-size:.8rem;margin-bottom:4px">Ocorrências por tipo</div>' + Object.entries(x.rec.porTipo || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => '<div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding:2px 0"><span>' + esc(k) + '</span><b style="font-family:var(--font-mono)">' + v + '</b></div>').join('') + '</div>'
         + '<div><div style="font-weight:700;font-size:.8rem;margin-bottom:4px">Por criticidade</div>' + Object.entries(x.rec.porCriticidade || {}).sort().map(([k, v]) => '<div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding:2px 0"><span>' + esc(k) + '</span><b style="font-family:var(--font-mono)">' + v + '</b></div>').join('') + '</div></div>' : '')
     + (() => {
+        // ── Violência doméstica: pendências do plantão ──
+        const v = x.vd; if (!v) return '';
+        const ROT = { SISTEMA: ['arquivada só pelo sistema', '#b91c1c'], SEM_ACAO: ['sem ação de operador', '#b91c1c'], FORA_PRAZO: ['fora do prazo do POP', '#c2410c'], SEM_REGISTRO: ['confirmada sem registro no perfil', '#a16207'] };
+        const peso = p2 => (p2.fl.includes('SISTEMA') || p2.fl.includes('SEM_ACAO') ? 0 : p2.fl.includes('FORA_PRAZO') ? 1 : 2);
+        const lst = v.pendencias.slice().sort((a2, b2) => peso(a2) - peso(b2) || (a2.d < b2.d ? -1 : 1));
+        return '<div id="pl-vd-sec" style="border:1px solid #ddd6fe;border-left:4px solid #7c3aed;border-radius:6px;padding:8px 10px;margin-bottom:12px">'
+          + '<div style="font-weight:700;font-size:.85rem;color:#6d28d9;margin-bottom:4px">\u26A0 Violência doméstica — ' + v.violacoes + ' violação(ões), ' + v.confirmadas + ' confirmada(s), ' + lst.length + ' com pendência</div>'
+          + '<div style="font-size:.72rem;color:#64748b;margin-bottom:6px">Pendência = nenhuma ação de operador · 1ª ação depois do prazo do POP (VD: 1h exclusão/botão/proximidade, 12h inclusão, 24h pulseira/bateria) · violação CONFIRMADA sem registro no perfil do monitorado no AKILES até o fim do plantão (08h).</div>'
+          + (lst.length ? '<div style="max-height:320px;overflow-y:auto"><table style="width:100%;border-collapse:collapse;font-size:.75rem"><thead><tr>' + ['Hora', 'Ocorrência', 'Monitorado', 'Tipo', 'Atendeu', '1ª ação', 'Pendência'].map(th).join('') + '</tr></thead><tbody>'
+              + lst.map(p2 => '<tr style="border-top:1px solid #f1f5f9">' + td(new Date(p2.d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }), 1) + td(esc(p2.id), 1)
+                + td('<b>' + esc(p2.nome || '—') + '</b>' + (p2.reg ? '<div style="color:#64748b;font-family:var(--font-mono)">reg. ' + esc(p2.reg) + '</div>' : '')) + td(esc(p2.t) + (p2.conf ? ' <span style="color:#15803d;font-weight:700">\u2714 conf.</span>' : ''))
+                + td(p2.op ? esc(nome(p2.op)) : '<span style="color:#b91c1c">ninguém</span>') + td(p2.min != null ? p2.min + ' min <span style="color:#94a3b8">(prazo ' + (p2.sla * 60) + ')</span>' : '—', 1)
+                + td(p2.fl.map(f2 => '<span style="display:inline-block;margin:1px 2px;padding:1px 6px;border-radius:3px;background:' + ROT[f2][1] + '1a;color:' + ROT[f2][1] + ';font-weight:700;font-size:.68rem">' + ROT[f2][0] + '</span>').join('')) + '</tr>').join('') + '</tbody></table></div>'
+            : '<div style="color:#15803d;font-size:.78rem">Nenhuma pendência — todas atendidas no prazo e registradas.</div>')
+          + '</div>';
+      })()
+    + (() => {
         const g = x.graves, b = x.buracos, ph = x.porHora;
         const bloco = (tit, corpo) => '<div style="border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px"><div style="font-weight:700;font-size:.8rem;margin-bottom:6px">' + tit + '</div>' + corpo + '</div>';
         const hhmm = iso => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -10861,10 +10893,13 @@ function pl_detalhe(eq, diaEscolhido) {
         if (x.instTestadas) h += bloco('\u2B06 Instalações com ponto de atenção nos testes (' + x.instAtencao.length + ' de ' + x.instTestadas + ')', x.instAtencao.length ? x.instAtencao.map(a => '<div style="border-bottom:1px solid #f1f5f9;padding:2px 0">' + hhmm(a.ts) + ' · ' + esc(nome(a.op)) + (a.reg ? ' · reg. ' + esc(a.reg) : '') + '<br><span style="color:#b45309">' + a.motivos.map(esc).join('; ') + '</span></div>').join('') : '<div style="color:#15803d">Todas com testes OK.</div>');
         return h + '</div>';
       })()
-    + '<div style="font-weight:700;font-size:.85rem;margin:6px 0">Operadores do plantão</div>'
-    + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.76rem"><thead><tr>' + ['Operador', 'Atend.', '\u2714', '\u2718', 'SMS', 'Alertas', 'Instal.', 'Desinst.', 'Sensíveis', 'Consultas', 'Equipe'].map(th).join('') + '</tr></thead><tbody>'
-    + ops.map(op => { const o = x.porOp[op]; const ns = x.sens.filter(s => s.op === op).length; const aj = _plAjustes()[op] || '';
-        return '<tr style="border-top:1px solid #f1f5f9">' + td(esc(nome(op))) + td(o.atendimento || 0, 1) + td(o.confirmadas || 0, 1) + td(o.naoConfirmadas || 0, 1) + td(o.sms || 0, 1) + td(o.alerta || 0, 1) + td(o.instalacao || 0, 1) + td(o.desinstalacao || 0, 1) + td(ns, 1) + td(o.consulta || 0, 1)
+    + '<div style="font-weight:700;font-size:.85rem;margin:6px 0">Servidores do plantão <span style="font-weight:400;color:#64748b;font-size:.75rem">— clique no nome para ver cada ocorrência e quanto tempo levou</span></div>'
+    + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.76rem"><thead><tr>' + ['Servidor', 'Atendeu 1º', 'Resposta', 'No POP', 'VD', '\u2714', '\u2718', 'SMS', 'Alertas', 'Registros', 'Instal.', 'Desinst.', 'Sensíveis', 'Equipe'].map(th).join('') + '</tr></thead><tbody>'
+    + ops.concat(Object.keys(x.servidores).filter(op => !ops.includes(op) && !_plEhExpediente(d, op))).map(op => { const o = x.porOp[op] || {}; const sv = x.servidores[op] || {}; const ns = x.sens.filter(s => s.op === op).length; const aj = _plAjustes()[op] || '';
+        const pctSv = sv.pop ? Math.round(sv.popOk / sv.pop * 100) : null;
+        return '<tr style="border-top:1px solid #f1f5f9">' + td('<a href="#" onclick="pl_servidor(\'' + eq + '\', \'' + dia + '\', \'' + op + '\');return false" style="color:#1d4ed8;font-weight:600">' + esc(nome(op)) + '</a>') + td(sv.n || 0, 1) + td(sv.med != null ? sv.med + ' min' : '—', 1)
+          + td(pctSv != null ? '<span style="color:' + (pctSv < 60 ? '#b91c1c' : pctSv < 80 ? '#c2410c' : '#15803d') + '">' + pctSv + '%</span>' : '—', 1) + td(sv.vd || 0, 1)
+          + td(o.confirmadas || 0, 1) + td(o.naoConfirmadas || 0, 1) + td(o.sms || 0, 1) + td(o.alerta || 0, 1) + td(o.registro || 0, 1) + td(o.instalacao || 0, 1) + td(o.desinstalacao || 0, 1) + td(ns, 1)
           + td('<select onchange="pl_ajustarEquipe(\'' + op + '\', this.value, \'' + eq + '\', \'' + dia + '\')" style="font-size:.72rem;padding:2px 4px;border:1px solid #cbd5e1;border-radius:4px"><option value=""' + (!aj ? ' selected' : '') + '>Automático (' + esc(((d.operadores || {})[op] || {}).equipe || '?') + ')</option><option value="PLANTAO"' + (aj === 'PLANTAO' ? ' selected' : '') + '>É do plantão</option><option value="EXPEDIENTE"' + (aj === 'EXPEDIENTE' ? ' selected' : '') + '>Expediente / supervisão</option></select>') + '</tr>'; }).join('')
     + '</tbody></table></div>'
     + '<div style="font-weight:700;font-size:.85rem;margin:14px 0 6px">Ações sensíveis (' + x.sens.length + ')' + (x.sens.some(s => new Date(s.ts).getHours() < 6) ? ' <span style="color:#dc2626;font-size:.75rem">— ' + x.sens.filter(s => new Date(s.ts).getHours() < 6).length + ' de madrugada (00h–06h)</span>' : '') + '</div>'
@@ -10875,6 +10910,28 @@ function pl_detalhe(eq, diaEscolhido) {
   let ov = document.getElementById('pl-modal');
   if (!ov) { ov = document.createElement('div'); ov.id = 'pl-modal'; ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow:auto'; ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); }); document.body.appendChild(ov); }
   ov.innerHTML = '<div style="background:#fff;border-radius:8px;max-width:980px;width:100%;padding:16px 20px;box-shadow:0 10px 40px rgba(0,0,0,.3)"><div style="display:flex;justify-content:flex-end"><button type="button" onclick="document.getElementById(\'pl-modal\').remove()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:4px 12px;cursor:pointer">Fechar \u2715</button></div>' + html + '</div>';
+  if (focoVD) { const sec = document.getElementById('pl-vd-sec'); if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: 'start' }); }
+}
+// Ocorrências de UM servidor no plantão: quanto tempo levou cada uma (1ª ação dele)
+function pl_servidor(eq, dia, op) {
+  const d = _plDados(); if (!d) return;
+  const x = _plDia(d, dia), nomeOp = ((d.operadores || {})[op] || {}).nome || ('operador ' + op);
+  const linhas = ((x.ocServ || {})[op] || []).slice().sort((a, b) => (a[2] < b[2] ? -1 : 1));
+  const sv = x.servidores[op] || {};
+  let ov = document.getElementById('pl-modal-serv');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'pl-modal-serv'; ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:10000;display:flex;align-items:flex-start;justify-content:center;padding:40px 12px;overflow:auto'; ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); }); document.body.appendChild(ov); }
+  const th = t => '<th style="text-align:left;padding:4px 6px;color:#64748b;font-weight:600">' + t + '</th>';
+  ov.innerHTML = '<div style="background:#fff;border-radius:8px;max-width:820px;width:100%;padding:16px 20px;box-shadow:0 10px 40px rgba(0,0,0,.3);font-size:.8rem">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b style="font-size:1rem">' + esc(nomeOp) + '</b> <span style="color:#64748b">— plantão ' + esc(eq) + ' de ' + _plDataBR(dia) + '</span></div><button type="button" onclick="document.getElementById(\'pl-modal-serv\').remove()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:4px 12px;cursor:pointer">Fechar \u2715</button></div>'
+    + '<div style="margin:8px 0;color:#475569">Atendeu primeiro <b>' + (sv.n || 0) + '</b> ocorrência(s) · resposta (mediana) <b>' + (sv.med != null ? sv.med + ' min' : '—') + '</b> · no prazo do POP <b>' + (sv.pop ? Math.round(sv.popOk / sv.pop * 100) + '%' : '—') + '</b> · VD <b>' + (sv.vd || 0) + '</b></div>'
+    + (!x.ocServ ? '<div style="color:#64748b">A lista por ocorrência fica disponível para os últimos 20 plantões.</div>'
+      : !linhas.length ? '<div style="color:#64748b">Nenhuma ocorrência em que este servidor tenha agido primeiro.</div>'
+      : '<div style="max-height:60vh;overflow-y:auto"><table style="width:100%;border-collapse:collapse"><thead><tr>' + ['Hora da ocorrência', 'Nº', 'Tipo', 'Tempo até a 1ª ação', 'POP'].map(th).join('') + '</tr></thead><tbody>'
+        + linhas.map(l => '<tr style="border-top:1px solid #f1f5f9"><td style="padding:4px 6px;font-family:var(--font-mono)">' + new Date(l[2]).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '</td>'
+          + '<td style="padding:4px 6px;font-family:var(--font-mono)">' + esc(l[0]) + '</td><td style="padding:4px 6px">' + esc(l[1]) + (l[5] ? ' <span style="background:#7c3aed;color:#fff;border-radius:3px;padding:0 4px;font-size:.62rem">VD</span>' : '') + (l[6] ? ' <span style="color:#15803d">\u2714</span>' : '') + '</td>'
+          + '<td style="padding:4px 6px;font-family:var(--font-mono);color:' + (l[4] === 0 ? '#b91c1c' : '') + '">' + (l[3] != null ? (l[3] >= 60 ? Math.floor(l[3] / 60) + 'h ' + (l[3] % 60) + 'min' : l[3] + ' min') : '—') + '</td>'
+          + '<td style="padding:4px 6px">' + (l[4] === 1 ? '<span style="color:#15803d">\u2714 no prazo</span>' : l[4] === 0 ? '<span style="color:#b91c1c">\u2718 fora</span>' : '<span style="color:#94a3b8">sem prazo</span>') + '</td></tr>').join('') + '</tbody></table></div>')
+    + '</div>';
 }
 function pl_ajustarEquipe(op, valor, eq, dia) {
   const a = Object.assign({}, _plAjustes());
