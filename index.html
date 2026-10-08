@@ -10756,7 +10756,10 @@ function _plDia(d, dia) {
   const ops = Object.keys(porOp).filter(op => !_plEhExpediente(d, op));
   ops.forEach(op => _PL_CAMPOS.forEach(c => tot[c] += (porOp[op][c] || 0)));
   const sens = (t.sensiveis || []).concat(e.sensiveis || []).filter(x => !_plEhExpediente(d, x.op)).sort((a, b) => a.ts < b.ts ? -1 : 1);
-  return { dia, equipe: t.equipe || getPlantaoParaData(dia), parcial: !!(t.parcial || e.parcial), tot, ops, porOp, sens, resp: t.respostaMedianaMin, respN: t.respostaN || 0, aguardando: t.aguardando || 0 };
+  const rec = t.recebidas || null, st = (rec && rec.porStatus) || {};
+  const recebidas = rec ? rec.total : null, tratadas = rec ? (st['Arquivado'] || 0) : null;
+  return { dia, equipe: t.equipe || getPlantaoParaData(dia), parcial: !!(t.parcial || e.parcial), tot, ops, porOp, sens, resp: t.respostaMedianaMin, respN: t.respostaN || 0, aguardando: t.aguardando || 0,
+           rec, recebidas, tratadas, pctTratadas: recebidas ? Math.round(tratadas / recebidas * 100) : null, emAnalise: st['Em análise'] || 0, abertas: st['Aberto'] || 0 };
 }
 function _plDiasDe(d, equipe) { return Object.keys(d.turnos || {}).concat(Object.keys(d.expediente || {})).filter((x, i, a) => a.indexOf(x) === i).filter(dia => getPlantaoParaData(dia) === equipe).sort().reverse(); }
 function pl_renderizar() {
@@ -10776,6 +10779,7 @@ function pl_renderizar() {
     const x = _plDia(d, dias[0]);
     return '<div onclick="pl_detalhe(\'' + eq + '\')" title="Ver o detalhe do plantão" style="cursor:pointer;border:1px solid #e2e8f0;border-top:4px solid ' + cor + ';border-radius:8px;padding:10px 12px;font-size:.8rem;display:flex;flex-direction:column;gap:3px">'
       + '<div style="display:flex;justify-content:space-between"><b style="color:' + cor + '">' + eq + '</b><span style="color:#64748b;font-family:var(--font-mono)">' + _plDataBR(x.dia) + '</span></div>'
+      + (x.recebidas != null ? linha('\u{1F4E5} Ocorrências recebidas', x.recebidas) + linha('Tratadas (arquivadas)', x.pctTratadas + '%', x.pctTratadas < 90 ? '#b45309' : '#15803d') : '')
       + linha('\u2714 Confirmadas', x.tot.confirmadas, '#15803d') + linha('\u2718 Não confirmadas', x.tot.naoConfirmadas, '#b45309')
       + linha('\u2B06 Instalações', x.tot.instalacao) + linha('\u2B07 Desinstalações', x.tot.desinstalacao)
       + linha('\u23F1 Resposta (mediana)', x.resp != null ? x.resp + ' min' : '—', x.resp > 60 ? '#b91c1c' : '')
@@ -10790,19 +10794,25 @@ function pl_renderizar() {
     const xs = _plDiasDe(d, eq).filter(dia => dia >= lim).map(dia => _plDia(d, dia)).filter(x => !x.parcial);
     const n = xs.length || 1, soma = c => xs.reduce((a, x) => a + x.tot[c], 0);
     const resps = xs.map(x => x.resp).filter(v => v != null);
-    return { eq, n: xs.length, conf: soma('confirmadas') / n, nao: soma('naoConfirmadas') / n, inst: soma('instalacao'), desinst: soma('desinstalacao'), resp: resps.length ? Math.round(resps.reduce((a, b) => a + b, 0) / resps.length) : null, cont: (soma('sms') + soma('alerta')) / n };
+    const comRec = xs.filter(x => x.recebidas != null), rec = comRec.reduce((a, x) => a + x.recebidas, 0), trat = comRec.reduce((a, x) => a + x.tratadas, 0);
+    const opsTot = comRec.reduce((a, x) => a + (x.ops.length || 0), 0);
+    return { eq, n: xs.length, conf: soma('confirmadas') / n, nao: soma('naoConfirmadas') / n, inst: soma('instalacao'), desinst: soma('desinstalacao'), resp: resps.length ? Math.round(resps.reduce((a, b) => a + b, 0) / resps.length) : null, cont: (soma('sms') + soma('alerta')) / n,
+             rec: comRec.length ? rec / comRec.length : null, pct: rec ? Math.round(trat / rec * 100) : null, porOp: opsTot ? rec / opsTot : null };
   });
   const max = Math.max(1, ...lin.map(l => l.conf + l.nao));
   comp.innerHTML = '<div style="font-size:.8rem;font-weight:700;color:#0f2742;margin-bottom:6px">Comparativo — média por plantão (' + nd + ' dias)</div>'
     + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.78rem"><thead><tr style="color:#64748b;text-align:left">'
-    + '<th style="padding:4px 6px">Equipe</th><th style="padding:4px 6px">Plantões</th><th style="padding:4px 6px;min-width:180px">Violações avaliadas / plantão</th><th style="padding:4px 6px">Instal.</th><th style="padding:4px 6px">Desinst.</th><th style="padding:4px 6px">Resposta</th><th style="padding:4px 6px">Contatos / plantão</th></tr></thead><tbody>'
+    + '<th style="padding:4px 6px">Equipe</th><th style="padding:4px 6px">Plantões</th><th style="padding:4px 6px">Recebidas / plantão</th><th style="padding:4px 6px">% tratadas</th><th style="padding:4px 6px">Ocorrências / operador</th><th style="padding:4px 6px;min-width:180px">Violações avaliadas / plantão</th><th style="padding:4px 6px">Instal.</th><th style="padding:4px 6px">Desinst.</th><th style="padding:4px 6px">Resposta</th><th style="padding:4px 6px">Contatos / plantão</th></tr></thead><tbody>'
     + lin.map(l => '<tr style="border-top:1px solid #f1f5f9"><td style="padding:5px 6px;font-weight:700;color:' + (PLANTAO_CORES[l.eq] || '#1d4ed8') + '">' + l.eq + '</td>'
       + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + l.n + '</td>'
+      + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + (l.rec != null ? l.rec.toFixed(0) : '—') + '</td>'
+      + '<td style="padding:5px 6px;font-family:var(--font-mono);color:' + (l.pct != null && l.pct < 90 ? '#b45309' : '#15803d') + '">' + (l.pct != null ? l.pct + '%' : '—') + '</td>'
+      + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + (l.porOp != null ? l.porOp.toFixed(0) : '—') + '</td>'
       + '<td style="padding:5px 6px"><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:10px;background:#f1f5f9;border-radius:2px;overflow:hidden;display:flex"><div style="width:' + (l.conf / max * 100) + '%;background:#16a34a"></div><div style="width:' + (l.nao / max * 100) + '%;background:#d97706"></div></div><span style="font-family:var(--font-mono);white-space:nowrap">' + l.conf.toFixed(0) + ' \u2714 · ' + l.nao.toFixed(0) + ' \u2718</span></div></td>'
       + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + l.inst + '</td><td style="padding:5px 6px;font-family:var(--font-mono)">' + l.desinst + '</td>'
       + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + (l.resp != null ? l.resp + ' min' : '—') + '</td>'
       + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + l.cont.toFixed(0) + '</td></tr>').join('')
-    + '</tbody></table></div><div style="font-size:.7rem;color:#94a3b8;margin-top:4px">\u2714 confirmadas · \u2718 não confirmadas (pela última avaliação no AKILES). Resposta = mediana do início da violação até o 1º atendimento.</div>';
+    + '</tbody></table></div><div style="font-size:.7rem;color:#94a3b8;margin-top:4px">Recebidas = todas as ocorrências que entraram no plantão (qualquer tipo). % tratadas = arquivadas no AKILES. \u2714 confirmadas · \u2718 não confirmadas (pela última avaliação). Resposta = mediana do início da violação até o 1º atendimento.</div>';
 }
 function pl_detalhe(eq, diaEscolhido) {
   const d = _plDados(); if (!d) return;
@@ -10816,8 +10826,11 @@ function pl_detalhe(eq, diaEscolhido) {
     + '<select onchange="pl_detalhe(\'' + eq + '\', this.value)" style="padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px">' + dias.map(dd => '<option value="' + dd + '"' + (dd === dia ? ' selected' : '') + '>Plantão de ' + _plDataBR(dd) + (_plDia(d, dd).parcial ? ' (em andamento)' : '') + '</option>').join('') + '</select>'
     + '<span style="font-size:.78rem;color:#64748b">08h de ' + _plDataBR(dia) + ' às 08h do dia seguinte</span></div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;font-size:.78rem;margin-bottom:12px">'
-    + [['\u2714 Confirmadas', x.tot.confirmadas, '#15803d'], ['\u2718 Não confirmadas', x.tot.naoConfirmadas, '#b45309'], ['\u2B06 Instalações', x.tot.instalacao], ['\u2B07 Desinstalações', x.tot.desinstalacao], ['Atendimentos', x.tot.atendimento], ['SMS', x.tot.sms], ['Alertas', x.tot.alerta], ['\u23F1 Resposta', x.resp != null ? x.resp + ' min' : '—'], ['Aguardando', x.aguardando]]
+    + (x.recebidas != null ? [['\u{1F4E5} Recebidas', x.recebidas], ['Tratadas', x.pctTratadas + '%', x.pctTratadas < 90 ? '#b45309' : '#15803d'], ['Em análise', x.emAnalise], ['Abertas', x.abertas, x.abertas ? '#b91c1c' : '']] : []).concat([['\u2714 Confirmadas', x.tot.confirmadas, '#15803d'], ['\u2718 Não confirmadas', x.tot.naoConfirmadas, '#b45309'], ['\u2B06 Instalações', x.tot.instalacao], ['\u2B07 Desinstalações', x.tot.desinstalacao], ['Atendimentos', x.tot.atendimento], ['SMS', x.tot.sms], ['Alertas', x.tot.alerta], ['\u23F1 Resposta', x.resp != null ? x.resp + ' min' : '—'], ['Aguardando', x.aguardando]])
       .map(([r, v, c]) => '<span style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px">' + r + ': <b style="' + (c ? 'color:' + c : '') + '">' + v + '</b></span>').join('') + '</div>'
+    + (x.rec ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:12px;font-size:.76rem">'
+        + '<div><div style="font-weight:700;font-size:.8rem;margin-bottom:4px">Ocorrências por tipo</div>' + Object.entries(x.rec.porTipo || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => '<div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding:2px 0"><span>' + esc(k) + '</span><b style="font-family:var(--font-mono)">' + v + '</b></div>').join('') + '</div>'
+        + '<div><div style="font-weight:700;font-size:.8rem;margin-bottom:4px">Por criticidade</div>' + Object.entries(x.rec.porCriticidade || {}).sort().map(([k, v]) => '<div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding:2px 0"><span>' + esc(k) + '</span><b style="font-family:var(--font-mono)">' + v + '</b></div>').join('') + '</div></div>' : '')
     + '<div style="font-weight:700;font-size:.85rem;margin:6px 0">Operadores do plantão</div>'
     + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.76rem"><thead><tr>' + ['Operador', 'Atend.', '\u2714', '\u2718', 'SMS', 'Alertas', 'Instal.', 'Desinst.', 'Sensíveis', 'Consultas', 'Equipe'].map(th).join('') + '</tr></thead><tbody>'
     + ops.map(op => { const o = x.porOp[op]; const ns = x.sens.filter(s => s.op === op).length; const aj = _plAjustes()[op] || '';
