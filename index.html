@@ -2053,6 +2053,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
         <div class="sub-tab"        id="rel-stab-arquivadas" onclick="mudarSubAbaRel('arquivadas')">📁 Arquivadas</div>
         <div class="sub-tab"        id="rel-stab-gerador"    onclick="mudarSubAbaRel('gerador')">⚡ Gerador de Violações</div>
         <div class="sub-tab"        id="rel-stab-semcom"     onclick="mudarSubAbaRel('semcom')">📵 Sem Comunicação<span id="rel-semcom-badge" class="notif-badge" style="display:none">0</span></div>
+        <div class="sub-tab"        id="rel-stab-romp"       onclick="mudarSubAbaRel('romp')">⛓️ Rompimento<span id="rel-romp-badge" class="notif-badge" style="display:none">0</span></div>
       </div>
       <!-- ── Sub-painel: Recebidos dos Críticos (fluxo) ── -->
       <div class="sub-panel" id="rel-panel-recebidos">
@@ -2315,6 +2316,36 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
           <div style="margin-top:8px;font-size:.8rem;color:#666" id="rel-semcom-count"></div>
         </div>
       </div><!-- /rel-panel-semcom -->
+      <!-- ── Sub-painel: Rompimento (pacote automático do AKILES) ── -->
+      <div class="sub-panel" id="rel-panel-romp">
+        <div class="table-wrapper">
+          <div class="table-toolbar">
+            <div class="table-search">
+              <span>🔍</span>
+              <input type="text" id="rel-romp-busca" placeholder="Buscar nome, CPF ou nº da ocorrência..." oninput="renderizarAkOc('rompimentos')">
+            </div>
+            <div class="table-actions" style="align-items:center;gap:8px">
+              <select id="rel-romp-fstatus" onchange="renderizarAkOc('rompimentos')" style="padding:4px 6px;border:1px solid #ccc;border-radius:5px">
+                <option value="">Todos os status</option>
+                <option value="pendente">Pendente</option>
+                <option value="enviado">Enviado</option>
+              </select>
+              <button class="btn-secondary" onclick="renderizarAkOc('rompimentos')">🔄 Atualizar</button>
+            </div>
+          </div>
+          <div id="rel-romp-info" style="font-size:.78rem;color:#64748b;margin:4px 0"></div>
+          <div id="rel-romp-kpis" style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px 0;font-size:.8rem"></div>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead><tr>
+                <th>Monitorado</th><th>Ocorrência</th><th>Início / fim</th><th>Situação no AKILES</th><th>Processo / juízo</th><th>Status</th><th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-rel-romp"></tbody>
+            </table>
+          </div>
+          <div style="margin-top:8px;font-size:.78rem;color:#666">Violência doméstica primeiro; depois ocorrências em andamento e as mais recentes.</div>
+        </div>
+      </div>
 
     </div>
 
@@ -3954,6 +3985,9 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
         <div class="sub-tab"       id="psi-stab-semcom" onclick="mudarSubAbaPsi('semcom')">
           📵 Sem Comunicação (DPP) <span id="psi-semcom-badge" class="notif-badge" style="display:none">0</span>
         </div>
+        <div class="sub-tab"       id="psi-stab-botao" onclick="mudarSubAbaPsi('botao')">
+          🆘 Botão de segurança (DPP) <span id="psi-botao-badge" class="notif-badge" style="display:none">0</span>
+        </div>
       </div>
 
       <!-- ── ATIVOS ── -->
@@ -4455,6 +4489,36 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
         </div><!-- /psc-panel-arquivados -->
 
       </div><!-- /psi-panel-semcom -->
+      <!-- ── Sub-painel: Botão de segurança (DPP) (pacote automático do AKILES) ── -->
+      <div class="sub-panel" id="psi-panel-botao">
+        <div class="table-wrapper">
+          <div class="table-toolbar">
+            <div class="table-search">
+              <span>🔍</span>
+              <input type="text" id="psi-botao-busca" placeholder="Buscar nome, CPF ou nº da ocorrência..." oninput="renderizarAkOc('botoes')">
+            </div>
+            <div class="table-actions" style="align-items:center;gap:8px">
+              <select id="psi-botao-fstatus" onchange="renderizarAkOc('botoes')" style="padding:4px 6px;border:1px solid #ccc;border-radius:5px">
+                <option value="">Todos os status</option>
+                <option value="pendente">Pendente</option>
+                <option value="tratado">Atendido</option>
+              </select>
+              <button class="btn-secondary" onclick="renderizarAkOc('botoes')">🔄 Atualizar</button>
+            </div>
+          </div>
+          <div id="psi-botao-info" style="font-size:.78rem;color:#64748b;margin:4px 0"></div>
+          <div id="psi-botao-kpis" style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px 0;font-size:.8rem"></div>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead><tr>
+                <th>Monitorado</th><th>Ocorrência</th><th>Início / fim</th><th>Situação no AKILES</th><th>Processo / juízo</th><th>Status</th><th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-psi-botao"></tbody>
+            </table>
+          </div>
+          <div style="margin-top:8px;font-size:.78rem;color:#666">Violência doméstica primeiro; depois ocorrências em andamento e as mais recentes.</div>
+        </div>
+      </div>
 
     </div><!-- /panel-psicossocial -->
 
@@ -8067,6 +8131,7 @@ function atualizarTudo() {
   atualizarBadgeTriagemArq();
   atualizarBadgePsiArq();
   atualizarBadgeSemCom();
+  try { _akilesAutoAplicar(); renderizarAkOc('rompimentos'); renderizarAkOc('botoes'); } catch (e) { console.warn('[CME] pacote AKILES:', e.message); }
   atualizarBadgeOFC();
 }
 
@@ -9255,6 +9320,202 @@ function _corDias(dias, desvinculado) {
   return '';
 }
 
+// ── Núcleo da importação (Excel do AKILES e pacote automático do robô) ────────
+// linhas: [{ nome, registro, ultimaComunicacao, tempoSemCom, intervalo, unidade, grupo? }]
+// Atualiza só os campos vindos do AKILES — preserva tratativas, desvinculação e
+// situação. Quem não está nas linhas voltou a comunicar ('comunicou', sem apagar).
+// Retorna o resumo, ou null se nenhuma linha válida (NADA é alterado).
+function _scAplicarLinhas(linhas, opts) {
+  opts = opts || {};
+  const dados = getSemCom();
+  const agora = new Date().toISOString();
+
+  // BACKUP de segurança ANTES de qualquer alteração — garante a recuperação
+  // do que já foi feito (desvinculações/tratativas) caso algo dê errado.
+  // Mantém os 5 backups mais recentes em localStorage.
+  try {
+    const bk = 'semcom_backup_' + agora.replace(/[:.]/g,'').slice(0,15);
+    localStorage.setItem(bk, JSON.stringify(dados));
+    const ks = Object.keys(localStorage).filter(k => k.startsWith('semcom_backup_')).sort();
+    while (ks.length > 5) localStorage.removeItem(ks.shift());
+  } catch(e) { console.warn('[CME] backup pré-import falhou:', e.message); }
+
+  let novos = 0, atualizados = 0, nJur = 0, nPsi = 0;
+  const registrosNoRelatorio = new Set(); // registros presentes NESTE relatório do AKILES
+
+  for (const l of (linhas || [])) {
+    const nome     = String(l.nome || '').trim();
+    const registro = _scNormReg(l.registro);
+    if (!nome || !registro || !/\d/.test(registro)) continue; // pula linhas sem dados válidos
+    // Importa TODAS as linhas (DPP e não-DPP). O filtro de exibição roteia
+    // DPP → Psicossocial e não-DPP → Jurídico, então NADA some no import.
+    if (_scIsDPP({ registro })) nPsi++; else nJur++;
+    const dataUlt   = String(l.ultimaComunicacao || '').trim();
+    const tempo     = String(l.tempoSemCom || '').trim();
+    const intervalo = String(l.intervalo || '').trim();
+    const unidade   = String(l.unidade || '').trim();
+    const dias      = _parseDiasSemCom(tempo);
+    const extra     = l.grupo ? { grupo: String(l.grupo).trim() } : {};
+
+    const chave = _scChaveReg(registro);
+    registrosNoRelatorio.add(chave);
+
+    const cands = [];
+    dados.monitorados.forEach((m, j) => { if (_scChaveReg(m.registro) === chave) cands.push(j); });
+    // Duplicata antiga (mesma pessoa gravada com grafias diferentes): atualiza a
+    // que está em aberto; senão a desvinculada; senão a primeira.
+    const idx = cands.find(j => _scEmAberto(dados.monitorados[j]))
+             ?? cands.find(j => dados.monitorados[j].situacao !== 'comunicou')
+             ?? (cands.length ? cands[0] : -1);
+    if (idx >= 0) {
+      // Estava arquivado e voltou a ficar sem comunicação: guarda a vez anterior.
+      if (dados.monitorados[idx].situacao === 'comunicou') _scGuardarEpisodio(dados.monitorados[idx], dados.monitorados[idx], dataUlt);
+      // O registro acompanha a grafia atual (é dela que sai a marcação DPP).
+      Object.assign(dados.monitorados[idx], { registro, nome, ultimaComunicacao: dataUlt, tempoSemCom: tempo, intervalo, diasSemCom: dias, atualizadoEm: agora }, l.unidade !== undefined ? { unidade } : {}, extra); // o pacote automático não traz unidade: não apaga a existente
+      // Reapareceu no relatório: se estava marcado 'comunicou', voltou a ficar
+      // SEM comunicação → reativa (desvinculado permanece, é ação manual).
+      if (dados.monitorados[idx].situacao === 'comunicou') dados.monitorados[idx].situacao = 'ativo';
+      atualizados++;
+    } else {
+      dados.monitorados.push(Object.assign({
+        id: 'sc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+        registro, nome, ultimaComunicacao: dataUlt,
+        tempoSemCom: tempo, diasSemCom: dias,
+        intervalo, unidade,
+        situacao: 'ativo', tratativas: [], desvinculacao: null,
+        importadoEm: agora, atualizadoEm: agora,
+      }, extra));
+      novos++;
+    }
+  }
+
+  // 🛡️ GUARDA ANTI-CATÁSTROFE: só sincroniza se vieram registros DE VERDADE —
+  // senão marcaria todo mundo como 'comunicou' (zerava a lista).
+  if (registrosNoRelatorio.size === 0) return null;
+
+  // Junta duplicatas antigas da mesma pessoa. Cópia no banco antes de apagar.
+  const _dupGrupos = new Set(), _temDup = dados.monitorados.some(m => { const c = _scChaveReg(m.registro); if (_dupGrupos.has(c)) return true; _dupGrupos.add(c); return false; });
+  if (_temDup) salvarStore('semcomunicacao_backup_mescla', { em: agora, por: usuarioAtual?.nome || '', dados: JSON.parse(JSON.stringify(dados)) });
+  const mesclados = _temDup ? _scMesclarDuplicatas(dados) : 0;
+
+  // SINCRONIZAÇÃO com o AKILES: quem NÃO está no relatório novo voltou a se
+  // comunicar. Marca 'comunicou' (NÃO deleta). Desvinculado é ação manual.
+  let voltaram = 0;
+  dados.monitorados.forEach(m => {
+    if (!registrosNoRelatorio.has(_scChaveReg(m.registro)) && m.situacao !== 'desvinculado' && m.situacao !== 'comunicou') {
+      m.situacao = 'comunicou';
+      m.comunicouEm = agora;
+      voltaram++;
+    }
+  });
+
+  dados.ultimaImportacao = agora;
+  dados.ultimaImportOrigem = opts.origem || 'Excel';
+  if (opts.pacote) dados.ultimoPacoteAkiles = opts.pacote;
+  if (!dados.ultimaImportArea) dados.ultimaImportArea = {};
+  // O import popula AS DUAS áreas (o filtro só separa na exibição)
+  dados.ultimaImportArea['juridico'] = agora;
+  dados.ultimaImportArea['psicossocial'] = agora;
+  salvarSemCom(dados);
+  atualizarBadgeSemCom();
+  const desvinc = (dados.monitorados||[]).filter(m => m.situacao === 'desvinculado').length;
+  return { nJur, nPsi, novos, atualizados, voltaram, mesclados, desvinc };
+}
+
+// ── Pacote automático do AKILES (robô diário das 10h) ──────────────────────
+// O robô (atualizar-akiles.js) grava no banco a chave cme_akiles_auto com:
+// semcom (relatório 64 + nome/grupo do 66), rompimentos ("Alerta de integridade
+// da pulseira") e botoes ("Botão de segurança preventiva"). Quem abrir o CME
+// primeiro aplica o pacote — uma vez só, com o MESMO núcleo do Excel.
+function _akilesPacote() { return carregarStore('akiles_auto', null); }
+function getAkilesOc() { const d = carregarStore('akiles_ocorrencias', null); return (d && typeof d === 'object') ? d : { rompimentos: {}, botoes: {} }; }
+function _scVD(m) { return /^\s*9\.|viol[êe]ncia dom[ée]stica/i.test(String((m && m.grupo) || '')); }
+function _scSeloVD(m) { return _scVD(m) ? '<span title="Violência doméstica — prioridade" style="background:#7c3aed;color:#fff;border-radius:3px;padding:1px 6px;font-size:.7rem;font-weight:600;margin-left:6px;vertical-align:1px">VD</span>' : ''; }
+// Ordem de prioridade: violência doméstica primeiro; depois quem está há mais tempo.
+function _scOrdemPrioridade(a, b) { return (_scVD(b) - _scVD(a)) || (_diasSemComAtual(b) - _diasSemComAtual(a)); }
+
+function _akilesAutoAplicar() {
+  const pk = _akilesPacote();
+  if (!pk || !pk.geradoEm || !usuarioAtual) return;
+  // ocorrências: acumula por nº de ocorrência (o pacote traz só os últimos dias)
+  const oc = getAkilesOc();
+  if (oc.ultimoPacote !== pk.geradoEm) {
+    const juntar = (dest, lista) => (lista || []).forEach(o => { if (o && o.idOc) dest[o.idOc] = Object.assign({}, dest[o.idOc] || {}, o); });
+    oc.rompimentos = oc.rompimentos || {}; oc.botoes = oc.botoes || {};
+    juntar(oc.rompimentos, pk.rompimentos); juntar(oc.botoes, pk.botoes);
+    oc.ultimoPacote = pk.geradoEm;
+    salvarStore('akiles_ocorrencias', oc);
+  }
+  // sem comunicação
+  const dados = getSemCom();
+  if (dados.ultimoPacoteAkiles === pk.geradoEm || !Array.isArray(pk.semcom) || pk.semcom.length < 20) return;
+  // Excel importado à mão DEPOIS do pacote é mais novo — não regride.
+  if (dados.ultimaImportacao && dados.ultimaImportacao > pk.geradoEm) { dados.ultimoPacoteAkiles = pk.geradoEm; salvarSemCom(dados); return; }
+  const res = _scAplicarLinhas(pk.semcom, { origem: 'AKILES automático', pacote: pk.geradoEm });
+  if (res) {
+    _mostrarToast(`\u{1F916} Sem Comunicação atualizado automaticamente do AKILES (${new Date(pk.geradoEm).toLocaleString('pt-BR')}): ${res.novos} novo(s), ${res.voltaram} voltaram a comunicar.`, 'sucesso');
+    try { renderizarSemCom('juridico'); renderizarSemCom('psicossocial'); renderizarRelSemCom(); } catch (e) {}
+  }
+}
+
+// ── Listas de ocorrências do AKILES: Rompimento (Relatório) e Botão (Psicossocial) ─
+function _akOcStatusStore(tipo) { return tipo === 'botoes' ? 'psi_botao_status' : 'rel_romp_status'; }
+function _akOcStatus(tipo) { const m = carregarStore(_akOcStatusStore(tipo), {}); return (m && typeof m === 'object') ? m : {}; }
+function _akOcStatusDe(tipo, idOc) { const s = _akOcStatus(tipo)[idOc]; return (s && s.status) || 'pendente'; }
+function akOc_marcar(tipo, idOc, status) {
+  const m = Object.assign({}, _akOcStatus(tipo));
+  m[idOc] = { status, em: new Date().toISOString(), por: usuarioAtual?.nome || '' };
+  salvarStore(_akOcStatusStore(tipo), m);
+  renderizarAkOc(tipo);
+}
+function _akOcLista(tipo) {
+  return Object.values(getAkilesOc()[tipo] || {}).sort((a, b) =>
+    ((b.vd ? 1 : 0) - (a.vd ? 1 : 0))
+    || ((b.situacao === 'Em andamento' ? 1 : 0) - (a.situacao === 'Em andamento' ? 1 : 0))
+    || (_akOcData(b.inicio) - _akOcData(a.inicio)));
+}
+function _akOcData(s) { const m = String(s || '').match(/^(\d{2})\/(\d{2})\/(\d{2,4})\s+(\d{2}):(\d{2})/); if (!m) return 0; const y = +m[3] < 100 ? 2000 + +m[3] : +m[3]; return new Date(y, +m[2] - 1, +m[1], +m[4], +m[5]).getTime(); }
+function renderizarAkOc(tipo) {
+  const pfx = tipo === 'botoes' ? 'psi-botao' : 'rel-romp';
+  const tbody = document.getElementById('tbody-' + pfx);
+  if (!tbody) return;
+  const busca = (document.getElementById(pfx + '-busca')?.value || '').toLowerCase().trim();
+  const fSt = document.getElementById(pfx + '-fstatus')?.value || '';
+  const base = _akOcLista(tipo);
+  let lista = base.slice();
+  if (busca) lista = lista.filter(o => (o.nome || '').toLowerCase().includes(busca) || String(o.idOc).includes(busca) || String(o.cpf || '').includes(busca));
+  if (fSt) lista = lista.filter(o => _akOcStatusDe(tipo, o.idOc) === fSt);
+  const pk = _akilesPacote();
+  const info = document.getElementById(pfx + '-info');
+  if (info) info.textContent = pk && pk.geradoEm ? 'Atualizado automaticamente do AKILES em ' + new Date(pk.geradoEm).toLocaleString('pt-BR') + ' (todo dia às 10h)' : 'Aguardando a 1ª atualização automática do AKILES (todo dia às 10h).';
+  const pend = base.filter(o => _akOcStatusDe(tipo, o.idOc) === 'pendente').length;
+  const kp = document.getElementById(pfx + '-kpis');
+  if (kp) kp.innerHTML = `<span style="background:#eef2ff;padding:3px 10px;border-radius:3px">Total: <b>${base.length}</b></span>`
+    + `<span style="background:#f5f3ff;padding:3px 10px;border-radius:3px;color:#6d28d9">Violência doméstica: <b>${base.filter(o => o.vd).length}</b></span>`
+    + `<span style="background:#fef2f2;padding:3px 10px;border-radius:3px;color:#b91c1c">Pendentes: <b>${pend}</b></span>`;
+  const acaoFinal = tipo === 'botoes' ? ['tratado', '\u{2713} Atendido'] : ['enviado', '\u{2713} Enviado'];
+  tbody.innerHTML = !lista.length
+    ? `<tr><td colspan="7" style="text-align:center;padding:28px;color:#888">Nenhuma ocorrência ${tipo === 'botoes' ? 'de botão de segurança' : 'de rompimento'} registrada.</td></tr>`
+    : lista.map(o => {
+      const st = _akOcStatusDe(tipo, o.idOc), si = _akOcStatus(tipo)[o.idOc] || {};
+      const selo = st === 'pendente' ? '<span style="background:rgba(248,81,73,.15);color:#b91c1c;padding:2px 8px;border-radius:3px;font-size:.72rem">Pendente</span>'
+        : `<span style="background:rgba(63,185,80,.15);color:#15803d;padding:2px 8px;border-radius:3px;font-size:.72rem">${st === 'tratado' ? 'Atendido' : 'Enviado'}</span><div style="font-size:.66rem;color:#999">${esc(si.por || '')}${si.por ? ' · ' : ''}${esc(si.em ? new Date(si.em).toLocaleString('pt-BR') : '')}</div>`;
+      const andamento = o.situacao === 'Em andamento' ? 'color:#b91c1c;font-weight:600' : '';
+      const id = _relSemComEsc(o.idOc);
+      return `<tr>
+        <td><strong>${esc(o.nome || '—')}</strong>${o.vd ? _scSeloVD({ grupo: '9.' }) : ''}<div style="font-size:.72rem;color:#888">${esc(o.grupo || '')}</div></td>
+        <td style="font-family:var(--font-mono)">${esc(o.idOc)}</td>
+        <td style="font-family:var(--font-mono);font-size:.8rem">${esc(o.inicio)}${o.fim ? '<br>→ ' + esc(o.fim) : ''}<div style="font-size:.7rem;color:#888">${esc(o.duracao || '')}</div></td>
+        <td style="font-size:.8rem;${andamento}">${esc(o.situacao || '—')}<div style="font-size:.7rem;color:#888">${esc(o.atendimento || '')}</div></td>
+        <td style="font-size:.75rem">${esc(o.processo || '—')}<div style="color:#888">${esc(o.juizo || '')}</div></td>
+        <td>${selo}</td>
+        <td style="white-space:nowrap">${st === 'pendente' ? `<button class="btn-sm btn-outline" onclick="akOc_marcar('${tipo}','${id}','${acaoFinal[0]}')">${acaoFinal[1]}</button>` : `<button class="btn-sm btn-outline" onclick="akOc_marcar('${tipo}','${id}','pendente')" title="Voltar para pendente">\u{21A9}</button>`}</td>
+      </tr>`;
+    }).join('');
+  const b = document.getElementById(pfx + '-badge');
+  if (b) { b.textContent = pend; b.style.display = pend ? 'inline-block' : 'none'; }
+}
+
 // ── Importar Excel AKILES ─────────────────────────────────
 // area: 'juridico' (padrão, exclui DPP) | 'psicossocial' (só DPP)
 function importarExcelSemCom(input, area) {
@@ -9338,112 +9599,22 @@ function importarExcelSemCom(input, area) {
       input.value = ''; return;
     }
 
-    // ── 6. Processar linhas de dados ───────────────────────
-    const dados = getSemCom();
-    const agora = new Date().toISOString();
-
-    // BACKUP de segurança ANTES de qualquer alteração — garante a recuperação
-    // do que já foi feito (desvinculações/tratativas) caso algo dê errado.
-    // Mantém os 5 backups mais recentes em localStorage.
-    try {
-      const bk = 'semcom_backup_' + agora.replace(/[:.]/g,'').slice(0,15);
-      localStorage.setItem(bk, JSON.stringify(dados));
-      const ks = Object.keys(localStorage).filter(k => k.startsWith('semcom_backup_')).sort();
-      while (ks.length > 5) localStorage.removeItem(ks.shift());
-    } catch(e) { console.warn('[CME] backup pré-import falhou:', e.message); }
-
-    let novos = 0, atualizados = 0, pulados = 0, nJur = 0, nPsi = 0;
-    const registrosNoRelatorio = new Set(); // registros presentes NESTE relatório do AKILES
-
+    // ── 6. Linhas do relatório → núcleo único (o mesmo do pacote automático do AKILES)
+    const linhas = [];
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const cells = Array.from(rows[i].querySelectorAll('td'));
-      if (cells.length < 2) { pulados++; continue; }
+      if (cells.length < 2) continue;
       const gc = idx => (idx >= 0 && idx < cells.length) ? cells[idx].textContent.trim() : '';
-      const nome     = gc(cNome);
-      const registro = _scNormReg(gc(cReg));
-      if (!nome || !registro || !/\d/.test(registro)) { pulados++; continue; } // pula linhas sem dados válidos
-      // Importa TODAS as linhas (DPP e não-DPP). O filtro de exibição roteia
-      // DPP → Psicossocial e não-DPP → Jurídico, então NADA some no import,
-      // não importa por qual aba você jogue o Excel.
-      if (_scIsDPP({ registro })) nPsi++; else nJur++;
-      const dataUlt  = gc(cData);
-      const tempo    = gc(cTempo);
-      const intervalo = gc(cIntervalo);
-      const unidade  = gc(cUnidade);
-      const dias     = _parseDiasSemCom(tempo);
-
-      const chave = _scChaveReg(registro);
-      registrosNoRelatorio.add(chave);
-
-      const cands = [];
-      dados.monitorados.forEach((m, j) => { if (_scChaveReg(m.registro) === chave) cands.push(j); });
-      // Duplicata antiga (mesma pessoa gravada com grafias diferentes): atualiza a
-      // que está em aberto; senão a desvinculada; senão a primeira.
-      const idx = cands.find(j => _scEmAberto(dados.monitorados[j]))
-               ?? cands.find(j => dados.monitorados[j].situacao !== 'comunicou')
-               ?? (cands.length ? cands[0] : -1);
-      if (idx >= 0) {
-        // Estava arquivado e voltou a ficar sem comunicação: guarda a vez anterior.
-        if (dados.monitorados[idx].situacao === 'comunicou') _scGuardarEpisodio(dados.monitorados[idx], dados.monitorados[idx], dataUlt);
-        // Atualiza só campos vindos do AKILES — preserva tratativas, desvinculação, situação.
-        // O registro acompanha a grafia atual (é dela que sai a marcação DPP).
-        Object.assign(dados.monitorados[idx], { registro, nome, ultimaComunicacao: dataUlt, tempoSemCom: tempo, intervalo, unidade, diasSemCom: dias, atualizadoEm: agora });
-        // Reapareceu no relatório: se estava marcado 'comunicou', voltou a ficar
-        // SEM comunicação → reativa (desvinculado permanece, é ação manual).
-        if (dados.monitorados[idx].situacao === 'comunicou') dados.monitorados[idx].situacao = 'ativo';
-        atualizados++;
-      } else {
-        dados.monitorados.push({
-          id: 'sc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-          registro, nome, ultimaComunicacao: dataUlt,
-          tempoSemCom: tempo, diasSemCom: dias,
-          intervalo, unidade,
-          situacao: 'ativo', tratativas: [], desvinculacao: null,
-          importadoEm: agora, atualizadoEm: agora,
-        });
-        novos++;
-      }
+      linhas.push({ nome: gc(cNome), registro: gc(cReg), ultimaComunicacao: gc(cData), tempoSemCom: gc(cTempo), intervalo: gc(cIntervalo), unidade: gc(cUnidade) });
     }
-
-    // SINCRONIZAÇÃO com o AKILES: quem NÃO está no relatório novo voltou a se
-    // comunicar. Marca 'comunicou' (NÃO deleta — preserva tratativas/desvinculação/
-    // histórico) para sair da contagem ativa. Assim o CME reflete o relatório REAL
-    // do AKILES em vez de acumular ex-sem-comunicação. Desvinculado é ação manual,
-    // não é mexido aqui.
-    let voltaram = 0;
-    // 🛡️ GUARDA ANTI-CATÁSTROFE: só sincroniza se o arquivo trouxe registros DE
-    // VERDADE. Se o parse falhar (0 registros lidos), NÃO marca ninguém como
-    // 'comunicou' — senão zerava a lista inteira (foi o que aconteceu quando o
-    // formato do AKILES mudou e o parser lia 0 linhas).
-    if (registrosNoRelatorio.size === 0) {
+    const res = _scAplicarLinhas(linhas, { origem: 'Excel' });
+    input.value = '';
+    if (!res) {
       _mostrarToast('\u{26A0}\u{FE0F} Não consegui ler NENHUM registro do arquivo (formato inesperado). NADA foi alterado — a lista foi preservada.', 'erro');
-      input.value = '';
       return;
     }
-    // Junta duplicatas antigas da mesma pessoa. Cópia no banco antes de apagar.
-    const _dupGrupos = new Set(), _temDup = dados.monitorados.some(m => { const c = _scChaveReg(m.registro); if (_dupGrupos.has(c)) return true; _dupGrupos.add(c); return false; });
-    if (_temDup) salvarStore('semcomunicacao_backup_mescla', { em: agora, por: usuarioAtual?.nome || '', dados: JSON.parse(JSON.stringify(dados)) });
-    const mesclados = _temDup ? _scMesclarDuplicatas(dados) : 0;
-
-    dados.monitorados.forEach(m => {
-      if (!registrosNoRelatorio.has(_scChaveReg(m.registro)) && m.situacao !== 'desvinculado' && m.situacao !== 'comunicou') {
-        m.situacao = 'comunicou';
-        m.comunicouEm = agora;
-        voltaram++;
-      }
-    });
-
-    dados.ultimaImportacao = agora;
-    if (!dados.ultimaImportArea) dados.ultimaImportArea = {};
-    // O import popula AS DUAS áreas (o filtro só separa na exibição)
-    dados.ultimaImportArea['juridico'] = agora;
-    dados.ultimaImportArea['psicossocial'] = agora;
-    salvarSemCom(dados);
-    atualizarBadgeSemCom();
     renderizarSemCom(area);
-    input.value = '';
-    const _desvinc = (dados.monitorados||[]).filter(m => m.situacao === 'desvinculado').length;
-    _mostrarToast(`\u{2705} Importado: ${nJur} Jurídico + ${nPsi} DPP→Psicossocial (${novos} novos, ${atualizados} atualizados). ${voltaram} voltaram a comunicar (saíram da contagem). ${_desvinc} desvinculado(s) preservado(s).${mesclados ? ` ${mesclados} ficha(s) duplicada(s) juntada(s).` : ''}`, 'sucesso');
+    _mostrarToast(`\u{2705} Importado: ${res.nJur} Jurídico + ${res.nPsi} DPP→Psicossocial (${res.novos} novos, ${res.atualizados} atualizados). ${res.voltaram} voltaram a comunicar (saíram da contagem). ${res.desvinc} desvinculado(s) preservado(s).${res.mesclados ? ` ${res.mesclados} ficha(s) duplicada(s) juntada(s).` : ''}`, 'sucesso');
   };
 
   reader.onerror = () => { _mostrarToast('Erro ao ler o arquivo. Tente novamente.', 'erro'); input.value = ''; };
@@ -9699,8 +9870,8 @@ function renderizarSemCom(area) {
   else if (fSituacao === 'ativo')    lista = lista.filter(m => _scEmAberto(m));
   if (fDiasMin > 0) lista = lista.filter(m => _diasSemComAtual(m) >= fDiasMin);
 
-  // Ordenar: maiores dias primeiro (críticos no topo)
-  lista.sort((a,b) => _diasSemComAtual(b) - _diasSemComAtual(a));
+  // Ordenar: violência doméstica primeiro; depois maiores dias (críticos no topo)
+  lista.sort(_scOrdemPrioridade);
 
   // KPIs — calculados dinamicamente (escopo da área)
   const kpi = (suf, v) => { const el = document.getElementById(cfg.pfx+'-kpi-'+suf); if (el) el.textContent = v; };
@@ -9719,7 +9890,7 @@ function renderizarSemCom(area) {
   const uiEl = document.getElementById(cfg.ultima);
   const tsArea = (dados.ultimaImportArea && dados.ultimaImportArea[area]) || dados.ultimaImportacao;
   if (uiEl && tsArea) {
-    uiEl.textContent = 'Última importação: ' + new Date(tsArea).toLocaleString('pt-BR');
+    uiEl.textContent = 'Última importação: ' + new Date(tsArea).toLocaleString('pt-BR') + (dados.ultimaImportOrigem === 'AKILES automático' ? ' (automática do AKILES)' : '');
   }
 
   // Count label
@@ -9751,7 +9922,7 @@ function renderizarSemCom(area) {
     const btnMover = `<button class="btn-sm btn-outline" style="color:#8957e5;border-color:#c4a5f0;font-size:.78rem" title="Reclassificar entre Jurídico e Psicossocial (DPP)" onclick="_scMoverArea('${m.id}','${_destino}')">${_moverTxt}</button>`;
     return `<tr style="${rowStyle}">
       <td>${i+1}</td>
-      <td><strong>${esc(m.nome)}</strong>${badges180}</td>
+      <td><strong>${esc(m.nome)}</strong>${_scSeloVD(m)}${badges180}</td>
       <td style="font-family:var(--font-mono)">${esc(m.registro)}</td>
       <td style="font-size:.82rem">${esc((m.ultimaComunicacao||'').slice(0,16).replace('T',' '))}</td>
       <td style="font-size:.82rem">${esc(m.tempoSemCom)||'—'}</td>
@@ -12123,7 +12294,7 @@ function mudarSubAbaCom(aba) {
 
 // Navegação sub-abas Relatório
 function mudarSubAbaRel(aba) {
-  ['recebidos','lista','aguardando','arquivadas','gerador','semcom'].forEach(a => {
+  ['recebidos','lista','aguardando','arquivadas','gerador','semcom','romp'].forEach(a => {
     document.getElementById('rel-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('rel-panel-' + a)?.classList.toggle('active', a === aba);
   });
@@ -12133,6 +12304,7 @@ function mudarSubAbaRel(aba) {
   if (aba === 'arquivadas') renderizarRelArquivadas();
   if (aba === 'gerador')    rv_inicializar();
   if (aba === 'semcom')     renderizarRelSemCom();
+  if (aba === 'romp')       renderizarAkOc('rompimentos');
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -12161,12 +12333,13 @@ function _relSemComCorte() { return parseInt(document.getElementById('rel-semcom
 function _relSemComEsc(s) { return String(s == null ? '' : s).replace(/['"\\<>]/g, ''); }
 function _relSemComDataHora(iso) { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? String(iso) : d.toLocaleString('pt-BR'); }
 
-// Monitorados sem comunicação ATIVOS acima do corte (todas as áreas), ordenados por dias desc.
+// Monitorados sem comunicação ATIVOS acima do corte — só TORNOZELEIRA (o DPP fica com
+// a Equipe Multidisciplinar); violência doméstica primeiro, depois mais dias.
 function _relSemComLista() {
   const corte = _relSemComCorte();
   return (getSemCom().monitorados || [])
-    .filter(m => _scEmAberto(m) && _diasSemComAtual(m) >= corte)
-    .sort((a, b) => _diasSemComAtual(b) - _diasSemComAtual(a));
+    .filter(m => _scEmAberto(m) && _diasSemComAtual(m) >= corte && _scAreaDe(m) !== 'psicossocial')
+    .sort(_scOrdemPrioridade);
 }
 
 function renderizarRelSemCom() {
@@ -12202,7 +12375,7 @@ function renderizarRelSemCom() {
       const subData = info.em ? `<div style="font-size:.66rem;color:#999">${esc(info.por||'')}${info.por?' · ':''}${esc(_relSemComDataHora(info.enviadoEm || info.em))}</div>` : '';
       const reg = _relSemComEsc(m.registro);
       return `<tr>
-        <td><strong>${esc(m.nome||'—')}</strong></td>
+        <td><strong>${esc(m.nome||'—')}</strong>${_scSeloVD(m)}</td>
         <td style="font-family:var(--font-mono)">${esc(m.registro||'—')}</td>
         <td style="font-family:var(--font-mono);${corDias}">${dias}</td>
         <td style="font-family:var(--font-mono);font-size:.8rem">${esc(m.ultimaComunicacao||'—')}</td>
@@ -13472,13 +13645,14 @@ function getPsi()          { return carregarStore('psicossocial', { atendimentos
 function salvarPsi(dados)  { salvarStore('psicossocial', dados); }
 
 function mudarSubAbaPsi(aba) {
-  ['ativos','arquivados','semcom'].forEach(a => {
+  ['ativos','arquivados','semcom','botao'].forEach(a => {
     document.getElementById('psi-stab-'+a)?.classList.toggle('active', a===aba);
     document.getElementById('psi-panel-'+a)?.classList.toggle('active', a===aba);
   });
   if (aba==='arquivados') renderizarPsiArquivados();
   if (aba==='ativos')     renderizarPsi();
   if (aba==='semcom')     { renderizarSemCom('psicossocial'); atualizarBadgeSemCom(); }
+  if (aba==='botao')      renderizarAkOc('botoes');
 }
 
 function atualizarBadgePsiArq() {
@@ -13584,7 +13758,7 @@ function renderizarPsi() {
   if (el('psi-btns-acao'))   el('psi-btns-acao').style.display   = podeMod ? '' : 'none';
   if (el('psi-col-acoes'))   el('psi-col-acoes').style.display   = '';  // coluna Ações sempre visível (botão Ver + PDF p/ todos)
   // Não-equipe (somente leitura): vê apenas a sub-aba Atendimentos; oculta Arquivados e Sem Comunicação (DPP), que têm ações sensíveis
-  ['psi-stab-arquivados','psi-stab-semcom'].forEach(tid => { const t=el(tid); if(t) t.style.display = podeMod ? '' : 'none'; });
+  ['psi-stab-arquivados','psi-stab-semcom','psi-stab-botao'].forEach(tid => { const t=el(tid); if(t) t.style.display = podeMod ? '' : 'none'; });
   if (!podeMod) { const sa=el('psi-stab-ativos'); if(sa && !sa.classList.contains('active')) mudarSubAbaPsi('ativos'); }
 
   // Label e tabela
