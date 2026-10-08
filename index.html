@@ -7396,9 +7396,55 @@ const _STORES_PROTEGIDAS = {
   assinaturas: v => (v && typeof v === 'object' && !Array.isArray(v)) ? Object.keys(v).length : -1,
 };
 
+/* ─── ACESSO AO BANCO COM LOGIN ───────────────────────────────────────────
+   O CME lê e grava a tabela `store` pelas funções cme_store_ler / cme_store_gravar,
+   que conferem usuário+senha da sessão no próprio banco. Enquanto o banco ainda não
+   tem essas funções, cai no acesso antigo direto à tabela — o sistema funciona nos
+   dois casos. Nunca apaga linha; cme_usuarios continua só pelas funções próprias. */
+let _dbModoRpc = null; // null = ainda não testado · true = com login (RPC) · false = acesso antigo
+function _dbRpcAusente(err) {
+  const c = String((err && err.code) || ''), m = String((err && err.message) || '');
+  return c === 'PGRST202' || c === '42883' || /could not find the function|function .* does not exist/i.test(m);
+}
+function _dbSemPermissao(err) {
+  const c = String((err && err.code) || ''), m = String((err && err.message) || '');
+  return c === '28000' || /nao autorizado|não autorizado/i.test(m);
+}
+// chaves: lista de 'cme_x' ou null (tudo). Retorna { data:[{key,value,updated_at}], error }
+async function _dbLer(chaves) {
+  if (_dbModoRpc !== false) {
+    const r = await window._db.rpc('cme_store_ler', { p_username: _sessionUser || '', p_hash: _sessionHash || '', p_keys: chaves || null });
+    if (!r.error) { _dbModoRpc = true; return { data: r.data || [], error: null }; }
+    if (!_dbRpcAusente(r.error)) return { data: null, error: r.error };
+    _dbModoRpc = false;
+  }
+  let q = window._db.from('store').select('*');
+  if (chaves) q = q.in('key', chaves);
+  const r = await q;
+  return { data: r.data || null, error: r.error || null };
+}
+async function _dbLerChave(k) {
+  const r = await _dbLer([k]);
+  if (r.error) return { data: null, error: r.error };
+  const row = (r.data || []).find(x => x.key === k);
+  return { data: row ? { value: row.value } : null, error: null };
+}
+// soCriar = true: grava só se a chave NÃO existir (nunca sobrescreve dado existente)
+async function _dbGravar(k, valor, soCriar) {
+  if (_dbModoRpc !== false) {
+    const r = await window._db.rpc('cme_store_gravar', { p_username: _sessionUser || '', p_hash: _sessionHash || '', p_key: k, p_value: valor, p_so_criar: !!soCriar });
+    if (!r.error) { _dbModoRpc = true; return { error: null }; }
+    if (!_dbRpcAusente(r.error)) return { error: r.error };
+    _dbModoRpc = false;
+  }
+  const r = soCriar
+    ? await window._db.from('store').insert({ key: k, value: valor })
+    : await window._db.from('store').upsert({ key: k, value: valor, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+  return { error: soCriar ? null : (r.error || null) };
+}
+
 function _upsertStoreDireto(chave, valor) {
-  return window._db.from('store')
-    .upsert({ key: 'cme_' + chave, value: valor, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+  return _dbGravar('cme_' + chave, valor)
     .then(({ error }) => {
       if (error) {
         console.error('[CME] Erro ao salvar no Supabase:', chave, error);
@@ -7412,8 +7458,7 @@ async function _salvarStoreProtegido(chave, valor) {
   const nNovo = contar(valor);
   if (nNovo < 0) { _upsertStoreDireto(chave, valor); return; } // formato inesperado \u{2192} grava
   try {
-    const { data, error } = await window._db.from('store')
-      .select('value').eq('key', 'cme_' + chave).maybeSingle();
+    const { data, error } = await _dbLerChave('cme_' + chave);
     if (!error && data && data.value != null) {
       const nServ = contar(data.value);
       if (nServ >= 3) {
@@ -7842,7 +7887,7 @@ function addLog(msg, meta) {
   // Busca o estado atual dos logs direto do Supabase para evitar conflito entre PCs
   const entrada = { ts: new Date().toISOString(), msg };
   if (window._db) {
-    window._db.from('store').select('value').eq('key', 'cme_logs').maybeSingle()
+    _dbLerChave('cme_logs')
       .then(({ data }) => {
         const logs = (data?.value || _cache['logs'] || []).slice();
         logs.unshift(entrada);
@@ -8118,7 +8163,45 @@ function aplicarVisibilidadeTabs(nivel) {
   mudarAba(permitidas[0] || 'dashboard');
 }
 
-function iniciarApp() {
+// Carrega os dados do banco DEPOIS do login (a leitura exige usuário+senha da sessão).
+// Se a leitura falhar, NÃO abre o sistema com cache vazio (foi assim que um cache
+// vazio já truncou os ofícios) — volta para o login com aviso.
+let _dadosCarregados = false;
+async function _cmeGarantirDados() {
+  if (_dadosCarregados) return true;
+  if (!window._db) return false;
+  let r;
+  try { r = await _dbLer(null); } catch (e) { r = { data: null, error: e }; }
+  if (r.error || !Array.isArray(r.data)) { console.error('[CME] leitura do banco falhou:', r.error); return false; }
+  r.data.forEach(row => { if (row && row.key) _cache[row.key.replace('cme_', '')] = row.value; });
+  // Sementes: só quando a leitura deu certo, e gravadas em "só criar" (nunca sobrescrevem).
+  const tem = k => r.data.some(x => x.key === k);
+  const sementes = [
+    ['ocorrencias', DADOS_INICIAIS], ['logs', []], ['triagem', { atendimentos: [] }],
+    ['gerencia', { demandas: [] }], ['relatorios', { registros: [] }],
+    ['estoque', { itens: { 'Módulo eletrônico de monitoração':0, 'Cinta_17 cm':0,'Cinta_18 cm':0,'Cinta_19 cm':0,'Cinta_20 cm':0,
+        'Cinta_21 cm':0,'Cinta_22 cm':0,'Cinta_23 cm':0,'Cinta_24 cm':0,'Cinta_25 cm':0,'Cinta_26 cm':0,'Cinta_27 cm':0,'Cinta_28 cm':0,
+        'Cinta_29 cm':0,'Cinta_30 cm':0, 'Trava':0,'Carregador da tornozeleira':0, 'Dispositivo DPP':0 },
+      movimentacoes: [], seriais: {}, registros: {},
+      configuracoes: { estoqueMinimo: { 'Módulo eletrônico de monitoração':5,'Cinta':3,'Trava':20,'Carregador da tornozeleira':5,'Dispositivo DPP':3 } } }],
+  ].filter(([k]) => !tem('cme_' + k));
+  if (sementes.length) await Promise.all(sementes.map(([k, v]) => { _cache[k] = v; return _dbGravar('cme_' + k, v, true); }));
+  _dadosCarregados = true;
+  return true;
+}
+async function iniciarApp() {
+  if (!(await _cmeGarantirDados())) {
+    try { localStorage.removeItem('cme_sessao'); } catch (e) {}
+    usuarioAtual = null;
+    document.getElementById("app").style.display = "none";
+    document.getElementById("login-screen").style.display = "flex";
+    const errEl = document.getElementById("login-error");
+    if (errEl) { errEl.textContent = 'Não consegui carregar os dados do sistema. Entre novamente (se repetir, avise o administrador).'; errEl.style.display = 'block'; }
+    return;
+  }
+  _iniciarAppTela();
+}
+function _iniciarAppTela() {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
 
@@ -9534,7 +9617,7 @@ async function _akilesAutoAplicar() {
     // depois já vê o pacote aplicado e não sobrescreve tratativas salvas no meio.
     await new Promise(r => setTimeout(r, 500 + Math.random() * 4000));
     for (const k of ['akiles_auto', 'semcomunicacao', 'akiles_ocorrencias', 'ocorrencias']) {
-      const { data, error } = await window._db.from('store').select('value').eq('key', 'cme_' + k).maybeSingle();
+      const { data, error } = await _dbLerChave('cme_' + k);
       if (error) throw new Error(error.message);
       if (data && data.value != null) _cache[k] = data.value;
     }
@@ -10887,7 +10970,7 @@ async function _ocorrenciasFrescas() {
   let arr = getOcorrencias();
   if (window._db) {
     try {
-      const { data } = await window._db.from('store').select('value').eq('key', 'cme_ocorrencias').maybeSingle();
+      const { data } = await _dbLerChave('cme_ocorrencias');
       if (data && Array.isArray(data.value)) arr = data.value;
     } catch (e) { /* usa _cache se a leitura falhar */ }
   }
@@ -11455,8 +11538,7 @@ async function _salvarAssinaturaStore(usuario, dataUrl) {
   let base = _assMap();
   if (window._db) {
     try {
-      const { data, error } = await window._db.from('store')
-        .select('value').eq('key', 'cme_assinaturas').maybeSingle();
+      const { data, error } = await _dbLerChave('cme_assinaturas');
       if (!error && data && data.value && typeof data.value === 'object' && !Array.isArray(data.value)) {
         base = Object.assign({}, data.value, base);
       }
@@ -19862,71 +19944,32 @@ function r2_iconeArquivo(nome) {
 
     loadingMsg.textContent = 'Conectando ao banco de dados...';
 
-    const { data, error } = await window._db.from('store').select('*');
-
-    if (error) throw new Error('Falha na leitura da tabela: ' + error.message + ' (código ' + error.code + ')');
-
-    // Popular cache com dados vindos do Supabase
-    data.forEach(row => {
-      _cache[row.key.replace('cme_', '')] = row.value;
-    });
-
-    // Semear dados padrão se ainda não existem no banco (await garante conclusão antes de logar)
-    // cme_usuarios é protegido por RLS — gerenciado exclusivamente via funções RPC
-    const seeds = [];
-    if (!data.find(r => r.key === 'cme_ocorrencias')) {
-      _cache['ocorrencias'] = DADOS_INICIAIS;
-      seeds.push(window._db.from('store').insert({ key: 'cme_ocorrencias', value: DADOS_INICIAIS }));
-    }
-    if (!data.find(r => r.key === 'cme_logs')) {
-      _cache['logs'] = [];
-      seeds.push(window._db.from('store').insert({ key: 'cme_logs', value: [] }));
-    }
-    if (!data.find(r => r.key === 'cme_estoque')) {
-      const estPad = {
-        itens: {
-          'Módulo eletrônico de monitoração':0,
-          'Cinta_17 cm':0,'Cinta_18 cm':0,'Cinta_19 cm':0,'Cinta_20 cm':0,
-          'Cinta_21 cm':0,'Cinta_22 cm':0,'Cinta_23 cm':0,'Cinta_24 cm':0,
-          'Cinta_25 cm':0,'Cinta_26 cm':0,'Cinta_27 cm':0,'Cinta_28 cm':0,
-          'Cinta_29 cm':0,'Cinta_30 cm':0,
-          'Trava':0,'Carregador da tornozeleira':0,
-          'Dispositivo DPP':0,
-        },
-        movimentacoes: [],
-        seriais: {},
-        registros: {},
-        configuracoes: { estoqueMinimo: {
-          'Módulo eletrônico de monitoração':5,'Cinta':3,'Trava':20,
-          'Carregador da tornozeleira':5,'Dispositivo DPP':3
-        }}
-      };
-      _cache['estoque'] = estPad;
-      seeds.push(window._db.from('store').insert({ key: 'cme_estoque', value: estPad }));
-    }
-    if (!data.find(r => r.key === 'cme_triagem')) {
-      _cache['triagem'] = { atendimentos: [] };
-      seeds.push(window._db.from('store').insert({ key: 'cme_triagem', value: { atendimentos: [] } }));
-    }
-    if (!data.find(r => r.key === 'cme_gerencia')) {
-      _cache['gerencia'] = { demandas: [] };
-      seeds.push(window._db.from('store').insert({ key: 'cme_gerencia', value: { demandas: [] } }));
-    }
-    if (!data.find(r => r.key === 'cme_relatorios')) {
-      _cache['relatorios'] = { registros: [] };
-      seeds.push(window._db.from('store').insert({ key: 'cme_relatorios', value: { registros: [] } }));
-    }
-    if (seeds.length) {
-      loadingMsg.textContent = 'Inicializando banco pela primeira vez...';
-      await Promise.all(seeds);
-    }
+    // Os DADOS são lidos depois do login (iniciarApp → _cmeGarantirDados): a leitura
+    // exige usuário+senha da sessão. Aqui só conecta e liga a sincronização.
 
     loadingMsg.style.color = '#4CAF50';
     loadingMsg.textContent = '\u{2713} Banco de dados conectado!';
 
     // Sincronização em tempo real: recebe mudanças de outros PCs
+    // Modo com login: o banco avisa QUAL chave mudou (tabela store_eventos, sem
+    // dados) e o CME busca o valor novo pela leitura com login.
+    window._db.channel('store-eventos')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'store_eventos' }, async (payload) => {
+        if (_dbModoRpc !== true || !usuarioAtual || !_dadosCarregados) return;
+        const k = (payload.new || payload.old || {}).key;
+        if (!k || k === 'cme_usuarios') return;
+        const r = await _dbLer([k]);
+        if (r.error) return;
+        const row = (r.data || [])[0], chave = k.replace('cme_', '');
+        if (row) _cache[chave] = row.value; else delete _cache[chave];
+        _cmeAposMudancaRemota(chave);
+      })
+      .subscribe();
+    // Modo antigo (enquanto o banco não tem as funções com login): a própria
+    // tabela store avisa as mudanças com o valor.
     window._db.channel('store-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'store' }, (payload) => {
+        if (_dbModoRpc === true || !_dadosCarregados) return;
         const row = payload.new || payload.old;
         if (!row?.key) return;
         const chave = row.key.replace('cme_', '');
@@ -19935,6 +19978,11 @@ function r2_iconeArquivo(nome) {
         } else {
           _cache[chave] = row.value;
         }
+        _cmeAposMudancaRemota(chave);
+      })
+      .subscribe();
+
+    function _cmeAposMudancaRemota(chave) {
         if (usuarioAtual) {
           atualizarTudo();
           if (document.getElementById('panel-admin')?.classList.contains('active')) {
@@ -19949,8 +19997,7 @@ function r2_iconeArquivo(nome) {
           }
           if (chave === 'oficios') com_sincronizarNumeroRemoto();
         }
-      })
-      .subscribe();
+    }
 
     // Pausa breve para o usuário ver a confirmação verde
     await new Promise(r => setTimeout(r, 600));
@@ -22366,8 +22413,7 @@ async function com_registrarOficio(dados) {
   if (window._db) {
     let lido = false;
     try {
-      const { data, error } = await window._db.from('store')
-        .select('value').eq('key', 'cme_oficios').maybeSingle();
+      const { data, error } = await _dbLerChave('cme_oficios');
       if (!error) {
         lido = true;
         if (data && data.value && Array.isArray(data.value.registros)) _cache['oficios'] = data.value;
