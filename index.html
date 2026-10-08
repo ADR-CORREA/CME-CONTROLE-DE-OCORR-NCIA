@@ -2066,6 +2066,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
 
     <!-- ─── RELATÓRIO ─── -->
     <div class="tab-panel" id="panel-relatorio">
+      <div id="rel-term-aviso" onclick="mudarSubAbaRel('termino')" title="Abrir a lista de término da monitoração" style="display:none;cursor:pointer;margin:0 0 10px 0;padding:10px 14px;border-radius:6px;border:1px solid rgba(248,81,73,.45);border-left:4px solid #f85149;background:rgba(248,81,73,.08);font-size:.88rem"></div>
       <div class="sub-tabs">
         <div class="sub-tab"        id="rel-stab-recebidos" onclick="mudarSubAbaRel('recebidos')">📥 Recebidos<span id="rel-rec-count" style="color:#e67e22;font-weight:700"></span></div>
         <div class="sub-tab active" id="rel-stab-lista"      onclick="mudarSubAbaRel('lista')">📄 Relatórios</div>
@@ -9671,6 +9672,7 @@ function _relTermLista() {
   return ((pk && Array.isArray(pk.terminos)) ? pk.terminos : [])
     .map(t => Object.assign({}, t, { dias: _relTermDias(t) }))
     .filter(t => t.termino && t.dias <= antec)
+    .filter((t, i, a) => a.findIndex(y => _relTermChave(y) === _relTermChave(t) && y.termino === t.termino) === i)
     .sort((a, b) => (a.dias - b.dias) || (_scVD(b) - _scVD(a)));
 }
 function relTerm_marcar(chave, status) {
@@ -9686,6 +9688,13 @@ function renderizarRelTermino() {
   const pend = base.filter(t => stDe(t) === 'pendente').length;
   const b = document.getElementById('rel-term-badge');
   if (b) { b.textContent = pend; b.style.display = pend ? 'inline-block' : 'none'; }
+  const av = document.getElementById('rel-term-aviso');
+  if (av) {
+    const pv = base.filter(t => t.dias < 0 && stDe(t) === 'pendente').length;
+    const p15 = base.filter(t => t.dias >= 0 && t.dias <= 15 && stDe(t) === 'pendente').length;
+    av.style.display = pend ? 'block' : 'none';
+    av.innerHTML = `\u{23F3} <b>Término da monitoração:</b> ${pv ? `<b style="color:#dc2626">${pv} vencido(s)</b> com tornozeleira ainda ativa, ` : ''}${p15 ? `<b style="color:#c2410c">${p15} vencendo em até 15 dias</b>, ` : ''}${pend} relatório(s) pendente(s) no total. <u>Ver lista</u>`;
+  }
   const tbody = document.getElementById('tbody-rel-termino');
   if (!tbody) return;
   const sel = document.getElementById('rel-term-antec');
