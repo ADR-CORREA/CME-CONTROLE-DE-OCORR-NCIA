@@ -7208,7 +7208,7 @@ function getSLA(tipo, medida) {
   return SLA[`${tipo}|${medida}`] || null;
 }
 
-function calcStatus(dataAlerta, tipo, medida, prodoc) {
+function calcStatus(dataAlerta, tipo, medida, prodoc, restabelecidaEm) {
   if (!dataAlerta || !tipo || !medida) return "-";
   const sla = getSLA(tipo, medida);
   if (!sla) return "-";
@@ -7217,6 +7217,9 @@ function calcStatus(dataAlerta, tipo, medida, prodoc) {
   const decorridoH = (agora - alerta) / 3600000;
   const pct = decorridoH / sla.h;
   if (prodoc === "SIM") return "\u{2705} COMUNICADO";
+  // Voltou a comunicar / restabeleceu DENTRO do prazo do POP: não é mais crítico.
+  // Depois do prazo continua VENCIDO (a violação aconteceu e precisa ser comunicada).
+  if (restabelecidaEm && (new Date(restabelecidaEm) - alerta) / 3600000 < sla.h) return "\u{2705} RESTABELECIDA";
   if (pct >= 1) return "\u{1F534} VENCIDO";
   if (pct >= 0.8) return "\u{1F7E0} VENCENDO";
   if (pct >= 0.5) return "\u{1F7E1} ATENÇÃO";
@@ -8160,7 +8163,7 @@ function atualizarDashboard() {
   let ok=0, at=0, ve=0, vd=0, com=0, prot=0;
   let protSemProd=0, cautSemProd=0, protVenc=0;
   ocs.forEach(oc => {
-    const s = calcStatus(oc.dataAlerta, oc.tipo, oc.medida, oc.prodoc);
+    const s = calcStatus(oc.dataAlerta, oc.tipo, oc.medida, oc.prodoc, oc.restabelecidaEm);
     if (s === "\u{1F7E2} NO PRAZO") ok++;
     else if (s === "\u{1F7E1} ATENÇÃO") at++;
     else if (s === "\u{1F7E0} VENCENDO") ve++;
@@ -8362,7 +8365,7 @@ function renderizarCriticos() {
   const ocs = getOcorrencias();
   // Calcular status e score
   const com_score = ocs.map((oc, i) => {
-    const s = calcStatus(oc.dataAlerta, oc.tipo, oc.medida, oc.prodoc);
+    const s = calcStatus(oc.dataAlerta, oc.tipo, oc.medida, oc.prodoc, oc.restabelecidaEm);
     return { ...oc, _status: s, _score: calcScore(s, i) };
   });
   // Ordenar por score
@@ -8407,8 +8410,8 @@ function renderizarCriticos() {
     const tentativas = contarTentativas(oc.contatos);
     return `<tr class="${rowClass}">
       <td style="text-align:center;font-weight:700;color:${priorColor};font-family:var(--font-mono)">${priorNum}º</td>
-      <td style="font-family:var(--font-mono)">${oc.id}</td>
-      <td><strong>${esc(oc.monitorado) || "-"}</strong></td>
+      <td style="font-family:var(--font-mono)">${oc.id}${_ocSeloAuto(oc)}</td>
+      <td><strong>${esc(oc.monitorado) || "-"}</strong>${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</td>
       <td>${esc(oc.medida) || "-"}</td>
       <td>${esc(oc.tipo) || "-"}</td>
       <td>${badge}</td>
@@ -8568,7 +8571,7 @@ function renderizarOcorrencias() {
       Nenhuma ocorrência encontrada</td></tr>`;
   } else {
     tbody.innerHTML = pagOcs.map(oc => {
-      const s = calcStatus(oc.dataAlerta, oc.tipo, oc.medida, oc.prodoc);
+      const s = calcStatus(oc.dataAlerta, oc.tipo, oc.medida, oc.prodoc, oc.restabelecidaEm);
       const pr = calcPrazoRestante(oc.dataAlerta, oc.tipo, oc.medida);
       const td = calcTempoDecorrido(oc.dataAlerta);
       const pp = calcPrazoPOP(oc.tipo, oc.medida);
@@ -8576,9 +8579,9 @@ function renderizarOcorrencias() {
       const badge = getBadge(s);
       const idx = findIdx(oc.id);
       return `<tr class="${rowClass}">
-        <td style="font-family:var(--font-mono);font-weight:700">${oc.id}</td>
+        <td style="font-family:var(--font-mono);font-weight:700">${oc.id}${_ocSeloAuto(oc)}</td>
         <td style="font-family:var(--font-mono);font-size:.78rem">${formatDate(oc.dataAlerta)}</td>
-        <td><strong>${esc(oc.monitorado) || "—"}</strong></td>
+        <td><strong>${esc(oc.monitorado) || "—"}</strong>${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</td>
         <td>${esc(oc.medida) || "—"}</td>
         <td>${esc(oc.tipo) || "—"}</td>
         <td style="font-family:var(--font-mono)">${pp}</td>
@@ -9444,20 +9447,37 @@ let _akAplicando = false, _akAvisoQueda = null;
 async function _akilesAutoAplicar() {
   const pk0 = _akilesPacote();
   if (_akAplicando || !pk0 || !pk0.geradoEm || !usuarioAtual) return;
-  if (getAkilesOc().ultimoPacote === pk0.geradoEm && getSemCom().ultimoPacoteAkiles === pk0.geradoEm) return;
+  const oc0 = getAkilesOc();
+  if (oc0.ultimoPacote === pk0.geradoEm && oc0.ocorrenciasDoPacote === pk0.geradoEm && getSemCom().ultimoPacoteAkiles === pk0.geradoEm) return;
   _akAplicando = true;
   try {
     // Todos os CMEs abertos recebem o pacote ao mesmo tempo (tempo real): cada um
     // espera um pouco (aleatório) e RELÊ do servidor antes de aplicar — quem vier
     // depois já vê o pacote aplicado e não sobrescreve tratativas salvas no meio.
     await new Promise(r => setTimeout(r, 500 + Math.random() * 4000));
-    for (const k of ['akiles_auto', 'semcomunicacao', 'akiles_ocorrencias']) {
+    for (const k of ['akiles_auto', 'semcomunicacao', 'akiles_ocorrencias', 'ocorrencias']) {
       const { data, error } = await window._db.from('store').select('value').eq('key', 'cme_' + k).maybeSingle();
       if (error) throw new Error(error.message);
       if (data && data.value != null) _cache[k] = data.value;
     }
     _akilesAplicarPacote();
+    _akilesOcorrenciasDoPacote();
   } finally { _akAplicando = false; }
+}
+// Gera as ocorrências uma vez por pacote — só com pacote são (o mesmo critério do
+// Sem Comunicação: senão um relatório cortado "restabeleceria" todo mundo).
+function _akilesOcorrenciasDoPacote() {
+  const pk = _akilesPacote(), oc = getAkilesOc();
+  if (!pk || !pk.geradoEm || oc.ocorrenciasDoPacote === pk.geradoEm) return;
+  if (!Array.isArray(pk.semcom) || pk.semcom.length < 20) return;
+  const abertos = (getSemCom().monitorados || []).filter(_scEmAberto).length;
+  if (abertos >= 40 && pk.semcom.length < abertos * 0.5) return;
+  const r = _akilesGerarOcorrencias(pk);
+  salvarStore('akiles_ocorrencias', Object.assign({}, getAkilesOc(), { ocorrenciasDoPacote: pk.geradoEm }));
+  if (r.criadas || r.restab) {
+    _mostrarToast(`\u{1F916} Ocorrências do AKILES: ${r.criadas} nova(s) lançada(s) automaticamente${r.restab ? `, ${r.restab} restabelecida(s)` : ''}. As vencidas no prazo do POP já estão no Crítico.`, 'sucesso');
+    try { atualizarTudo(); } catch (e) {}
+  }
 }
 function _akilesAplicarPacote() {
   const pk = _akilesPacote();
@@ -9493,6 +9513,81 @@ function _akilesAplicarPacote() {
     _mostrarToast(`\u{1F916} Sem Comunicação atualizado automaticamente do AKILES (${new Date(pk.geradoEm).toLocaleString('pt-BR')}): ${res.novos} novo(s), ${res.voltaram} voltaram a comunicar.`, 'sucesso');
     try { renderizarSemCom('juridico'); renderizarSemCom('psicossocial'); renderizarRelSemCom(); renderizarAkOc('rompimentos'); renderizarAkOc('botoes'); } catch (e) {}
   }
+}
+
+// ── Ocorrências automáticas (aba Ocorrências → Crítico pelo prazo do POP) ─────
+// Tornozeleira sem comunicação e rompimento viram ocorrência sozinhos, sem
+// digitação. DPP fica de fora (é da Equipe Multidisciplinar). Medida: violência
+// doméstica = Protetiva; demais = Cautelar. O prazo do POP e a ida para o Crítico
+// são os mesmos das ocorrências manuais (calcStatus). Ocorrência já existente com
+// o mesmo nº (lançada à mão) NUNCA é alterada.
+function _ocSeloAuto(oc) {
+  return oc && oc.origem === 'akiles' ? ' <span title="Criada automaticamente a partir do AKILES" style="background:rgba(88,166,255,.15);color:#2563eb;border-radius:3px;padding:0 5px;font-size:.62rem;font-weight:600;vertical-align:1px">AKILES</span>' : '';
+}
+// "29/09/26 21:00" ou "2026-03-29 16:20:52.63" → "2026-09-29T21:00" (hora local, igual ao formulário)
+function _akDataLocal(v) {
+  const s = String(v || '').trim();
+  let m = s.match(/^(\d{2})\/(\d{2})\/(\d{2,4})\s+(\d{2}):(\d{2})/);
+  if (m) return `${+m[3] < 100 ? 2000 + +m[3] : m[3]}-${m[2]}-${m[1]}T${m[4]}:${m[5]}`;
+  m = s.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
+  return m ? `${m[1]}T${m[2]}` : '';
+}
+function _akAgoraLocal() { const d = new Date(), z = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`; }
+
+function _akilesGerarOcorrencias(pk) {
+  const arr = getOcorrencias().slice();
+  const porId = new Map(arr.map(o => [String(o.id), o]));
+  const novas = [];
+  let restab = 0;
+  const criar = (id, campos) => {
+    if (!id || porId.has(String(id)) || !campos.dataAlerta) return;
+    const o = Object.assign({ id, plantao: '', operador: 'AKILES (automático)', ciodes: '', contatos: '', prodoc: '', prodocNum: '', prodocData: '', obs: '', juridico: {}, origem: 'akiles', criadaAutoEm: new Date().toISOString() }, campos);
+    _histOc(o, 'Criada automaticamente a partir do AKILES');
+    porId.set(String(id), o);
+    novas.push(o);
+  };
+  const tipoCME = t => /integridade/i.test(t || '') ? 'Rompimento / Integridade' : 'Descarregamento de bateria';
+  const desde = v => { const d = _akDataLocal(v); return d ? new Date(d).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'; };
+
+  // Tornozeleiras sem comunicação
+  (pk.semcom || []).filter(x => !x.dpp && !_scIsDPP(x)).forEach(x => {
+    const base = { monitorado: x.nome || ('Registro ' + x.registro), medida: x.vd ? 'Protetiva' : 'Cautelar', vdAkiles: !!x.vd, registroAkiles: x.registro };
+    const oc = x.ocAkiles;
+    if (oc && oc.idOc) {
+      criar(+oc.idOc, Object.assign(base, { tipo: tipoCME(oc.tipo), dataAlerta: _akDataLocal(oc.inicio),
+        descricao: `Gerada automaticamente: ${oc.tipo} (ocorrência nº ${oc.idOc} no AKILES), sem comunicação desde ${desde(x.ultimaComunicacao)}. Registro ${x.registro}. Processo ${oc.processo || x.processo || '—'}${oc.juizo ? ' — ' + oc.juizo : ''}.` }));
+    } else {
+      // Sem ocorrência aberta no AKILES: o ID é o nº de registro do monitorado
+      // (8-9 dígitos — não colide com os nº de ocorrência, de 6 dígitos).
+      criar(+String(x.registro).replace(/\D/g, ''), Object.assign(base, { tipo: 'Descarregamento de bateria', dataAlerta: _akDataLocal(x.ultimaComunicacao), semNumeroAkiles: true,
+        descricao: `Gerada automaticamente: sem comunicação desde ${desde(x.ultimaComunicacao)} (relatório de monitorados sem comunicação do AKILES, sem nº de ocorrência — o ID é o nº de registro ${x.registro}). Processo ${x.processo || '—'}.` }));
+    }
+  });
+  // Rompimentos dos últimos dias (mesmo os já restabelecidos: fora do prazo do POP ainda contam)
+  (pk.rompimentos || []).forEach(o => {
+    criar(+o.idOc, { monitorado: o.nome, medida: o.vd ? 'Protetiva' : 'Cautelar', vdAkiles: !!o.vd, tipo: 'Rompimento / Integridade', dataAlerta: _akDataLocal(o.inicio),
+      restabelecidaEm: o.situacao === 'Restabelecida' ? (_akDataLocal(o.fim) || undefined) : undefined,
+      descricao: `Gerada automaticamente: ${o.tipo} (ocorrência nº ${o.idOc} no AKILES). Processo ${o.processo || '—'}${o.juizo ? ' — ' + o.juizo : ''}.${o.comentario ? ' Comentário no AKILES: ' + o.comentario : ''}` });
+  });
+
+  // Restabelecimento das automáticas que ainda estão abertas
+  const rompRestab = new Map((pk.rompimentos || []).filter(o => o.situacao === 'Restabelecida' && o.fim).map(o => [String(o.idOc), _akDataLocal(o.fim)]));
+  const aindaSemCom = new Set((pk.semcom || []).map(x => _scChaveReg(x.registro)));
+  const agoraLocal = _akAgoraLocal();
+  arr.forEach(o => {
+    if (o.origem !== 'akiles' || o.restabelecidaEm) return;
+    let em = rompRestab.get(String(o.id)) || '';
+    if (!em && o.registroAkiles && !aindaSemCom.has(_scChaveReg(o.registroAkiles))) em = agoraLocal; // saiu da lista = voltou a comunicar
+    if (em) { o.restabelecidaEm = em; _histOc(o, 'Restabelecida (AKILES): voltou a comunicar em ' + new Date(em).toLocaleString('pt-BR')); restab++; }
+  });
+
+  // Novas: violência doméstica primeiro; depois as mais antigas (ordem do Crítico)
+  novas.sort((a, b) => ((b.vdAkiles ? 1 : 0) - (a.vdAkiles ? 1 : 0)) || (new Date(a.dataAlerta) - new Date(b.dataAlerta)));
+  if (!novas.length && !restab) return { criadas: 0, restab: 0 };
+  salvarStore('ocorrencias_backup_auto', { em: new Date().toISOString(), por: usuarioAtual?.nome || '', dados: getOcorrencias() }); // cópia no banco antes
+  salvarStore('ocorrencias', arr.concat(novas));
+  addLog(`Ocorrências automáticas do AKILES: ${novas.length} criada(s), ${restab} restabelecida(s)`);
+  return { criadas: novas.length, restab };
 }
 
 // ── Listas de ocorrências do AKILES: Rompimento (Relatório) e Botão (Psicossocial) ─
@@ -10437,7 +10532,7 @@ function _dashPendenciasPessoal(nivel) {
       out.push({ label:'Em acompanhamento', valor: ocs.filter(o=>o.prodoc==='SIM' && calcStatusCaso(o)==='EM ACOMPANHAMENTO').length, aba:'juridico' });
     } else if (nivel === 'plantao') {
       let crit = 0;
-      ocs.forEach(o => { const s = calcStatus(o.dataAlerta,o.tipo,o.medida,o.prodoc); if (['\u{1F534} VENCIDO','\u{1F7E0} VENCENDO','\u{1F7E1} ATENÇÃO'].includes(s)) crit++; });
+      ocs.forEach(o => { const s = calcStatus(o.dataAlerta,o.tipo,o.medida,o.prodoc,o.restabelecidaEm); if (['\u{1F534} VENCIDO','\u{1F7E0} VENCENDO','\u{1F7E1} ATENÇÃO'].includes(s)) crit++; });
       out.push({ label:'Casos críticos agora', valor: crit, alerta: crit>0, aba:'criticos' });
     }
   } catch(e) { console.warn('pendências pessoal', e); }
@@ -10552,7 +10647,7 @@ function visualizarOcorrencia(idx) {
   document.getElementById('ver-operador').value     = ou(oc.operador);
   document.getElementById('ver-prazo-pop').value    = calcPrazoPOP(oc.tipo, oc.medida);
   document.getElementById('ver-prazo-rest').value   = calcPrazoRestante(oc.dataAlerta, oc.tipo, oc.medida);
-  document.getElementById('ver-status').value       = calcStatus(oc.dataAlerta, oc.tipo, oc.medida, oc.prodoc);
+  document.getElementById('ver-status').value       = calcStatus(oc.dataAlerta, oc.tipo, oc.medida, oc.prodoc, oc.restabelecidaEm);
   document.getElementById('ver-tempo').value        = calcTempoDecorrido(oc.dataAlerta);
   document.getElementById('ver-ciodes').value       = ou(oc.ciodes);
   document.getElementById('ver-prodoc').value       = ou(oc.prodoc);
@@ -11760,7 +11855,7 @@ function exportarCSV() {
   const header = ["ID","Data Alerta","Monitorado","Medida","Tipo Violação","Prazo POP",
     "Status","CIODES","PRODOC","Nº PRODOC","Data PRODOC","Plantão","Operador","Contatos","Obs"];
   const rows = ocs.map(o => {
-    const s = calcStatus(o.dataAlerta, o.tipo, o.medida, o.prodoc);
+    const s = calcStatus(o.dataAlerta, o.tipo, o.medida, o.prodoc, o.restabelecidaEm);
     const pp = calcPrazoPOP(o.tipo, o.medida);
     return [o.id, formatDate(o.dataAlerta), o.monitorado, o.medida, o.tipo,
       pp, s, o.ciodes||"", o.prodoc||"", o.prodocNum||"", o.prodocData||"",
@@ -11811,7 +11906,7 @@ function getPct(dataAlerta, tipo, medida) {
   return (new Date() - new Date(dataAlerta)) / 3600000 / sla.h;
 }
 function getRowClass(status, medida) {
-  if (status === "\u{2705} COMUNICADO") return "row-comunicado";
+  if (status === "\u{2705} COMUNICADO" || status === "\u{2705} RESTABELECIDA") return "row-comunicado";
   if (status === "\u{1F534} VENCIDO") return "row-vencido";
   if (status === "\u{1F7E0} VENCENDO") return "row-vencendo";
   if (status === "\u{1F7E1} ATENÇÃO") return "row-atencao";
@@ -11825,6 +11920,7 @@ function getBadge(status) {
     "\u{1F7E0} VENCENDO":      "badge-vencendo",
     "\u{1F534} VENCIDO":       "badge-vencido",
     "\u{2705} COMUNICADO":    "badge-comunicado",
+    "\u{2705} RESTABELECIDA": "badge-comunicado",
     "-":                "badge-neutro",
   };
   return `<span class="badge ${map[status]||'badge-neutro'}">${status}</span>`;
