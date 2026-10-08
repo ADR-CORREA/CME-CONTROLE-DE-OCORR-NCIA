@@ -10759,7 +10759,9 @@ function _plDia(d, dia) {
   const rec = t.recebidas || null, st = (rec && rec.porStatus) || {};
   const recebidas = rec ? rec.total : null, tratadas = rec ? (st['Arquivado'] || 0) : null;
   return { dia, equipe: t.equipe || getPlantaoParaData(dia), parcial: !!(t.parcial || e.parcial), tot, ops, porOp, sens, resp: t.respostaMedianaMin, respN: t.respostaN || 0, aguardando: t.aguardando || 0,
-           rec, recebidas, tratadas, pctTratadas: recebidas ? Math.round(tratadas / recebidas * 100) : null, emAnalise: st['Em análise'] || 0, abertas: st['Aberto'] || 0 };
+           rec, recebidas, tratadas, pctTratadas: recebidas ? Math.round(tratadas / recebidas * 100) : null, emAnalise: st['Em análise'] || 0, abertas: st['Aberto'] || 0,
+           automaticas: t.automaticas, humanas: t.humanas, pop: t.pop || null, pctPop: t.pop && t.pop.avaliadas ? Math.round(t.pop.noPrazo / t.pop.avaliadas * 100) : null,
+           repasse: t.repasse, graves: t.graves || null, porHora: t.porHora || null, buracos: t.buracos || null, instTestadas: t.instTestadas || 0, instAtencao: t.instAtencao || [] };
 }
 function _plDiasDe(d, equipe) { return Object.keys(d.turnos || {}).concat(Object.keys(d.expediente || {})).filter((x, i, a) => a.indexOf(x) === i).filter(dia => getPlantaoParaData(dia) === equipe).sort().reverse(); }
 function pl_renderizar() {
@@ -10779,12 +10781,16 @@ function pl_renderizar() {
     const x = _plDia(d, dias[0]);
     return '<div onclick="pl_detalhe(\'' + eq + '\')" title="Ver o detalhe do plantão" style="cursor:pointer;border:1px solid #e2e8f0;border-top:4px solid ' + cor + ';border-radius:8px;padding:10px 12px;font-size:.8rem;display:flex;flex-direction:column;gap:3px">'
       + '<div style="display:flex;justify-content:space-between"><b style="color:' + cor + '">' + eq + '</b><span style="color:#64748b;font-family:var(--font-mono)">' + _plDataBR(x.dia) + '</span></div>'
-      + (x.recebidas != null ? linha('\u{1F4E5} Ocorrências recebidas', x.recebidas) + linha('Tratadas (arquivadas)', x.pctTratadas + '%', x.pctTratadas < 90 ? '#b45309' : '#15803d') : '')
-      + linha('\u2714 Confirmadas', x.tot.confirmadas, '#15803d') + linha('\u2718 Não confirmadas', x.tot.naoConfirmadas, '#b45309')
-      + linha('\u2B06 Instalações', x.tot.instalacao) + linha('\u2B07 Desinstalações', x.tot.desinstalacao)
-      + linha('\u23F1 Resposta (mediana)', x.resp != null ? x.resp + ' min' : '—', x.resp > 60 ? '#b91c1c' : '')
-      + linha('Contatos (SMS + alertas)', x.tot.sms + x.tot.alerta)
-      + linha('Aguardando atendimento', x.aguardando, x.aguardando ? '#b91c1c' : '')
+      + (x.recebidas != null ? linha('Recebidas', x.recebidas) + linha('Tratadas', x.pctTratadas + '%', x.pctTratadas < 90 ? '#b45309' : '#15803d') : '')
+      + (x.pctPop != null ? linha('No prazo POP', x.pctPop + '%', x.pctPop < 60 ? '#b91c1c' : x.pctPop < 80 ? '#b45309' : '#15803d') : '')
+      + (x.repasse != null ? linha('Repasse', x.repasse, x.repasse > 20 ? '#b45309' : '') : '')
+      + linha('Confirmadas', x.tot.confirmadas, '#15803d') + linha('Não confirm.', x.tot.naoConfirmadas, '#b45309')
+      + linha('Instalações', x.tot.instalacao + (x.instAtencao.length ? ' <span style="color:#b45309" title="com ponto de atenção nos testes">(' + x.instAtencao.length + '\u26A0)</span>' : '')) + linha('Desinstalações', x.tot.desinstalacao)
+      + (x.graves && x.graves.botaoN ? linha('Botão DPP', x.graves.botaoMed + ' min', x.graves.botaoMed > 30 ? '#b91c1c' : '#15803d') : '')
+      + (x.buracos ? linha('Sem ação \u2265 1h', x.buracos.n ? x.buracos.n + 'x \u00B7 ' + x.buracos.maiorMin + ' min' : 'nenhum', x.buracos.n ? '#b91c1c' : '#15803d') : '')
+      + linha('Resposta', x.resp != null ? x.resp + ' min' : '—', x.resp > 60 ? '#b91c1c' : '')
+      + linha('SMS + alertas', x.tot.sms + x.tot.alerta)
+      + linha('Aguardando', x.aguardando, x.aguardando ? '#b91c1c' : '')
       + '<div style="color:#94a3b8;font-size:.72rem;margin-top:2px">' + x.ops.length + ' operador(es) · ' + x.sens.length + ' ação(ões) sensível(is)</div></div>';
   }).join('');
   // comparativo: média por plantão no período (só plantões completos)
@@ -10797,22 +10803,28 @@ function pl_renderizar() {
     const comRec = xs.filter(x => x.recebidas != null), rec = comRec.reduce((a, x) => a + x.recebidas, 0), trat = comRec.reduce((a, x) => a + x.tratadas, 0);
     const opsTot = comRec.reduce((a, x) => a + (x.ops.length || 0), 0);
     return { eq, n: xs.length, conf: soma('confirmadas') / n, nao: soma('naoConfirmadas') / n, inst: soma('instalacao'), desinst: soma('desinstalacao'), resp: resps.length ? Math.round(resps.reduce((a, b) => a + b, 0) / resps.length) : null, cont: (soma('sms') + soma('alerta')) / n,
-             rec: comRec.length ? rec / comRec.length : null, pct: rec ? Math.round(trat / rec * 100) : null, porOp: opsTot ? rec / opsTot : null };
+             rec: comRec.length ? rec / comRec.length : null, pct: rec ? Math.round(trat / rec * 100) : null, porOp: opsTot ? rec / opsTot : null,
+             pop: (() => { const a = xs.reduce((s2, x) => s2 + ((x.pop && x.pop.avaliadas) || 0), 0), b = xs.reduce((s2, x) => s2 + ((x.pop && x.pop.noPrazo) || 0), 0); return a ? Math.round(b / a * 100) : null; })(),
+             repasse: xs.length ? xs.reduce((s2, x) => s2 + (x.repasse || 0), 0) / xs.length : null,
+             buracoMin: xs.reduce((s2, x) => s2 + ((x.buracos && x.buracos.totalMin) || 0), 0) };
   });
   const max = Math.max(1, ...lin.map(l => l.conf + l.nao));
   comp.innerHTML = '<div style="font-size:.8rem;font-weight:700;color:#0f2742;margin-bottom:6px">Comparativo — média por plantão (' + nd + ' dias)</div>'
     + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.78rem"><thead><tr style="color:#64748b;text-align:left">'
-    + '<th style="padding:4px 6px">Equipe</th><th style="padding:4px 6px">Plantões</th><th style="padding:4px 6px">Recebidas / plantão</th><th style="padding:4px 6px">% tratadas</th><th style="padding:4px 6px">Ocorrências / operador</th><th style="padding:4px 6px;min-width:180px">Violações avaliadas / plantão</th><th style="padding:4px 6px">Instal.</th><th style="padding:4px 6px">Desinst.</th><th style="padding:4px 6px">Resposta</th><th style="padding:4px 6px">Contatos / plantão</th></tr></thead><tbody>'
+    + '<th style="padding:4px 6px">Equipe</th><th style="padding:4px 6px">Plantões</th><th style="padding:4px 6px">Recebidas / plantão</th><th style="padding:4px 6px">% tratadas</th><th style="padding:4px 6px">% no POP</th><th style="padding:4px 6px">Repasse / plantão</th><th style="padding:4px 6px">Tempo sem ação \u2265 1h</th><th style="padding:4px 6px">Ocorrências / operador</th><th style="padding:4px 6px;min-width:180px">Violações avaliadas / plantão</th><th style="padding:4px 6px">Instal.</th><th style="padding:4px 6px">Desinst.</th><th style="padding:4px 6px">Resposta</th><th style="padding:4px 6px">Contatos / plantão</th></tr></thead><tbody>'
     + lin.map(l => '<tr style="border-top:1px solid #f1f5f9"><td style="padding:5px 6px;font-weight:700;color:' + (PLANTAO_CORES[l.eq] || '#1d4ed8') + '">' + l.eq + '</td>'
       + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + l.n + '</td>'
       + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + (l.rec != null ? l.rec.toFixed(0) : '—') + '</td>'
       + '<td style="padding:5px 6px;font-family:var(--font-mono);color:' + (l.pct != null && l.pct < 90 ? '#b45309' : '#15803d') + '">' + (l.pct != null ? l.pct + '%' : '—') + '</td>'
+      + '<td style="padding:5px 6px;font-family:var(--font-mono);color:' + (l.pop == null ? '' : l.pop < 60 ? '#b91c1c' : l.pop < 80 ? '#b45309' : '#15803d') + '">' + (l.pop != null ? l.pop + '%' : '—') + '</td>'
+      + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + (l.repasse != null ? l.repasse.toFixed(0) : '—') + '</td>'
+      + '<td style="padding:5px 6px;font-family:var(--font-mono);color:' + (l.buracoMin ? '#b91c1c' : '#15803d') + '">' + (l.buracoMin ? l.buracoMin + ' min' : '0') + '</td>'
       + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + (l.porOp != null ? l.porOp.toFixed(0) : '—') + '</td>'
       + '<td style="padding:5px 6px"><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:10px;background:#f1f5f9;border-radius:2px;overflow:hidden;display:flex"><div style="width:' + (l.conf / max * 100) + '%;background:#16a34a"></div><div style="width:' + (l.nao / max * 100) + '%;background:#d97706"></div></div><span style="font-family:var(--font-mono);white-space:nowrap">' + l.conf.toFixed(0) + ' \u2714 · ' + l.nao.toFixed(0) + ' \u2718</span></div></td>'
       + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + l.inst + '</td><td style="padding:5px 6px;font-family:var(--font-mono)">' + l.desinst + '</td>'
       + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + (l.resp != null ? l.resp + ' min' : '—') + '</td>'
       + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + l.cont.toFixed(0) + '</td></tr>').join('')
-    + '</tbody></table></div><div style="font-size:.7rem;color:#94a3b8;margin-top:4px">Recebidas = todas as ocorrências que entraram no plantão (qualquer tipo). % tratadas = arquivadas no AKILES. \u2714 confirmadas · \u2718 não confirmadas (pela última avaliação). Resposta = mediana do início da violação até o 1º atendimento.</div>';
+    + '</tbody></table></div><div style="font-size:.7rem;color:#94a3b8;margin-top:4px">Recebidas = todas as ocorrências que entraram no plantão (qualquer tipo). % tratadas = arquivadas no AKILES. % no POP = 1ª ação do operador dentro do prazo do POP (tabela do CME), sem contar as tratadas só pelo sistema. Repasse = ocorrências do plantão sem nenhuma ação de operador até as 08h. \u2714 confirmadas · \u2718 não confirmadas (pela última avaliação). Resposta = mediana do início da violação até o 1º atendimento.</div>';
 }
 function pl_detalhe(eq, diaEscolhido) {
   const d = _plDados(); if (!d) return;
@@ -10826,20 +10838,38 @@ function pl_detalhe(eq, diaEscolhido) {
     + '<select onchange="pl_detalhe(\'' + eq + '\', this.value)" style="padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px">' + dias.map(dd => '<option value="' + dd + '"' + (dd === dia ? ' selected' : '') + '>Plantão de ' + _plDataBR(dd) + (_plDia(d, dd).parcial ? ' (em andamento)' : '') + '</option>').join('') + '</select>'
     + '<span style="font-size:.78rem;color:#64748b">08h de ' + _plDataBR(dia) + ' às 08h do dia seguinte</span></div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;font-size:.78rem;margin-bottom:12px">'
-    + (x.recebidas != null ? [['\u{1F4E5} Recebidas', x.recebidas], ['Tratadas', x.pctTratadas + '%', x.pctTratadas < 90 ? '#b45309' : '#15803d'], ['Em análise', x.emAnalise], ['Abertas', x.abertas, x.abertas ? '#b91c1c' : '']] : []).concat([['\u2714 Confirmadas', x.tot.confirmadas, '#15803d'], ['\u2718 Não confirmadas', x.tot.naoConfirmadas, '#b45309'], ['\u2B06 Instalações', x.tot.instalacao], ['\u2B07 Desinstalações', x.tot.desinstalacao], ['Atendimentos', x.tot.atendimento], ['SMS', x.tot.sms], ['Alertas', x.tot.alerta], ['\u23F1 Resposta', x.resp != null ? x.resp + ' min' : '—'], ['Aguardando', x.aguardando]])
+    + (x.recebidas != null ? [['\u{1F4E5} Recebidas', x.recebidas], ['Pelo sistema', x.automaticas != null ? x.automaticas : '—'], ['Pelos operadores', x.humanas != null ? x.humanas : '—'], ['Tratadas', x.pctTratadas + '%', x.pctTratadas < 90 ? '#b45309' : '#15803d'], ['Em análise', x.emAnalise], ['Abertas', x.abertas, x.abertas ? '#b91c1c' : '']] : [])
+      .concat(x.pctPop != null ? [['\u{1F4CF} No prazo do POP', x.pctPop + '% (' + x.pop.noPrazo + '/' + x.pop.avaliadas + ')', x.pctPop < 60 ? '#b91c1c' : x.pctPop < 80 ? '#b45309' : '#15803d'], ['\u21AA Repasse', x.repasse]] : []).concat([['\u2714 Confirmadas', x.tot.confirmadas, '#15803d'], ['\u2718 Não confirmadas', x.tot.naoConfirmadas, '#b45309'], ['\u2B06 Instalações', x.tot.instalacao], ['\u2B07 Desinstalações', x.tot.desinstalacao], ['Atendimentos', x.tot.atendimento], ['SMS', x.tot.sms], ['Alertas', x.tot.alerta], ['\u23F1 Resposta', x.resp != null ? x.resp + ' min' : '—'], ['Aguardando', x.aguardando]])
       .map(([r, v, c]) => '<span style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px">' + r + ': <b style="' + (c ? 'color:' + c : '') + '">' + v + '</b></span>').join('') + '</div>'
     + (x.rec ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:12px;font-size:.76rem">'
         + '<div><div style="font-weight:700;font-size:.8rem;margin-bottom:4px">Ocorrências por tipo</div>' + Object.entries(x.rec.porTipo || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => '<div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding:2px 0"><span>' + esc(k) + '</span><b style="font-family:var(--font-mono)">' + v + '</b></div>').join('') + '</div>'
         + '<div><div style="font-weight:700;font-size:.8rem;margin-bottom:4px">Por criticidade</div>' + Object.entries(x.rec.porCriticidade || {}).sort().map(([k, v]) => '<div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding:2px 0"><span>' + esc(k) + '</span><b style="font-family:var(--font-mono)">' + v + '</b></div>').join('') + '</div></div>' : '')
+    + (() => {
+        const g = x.graves, b = x.buracos, ph = x.porHora;
+        const bloco = (tit, corpo) => '<div style="border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px"><div style="font-weight:700;font-size:.8rem;margin-bottom:6px">' + tit + '</div>' + corpo + '</div>';
+        const hhmm = iso => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        let h = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;margin-bottom:12px;font-size:.76rem">';
+        if (g) h += bloco('\u{1F6A8} Casos graves — 1ª ação do operador (mediana)',
+          '<div style="display:flex;justify-content:space-between"><span>Criticidade ALTA</span><b>' + (g.altaN ? g.altaMed + ' min (' + g.altaN + ')' : '—') + '</b></div>'
+          + (g.altaSem ? '<div style="color:#b91c1c">' + g.altaSem + ' de criticidade alta ainda sem ação de operador</div>' : '')
+          + '<div style="display:flex;justify-content:space-between;margin-top:4px"><span>Botão de segurança (DPP)</span><b style="color:' + (g.botaoMed > 30 ? '#b91c1c' : '#15803d') + '">' + (g.botaoN ? g.botaoMed + ' min (' + g.botaoN + ')' : '—') + '</b></div>'
+          + (g.botaoSem ? '<div style="color:#b91c1c">' + g.botaoSem + ' botão(ões) sem ação de operador</div>' : ''));
+        if (ph) { const ordem = Array.from({ length: 24 }, (_, i) => (i + 8) % 24), mx = Math.max(1, ...ph);
+          h += bloco('\u{1F552} Ocorrências por hora do plantão', '<div style="display:flex;align-items:flex-end;gap:2px;height:60px">' + ordem.map(hr => '<div title="' + String(hr).padStart(2, '0') + 'h: ' + ph[hr] + '" style="flex:1;background:#3b82f6;opacity:' + (ph[hr] === mx ? 1 : .55) + ';height:' + Math.max(2, ph[hr] / mx * 100) + '%"></div>').join('') + '</div><div style="display:flex;justify-content:space-between;color:#94a3b8;font-size:.66rem"><span>08h</span><span>14h</span><span>20h</span><span>02h</span><span>07h</span></div>'
+            + '<div style="margin-top:4px">Pico: <b>' + String(ph.indexOf(mx)).padStart(2, '0') + 'h</b> (' + mx + ' ocorrências)</div>'); }
+        if (b) h += bloco('\u{1F441} Períodos sem NENHUMA ação de operador (\u2265 1h)', b.n ? b.lista.map(x2 => '<div style="display:flex;justify-content:space-between"><span>' + hhmm(x2.ini) + ' \u2192 ' + hhmm(x2.fim).slice(-5) + '</span><b style="color:#b91c1c">' + x2.min + ' min</b></div>').join('') : '<div style="color:#15803d">Nenhum — sempre houve alguém agindo.</div>');
+        if (x.instTestadas) h += bloco('\u2B06 Instalações com ponto de atenção nos testes (' + x.instAtencao.length + ' de ' + x.instTestadas + ')', x.instAtencao.length ? x.instAtencao.map(a => '<div style="border-bottom:1px solid #f1f5f9;padding:2px 0">' + hhmm(a.ts) + ' · ' + esc(nome(a.op)) + (a.reg ? ' · reg. ' + esc(a.reg) : '') + '<br><span style="color:#b45309">' + a.motivos.map(esc).join('; ') + '</span></div>').join('') : '<div style="color:#15803d">Todas com testes OK.</div>');
+        return h + '</div>';
+      })()
     + '<div style="font-weight:700;font-size:.85rem;margin:6px 0">Operadores do plantão</div>'
     + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.76rem"><thead><tr>' + ['Operador', 'Atend.', '\u2714', '\u2718', 'SMS', 'Alertas', 'Instal.', 'Desinst.', 'Sensíveis', 'Consultas', 'Equipe'].map(th).join('') + '</tr></thead><tbody>'
     + ops.map(op => { const o = x.porOp[op]; const ns = x.sens.filter(s => s.op === op).length; const aj = _plAjustes()[op] || '';
         return '<tr style="border-top:1px solid #f1f5f9">' + td(esc(nome(op))) + td(o.atendimento || 0, 1) + td(o.confirmadas || 0, 1) + td(o.naoConfirmadas || 0, 1) + td(o.sms || 0, 1) + td(o.alerta || 0, 1) + td(o.instalacao || 0, 1) + td(o.desinstalacao || 0, 1) + td(ns, 1) + td(o.consulta || 0, 1)
           + td('<select onchange="pl_ajustarEquipe(\'' + op + '\', this.value, \'' + eq + '\', \'' + dia + '\')" style="font-size:.72rem;padding:2px 4px;border:1px solid #cbd5e1;border-radius:4px"><option value=""' + (!aj ? ' selected' : '') + '>Automático (' + esc(((d.operadores || {})[op] || {}).equipe || '?') + ')</option><option value="PLANTAO"' + (aj === 'PLANTAO' ? ' selected' : '') + '>É do plantão</option><option value="EXPEDIENTE"' + (aj === 'EXPEDIENTE' ? ' selected' : '') + '>Expediente / supervisão</option></select>') + '</tr>'; }).join('')
     + '</tbody></table></div>'
-    + '<div style="font-weight:700;font-size:.85rem;margin:14px 0 6px">Ações sensíveis (' + x.sens.length + ')</div>'
+    + '<div style="font-weight:700;font-size:.85rem;margin:14px 0 6px">Ações sensíveis (' + x.sens.length + ')' + (x.sens.some(s => new Date(s.ts).getHours() < 6) ? ' <span style="color:#dc2626;font-size:.75rem">— ' + x.sens.filter(s => new Date(s.ts).getHours() < 6).length + ' de madrugada (00h–06h)</span>' : '') + '</div>'
     + (x.sens.length ? '<div style="max-height:220px;overflow-y:auto"><table style="width:100%;border-collapse:collapse;font-size:.76rem"><thead><tr>' + ['Hora', 'Operador', 'Ação', 'Ocorrência'].map(th).join('') + '</tr></thead><tbody>'
-        + x.sens.map(s => '<tr style="border-top:1px solid #f1f5f9">' + td(new Date(s.ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }), 1) + td(esc(nome(s.op))) + td(esc(s.tipo)) + td(esc(s.idOc || '—'), 1) + '</tr>').join('') + '</tbody></table></div>'
+        + x.sens.map(s => { const hr = new Date(s.ts).getHours(); const mad = hr < 6; return '<tr style="border-top:1px solid #f1f5f9' + (mad ? ';background:#fef2f2' : '') + '">' + td(new Date(s.ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + (mad ? ' <span style="background:#dc2626;color:#fff;border-radius:3px;padding:0 4px;font-size:.62rem">MADRUGADA</span>' : ''), 1) + td(esc(nome(s.op))) + td(esc(s.tipo)) + td(esc(s.idOc || '—'), 1) + '</tr>'; }).join('') + '</tbody></table></div>'
       : '<div style="font-size:.78rem;color:#64748b">Nenhuma.</div>')
     + '<div style="font-size:.7rem;color:#94a3b8;margin-top:10px">Fonte: auditoria do AKILES (só leitura). Quem está como "Expediente / supervisão" não entra nos números do plantão.</div>';
   let ov = document.getElementById('pl-modal');
