@@ -8593,6 +8593,9 @@ function renderizarCriticos() {
         <button class="btn-sm" onclick="gerarRelatorioDeOcorrencia(${findIdx(oc.id)})"
           title="Gerar relatório (Modelos \u{2192} Jurídico) com dados desta ocorrência"
           style="margin-left:4px;background:#0D9488;color:#fff;border:none;border-radius:5px;padding:3px 7px;cursor:pointer;font-size:.78rem">\u{1F4CB} REL</button>
+        <button class="btn-sm" onclick="rv_relatorioDaOcorrencia(${findIdx(oc.id)})"
+          title="Relatório de violações pronto (busca no Metabase + mapas do robô + Word)"
+          style="margin-left:4px;background:#7c3aed;color:#fff;border:none;border-radius:5px;padding:3px 7px;cursor:pointer;font-size:.78rem">\u{1F5FA}\u{FE0F} Violações</button>
       </td>
     </tr>`;
   }).join("");
@@ -8753,6 +8756,7 @@ function renderizarOcorrencias() {
         <td style="font-family:var(--font-mono);font-size:.78rem">${esc(oc.prodocNum) || "—"}</td>
         <td>${esc(oc.plantao) || "—"}</td>
         <td style="white-space:nowrap">
+          <button class="btn-sm" onclick="rv_relatorioDaOcorrencia(${idx})" title="Relatório de violações pronto (busca no Metabase + mapas do robô + Word)" style="background:#7c3aed;color:#fff;border:none;border-radius:5px;padding:3px 7px;cursor:pointer;font-size:.78rem;margin-right:4px">\u{1F5FA}\u{FE0F}</button>
           <button class="btn-sm btn-outline" onclick="visualizarOcorrencia(${idx})" title="Visualizar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
           <button class="btn-edit" onclick="editarOcorrencia(${idx})" style="margin-left:4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Editar</button>
           <button class="btn-danger" onclick="excluirOcorrencia(${idx})" style="margin-left:4px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
@@ -20143,6 +20147,73 @@ function rv_atualizarAssinante() {
   const us = _rvListaAssinantes();
   const _u = us[idx];
   aviso.style.display = (_u && (_u.assinatura || (typeof _getAssinaturaDe === 'function' && _getAssinaturaDe(_u.usuario)))) ? 'none' : '';
+}
+
+// ── Relatório AUTOMÁTICO a partir da ocorrência ──────────────────────────────
+// Um clique na ocorrência: busca as violações do monitorado no Metabase (a mesma
+// consulta que antes era exportada em Excel, agora pela nuvem do CME, com login),
+// carrega no Gerador, pede os mapas ao robô e baixa o Word pronto.
+function _rvIsoData(d){ const z=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()); }
+function rv_relatorioDaOcorrencia(idx){
+  const oc=getOcorrencias()[idx];
+  if(!oc||!String(oc.monitorado||'').trim()){ _mostrarToast('Esta ocorrência não tem o nome do monitorado.','erro'); return; }
+  const base=oc.dataAlerta?new Date(oc.dataAlerta):new Date();
+  const ini=_rvIsoData(new Date((isNaN(base)?Date.now():base.getTime())-30*864e5)), fim=_rvIsoData(new Date());
+  let ov=document.getElementById('rv-auto-modal');
+  if(!ov){ ov=document.createElement('div'); ov.id='rv-auto-modal'; ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px'; ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); }); document.body.appendChild(ov); }
+  ov.innerHTML='<div style="background:#fff;border-radius:8px;max-width:440px;width:100%;padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.3);font-size:.88rem">'
+    +'<div style="font-weight:700;font-size:1rem;color:#0f172a;margin-bottom:6px">\u{1F5FA}\u{FE0F} Relatório de violações</div>'
+    +'<div style="color:#475569;margin-bottom:12px">'+esc(oc.monitorado)+'</div>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">'
+      +'<label style="display:flex;flex-direction:column;gap:3px;color:#475569">De<input type="date" id="rv-auto-ini" value="'+ini+'" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px"></label>'
+      +'<label style="display:flex;flex-direction:column;gap:3px;color:#475569">Até<input type="date" id="rv-auto-fim" value="'+fim+'" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px"></label></div>'
+    +'<div style="font-size:.76rem;color:#64748b;margin:10px 0 14px">Busca no Metabase as violações desse período, gera os mapas (violações de zona) e baixa o Word, como no Gerador. O robô de mapas precisa estar ligado.</div>'
+    +'<div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" onclick="document.getElementById(\'rv-auto-modal\').remove()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:6px 14px;cursor:pointer">Cancelar</button>'
+    +'<button type="button" id="rv-auto-ok" style="background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-weight:700;cursor:pointer">Gerar relatório</button></div></div>';
+  document.getElementById('rv-auto-ok').onclick=()=>{
+    const a=document.getElementById('rv-auto-ini').value, b=document.getElementById('rv-auto-fim').value;
+    if(!a||!b||a>b){ _mostrarToast('Confira o período.','erro'); return; }
+    ov.remove(); rv_gerarAutomatico(String(oc.monitorado).trim(), a, b);
+  };
+}
+async function rv_gerarAutomatico(nome, ini, fim){
+  if(!(typeof _r2Pronto==='function' && _r2Pronto())){ _mostrarToast('Sem conexão com o servidor do CME — tente de novo em instantes.','erro'); return; }
+  _mostrarToast('\u{1F50E} Buscando no Metabase as violações de '+nome+'…');
+  let rows;
+  try{
+    const r=await fetch(r2_state.url.replace(/\/$/,'')+'/metabase/ocorrencias?monitorado='+encodeURIComponent(nome)+'&ini='+ini+'&fim='+fim,{headers:{'Authorization':'Bearer '+_workerToken()}});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.error||('erro '+r.status));
+    rows=d.rows||[];
+  }catch(e){ _mostrarToast('Não consegui buscar no Metabase: '+(e.message||e),'erro'); return; }
+  const fmtBR=iso=>iso.split('-').reverse().join('/');
+  if(!rows.length){ _mostrarToast('Nenhuma violação de '+nome+' entre '+fmtBR(ini)+' e '+fmtBR(fim)+' no Metabase.','erro'); return; }
+  // mesmas colunas da planilha que era exportada do Metabase
+  const colUS=_rvDetectarColunaUS(rows.map(r=>r.data_ocorrencia_inicio));
+  const t=v=>String(v==null?'':v).trim();
+  const linhas=rows.map(r=>({
+    nome:t(r.monitorado), processo:t(r.nu_processo), cpf:t(r.cpf), competencia:t(r.ds_juizo), comarca:t(r.ds_foro),
+    tipo:t(r.tipo_ocorrencia), idOc:t(r.id_ocorrencia), ocorreu:_rvOcorreuNorm(r.data_ocorrencia_inicio,null,colUS),
+    duracao:t(r.duracao_formatada), disp:t(r.id_dispositivo_usuario).replace(/\D/g,''),
+    fim:r.data_ocorrencia_fim?_rvOcorreuNorm(r.data_ocorrencia_fim,null,colUS):'', endereco:'', contato:'',
+  })).filter(r=>r.nome);
+  const mapa={};
+  linhas.forEach(r=>{ const k=r.nome+'|||'+r.processo; if(!mapa[k]) mapa[k]=[]; if(r.idOc && mapa[k].some(o=>o.idOc===r.idOc)) return; mapa[k].push(r); });
+  _rv_grupos=Object.values(mapa);
+  _rv_planilha='Metabase (automático) — '+nome+' — '+fmtBR(ini)+' a '+fmtBR(fim);
+  // abre o Gerador já carregado (o servidor confere ali o que vai no relatório)
+  mudarAba('relatorio'); mudarSubAbaRel('gerador');
+  rv_renderizarLista();
+  const st=document.getElementById('rv-status'); if(st) st.style.display='';
+  rv_atualizarAssinante(); rv_marcarTodos(true);
+  // mapas das violações de zona (pelo robô)
+  const pedidos=new Map();
+  _rv_grupos.forEach(g=>g.filter(x=>/zona/i.test(x.tipo||'')).forEach(x=>{ const id=String(x.idOc||'').trim(); if(id&&!pedidos.has(id)) pedidos.set(id,_rvPedidoRobo(x)); }));
+  const faltam=[...pedidos.keys()].filter(id=>!_rv_imagens[id]);
+  if(faltam.length) await rv_capturarViaCloud(faltam.map(id=>pedidos.get(id)));
+  const sel=document.getElementById('rv-assinante');
+  if(!sel||sel.value===''){ _mostrarToast('Violações carregadas no Gerador. Escolha o servidor assinante e clique em "Gerar Word".','sucesso'); return; }
+  rv_gerarSelecionados('word');
 }
 
 // ── Importar planilha AKILES ──────────────────────────────────
