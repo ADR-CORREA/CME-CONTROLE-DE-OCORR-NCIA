@@ -1467,6 +1467,16 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
             <span>🔍</span>
             <input type="text" placeholder="Buscar monitorado..." oninput="filtrarCriticos(this.value)">
           </div>
+          <select id="crit-filtro-tipo" onchange="filtrarCriticosTipo(this.value)" title="Filtrar por tipo de violação" style="padding:6px 8px;border:1px solid var(--cz3,#ccc);border-radius:6px;font-size:.85rem;margin-left:8px;background:inherit;color:inherit">
+            <option value="">Todos os tipos de violação</option>
+            <option value="Rompimento / Integridade">Rompimento / Integridade</option>
+            <option value="Descarregamento de bateria">Descarregamento de bateria</option>
+            <option value="Zona de Exclusão (permanência)">Zona de Exclusão (permanência)</option>
+            <option value="Zona de Exclusão (passagem rápida)">Zona de Exclusão (passagem rápida)</option>
+            <option value="Zona de Inclusão (saída)">Zona de Inclusão (saída)</option>
+            <option value="DPP Acionado">DPP Acionado</option>
+            <option value="Aproximação DPP">Aproximação DPP</option>
+          </select>
           <div class="table-actions">
             <button class="btn-secondary" onclick="renderizarCriticos()">🔄 Atualizar</button>
             <button class="btn-secondary" onclick="exportarCriticosExcel()">📥 Exportar Excel</button>
@@ -1511,6 +1521,16 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
             <span>🔍</span>
             <input type="text" placeholder="Buscar ID, monitorado..." oninput="filtrarOcorrencias(this.value)">
           </div>
+          <select id="oc-filtro-tipo" onchange="filtrarOcorrenciasTipo(this.value)" title="Filtrar por tipo de violação" style="padding:6px 8px;border:1px solid var(--cz3,#ccc);border-radius:6px;font-size:.85rem;margin-left:8px;background:inherit;color:inherit">
+            <option value="">Todos os tipos de violação</option>
+            <option value="Rompimento / Integridade">Rompimento / Integridade</option>
+            <option value="Descarregamento de bateria">Descarregamento de bateria</option>
+            <option value="Zona de Exclusão (permanência)">Zona de Exclusão (permanência)</option>
+            <option value="Zona de Exclusão (passagem rápida)">Zona de Exclusão (passagem rápida)</option>
+            <option value="Zona de Inclusão (saída)">Zona de Inclusão (saída)</option>
+            <option value="DPP Acionado">DPP Acionado</option>
+            <option value="Aproximação DPP">Aproximação DPP</option>
+          </select>
           <div class="table-actions">
             <button class="btn-secondary" onclick="renderizarOcorrencias()">🔄 Atualizar</button>
             <button class="btn-secondary" onclick="exportarOcorrenciasExcel()">📥 Exportar Excel</button>
@@ -7817,6 +7837,8 @@ let paginaAtual = 1;
 const ITEMS_POR_PAG = 20;
 let filtroOc = "";
 let filtroCrit = "";
+let filtroOcTipo = "";   // filtro por tipo de violação (Ocorrências)
+let filtroCritTipo = ""; // filtro por tipo de violação (Críticos)
 let filtroJur = "";
 
 /* ─── LOGIN / LOGOUT ─────────────────────────────────── */
@@ -8372,7 +8394,7 @@ function renderizarCriticos() {
   com_score.sort((a, b) => a._score - b._score);
   // Mostrar apenas ATENÇÃO, VENCENDO e VENCIDO (excluir NO PRAZO, COMUNICADO e arquivados)
   const ativos = com_score.filter(o =>
-    !o.arquivadaPorComunicacao && (
+    !o.arquivadaPorComunicacao && (!filtroCritTipo || o.tipo === filtroCritTipo) && (
       o._status === "\u{1F534} VENCIDO" ||
       o._status === "\u{1F7E0} VENCENDO" ||
       o._status === "\u{1F7E1} ATENÇÃO"
@@ -8441,6 +8463,7 @@ function renderizarCriticos() {
 }
 
 function filtrarCriticos(v) { filtroCrit = v; renderizarCriticos(); }
+function filtrarCriticosTipo(v) { filtroCritTipo = v; renderizarCriticos(); }
 
 /* ─── GERAR COMUNICAÇÃO A PARTIR DE OCORRÊNCIA ───────── */
 function gerarComunicacaoDeOcorrencia(idx) {
@@ -8553,6 +8576,7 @@ function gerarRelatorioDeOcorrencia(idx) {
 /* ─── OCORRÊNCIAS ────────────────────────────────────── */
 function renderizarOcorrencias() {
   let ocs = getOcorrencias().filter(o => !o.arquivadaPorComunicacao);
+  if (filtroOcTipo) ocs = ocs.filter(o => o.tipo === filtroOcTipo);
   if (filtroOc) {
     ocs = ocs.filter(o =>
       String(o.id).includes(filtroOc) ||
@@ -8623,6 +8647,7 @@ function irPag(p) {
   renderizarOcorrencias();
 }
 function filtrarOcorrencias(v) { filtroOc = v; paginaAtual = 1; renderizarOcorrencias(); }
+function filtrarOcorrenciasTipo(v) { filtroOcTipo = v; paginaAtual = 1; renderizarOcorrencias(); }
 
 /* ─── Sub-aba Ocorrências (Ativas / Arquivadas) ───────── */
 function mudarSubAbaOc(aba) {
