@@ -2073,6 +2073,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
         <div class="sub-tab"        id="rel-stab-arquivadas" onclick="mudarSubAbaRel('arquivadas')">📁 Arquivadas</div>
         <div class="sub-tab"        id="rel-stab-gerador"    onclick="mudarSubAbaRel('gerador')">⚡ Gerador de Violações</div>
         <div class="sub-tab"        id="rel-stab-semcom"     onclick="mudarSubAbaRel('semcom')">📵 Sem Comunicação<span id="rel-semcom-badge" class="notif-badge" style="display:none">0</span></div>
+        <div class="sub-tab"        id="rel-stab-termino"    onclick="mudarSubAbaRel('termino')">⏳ Término da monitoração<span id="rel-term-badge" class="notif-badge" style="display:none">0</span></div>
         <div class="sub-tab"        id="rel-stab-romp"       onclick="mudarSubAbaRel('romp')">⛓️ Rompimento<span id="rel-romp-badge" class="notif-badge" style="display:none">0</span></div>
       </div>
       <!-- ── Sub-painel: Recebidos dos Críticos (fluxo) ── -->
@@ -2336,6 +2337,44 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
           <div style="margin-top:8px;font-size:.8rem;color:#666" id="rel-semcom-count"></div>
         </div>
       </div><!-- /rel-panel-semcom -->
+
+      <!-- ── Sub-painel: Término da monitoração (pacote automático do AKILES) ── -->
+      <div class="sub-panel" id="rel-panel-termino">
+        <div class="table-wrapper">
+          <div class="table-toolbar">
+            <div class="table-search">
+              <span>🔍</span>
+              <input type="text" id="rel-term-busca" placeholder="Buscar nome, registro ou processo..." oninput="renderizarRelTermino()">
+            </div>
+            <div class="table-actions" style="align-items:center;gap:8px">
+              <label style="font-size:.8rem;color:#64748b">Avisar com</label>
+              <select id="rel-term-antec" onchange="relTermAntecedencia(this.value)" style="padding:4px 6px;border:1px solid #ccc;border-radius:5px">
+                <option value="15">15 dias</option>
+                <option value="30">30 dias</option>
+                <option value="45">45 dias</option>
+                <option value="60">60 dias</option>
+              </select>
+              <select id="rel-term-fstatus" onchange="renderizarRelTermino()" style="padding:4px 6px;border:1px solid #ccc;border-radius:5px">
+                <option value="">Todos os status</option>
+                <option value="pendente">Pendente</option>
+                <option value="enviado">Relatório enviado</option>
+              </select>
+              <button class="btn-secondary" onclick="renderizarRelTermino()">🔄 Atualizar</button>
+            </div>
+          </div>
+          <div id="rel-term-info" style="font-size:.78rem;color:#64748b;margin:4px 0"></div>
+          <div id="rel-term-kpis" style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px 0;font-size:.8rem"></div>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead><tr>
+                <th>Monitorado</th><th>Registro</th><th>Processo</th><th>Término</th><th>Prazo</th><th>Status</th><th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-rel-termino"></tbody>
+            </table>
+          </div>
+          <div style="margin-top:8px;font-size:.78rem;color:#666">Data de término do processo no cadastro do AKILES (aba Processos). Envie o relatório antes do prazo para o juiz decidir com ele em mãos. Um aviso por processo.</div>
+        </div>
+      </div>
       <!-- ── Sub-painel: Rompimento (pacote automático do AKILES) ── -->
       <div class="sub-panel" id="rel-panel-romp">
         <div class="table-wrapper">
@@ -8156,7 +8195,7 @@ function atualizarTudo() {
   atualizarBadgeTriagemArq();
   atualizarBadgePsiArq();
   atualizarBadgeSemCom();
-  try { renderizarAkOc('rompimentos'); renderizarAkOc('botoes'); } catch (e) { console.warn('[CME] listas AKILES:', e.message); }
+  try { renderizarAkOc('rompimentos'); renderizarAkOc('botoes'); renderizarRelTermino(); } catch (e) { console.warn('[CME] listas AKILES:', e.message); }
   _akilesAutoAplicar().catch(e => console.warn('[CME] pacote AKILES:', e.message));
   atualizarBadgeOFC();
 }
@@ -9613,6 +9652,82 @@ function _akilesGerarOcorrencias(pk) {
   salvarStore('ocorrencias', arr.concat(novas));
   addLog(`Ocorrências automáticas do AKILES: ${novas.length} criada(s), ${restab} restabelecida(s)`);
   return { criadas: novas.length, restab };
+}
+
+// ── Término da monitoração (Relatório) ──────────────────────────────────────
+// O robô das 10h lê a data de término de cada processo no AKILES (só leitura) e
+// manda os que vencem nos próximos 60 dias (e os vencidos há até 30). Aqui o
+// Relatório vê os que entram na antecedência escolhida e marca "relatório enviado".
+const _REL_TERM_ANTEC_PADRAO = 30;
+function _relTermAntec() { try { const v = +localStorage.getItem('cme_rel_term_antec'); if ([15, 30, 45, 60].includes(v)) return v; } catch (e) {} return _REL_TERM_ANTEC_PADRAO; }
+function relTermAntecedencia(v) { try { localStorage.setItem('cme_rel_term_antec', String(v)); } catch (e) {} renderizarRelTermino(); }
+function _relTermStatus() { const m = carregarStore('rel_termino_status', {}); return (m && typeof m === 'object') ? m : {}; }
+function _relTermChave(t) { return String(t.registro || '') + '|' + String(t.processo || ''); }
+// dias até o término, recalculado HOJE (o pacote pode ser de ontem)
+function _relTermDias(t) { const d = new Date(String(t.termino) + 'T12:00:00'), h = new Date(); h.setHours(12, 0, 0, 0); return Math.round((d - h) / 864e5); }
+function _relTermLista() {
+  const pk = _akilesPacote();
+  const antec = _relTermAntec();
+  return ((pk && Array.isArray(pk.terminos)) ? pk.terminos : [])
+    .map(t => Object.assign({}, t, { dias: _relTermDias(t) }))
+    .filter(t => t.termino && t.dias <= antec)
+    .sort((a, b) => (a.dias - b.dias) || (_scVD(b) - _scVD(a)));
+}
+function relTerm_marcar(chave, status) {
+  const m = Object.assign({}, _relTermStatus());
+  if (status === 'pendente') delete m[chave];
+  else m[chave] = { status, em: new Date().toISOString(), por: usuarioAtual?.nome || '' };
+  salvarStore('rel_termino_status', m);
+  renderizarRelTermino();
+}
+function renderizarRelTermino() {
+  const base = _relTermLista(), st = _relTermStatus();
+  const stDe = t => (st[_relTermChave(t)] && st[_relTermChave(t)].status) || 'pendente';
+  const pend = base.filter(t => stDe(t) === 'pendente').length;
+  const b = document.getElementById('rel-term-badge');
+  if (b) { b.textContent = pend; b.style.display = pend ? 'inline-block' : 'none'; }
+  const tbody = document.getElementById('tbody-rel-termino');
+  if (!tbody) return;
+  const sel = document.getElementById('rel-term-antec');
+  if (sel) sel.value = String(_relTermAntec());
+  const busca = (document.getElementById('rel-term-busca')?.value || '').toLowerCase().trim();
+  const fSt = document.getElementById('rel-term-fstatus')?.value || '';
+  let lista = base.slice();
+  if (busca) lista = lista.filter(t => (t.nome || '').toLowerCase().includes(busca) || String(t.registro).includes(busca) || String(t.processo || '').includes(busca));
+  if (fSt) lista = lista.filter(t => stDe(t) === fSt);
+  const pk = _akilesPacote();
+  const info = document.getElementById('rel-term-info');
+  if (info) info.textContent = pk && Array.isArray(pk.terminos)
+    ? 'Atualizado automaticamente do AKILES em ' + new Date(pk.terminosEm || pk.geradoEm).toLocaleString('pt-BR') + ' (todo dia às 10h)'
+    : 'Aguardando a 1ª atualização automática do AKILES (todo dia às 10h).';
+  const kp = document.getElementById('rel-term-kpis');
+  if (kp) kp.innerHTML = `<span style="background:#fef2f2;padding:3px 10px;border-radius:3px;color:#b91c1c">Vencidos: <b>${base.filter(t => t.dias < 0).length}</b></span>`
+    + `<span style="background:#fff7ed;padding:3px 10px;border-radius:3px;color:#c2410c">Até 15 dias: <b>${base.filter(t => t.dias >= 0 && t.dias <= 15).length}</b></span>`
+    + `<span style="background:#eef2ff;padding:3px 10px;border-radius:3px">Total na antecedência: <b>${base.length}</b></span>`
+    + `<span style="background:#fef2f2;padding:3px 10px;border-radius:3px;color:#b91c1c">Relatório pendente: <b>${pend}</b></span>`;
+  const fmtD = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : '—'; };
+  tbody.innerHTML = !lista.length
+    ? `<tr><td colspan="7" style="text-align:center;padding:28px;color:#888">Nenhum término de monitoração dentro de ${_relTermAntec()} dias.</td></tr>`
+    : lista.map(t => {
+      const s = stDe(t), si = st[_relTermChave(t)] || {};
+      const cor = t.dias < 0 ? 'color:#b91c1c;font-weight:600' : t.dias <= 15 ? 'color:#c2410c;font-weight:600' : '';
+      const prazo = t.dias < 0 ? `venceu há ${-t.dias} dia(s)` : t.dias === 0 ? 'vence HOJE' : `faltam ${t.dias} dia(s)`;
+      const selo = s === 'pendente'
+        ? '<span style="background:rgba(248,81,73,.15);color:#b91c1c;padding:2px 8px;border-radius:3px;font-size:.72rem">Pendente</span>'
+        : `<span style="background:rgba(63,185,80,.15);color:#15803d;padding:2px 8px;border-radius:3px;font-size:.72rem">Relatório enviado</span><div style="font-size:.66rem;color:#999">${esc(si.por || '')}${si.por ? ' · ' : ''}${esc(si.em ? new Date(si.em).toLocaleString('pt-BR') : '')}</div>`;
+      const ch = _relSemComEsc(_relTermChave(t));
+      return `<tr>
+        <td><strong>${esc(t.nome || '—')}</strong>${_scSeloVD(t)}<div style="font-size:.72rem;color:#888">${esc(t.grupo || '')}</div></td>
+        <td style="font-family:var(--font-mono)">${esc(t.registro)}</td>
+        <td style="font-family:var(--font-mono);font-size:.8rem">${esc(t.processo || '—')}${t.principal ? ' <span style="font-size:.66rem;color:#888">(principal)</span>' : ''}</td>
+        <td style="font-family:var(--font-mono)">${fmtD(t.termino)}</td>
+        <td style="font-family:var(--font-mono);${cor}">${prazo}</td>
+        <td>${selo}</td>
+        <td style="white-space:nowrap">${s === 'pendente'
+          ? `<button class="btn-sm btn-outline" onclick="relTerm_marcar('${ch}','enviado')">\u{2713} Relatório enviado</button>`
+          : `<button class="btn-sm btn-outline" onclick="relTerm_marcar('${ch}','pendente')" title="Voltar para pendente">\u{21A9}</button>`}</td>
+      </tr>`;
+    }).join('');
 }
 
 // ── Listas de ocorrências do AKILES: Rompimento (Relatório) e Botão (Psicossocial) ─
@@ -12452,7 +12567,7 @@ function mudarSubAbaCom(aba) {
 
 // Navegação sub-abas Relatório
 function mudarSubAbaRel(aba) {
-  ['recebidos','lista','aguardando','arquivadas','gerador','semcom','romp'].forEach(a => {
+  ['recebidos','lista','aguardando','arquivadas','gerador','semcom','termino','romp'].forEach(a => {
     document.getElementById('rel-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('rel-panel-' + a)?.classList.toggle('active', a === aba);
   });
@@ -12463,6 +12578,7 @@ function mudarSubAbaRel(aba) {
   if (aba === 'gerador')    rv_inicializar();
   if (aba === 'semcom')     renderizarRelSemCom();
   if (aba === 'romp')       renderizarAkOc('rompimentos');
+  if (aba === 'termino')    renderizarRelTermino();
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -20021,7 +20137,7 @@ async function rv_capturarViaCloud(ids) {
     if (!r.ok || !d.jobId) { _mostrarToast(d.erro || d.error || 'Erro ao enviar o pedido ao servidor.', 'erro'); return; }
     jobId = d.jobId;
     const inseridos = new Set();
-    let ultProg = -1, semProg = 0, voltas = 0;
+    let ultProg = -1, semProg = 0, voltas = 0, naFila = 0, avisouFila = false, jaAvisou = false;
     for (;;) {
       await new Promise(res => setTimeout(res, 1500));
       if (_rvCancelarFlag) { cancelado = true; break; }
@@ -20029,26 +20145,37 @@ async function rv_capturarViaCloud(ids) {
       let j;
       try { const jr = await fetch(base + '/robo/job?id=' + encodeURIComponent(jobId), { headers: H }); if (!jr.ok) break; j = await jr.json(); } catch (e) { continue; }
       setBarra(j.progresso || 0, j.total || ids.length);
+      // Pedido ainda na fila: o robô pode estar terminando outro lote ou a internet
+      // dele oscilou. ESPERA (até 5 min) em vez de desistir em 36 s, como antes.
+      if (j.status === 'pendente' && !(j.progresso > 0)) {
+        naFila++;
+        const t = document.getElementById('rv-progresso-txt');
+        if (t) t.textContent = `Aguardando o robô pegar o pedido… (${Math.round(naFila * 1.5)}s)`;
+        if (naFila === 20 && !avisouFila) { avisouFila = true; _mostrarToast('\u{23F3} O pedido está na fila — o robô pega assim que ficar livre. Pode continuar esperando.'); }
+        if (naFila >= 200) { jaAvisou = true; _mostrarToast('\u{26A0}\u{FE0F} O robô não pegou o pedido em 5 minutos. Confira se o computador do robô está ligado e com internet (janela LIGAR ROBO) e tente de novo.', 'erro'); break; }
+        continue;
+      }
       for (const idOc of (j.prontos || [])) {
         if (inseridos.has(idOc)) continue;
         try { const ir = await fetch(base + '/robo/img?id=' + encodeURIComponent(jobId) + '&idOc=' + encodeURIComponent(idOc), { headers: H }); if (ir.ok) { _rvSetImg(idOc, await _rvMapaJpeg(await _blobToDataURL(await ir.blob()))); inseridos.add(idOc); } } catch (e) {}
       }
       if (j.status === 'concluido') break;
       if ((j.progresso || 0) !== ultProg) { ultProg = j.progresso || 0; semProg = 0; } else { semProg++; }
-      if (j.status === 'pendente' && semProg >= 24) { _mostrarToast('\u{26A0}\u{FE0F} O robô não respondeu. Ele está LIGADO no seu PC? (LIGAR ROBO.bat)', 'erro'); break; }
+      if (j.status === 'pendente' && semProg >= 200) { jaAvisou = true; _mostrarToast('\u{26A0}\u{FE0F} O robô não respondeu. Ele está LIGADO no seu PC? (LIGAR ROBO.bat)', 'erro'); break; }
       // Aborta SÓ se o robô estagnar (parar de produzir mapas por muito tempo) —
       // NUNCA por tempo total. Antes havia um teto fixo (voltas>=280 ≈ 12 min) que
       // apagava o job no MEIO de lotes grandes mesmo com o robô trabalhando: só
       // ~11 de 38 saíam. Agora um lote de 100 roda até o fim enquanto avança;
       // semProg>=120 (~5 min sem NENHUM mapa novo) = robô travou de verdade.
-      if (semProg >= 120) { _mostrarToast('\u{26A0}\u{FE0F} O robô parou de responder no meio da captura. Veja a janela do robô e tente de novo.', 'erro'); break; }
+      if (semProg >= 120) { jaAvisou = true; _mostrarToast('\u{26A0}\u{FE0F} O robô parou de responder no meio da captura. Veja a janela do robô e tente de novo.', 'erro'); break; }
       if (voltas >= 6000) break; // guarda anti-loop (só se algo travar de vez, ~4h)
     }
     const n = inseridos.size;
     if (cancelado) {
       _mostrarToast(`\u{23F9}\u{FE0F} Captura cancelada.${n ? ` ${n} mapa(s) já recebido(s).` : ''}`, 'erro');
     } else {
-      _mostrarToast(n ? `\u{2705} Captura concluída! ${n} mapa(s) recebido(s).` : 'Nenhum mapa recebido — confira se o robô está ligado.', n ? 'sucesso' : 'erro');
+      // sem mapa e sem aviso específico antes (ex.: o robô devolveu só falhas)
+      if (n || !jaAvisou) _mostrarToast(n ? `\u{2705} Captura concluída! ${n} mapa(s) recebido(s).` : 'O robô não conseguiu gerar os mapas desta vez. Tente de novo em instantes.', n ? 'sucesso' : 'erro');
       if (n) _rvBeep();
     }
   } catch (e) {
