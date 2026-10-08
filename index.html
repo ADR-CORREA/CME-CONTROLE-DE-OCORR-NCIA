@@ -8131,7 +8131,8 @@ function atualizarTudo() {
   atualizarBadgeTriagemArq();
   atualizarBadgePsiArq();
   atualizarBadgeSemCom();
-  try { _akilesAutoAplicar(); renderizarAkOc('rompimentos'); renderizarAkOc('botoes'); } catch (e) { console.warn('[CME] pacote AKILES:', e.message); }
+  try { renderizarAkOc('rompimentos'); renderizarAkOc('botoes'); } catch (e) { console.warn('[CME] listas AKILES:', e.message); }
+  _akilesAutoAplicar().catch(e => console.warn('[CME] pacote AKILES:', e.message));
   atualizarBadgeOFC();
 }
 
@@ -9344,9 +9345,13 @@ function _scAplicarLinhas(linhas, opts) {
   const registrosNoRelatorio = new Set(); // registros presentes NESTE relatório do AKILES
 
   for (const l of (linhas || [])) {
-    const nome     = String(l.nome || '').trim();
-    const registro = _scNormReg(l.registro);
-    if (!nome || !registro || !/\d/.test(registro)) continue; // pula linhas sem dados válidos
+    const nomeLinha = String(l.nome || '').trim();
+    const registro  = _scNormReg(l.registro);
+    if (!registro || !/\d/.test(registro)) continue; // pula linhas sem dados válidos
+    // Excel: linha sem nome não é monitorado (rodapé/total). Pacote do robô: o
+    // nome vem de outro relatório e pode faltar — a linha NÃO pode ser descartada,
+    // senão a pessoa sairia da lista como se tivesse voltado a comunicar.
+    if (!nomeLinha && !opts.aceitaSemNome) continue;
     // Importa TODAS as linhas (DPP e não-DPP). O filtro de exibição roteia
     // DPP → Psicossocial e não-DPP → Jurídico, então NADA some no import.
     if (_scIsDPP({ registro })) nPsi++; else nJur++;
@@ -9367,6 +9372,7 @@ function _scAplicarLinhas(linhas, opts) {
     const idx = cands.find(j => _scEmAberto(dados.monitorados[j]))
              ?? cands.find(j => dados.monitorados[j].situacao !== 'comunicou')
              ?? (cands.length ? cands[0] : -1);
+    const nome = nomeLinha || (idx >= 0 && dados.monitorados[idx].nome) || ('Registro ' + registro);
     if (idx >= 0) {
       // Estava arquivado e voltou a ficar sem comunicação: guarda a vez anterior.
       if (dados.monitorados[idx].situacao === 'comunicou') _scGuardarEpisodio(dados.monitorados[idx], dados.monitorados[idx], dataUlt);
@@ -9434,9 +9440,28 @@ function _scSeloVD(m) { return _scVD(m) ? '<span title="Violência doméstica �
 // Ordem de prioridade: violência doméstica primeiro; depois quem está há mais tempo.
 function _scOrdemPrioridade(a, b) { return (_scVD(b) - _scVD(a)) || (_diasSemComAtual(b) - _diasSemComAtual(a)); }
 
-function _akilesAutoAplicar() {
+let _akAplicando = false, _akAvisoQueda = null;
+async function _akilesAutoAplicar() {
+  const pk0 = _akilesPacote();
+  if (_akAplicando || !pk0 || !pk0.geradoEm || !usuarioAtual) return;
+  if (getAkilesOc().ultimoPacote === pk0.geradoEm && getSemCom().ultimoPacoteAkiles === pk0.geradoEm) return;
+  _akAplicando = true;
+  try {
+    // Todos os CMEs abertos recebem o pacote ao mesmo tempo (tempo real): cada um
+    // espera um pouco (aleatório) e RELÊ do servidor antes de aplicar — quem vier
+    // depois já vê o pacote aplicado e não sobrescreve tratativas salvas no meio.
+    await new Promise(r => setTimeout(r, 500 + Math.random() * 4000));
+    for (const k of ['akiles_auto', 'semcomunicacao', 'akiles_ocorrencias']) {
+      const { data, error } = await window._db.from('store').select('value').eq('key', 'cme_' + k).maybeSingle();
+      if (error) throw new Error(error.message);
+      if (data && data.value != null) _cache[k] = data.value;
+    }
+    _akilesAplicarPacote();
+  } finally { _akAplicando = false; }
+}
+function _akilesAplicarPacote() {
   const pk = _akilesPacote();
-  if (!pk || !pk.geradoEm || !usuarioAtual) return;
+  if (!pk || !pk.geradoEm) return;
   // ocorrências: acumula por nº de ocorrência (o pacote traz só os últimos dias)
   const oc = getAkilesOc();
   if (oc.ultimoPacote !== pk.geradoEm) {
@@ -9451,10 +9476,22 @@ function _akilesAutoAplicar() {
   if (dados.ultimoPacoteAkiles === pk.geradoEm || !Array.isArray(pk.semcom) || pk.semcom.length < 20) return;
   // Excel importado à mão DEPOIS do pacote é mais novo — não regride.
   if (dados.ultimaImportacao && dados.ultimaImportacao > pk.geradoEm) { dados.ultimoPacoteAkiles = pk.geradoEm; salvarSemCom(dados); return; }
-  const res = _scAplicarLinhas(pk.semcom, { origem: 'AKILES automático', pacote: pk.geradoEm });
+  // Sanidade: relatório que encolheu mais da metade de uma vez é suspeito (veio
+  // cortado do AKILES) — NÃO aplica; avisa e espera o próximo ou o Excel.
+  const abertos = (dados.monitorados || []).filter(_scEmAberto).length;
+  if (abertos >= 40 && pk.semcom.length < abertos * 0.5) {
+    if (_akAvisoQueda !== pk.geradoEm) {
+      _akAvisoQueda = pk.geradoEm;
+      _mostrarToast(`\u{26A0}\u{FE0F} O relatório automático do AKILES veio com só ${pk.semcom.length} sem comunicação (hoje são ${abertos} em aberto). Parece incompleto — NÃO apliquei. Se estiver certo, importe o Excel manualmente.`, 'erro');
+    }
+    return;
+  }
+  // Cópia no BANCO antes de aplicar (recuperável de qualquer computador).
+  salvarStore('semcomunicacao_backup_auto', { em: new Date().toISOString(), por: usuarioAtual?.nome || '', pacote: pk.geradoEm, dados: JSON.parse(JSON.stringify(dados)) });
+  const res = _scAplicarLinhas(pk.semcom, { origem: 'AKILES automático', pacote: pk.geradoEm, aceitaSemNome: true });
   if (res) {
     _mostrarToast(`\u{1F916} Sem Comunicação atualizado automaticamente do AKILES (${new Date(pk.geradoEm).toLocaleString('pt-BR')}): ${res.novos} novo(s), ${res.voltaram} voltaram a comunicar.`, 'sucesso');
-    try { renderizarSemCom('juridico'); renderizarSemCom('psicossocial'); renderizarRelSemCom(); } catch (e) {}
+    try { renderizarSemCom('juridico'); renderizarSemCom('psicossocial'); renderizarRelSemCom(); renderizarAkOc('rompimentos'); renderizarAkOc('botoes'); } catch (e) {}
   }
 }
 
