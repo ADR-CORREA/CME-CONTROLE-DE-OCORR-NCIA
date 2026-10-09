@@ -9668,7 +9668,7 @@ async function _akilesAutoAplicar() {
   const pk0 = _akilesPacote();
   if (_akAplicando || !pk0 || !pk0.geradoEm || !usuarioAtual) return;
   const oc0 = getAkilesOc();
-  if (oc0.ultimoPacote === pk0.geradoEm && oc0.ocorrenciasDoPacote === pk0.geradoEm && getSemCom().ultimoPacoteAkiles === pk0.geradoEm) return;
+  if (oc0.ultimoPacote === pk0.geradoEm && oc0.ocorrenciasDoPacote === pk0.geradoEm && getSemCom().ultimoPacoteAkiles === pk0.geradoEm) { _scCompletarDppAk(getSemCom(), pk0); return; }
   _akAplicando = true;
   try {
     // Todos os CMEs abertos recebem o pacote ao mesmo tempo (tempo real): cada um
@@ -9699,6 +9699,19 @@ function _akilesOcorrenciasDoPacote() {
     try { atualizarTudo(); } catch (e) {}
   }
 }
+// Pacote já aplicado por um CME de versão antiga (sem a marcação DPP do robô):
+// completa só o campo dppAk, sem reimportar nem mexer em mais nada.
+function _scCompletarDppAk(dados, pk) {
+  const porChave = new Map((pk.semcom || []).filter(x => typeof x.dpp === 'boolean').map(x => [_scChaveReg(x.registro), x.dpp]));
+  if (!porChave.size) return;
+  let mudou = 0;
+  (dados.monitorados || []).forEach(m => {
+    const v = porChave.get(_scChaveReg(m.registro));
+    if (typeof v === 'boolean' && m.dppAk !== v) { m.dppAk = v; mudou++; }
+  });
+  if (mudou) { salvarSemCom(dados); try { atualizarBadgeSemCom(); renderizarSemCom('juridico'); renderizarSemCom('psicossocial'); renderizarRelSemCom(); atualizarDashboard(); } catch (e) {} }
+}
+
 function _akilesAplicarPacote() {
   const pk = _akilesPacote();
   if (!pk || !pk.geradoEm) return;
@@ -9713,7 +9726,8 @@ function _akilesAplicarPacote() {
   }
   // sem comunicação
   const dados = getSemCom();
-  if (dados.ultimoPacoteAkiles === pk.geradoEm || !Array.isArray(pk.semcom) || pk.semcom.length < 20) return;
+  if (dados.ultimoPacoteAkiles === pk.geradoEm) { _scCompletarDppAk(dados, pk); return; }
+  if (!Array.isArray(pk.semcom) || pk.semcom.length < 20) return;
   // Excel importado à mão DEPOIS do pacote é mais novo — não regride.
   if (dados.ultimaImportacao && dados.ultimaImportacao > pk.geradoEm) { dados.ultimoPacoteAkiles = pk.geradoEm; salvarSemCom(dados); return; }
   // Sanidade: relatório que encolheu mais da metade de uma vez é suspeito (veio
