@@ -1684,6 +1684,21 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
             <div class="kpi-value" id="sc-kpi-total">0</div>
             <div class="kpi-label">Total</div>
           </div>
+          <div class="kpi-card" style="background:#f5f3ff;border-left:4px solid #7c3aed;cursor:pointer" title="Agressores com medida protetiva — prioridade: relatório ao juiz p/ mandado de prisão" onclick="_scFiltrarMedida('mpu')">
+            <div class="kpi-icon">🚨</div>
+            <div class="kpi-value" id="sc-kpi-mpu" style="color:#6d28d9">0</div>
+            <div class="kpi-label">MPU (agressores)</div>
+          </div>
+          <div class="kpi-card" style="background:#f5f3ff;border-left:4px solid #dc2626;cursor:pointer" title="MPU sem comunicar há 3 dias ou mais — enviar relatório ao juiz" onclick="_scFiltrarMedida('mpu', 3)">
+            <div class="kpi-icon">⚖️</div>
+            <div class="kpi-value" id="sc-kpi-mpu3" style="color:#dc2626">0</div>
+            <div class="kpi-label">MPU 3+ dias → relatório p/ MP</div>
+          </div>
+          <div class="kpi-card" style="background:#f8fafc;border-left:4px solid #64748b;cursor:pointer" title="Tornozeleiras que não são de medida protetiva" onclick="_scFiltrarMedida('demais')">
+            <div class="kpi-icon">📟</div>
+            <div class="kpi-value" id="sc-kpi-demais">0</div>
+            <div class="kpi-label">Demais tornozeleiras</div>
+          </div>
           <div class="kpi-card" style="background:#fefce8;border-left:4px solid #ca8a04">
             <div class="kpi-icon">⏱️</div>
             <div class="kpi-value" id="sc-kpi-4h">0</div>
@@ -1737,6 +1752,14 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
                 <option>3. at&eacute; 3 horas</option>
                 <option>4. at&eacute; 4 horas</option>
                 <option>5. mais de 4h</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Medida</label>
+              <select id="sc-f-medida" onchange="renderizarSemCom()">
+                <option value="">Todas</option>
+                <option value="mpu">MPU (agressores)</option>
+                <option value="demais">Demais</option>
               </select>
             </div>
             <div class="form-field" style="margin:0">
@@ -8472,7 +8495,7 @@ function _dashGraficos(ocs, st){
 }
 
 function _dSecCard(icon,nome,cor,rows){
-  return `<div class="dsec-card" style="--sc:${cor}"><div class="dsec-head"><span class="dsec-ic">${icon}</span>${nome}</div>${rows.map(r=>`<div class="dsec-row"><span>${r[0]}</span><b class="${r[2]?'dsec-alert':''}">${_dNum(r[1])}</b></div>`).join('')}</div>`;
+  return `<div class="dsec-card" style="--sc:${cor}"><div class="dsec-head"><span class="dsec-ic">${icon}</span>${nome}</div>${rows.map(r=>`<div class="dsec-row"><span>${r[0]}</span><b class="${r[2]?'dsec-alert':''}">${typeof r[1]==='string'?r[1]:_dNum(r[1])}</b></div>`).join('')}</div>`;
 }
 function _dashSetores(ocs, jm){
   const box=document.getElementById('dash-sectors'); if(!box) return;
@@ -8501,7 +8524,16 @@ function _dashSetores(ocs, jm){
   const gerAnd=ger.filter(g=>g.status==='em_andamento').length;
   const gerVenc=ger.filter(g=>g.status!=='concluida' && g.prazo && String(g.prazo).slice(0,10)<todayK).length;
 
+  // Sem comunicação separado: DPP (vítimas) × tornozeleira — e, na tornozeleira, MPU (agressores) primeiro.
+  const resumoAk=(_akilesPacote()||{}).resumo||null;
+  const dppAberto=_scListaArea(getSemCom(),'psicossocial').filter(_scEmAberto);
+  const dpp3=dppAberto.filter(m=>_diasSemComAtual(m)>=3).length;
+  const torAberto=sc.filter(_scEmAberto), mpuAberto=torAberto.filter(_scMPU);
+  const mpu3=mpuAberto.filter(m=>_diasSemComAtual(m)>=3).length;
+
   box.innerHTML=[
+    _dSecCard('\u{1F198}','DPP (botão do pânico)','#7C3AED',[['DPP ativos (AKILES)',resumoAk?resumoAk.dppAtivos:'—',false],['Sem comunicar agora',dppAberto.length,false],['Sem comunicar há 3+ dias',dpp3,dpp3>0]]),
+    _dSecCard('\u{1F4F5}','Tornozeleira sem comunicação','#DC2626',[['MPU – agressores',mpuAberto.length,mpuAberto.length>0],['MPU há 3+ dias (relatório p/ MP)',mpu3,mpu3>0],['Demais tornozeleiras',torAberto.length-mpuAberto.length,false]]),
     _dSecCard('\u{2696}\u{FE0F}','Jurídico','#4338CA',[['Em acompanhamento',jm.jurAcomp,false],['Próx. prazo (30–60d)',jm.jurProx,false],['60 dias (pós-comunicação)',jm.jur60,false],['180 dias (Akiles)',jur180,jur180>0],['OFC vencidos',ofcVenc,ofcVenc>0],['Sem comunicação (7d+)',semComCrit,semComCrit>0]]),
     _dSecCard('\u{1F4E1}','Comunicação','#0891B2',[['Aguardando PRODOC',aguard,false],['Já comunicados',comunicados,false]]),
     _dSecCard('\u{1F4CB}','Relatório','#1D4ED8',[['No mês',relMes,false],['Em confecção',relConf,false]]),
@@ -8936,7 +8968,9 @@ function salvarSemCom(d)   { salvarStore('semcomunicacao', d); }
    da equipe Psicossocial; os demais, do Jurídico. Mesmo store, sem
    mover nenhum dado — só filtragem de exibição. Preserva 100% das
    tratativas/desvinculações já registradas. */
-function _scIsDPP(m)        { return /dpp/i.test(String((m && m.registro) || '')); }
+// dppAk: marcação do robô (aparelho "vt-" na listagem do AKILES) — a maioria dos
+// DPP não traz "DPP" no registro. O Excel manual não traz o campo: vale o registro.
+function _scIsDPP(m)        { return !!m && (m.dppAk === true || /dpp/i.test(String(m.registro || ''))); }
 // Área do registro: marcação MANUAL (areaManual) tem prioridade — alguns DPP
 // não vêm com "-DPP" no Excel do AKILES, então o operador pode reclassificar.
 function _scAreaDe(m)       { if (m && (m.areaManual === 'psicossocial' || m.areaManual === 'juridico')) return m.areaManual; return _scIsDPP(m) ? 'psicossocial' : 'juridico'; }
@@ -9538,13 +9572,14 @@ function _scAplicarLinhas(linhas, opts) {
     if (!nomeLinha && !opts.aceitaSemNome) continue;
     // Importa TODAS as linhas (DPP e não-DPP). O filtro de exibição roteia
     // DPP → Psicossocial e não-DPP → Jurídico, então NADA some no import.
-    if (_scIsDPP({ registro })) nPsi++; else nJur++;
+    if (_scIsDPP({ registro, dppAk: l.dpp })) nPsi++; else nJur++;
     const dataUlt   = String(l.ultimaComunicacao || '').trim();
     const tempo     = String(l.tempoSemCom || '').trim();
     const intervalo = String(l.intervalo || '').trim();
     const unidade   = String(l.unidade || '').trim();
     const dias      = _parseDiasSemCom(tempo);
-    const extra     = l.grupo ? { grupo: String(l.grupo).trim() } : {};
+    const extra     = Object.assign(l.grupo ? { grupo: String(l.grupo).trim() } : {},
+                                    typeof l.dpp === 'boolean' ? { dppAk: l.dpp } : {}); // só o pacote do robô traz
 
     const chave = _scChaveReg(registro);
     registrosNoRelatorio.add(chave);
@@ -9620,7 +9655,11 @@ function _scAplicarLinhas(linhas, opts) {
 function _akilesPacote() { return carregarStore('akiles_auto', null); }
 function getAkilesOc() { const d = carregarStore('akiles_ocorrencias', null); return (d && typeof d === 'object') ? d : { rompimentos: {}, botoes: {} }; }
 function _scVD(m) { return /^\s*9\.|viol[êe]ncia dom[ée]stica/i.test(String((m && m.grupo) || '')); }
-function _scSeloVD(m) { return _scVD(m) ? '<span title="Violência doméstica — prioridade" style="background:#7c3aed;color:#fff;border-radius:3px;padding:1px 6px;font-size:.7rem;font-weight:600;margin-left:6px;vertical-align:1px">VD</span>' : ''; }
+// Agressor de MPU (tornozeleira, grupo 9): prioridade — relatório ao juiz p/ mandado de prisão.
+function _scMPU(m) { return _scVD(m) && _scAreaDe(m) === 'juridico'; }
+// Selo neutro para listas que misturam vítima (DPP) e agressor (términos, botão de segurança).
+function _scSeloVDNeutro(m) { return _scVD(m) ? '<span title="Violência doméstica — prioridade" style="background:#7c3aed;color:#fff;border-radius:3px;padding:1px 6px;font-size:.7rem;font-weight:600;margin-left:6px;vertical-align:1px">VD</span>' : ''; }
+function _scSeloVD(m) { return _scMPU(m) ? '<span title="Medida protetiva (agressor) — prioridade: relatório ao juiz p/ mandado de prisão" style="background:#7c3aed;color:#fff;border-radius:3px;padding:1px 6px;font-size:.7rem;font-weight:600;margin-left:6px;vertical-align:1px">MPU</span>' : ''; }
 // Ordem de prioridade: violência doméstica primeiro; depois quem está há mais tempo.
 function _scOrdemPrioridade(a, b) { return (_scVD(b) - _scVD(a)) || (_diasSemComAtual(b) - _diasSemComAtual(a)); }
 
@@ -9692,7 +9731,7 @@ function _akilesAplicarPacote() {
   const res = _scAplicarLinhas(pk.semcom, { origem: 'AKILES automático', pacote: pk.geradoEm, aceitaSemNome: true });
   if (res) {
     _mostrarToast(`\u{1F916} Sem Comunicação atualizado automaticamente do AKILES (${new Date(pk.geradoEm).toLocaleString('pt-BR')}): ${res.novos} novo(s), ${res.voltaram} voltaram a comunicar.`, 'sucesso');
-    try { renderizarSemCom('juridico'); renderizarSemCom('psicossocial'); renderizarRelSemCom(); renderizarAkOc('rompimentos'); renderizarAkOc('botoes'); } catch (e) {}
+    try { renderizarSemCom('juridico'); renderizarSemCom('psicossocial'); renderizarRelSemCom(); renderizarAkOc('rompimentos'); renderizarAkOc('botoes'); atualizarDashboard(); } catch (e) {}
   }
 }
 
@@ -9842,7 +9881,7 @@ function renderizarRelTermino() {
         : `<span style="background:rgba(63,185,80,.15);color:#15803d;padding:2px 8px;border-radius:3px;font-size:.72rem">Relatório enviado</span><div style="font-size:.66rem;color:#999">${esc(si.por || '')}${si.por ? ' · ' : ''}${esc(si.em ? new Date(si.em).toLocaleString('pt-BR') : '')}</div>`;
       const ch = _relSemComEsc(_relTermChave(t));
       return `<tr>
-        <td><strong>${esc(t.nome || '—')}</strong>${_scSeloVD(t)}<div style="font-size:.72rem;color:#888">${esc(t.grupo || '')}</div></td>
+        <td><strong>${esc(t.nome || '—')}</strong>${_scSeloVDNeutro(t)}<div style="font-size:.72rem;color:#888">${esc(t.grupo || '')}</div></td>
         <td style="font-family:var(--font-mono)">${esc(t.registro)}</td>
         <td style="font-family:var(--font-mono);font-size:.8rem">${esc(t.processo || '—')}${t.principal ? ' <span style="font-size:.66rem;color:#888">(principal)</span>' : ''}</td>
         <td style="font-family:var(--font-mono)">${fmtD(t.termino)}</td>
@@ -9900,7 +9939,7 @@ function renderizarAkOc(tipo) {
       const andamento = o.situacao === 'Em andamento' ? 'color:#b91c1c;font-weight:600' : '';
       const id = _relSemComEsc(o.idOc);
       return `<tr>
-        <td><strong>${esc(o.nome || '—')}</strong>${o.vd ? _scSeloVD({ grupo: '9.' }) : ''}<div style="font-size:.72rem;color:#888">${esc(o.grupo || '')}</div></td>
+        <td><strong>${esc(o.nome || '—')}</strong>${o.vd ? (tipo === 'botoes' ? _scSeloVDNeutro({ grupo: '9.' }) : _scSeloVD({ grupo: '9.' })) : ''}<div style="font-size:.72rem;color:#888">${esc(o.grupo || '')}</div></td>
         <td style="font-family:var(--font-mono)">${esc(o.idOc)}</td>
         <td style="font-family:var(--font-mono);font-size:.8rem">${esc(o.inicio)}${o.fim ? '<br>→ ' + esc(o.fim) : ''}<div style="font-size:.7rem;color:#888">${esc(o.duracao || '')}</div></td>
         <td style="font-size:.8rem;${andamento}">${esc(o.situacao || '—')}<div style="font-size:.7rem;color:#888">${esc(o.atendimento || '')}</div></td>
@@ -10254,6 +10293,7 @@ function renderizarSemCom(area) {
   const fIntervalo = (document.getElementById(cfg.pfx+'-f-intervalo')?.value || '').toLowerCase().trim();
   const fSituacao = document.getElementById(cfg.pfx+'-f-situacao')?.value || '';
   const fDiasMin  = parseInt(document.getElementById(cfg.pfx+'-f-dias-min')?.value || '0') || 0;
+  const fMedida   = document.getElementById(cfg.pfx+'-f-medida')?.value || ''; // só no Jurídico
 
   // Base já filtrada pela área (Jurídico exclui DPP; Psicossocial só DPP)
   const all = _scListaArea(dados, area);
@@ -10266,6 +10306,8 @@ function renderizarSemCom(area) {
   else if (fSituacao === 'tratativa') lista = lista.filter(m => (m.tratativas||[]).length > 0 && _scEmAberto(m));
   else if (fSituacao === 'ativo')    lista = lista.filter(m => _scEmAberto(m));
   if (fDiasMin > 0) lista = lista.filter(m => _diasSemComAtual(m) >= fDiasMin);
+  if (fMedida === 'mpu')    lista = lista.filter(_scMPU);
+  if (fMedida === 'demais') lista = lista.filter(m => !_scMPU(m));
 
   // Ordenar: violência doméstica primeiro; depois maiores dias (críticos no topo)
   lista.sort(_scOrdemPrioridade);
@@ -10282,6 +10324,9 @@ function renderizarSemCom(area) {
   kpi('30d',    aberto.filter(m => { const d = _diasSemComAtual(m); return d >= 30 && d < 180; }).length);
   kpi('180d',   aberto.filter(m => _diasSemComAtual(m) >= 180).length);
   kpi('desvinc', all.filter(m => m.situacao === 'desvinculado').length);
+  kpi('mpu',    aberto.filter(_scMPU).length);
+  kpi('mpu3',   aberto.filter(m => _scMPU(m) && _diasSemComAtual(m) >= 3).length);
+  kpi('demais', aberto.filter(m => !_scMPU(m)).length);
 
   // Última importação (timestamp da área, com fallback ao global)
   const uiEl = document.getElementById(cfg.ultima);
@@ -10341,10 +10386,18 @@ function renderizarSemCom(area) {
 function limparFiltrosSemCom(area) {
   area = area || 'juridico';
   const pfx = _SC_CFG[area].pfx;
-  [pfx+'-f-nome',pfx+'-f-registro',pfx+'-f-intervalo',pfx+'-f-situacao',pfx+'-f-dias-min'].forEach(id => {
+  [pfx+'-f-nome',pfx+'-f-registro',pfx+'-f-intervalo',pfx+'-f-situacao',pfx+'-f-dias-min',pfx+'-f-medida'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   renderizarSemCom(area);
+}
+
+// Atalho dos cartões MPU/Demais (Jurídico): aplica o filtro de medida e o mínimo de dias.
+function _scFiltrarMedida(medida, diasMin) {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  set('sc-f-medida', medida || '');
+  set('sc-f-dias-min', diasMin ? String(diasMin) : '');
+  renderizarSemCom('juridico');
 }
 
 // ── Modal: Registrar Tratativa ─────────────────────────────
