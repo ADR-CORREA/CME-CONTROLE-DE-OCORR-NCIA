@@ -2231,10 +2231,31 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
           <div style="font-weight:700;color:#1F4E78;font-size:1rem">⚡ Gerador de Relatório de Violações — AKILES</div>
         </div>
 
+        <!-- Busca direta no banco (mesmos filtros do Metabase) -->
+        <div id="rv-busca" style="background:#f5f3ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:8px;padding:14px 16px;margin-bottom:12px">
+          <div style="font-weight:700;color:#5b21b6;margin-bottom:2px">🔎 Buscar direto no banco (Metabase) — sem baixar planilha</div>
+          <div style="font-size:.78rem;color:#6b7280;margin-bottom:10px">Preencha ao menos <b>nome</b>, CPF, mãe ou pai (aceita parte do nome). Tipo e vara são opcionais e também aceitam parte do texto. Os mapas das violações de zona saem pelo robô.</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 10px" onkeydown="if(event.key==='Enter'){event.preventDefault();rv_buscarBanco();}">
+            <div class="form-field" style="margin:0;grid-column:span 2"><label>Monitorado</label><input type="text" id="rv-b-nome" placeholder="Nome ou parte do nome" autocomplete="off"></div>
+            <div class="form-field" style="margin:0"><label>CPF</label><input type="text" id="rv-b-cpf" placeholder="só números" inputmode="numeric" autocomplete="off"></div>
+            <div class="form-field" style="margin:0"><label>Mãe</label><input type="text" id="rv-b-mae" autocomplete="off"></div>
+            <div class="form-field" style="margin:0"><label>Pai</label><input type="text" id="rv-b-pai" autocomplete="off"></div>
+            <div class="form-field" style="margin:0"><label>Tipo de ocorrência</label><input type="text" id="rv-b-tipo" list="rv-b-tipos" placeholder="Todos" autocomplete="off">
+              <datalist id="rv-b-tipos"><option>Zona de Exclusão</option><option>Zona de Inclusão</option><option>Zona de Advertência</option><option>Dispositivo desligado por falta de carga na bateria</option><option>Alerta de integridade da pulseira</option><option>Tempo limite de ausência de comunicação GPRS</option><option>Tempo limite de ausência de sinal GPS</option><option>Proximidade com dispositivo de segurança</option><option>Botão de segurança preventiva</option></datalist></div>
+            <div class="form-field" style="margin:0"><label>Vara (juízo)</label><input type="text" id="rv-b-vara" list="rv-b-varas" placeholder="Todas — aceita parte, ex.: VIOLÊNCIA" autocomplete="off">
+              <datalist id="rv-b-varas"><option>VARA DE EXECUÇÕES PENAIS - 1ª VARA</option><option>VARA DE EXECUÇÕES PENAIS - 2ª VARA</option><option>1ª VARA DE EXECUÇÃO PENAL DE MACAPÁ</option><option>VARA DO JUIZADO ESPECIAL E DE VIOLÊNCIA DOMÉSTICA E FAMILIAR CONTRA A MULHER</option><option>JUIZADO DE VIOLÊNCIA DOMÉSTICA E FAMILIAR CONTRA A MULHER - 1ª VARA</option><option>JUIZADO DE VIOLÊNCIA DOMÉSTICA E FAMILIAR CONTRA A MULHER - 2ª VARA</option><option>PLANTÃO CRIMINAL DA COMARCA DE MACAPÁ</option><option>PLANTÃO CRIMINAL DA COMARCA DE SANTANA</option><option>VARA DAS GARANTIAS - 1ª VARA</option><option>VARA DAS GARANTIAS - 2ª VARA</option><option>VARA CRIMINAL - 1ª VARA</option><option>VARA CRIMINAL - 2ª VARA</option><option>VARA CRIMINAL - 3ª VARA  - CRIMINAL E DE AUDITORIA MILITAR</option><option>VARA CRIMINAL - 4ª VARA</option><option>1ª VARA CRIMINAL DE SANTANA</option><option>VARA CRIMINAL E TRIBUNAL DO JÚRI - 1ª VARA</option><option>VARA CRIMINAL E TRIBUNAL DO JÚRI - 2ª VARA</option><option>VARA DO TRIBUNAL DO JÚRI</option><option>VARA ÚNICA</option><option>1ª VARA DE OIAPOQUE</option><option>2ª VARA DE OIAPOQUE</option><option>1ª VARA DE COMPETÊNCIA GERAL E TRIBUNAL DO JÚRI</option><option>TRIBUNAL DE JUSTIÇA</option><option>VARA DO JUIZADO ESPECIAL CRIMINAL</option><option>4ª VARA FEDERAL - CRIMINAL E JUIZADO ESPECIAL FEDERAL CRIMINAL ADJUNTO</option><option>VARA CRIMINAL ESTADUAL DE OUTRO ESTADO</option><option>VARA DE EXECUÇÃO PENAL DE OUTRO ESTADO</option></datalist></div>
+            <div class="form-field" style="margin:0"><label>De</label><input type="date" id="rv-b-ini"></div>
+            <div class="form-field" style="margin:0"><label>Até</label><input type="date" id="rv-b-fim"></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+            <button type="button" class="btn-secondary" onclick="rv_limparBusca()">✕ Limpar</button>
+            <button type="button" class="btn-primary" style="background:#7c3aed;border-color:#7c3aed" onclick="rv_buscarBanco()">🔎 Buscar e carregar no Gerador</button>
+          </div>
+        </div>
+
         <!-- Upload -->
-        <div style="background:#f0f9ff;border:2px dashed #0284c7;border-radius:12px;padding:28px;text-align:center;margin-bottom:16px">
-          <div style="font-size:2rem;margin-bottom:8px">📊</div>
-          <div style="font-weight:600;color:#1F4E78;margin-bottom:6px">Importe a planilha exportada do AKILES AP</div>
+        <div style="background:#f0f9ff;border:2px dashed #0284c7;border-radius:12px;padding:14px;text-align:center;margin-bottom:16px">
+          <div style="font-weight:600;color:#1F4E78;margin-bottom:6px">📊 Ou importe a planilha exportada do AKILES AP</div>
           <div style="font-size:.85rem;color:#666;margin-bottom:14px">Formatos aceitos: <strong>.xlsx</strong> ou <strong>.csv</strong></div>
           <label class="btn-primary" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px">
             📂 Selecionar planilha do AKILES
@@ -20461,12 +20482,41 @@ function rv_relatorioDaOcorrencia(idx){
     ov.remove(); rv_gerarAutomatico(String(oc.monitorado).trim(), a, b);
   };
 }
-async function rv_gerarAutomatico(nome, ini, fim){
+// ── Busca direta no banco (Gerador): mesmos filtros do card do Metabase ──
+const _RV_BUSCA_CAMPOS = { monitorado:'rv-b-nome', cpf:'rv-b-cpf', mae:'rv-b-mae', pai:'rv-b-pai', tipo:'rv-b-tipo', vara:'rv-b-vara' };
+function _rvBuscaPeriodoPadrao(){
+  const a=document.getElementById('rv-b-ini'), b=document.getElementById('rv-b-fim');
+  if(a && !a.value) a.value=_rvIsoData(new Date(Date.now()-30*864e5));
+  if(b && !b.value) b.value=_rvIsoData(new Date());
+}
+function rv_limparBusca(){
+  Object.values(_RV_BUSCA_CAMPOS).concat(['rv-b-ini','rv-b-fim']).forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  _rvBuscaPeriodoPadrao();
+}
+function rv_buscarBanco(){
+  _rvBuscaPeriodoPadrao();
+  const f={};
+  Object.entries(_RV_BUSCA_CAMPOS).forEach(([k,id])=>{ const v=String(document.getElementById(id)?.value||'').replace(/\s+/g,' ').trim(); if(v) f[k]=v; });
+  if(f.cpf) f.cpf=f.cpf.replace(/\D/g,'');
+  if(!['monitorado','cpf','mae','pai'].some(k=>(f[k]||'').length>=3)){ _mostrarToast('Informe o nome (ou CPF, mãe ou pai) com pelo menos 3 caracteres.','erro'); return; }
+  const ini=document.getElementById('rv-b-ini').value, fim=document.getElementById('rv-b-fim').value;
+  if(!ini||!fim||ini>fim){ _mostrarToast('Confira o período.','erro'); return; }
+  rv_gerarAutomatico(f, ini, fim, { gerarWord:false });
+}
+setTimeout(_rvBuscaPeriodoPadrao, 0);
+
+// nomeOuFiltros: o nome (ocorrência) ou { monitorado, cpf, mae, pai, tipo, vara } (busca do Gerador).
+// opts.gerarWord=false: só carrega e captura os mapas — quem buscou confere antes de gerar.
+async function rv_gerarAutomatico(nomeOuFiltros, ini, fim, opts){
+  opts=opts||{};
+  const filtros=typeof nomeOuFiltros==='object' ? nomeOuFiltros : { monitorado:nomeOuFiltros };
+  const nome=filtros.monitorado||(filtros.cpf?'CPF '+filtros.cpf:'')||(filtros.mae?'filho(a) de '+filtros.mae:'')||(filtros.pai?'filho(a) de '+filtros.pai:'');
   if(!(typeof _r2Pronto==='function' && _r2Pronto())){ _mostrarToast('Sem conexão com o servidor do CME — tente de novo em instantes.','erro'); return; }
   _mostrarToast('\u{1F50E} Buscando no Metabase as violações de '+nome+'…');
   let rows;
   try{
-    const r=await fetch(r2_state.url.replace(/\/$/,'')+'/metabase/ocorrencias?monitorado='+encodeURIComponent(nome)+'&ini='+ini+'&fim='+fim,{headers:{'Authorization':'Bearer '+_workerToken()}});
+    const qs=Object.entries(filtros).filter(([,v])=>v).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
+    const r=await fetch(r2_state.url.replace(/\/$/,'')+'/metabase/ocorrencias?'+qs+'&ini='+ini+'&fim='+fim,{headers:{'Authorization':'Bearer '+_workerToken()}});
     const d=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(d.error||('erro '+r.status));
     rows=d.rows||[];
@@ -20485,7 +20535,7 @@ async function rv_gerarAutomatico(nome, ini, fim){
   const mapa={};
   linhas.forEach(r=>{ const k=r.nome+'|||'+r.processo; if(!mapa[k]) mapa[k]=[]; if(r.idOc && mapa[k].some(o=>o.idOc===r.idOc)) return; mapa[k].push(r); });
   _rv_grupos=Object.values(mapa);
-  _rv_planilha='Metabase (automático) — '+nome+' — '+fmtBR(ini)+' a '+fmtBR(fim);
+  _rv_planilha='Metabase (automático) — '+nome+(filtros.tipo?' — '+filtros.tipo:'')+' — '+fmtBR(ini)+' a '+fmtBR(fim);
   // abre o Gerador já carregado (o servidor confere ali o que vai no relatório)
   mudarAba('relatorio'); mudarSubAbaRel('gerador');
   rv_renderizarLista();
@@ -20496,6 +20546,11 @@ async function rv_gerarAutomatico(nome, ini, fim){
   _rv_grupos.forEach(g=>g.filter(x=>/zona/i.test(x.tipo||'')).forEach(x=>{ const id=String(x.idOc||'').trim(); if(id&&!pedidos.has(id)) pedidos.set(id,_rvPedidoRobo(x)); }));
   const faltam=[...pedidos.keys()].filter(id=>!_rv_imagens[id]);
   if(faltam.length) await rv_capturarViaCloud(faltam.map(id=>pedidos.get(id)));
+  if(opts.gerarWord===false){
+    const pessoas=_rv_grupos.length;
+    _mostrarToast('\u{2705} '+rows.length+' violação(ões) de '+pessoas+' monitorado(s)/processo(s) carregada(s). Confira, escolha o assinante e clique em "Gerar Word".','sucesso');
+    return;
+  }
   const sel=document.getElementById('rv-assinante');
   if(!sel||sel.value===''){ _mostrarToast('Violações carregadas no Gerador. Escolha o servidor assinante e clique em "Gerar Word".','sucesso'); return; }
   rv_gerarSelecionados('word');
