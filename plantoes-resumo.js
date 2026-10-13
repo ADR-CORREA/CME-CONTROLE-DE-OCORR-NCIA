@@ -6,10 +6,12 @@
    Emojis só por \u{...}. Prefixo _plr (não colidir com o index). */
 
 const _PLR_PARADO_ZERO = 180; // minutos parado por plantão que zeram o indicador "tempo parado"
+const _PLR_REST_ZERO = 20;    // restabelecidas deixadas abertas por plantão que zeram o indicador
 const _PLR_IND = [
-  { k: 'pop', rot: 'Agiu no prazo', peso: 0.4, dica: '1ª ação do operador dentro do prazo do POP' },
-  { k: 'trat', rot: 'Ocorrências resolvidas', peso: 0.2, dica: 'ocorrências arquivadas no AKILES' },
-  { k: 'parado', rot: 'Tempo parado', peso: 0.2, dica: 'períodos de 1h ou mais sem nenhuma ação de operador' },
+  { k: 'pop', rot: 'Agiu no prazo', peso: 0.3, dica: '1ª ação do operador dentro do prazo do POP' },
+  { k: 'trat', rot: 'Ocorrências resolvidas', peso: 0.15, dica: 'ocorrências arquivadas no AKILES' },
+  { k: 'parado', rot: 'Tempo parado', peso: 0.15, dica: 'períodos de 1h ou mais sem nenhuma ação de operador' },
+  { k: 'rest', rot: 'Restabelecidas deixadas', peso: 0.2, dica: 'ocorrências que começaram no plantão, já restabelecidas e ainda abertas na troca das 08h (só as "em andamento" podem passar)' },
   { k: 'vd', rot: 'Violência doméstica em dia', peso: 0.2, dica: 'violações de VD sem pendência (ação, prazo do POP e registro no perfil)' },
 ];
 let _plrVerTudo = false;
@@ -23,6 +25,7 @@ function _plrIndicadores(l) {
     pop: l.pop != null ? { s: l.pop / 100, txt: l.pop + '%' } : null,
     trat: l.pct != null ? { s: l.pct / 100, txt: l.pct + '%' } : null,
     parado: parado != null ? { s: _plrClamp(1 - parado / _PLR_PARADO_ZERO), txt: parado ? _plrMin(parado) + ' por plantão' : 'nenhum' } : null,
+    rest: l.restMed ? (m => ({ s: _plrClamp(1 - m / _PLR_REST_ZERO), txt: m ? (Math.round(m * 10) / 10).toString().replace('.', ',') + ' por plantão' : 'nenhuma' }))(l.restN / l.restMed) : null,
     vd: l.vdViol ? { s: _plrClamp(1 - l.vdPend / l.vdViol), txt: Math.round((1 - l.vdPend / l.vdViol) * 100) + '% em dia' } : null,
   };
 }
@@ -43,6 +46,7 @@ const _PLR_FRASE = {
   trat: x => 'deixou ocorrências sem resolver (' + x.txt + ' resolvidas)',
   parado: x => 'ficou tempo sem nenhuma ação (' + x.txt + ')',
   vd: x => 'deixou casos de violência doméstica com pendência (só ' + x.txt + ')',
+  rest: x => 'deixou ocorrências já restabelecidas abertas para o próximo plantão (' + x.txt + ')',
 };
 function _plrPior(ind) {
   return _PLR_IND.filter(i => ind[i.k]).sort((a, b) => ind[a.k].s - ind[b.k].s)[0] || null;
@@ -62,10 +66,11 @@ function _plrRender(d, lin, nd) {
   const frase = 'Nos últimos ' + nd + ' dias, o melhor plantão foi ' + nome(melhor.eq) + ' (nota ' + fmtNota(melhor.nota) + ').'
     + (eqs.length > 1 && piorInd && pior.ind[piorInd.k].s < 0.8 ? ' Precisa de mais atenção: ' + nome(pior.eq) + ', que ' + _PLR_FRASE[piorInd.k](pior.ind[piorInd.k]) + '.' : '');
   box.innerHTML = '<div style="font-size:.95rem;line-height:1.5;padding:10px 14px;background:#f8fafc;border-left:4px solid #2563eb;border-radius:4px;margin-bottom:12px">' + frase + '</div>'
+    + _plrHtmlPassivo(d)
     + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">'
     + eqs.map((l, i) => _plrCartao(l, i + 1, fmtNota)).join('') + '</div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px">'
-    + '<div style="font-size:.72rem;color:#94a3b8">Nota de 0 a 10 = prazo do POP (40%) + ocorrências resolvidas (20%) + tempo parado (20%; ' + _plrMin(_PLR_PARADO_ZERO) + ' parado por plantão zera) + violência doméstica em dia (20%). Clique num plantão para ver o detalhe.</div>'
+    + '<div style="font-size:.72rem;color:#94a3b8">Nota de 0 a 10 = prazo do POP (30%) + ocorrências resolvidas (15%) + tempo parado (15%; ' + _plrMin(_PLR_PARADO_ZERO) + ' parado por plantão zera) + restabelecidas deixadas (20%; ' + _PLR_REST_ZERO + ' por plantão zera; conta a partir de 14/10/2026) + violência doméstica em dia (20%). Indicador sem dado fica fora da conta. Clique num plantão para ver o detalhe.</div>'
     + '<button class="btn-secondary" style="font-size:.8rem" onclick="_plrVerTudo=!_plrVerTudo;pl_renderizar()">' + (_plrVerTudo ? 'Esconder os números' : '\u{1F4CA} Ver todos os números') + '</button></div>';
 }
 function _plrCartao(l, pos, fmtNota) {
@@ -84,4 +89,32 @@ function _plrCartao(l, pos, fmtNota) {
     + _PLR_IND.map(barra).join('')
     + '<div style="font-size:.74rem;margin-top:8px;color:' + (pior && l.ind[pior.k].s < 0.8 ? '#b45309' : '#15803d') + '">'
     + (pior && l.ind[pior.k].s < 0.8 ? 'A melhorar: ' + pior.rot.toLowerCase() : 'Tudo dentro do esperado') + '</div></div>';
+}
+
+// Passivo: restabelecidas abertas de qualquer data (ninguém arquivou) — tem que diminuir
+function _plrMaisDias(iso, n) { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+function _plrHtmlPassivo(d) {
+  const ps = ((d && d.restabelecidas) || {}).passivo || []; if (!ps.length) return '';
+  const p = ps[ps.length - 1], ref = _plrMaisDias(p.dia, -7), antes = ps.find(x => x.dia >= ref && x.dia < p.dia) || null;
+  const dif = antes ? p.total - antes.total : null;
+  return '<div style="font-size:.85rem;line-height:1.5;padding:8px 14px;background:#fff7ed;border-left:4px solid #ea580c;border-radius:4px;margin-bottom:12px">'
+    + '\u{1F4E6} <b>Passivo no AKILES:</b> <b style="color:#c2410c">' + p.total + '</b> ocorrências já restabelecidas continuam abertas'
+    + ' <span style="color:#64748b">(' + p.mais30 + ' há mais de 30 dias · ' + p.ate30 + ' de 7 a 30 dias · ' + (p.ate7 + p.ate1) + ' da última semana; ' + p.nuncaPegas + ' nunca foram pegas por operador)</span>.'
+    + (dif != null ? ' <b style="color:' + (dif > 0 ? '#b91c1c' : '#15803d') + '">' + (dif > 0 ? '\u{2191} ' + dif + ' a mais' : dif < 0 ? '\u{2193} ' + (-dif) + ' a menos' : 'Igual') + '</b> desde ' + antes.dia.slice(8, 10) + '/' + antes.dia.slice(5, 7) + '.' : '')
+    + ' <span style="color:#64748b">Precisam ser arquivadas.</span></div>';
+}
+// Detalhe do plantão: quais restabelecidas ele deixou abertas na troca
+function _plrHtmlRestDetalhe(x) {
+  const r = x && x.restDeixadas;
+  if (!r) return '<div style="border:1px solid #e2e8f0;border-left:4px solid #94a3b8;border-radius:6px;padding:8px 10px;margin-bottom:12px;font-size:.78rem;color:#64748b">\u{21AA} Restabelecidas deixadas: não medido neste plantão (a contagem começou em 14/10/2026 e só é feita quando o robô roda até 4 h depois da troca).</div>';
+  const cor = r.n ? '#c2410c' : '#15803d';
+  return '<div style="border:1px solid #fed7aa;border-left:4px solid ' + cor + ';border-radius:6px;padding:8px 10px;margin-bottom:12px">'
+    + '<div style="font-weight:700;font-size:.85rem;color:' + cor + ';margin-bottom:4px">\u{21AA} Restabelecidas deixadas para o próximo plantão: ' + (r.n || 'nenhuma') + '</div>'
+    + '<div style="font-size:.72rem;color:#64748b;margin-bottom:6px">Ocorrências que começaram neste plantão, já com andamento "Restabelecido", e que ainda estavam abertas na troca (conferido às ' + new Date(r.medidoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '). As "em andamento" podem passar e não contam.</div>'
+    + (r.lista && r.lista.length ? '<div style="max-height:260px;overflow-y:auto"><table style="width:100%;border-collapse:collapse;font-size:.75rem"><thead><tr>'
+      + ['Início', 'Ocorrência', 'Registro', 'Tipo', 'Estado', 'Criticidade'].map(h => '<th style="text-align:left;padding:4px 6px;color:#64748b;font-weight:600">' + h + '</th>').join('') + '</tr></thead><tbody>'
+      + r.lista.map(o => '<tr style="border-top:1px solid #f1f5f9"><td style="padding:4px 6px;font-family:var(--font-mono)">' + new Date(o.d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '</td>'
+        + '<td style="padding:4px 6px;font-family:var(--font-mono)">' + esc(o.id) + '</td><td style="padding:4px 6px;font-family:var(--font-mono)">' + esc(o.reg || '') + '</td><td style="padding:4px 6px">' + esc(o.t) + '</td>'
+        + '<td style="padding:4px 6px;color:' + (o.est === 'Aberto' ? '#b91c1c' : '#b45309') + '">' + esc(o.est) + (o.est === 'Aberto' ? ' (ninguém pegou)' : '') + '</td><td style="padding:4px 6px">' + esc(o.c) + '</td></tr>').join('')
+      + '</tbody></table></div>' : '') + '</div>';
 }

@@ -10933,7 +10933,7 @@ function _plDia(d, dia) {
            rec, recebidas, tratadas, pctTratadas: recebidas ? Math.round(tratadas / recebidas * 100) : null, emAnalise: st['Em análise'] || 0, abertas: st['Aberto'] || 0,
            automaticas: t.automaticas, humanas: t.humanas, pop: t.pop || null, pctPop: t.pop && t.pop.avaliadas ? Math.round(t.pop.noPrazo / t.pop.avaliadas * 100) : null,
            repasse: t.repasse, graves: t.graves || null, porHora: t.porHora || null, buracos: t.buracos || null, instTestadas: t.instTestadas || 0, instAtencao: t.instAtencao || [],
-           vd: t.vd || null, servidores: t.servidores || {}, ocServ: t.ocorrenciasPorServidor || null };
+           vd: t.vd || null, servidores: t.servidores || {}, ocServ: t.ocorrenciasPorServidor || null, restDeixadas: t.restDeixadas || null };
 }
 function _plDiasDe(d, equipe) { return Object.keys(d.turnos || {}).concat(Object.keys(d.expediente || {})).filter((x, i, a) => a.indexOf(x) === i).filter(dia => getPlantaoParaData(dia) === equipe).sort().reverse(); }
 function pl_renderizar() {
@@ -10969,6 +10969,7 @@ function pl_renderizar() {
       + (x.vd ? linha('<span style="color:#6d28d9">VD pendências</span>', x.vd.pendencias.length, x.vd.pendencias.length ? '#b91c1c' : '#15803d') : '')
       + (x.pctPop != null ? linha('No prazo POP', x.pctPop + '%', x.pctPop < 60 ? '#b91c1c' : x.pctPop < 80 ? '#b45309' : '#15803d') : '')
       + (x.repasse != null ? linha('Repasse', x.repasse, x.repasse > 20 ? '#b45309' : '') : '')
+      + (x.restDeixadas ? linha('Restab. deixadas', x.restDeixadas.n, x.restDeixadas.n ? '#c2410c' : '#15803d') : '')
       + linha('Confirmadas', x.tot.confirmadas, '#15803d') + linha('Não confirm.', x.tot.naoConfirmadas, '#b45309')
       + linha('Instalações', x.tot.instalacao + (x.instAtencao.length ? ' <span style="color:#b45309" title="com ponto de atenção nos testes">(' + x.instAtencao.length + '\u26A0)</span>' : '')) + linha('Desinstalações', x.tot.desinstalacao)
       + (x.graves && x.graves.botaoN ? linha('Botão DPP', x.graves.botaoMed + ' min', x.graves.botaoMed > 30 ? '#b91c1c' : '#15803d') : '')
@@ -10992,7 +10993,8 @@ function pl_renderizar() {
              pop: (() => { const a = xs.reduce((s2, x) => s2 + ((x.pop && x.pop.avaliadas) || 0), 0), b = xs.reduce((s2, x) => s2 + ((x.pop && x.pop.noPrazo) || 0), 0); return a ? Math.round(b / a * 100) : null; })(),
              repasse: xs.length ? xs.reduce((s2, x) => s2 + (x.repasse || 0), 0) / xs.length : null,
              buracoMin: xs.reduce((s2, x) => s2 + ((x.buracos && x.buracos.totalMin) || 0), 0),
-             vdViol: xs.reduce((s2, x) => s2 + ((x.vd && x.vd.violacoes) || 0), 0), vdPend: xs.reduce((s2, x) => s2 + ((x.vd && x.vd.pendencias.length) || 0), 0) };
+             vdViol: xs.reduce((s2, x) => s2 + ((x.vd && x.vd.violacoes) || 0), 0), vdPend: xs.reduce((s2, x) => s2 + ((x.vd && x.vd.pendencias.length) || 0), 0),
+             restN: xs.reduce((s2, x) => s2 + ((x.restDeixadas && x.restDeixadas.n) || 0), 0), restMed: xs.filter(x => x.restDeixadas).length };
   });
   const max = Math.max(1, ...lin.map(l => l.conf + l.nao));
   comp.innerHTML = '<div style="font-size:.8rem;font-weight:700;color:#0f2742;margin-bottom:6px">Comparativo — média por plantão (' + nd + ' dias)</div>'
@@ -11048,6 +11050,7 @@ function pl_detalhe(eq, diaEscolhido, focoVD) {
             : '<div style="color:#15803d;font-size:.78rem">Nenhuma pendência — todas atendidas no prazo e registradas.</div>')
           + '</div>';
       })()
+    + (typeof _plrHtmlRestDetalhe === 'function' ? _plrHtmlRestDetalhe(x) : '')
     + (() => {
         const g = x.graves, b = x.buracos, ph = x.porHora;
         const bloco = (tit, corpo) => '<div style="border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px"><div style="font-weight:700;font-size:.8rem;margin-bottom:6px">' + tit + '</div>' + corpo + '</div>';
@@ -29326,6 +29329,6 @@ function estat_exportarResultado() {
 <script src="secretaria-arquivo.js?v=20261013g"></script>
 <script src="semcom-contatos.js?v=20261013i"></script>
 <script src="produtividade.js?v=20261013k"></script>
-<script src="plantoes-resumo.js?v=20261013l"></script>
+<script src="plantoes-resumo.js?v=20261013m"></script>
 </body>
 </html>
