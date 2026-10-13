@@ -9,7 +9,7 @@
 const _SEC_NIVEIS = ['admin', 'gerencia', 'secretaria'];
 const _SEC_EQUIPES = ['ALFA', 'BRAVO', 'CHARLIE', 'DELTA', 'ECHO', 'EXPEDIENTE'];
 const _SEC_DIREITOS = [6, 12, 24];
-let _secAba = 'servidores', _secPerfilId = null, _secPerfilAba = 'ficha';
+let _secAba = 'despachos', _secPerfilId = null, _secPerfilAba = 'ficha', _secModeloId = null;
 
 _STORES_PROTEGIDAS.secretaria = v => (v && Array.isArray(v.servidores))
   ? v.servidores.length + (v.apoios || []).length + (v.folgas || []).length : -1;
@@ -18,7 +18,9 @@ function _secPode() { return !!(usuarioAtual && _SEC_NIVEIS.includes(usuarioAtua
 function _secNormal(d) {
   d = (d && typeof d === 'object') ? d : {};
   const arr = k => Array.isArray(d[k]) ? d[k] : [];
-  return { servidores: arr('servidores'), apoios: arr('apoios'), folgas: arr('folgas'), lixeira: arr('lixeira') };
+  return { servidores: arr('servidores'), apoios: arr('apoios'), folgas: arr('folgas'), lixeira: arr('lixeira'),
+    modelos: Array.isArray(d.modelos) ? d.modelos : null,                       // null = ainda usa os modelos padrão
+    config: (d.config && typeof d.config === 'object') ? d.config : {} };
 }
 function _secDados() { return _secNormal(carregarStore('secretaria', null)); }
 function _secId(p) { return p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -95,7 +97,7 @@ function sec_inicializar() {
   const root = document.getElementById('sec-root');
   if (!root) return;
   if (!_secPode()) { root.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b">Acesso restrito à Secretaria e à Gerência.</div>'; return; }
-  const abas = [['servidores', '\u{1F464} Servidores'], ['apoios', '\u{23F1}\u{FE0F} Apoios e Dispensas'], ['folgas', '\u{1F91D} Folgas combinadas'], ['auditoria', '\u{1F50D} Auditoria']];
+  const abas = [['despachos', '\u{1F4E8} Despachos PRODOC'], ['servidores', '\u{1F464} Servidores'], ['apoios', '\u{23F1}\u{FE0F} Apoios e Dispensas'], ['folgas', '\u{1F91D} Folgas combinadas'], ['auditoria', '\u{1F50D} Auditoria']];
   root.innerHTML = '<div class="dash-header"><div><div class="dash-title">\u{1F5C2}\u{FE0F} Secretaria</div>'
     + '<div class="dash-update">Servidores, apoios e dispensas, folgas e documentos — acesso restrito à Secretaria e à Gerência</div></div></div>'
     + '<div class="sub-tabs">' + abas.map(([k, r]) => '<div class="sub-tab' + (k === _secAba ? ' active' : '') + '" id="sec-stab-' + k + '" onclick="sec_mudarAba(\'' + k + '\')">' + r + '</div>').join('') + '</div>'
@@ -109,7 +111,7 @@ function sec_mudarAba(aba) {
 }
 function sec_render() {
   if (_secPerfilId) return sec_renderPerfil();
-  ({ servidores: sec_renderServidores, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
+  ({ despachos: sec_renderDespachos, servidores: sec_renderServidores, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
 }
 
 // ── Servidores ────────────────────────────────────────────────────────────────
@@ -512,3 +514,186 @@ async function sec_renderAuditoria() {
         : '<tr><td colspan="5" style="text-align:center;padding:24px;color:#888">Nenhum registro ainda.</td></tr>') + '</tbody></table></div>';
   } catch (e) { c.innerHTML = '<div style="color:#b91c1c;padding:12px">Não consegui carregar a auditoria: ' + esc(e.message || String(e)) + '</div>'; }
 }
+
+/* ═══════════ DESPACHOS PRODOC (modelo "Texto para responder documentos do PJEDOC – TUCUJURISDOC") ═══════════
+   Marcações nos modelos:  {{NOME}} {{OFICIO}} {{ORGAO}} {{PROJETO}} {{UNIDADE}} {{DATA_...}} (vira campo de data)
+   {{GERENTE}} vem da configuração · {{G:o monitorado|a monitorada}} troca pelo gênero escolhido · **texto** = negrito. */
+const _SEC_ORDEM = 'Com os cordiais cumprimentos, de ordem do gerente da Central de Monitoramento Eletrônico - CME, {{GERENTE}}, ';
+const _SEC_MODELOS_PADRAO = [
+  { id: 'p01', destino: 'Relatório', titulo: 'Solicita relatório', assunto: 'SOLICITA RELATÓRIO - {{NOME}}',
+    texto: _SEC_ORDEM + 'encaminho a decisão judicial sobre {{G:o monitorado|a monitorada}} {{NOME}}, para conhecimento e providências quanto à elaboração de relatório de monitoramento.' },
+  { id: 'p02', destino: 'Jurídico', titulo: 'Decisão judicial — retirada de tornozeleira', assunto: 'DECISÃO JUDICIAL - {{NOME}}',
+    texto: _SEC_ORDEM + 'encaminho a decisão judicial sobre {{NOME}}, para conhecimento e providências quanto à retirada de tornozeleira.' },
+  { id: 'p03', destino: 'Psicossocial', titulo: 'Disponibilização de DPP', assunto: 'DISPONIBILIZAÇÃO DE DPP - {{NOME}}',
+    texto: _SEC_ORDEM + 'encaminho a decisão judicial sobre {{NOME}}, para conhecimento e providências quanto à disponibilização de dispositivo **“Botão do Pânico”**.' },
+  { id: 'p04', destino: 'Psicossocial', titulo: 'Devolução de DPP', assunto: 'DEVOLUÇÃO DE DPP - {{NOME}}',
+    texto: _SEC_ORDEM + 'encaminho a decisão judicial sobre {{NOME}}, para conhecimento e providências quanto à devolução de dispositivo “Botão do Pânico”.' },
+  { id: 'p05', destino: 'Plantão', titulo: 'Instalação TNZ — comparecimento espontâneo', assunto: 'INSTALAÇÃO TNZ - {{NOME}} - COMPARECIMENTO ESPONTÂNEO',
+    texto: _SEC_ORDEM + 'encaminho a decisão judicial sobre {{NOME}}, que deverá **comparecer espontaneamente** à CME para instalação de tornozeleira eletrônica.' },
+  { id: 'p06', destino: 'Plantão', titulo: 'Instalação TNZ — preso(a) em unidade (UFAE)', assunto: 'INSTALAÇÃO TNZ - {{NOME}} – {{UNIDADE}}',
+    texto: _SEC_ORDEM + 'encaminho a decisão administrativa da **UFAE** sobre instalação de tornozeleira {{G:no apenado|na apenada}} {{NOME}}, que se encontra {{G:recluso|reclusa}} {{G:no|na}} **{{UNIDADE}}**, para conhecimento e providências.' },
+  { id: 'p07', destino: 'Plantão', titulo: 'Atualizar no AKILES — justificativa (ofício)', assunto: 'ATUALIZAR NO AKILES - JUSTIFICATIVA - OFÍCIO Nº {{OFICIO}} - {{ORGAO}}',
+    texto: _SEC_ORDEM + 'encaminho o OFÍCIO Nº {{OFICIO}} - {{ORGAO}}, do projeto “{{PROJETO}}”, para que seja realizada a **justificativa** dos apenados no sistema Akiles.' },
+  { id: 'p08', destino: 'Plantão', titulo: 'Atualizar no AKILES — desligamento do reeducando', assunto: 'ATUALIZAR NO AKILES - DESLIGAMENTO {{G:DO REEDUCANDO|DA REEDUCANDA}} - {{NOME}}',
+    texto: _SEC_ORDEM + 'encaminho o OFÍCIO Nº {{OFICIO}} - {{ORGAO}}, sobre o **desligamento {{G:do monitorado|da monitorada}}** {{NOME}} no {{PROJETO}}, para que seja realizada a atualização das informações no sistema Akiles.' },
+  { id: 'p09', destino: 'Plantão', titulo: 'Atualizar no AKILES — inclusão do reeducando', assunto: 'ATUALIZAR NO AKILES – INCLUSÃO {{G:DO REEDUCANDO|DA REEDUCANDA}} - {{NOME}}',
+    texto: _SEC_ORDEM + 'encaminho o OFÍCIO Nº {{OFICIO}} - {{ORGAO}}, sobre a inclusão {{G:do reeducando|da reeducanda}} {{NOME}} no **{{PROJETO}}**, para atualização das informações no sistema Akiles.' },
+  { id: 'p10', destino: 'Comunicação Processual', titulo: 'Comunicar informações sobre monitorado(a)', assunto: 'COMUNICAR INFORMAÇÕES SOBRE {{G:MONITORADO|MONITORADA}} - {{NOME}}',
+    texto: _SEC_ORDEM + 'encaminho as informações sobre {{G:o apenado|a apenada}} {{NOME}}, para que ocorra a **comunicação nos autos do processo**.' },
+  { id: 'p11', destino: 'Comunicação Processual', titulo: 'Comunicar descumprimento', assunto: 'COMUNICAR DESCUMPRIMENTO - {{NOME}}',
+    texto: _SEC_ORDEM + 'encaminho as informações sobre {{G:o monitorado|a monitorada}} {{NOME}}, para que o **descumprimento** seja comunicado nos autos do processo.' },
+  { id: 'p12', destino: 'Comunicação Processual', titulo: 'Não comparecimento — vítima não buscou o DPP', assunto: 'COMUNICAR NÃO COMPARECIMENTO - {{NOME}}',
+    texto: _SEC_ORDEM + 'encaminho a decisão judicial sobre {{NOME}}, para que seja comunicado nos autos do processo a impossibilidade de cumprimento, pois a vítima **não compareceu** à CME para recebimento do dispositivo "botão do pânico".' },
+  { id: 'p13', destino: 'Comunicação Processual', titulo: 'Impossibilidade — sem monitoração e vítima não compareceu', assunto: 'IMPOSSIBILIDADE DE CUMPRIMENTO - {{NOME}}',
+    texto: _SEC_ORDEM + 'encaminho a decisão judicial sobre {{NOME}}, para que seja comunicado nos autos do processo a impossibilidade de cumprimento, pois o requerido **não esteve sob monitoração eletrônica** e a vítima não compareceu à CME para recebimento do dispositivo "botão do pânico".' },
+  { id: 'p14', destino: 'Comunicação Processual', titulo: 'Impossibilidade — tornozeleira já retirada', assunto: 'IMPOSSIBILIDADE DE CUMPRIMENTO - {{NOME}}',
+    texto: _SEC_ORDEM + 'encaminho a decisão judicial sobre {{NOME}}, para que seja comunicado nos autos do processo que a retirada de tornozeleira ocorreu dia {{DATA_RETIRADA}} conforme decisão judicial, e a devida comunicação também já foi realizada em {{DATA_COMUNICACAO}}.' },
+];
+const _SEC_ROTULOS = { NOME: 'Nome do(a) monitorado(a)', OFICIO: 'Nº do ofício (ex.: 253/2025)', ORGAO: 'Órgão (ex.: CCEP, PREFEITURA DE SANTANA)',
+  PROJETO: 'Projeto (ex.: Liberdade e Cidadania)', UNIDADE: 'Unidade (ex.: PRÉDIO ANEXO, PENITENCIÁRIA FEMININA)',
+  DATA_RETIRADA: 'Data da retirada', DATA_COMUNICACAO: 'Data da comunicação' };
+const _SEC_GERENTE_PADRAO = 'Everton Nunes Costa';
+
+function _secModelos(d) { return (d || _secDados()).modelos || _SEC_MODELOS_PADRAO; }
+function _secGerente(d) { return ((d || _secDados()).config || {}).gerente || _SEC_GERENTE_PADRAO; }
+function _secCamposDe(m) {
+  const set = new Set();
+  String(m.assunto + ' ' + m.texto).replace(/\{\{\s*([A-Z0-9_]+)\s*\}\}/g, (_, k) => { if (k !== 'GERENTE') set.add(k); return ''; });
+  return [...set];
+}
+function _secRotulo(k) { return _SEC_ROTULOS[k] || (k.charAt(0) + k.slice(1).toLowerCase()).replace(/_/g, ' '); }
+function _secUsaGenero(m) { return /\{\{G:/.test(m.assunto + m.texto); }
+// Preenche o modelo. html=true devolve com <b> e HTML escapado; senão texto puro.
+function _secPreencher(tpl, vals, genero, gerente, html) {
+  let s = String(tpl || '').replace(/\{\{G:([^|}]*)\|([^}]*)\}\}/g, (_, m, f) => genero === 'F' ? f : m);
+  s = s.replace(/\{\{\s*([A-Z0-9_]+)\s*\}\}/g, (_, k) => k === 'GERENTE' ? gerente : (vals[k] || '[' + k + ']'));
+  return html ? esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>') : s.replace(/\*\*(.+?)\*\*/g, '$1');
+}
+
+function sec_renderDespachos() {
+  const c = document.getElementById('sec-conteudo'); if (!c) return;
+  const d = _secDados(), mods = _secModelos(d);
+  if (!_secModeloId || !mods.some(m => m.id === _secModeloId)) _secModeloId = mods[0] && mods[0].id;
+  const busca = (document.getElementById('sec-dp-busca')?.value || '').toLowerCase().trim();
+  const grupos = {};
+  mods.filter(m => !busca || (m.destino + ' ' + m.titulo + ' ' + m.assunto).toLowerCase().includes(busca)).forEach(m => { (grupos[m.destino] = grupos[m.destino] || []).push(m); });
+  c.innerHTML = '<div style="display:grid;grid-template-columns:minmax(240px,320px) 1fr;gap:16px;align-items:start">'
+    + '<div><input id="sec-dp-busca" placeholder="Buscar modelo" value="' + esc(busca) + '" oninput="sec_renderDespachos()" style="width:100%;padding:6px 10px;margin-bottom:8px">'
+    + Object.keys(grupos).map(g => '<div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px">PRODOC para ' + esc(g) + '</div>'
+      + grupos[g].map(m => '<div onclick="_secModeloId=\'' + m.id + '\';sec_renderDespachos()" style="cursor:pointer;padding:7px 10px;border-radius:4px;margin-bottom:3px;font-size:.88rem;'
+        + (m.id === _secModeloId ? 'background:#dbeafe;border-left:3px solid #2563eb;font-weight:600' : 'background:#f8fafc;border-left:3px solid transparent') + '">' + esc(m.titulo) + '</div>').join('')).join('')
+    + '<div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap"><button class="btn-primary" onclick="sec_editarModelo()">+ Novo modelo</button>'
+    + '<button class="btn-secondary" onclick="sec_configGerente()">Gerente: ' + esc(_secGerente(d)) + '</button></div></div>'
+    + '<div id="sec-dp-form"></div></div>';
+  const b = document.getElementById('sec-dp-busca'); if (b && busca) { b.focus(); b.setSelectionRange(busca.length, busca.length); }
+  _secRenderFormDespacho();
+}
+function _secNomesConhecidos() {
+  const nomes = new Set();
+  try { (getSemCom().monitorados || []).forEach(m => m.nome && nomes.add(m.nome)); } catch (e) {}
+  try { (getOcorrencias() || []).forEach(o => o.monitorado && nomes.add(String(o.monitorado).trim())); } catch (e) {}
+  return [...nomes].sort().slice(0, 3000);
+}
+function _secRenderFormDespacho() {
+  const box = document.getElementById('sec-dp-form'); if (!box) return;
+  const m = _secModelos().find(x => x.id === _secModeloId);
+  if (!m) { box.innerHTML = '<div style="color:#888;padding:20px">Nenhum modelo.</div>'; return; }
+  const campos = _secCamposDe(m);
+  box.innerHTML = '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:14px 16px">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div><div style="font-size:.75rem;color:#64748b">PRODOC PARA ' + esc(String(m.destino).toUpperCase()) + '</div>'
+    + '<div style="font-weight:700;font-size:1.02rem">' + esc(m.titulo) + '</div></div>'
+    + '<div style="display:flex;gap:6px"><button class="btn-sm btn-outline" onclick="sec_editarModelo(\'' + m.id + '\')">Editar modelo</button>'
+    + '<button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_excluirModelo(\'' + m.id + '\')">Excluir</button></div></div>'
+    + '<div class="form-grid" style="margin-top:10px">'
+    + campos.map(k => /^DATA/.test(k)
+      ? _secCampo('sec-dp-' + k, _secRotulo(k), '', 'type="date" oninput="_secPrevDespacho()"')
+      : _secCampo('sec-dp-' + k, _secRotulo(k), '', (k === 'NOME' ? 'list="sec-dp-nomes" ' : '') + 'oninput="_secPrevDespacho()" style="text-transform:uppercase"')).join('')
+    + '</div>' + (campos.includes('NOME') ? '<datalist id="sec-dp-nomes">' + _secNomesConhecidos().map(n => '<option>' + esc(n) + '</option>').join('') + '</datalist>' : '')
+    + (_secUsaGenero(m) ? '<div class="form-field"><label>Gênero</label>' + _secChips('sec-dp-genero', [['M', 'Masculino'], ['F', 'Feminino']], 'M') + '</div>' : '')
+    + '<div style="margin-top:12px;font-size:.75rem;font-weight:700;color:#64748b">ASSUNTO</div>'
+    + '<div id="sec-dp-prev-assunto" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:8px 10px;font-weight:600"></div>'
+    + '<div style="margin-top:10px;font-size:.75rem;font-weight:700;color:#64748b">TEXTO</div>'
+    + '<div id="sec-dp-prev-texto" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:10px 12px;line-height:1.55;text-align:justify"></div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap">'
+    + '<button class="btn-secondary" onclick="sec_copiarDespacho(\'assunto\')">Copiar assunto</button>'
+    + '<button class="btn-primary" onclick="sec_copiarDespacho(\'texto\')">Copiar texto</button></div></div>';
+  document.querySelectorAll('[data-grupo="sec-dp-genero"]').forEach(btn => btn.addEventListener('click', () => setTimeout(_secPrevDespacho, 0)));
+  _secPrevDespacho();
+}
+function _secValoresDespacho(m) {
+  const vals = {};
+  _secCamposDe(m).forEach(k => { const v = _secVal('sec-dp-' + k); vals[k] = /^DATA/.test(k) ? _secBR(v) : v.toUpperCase(); });
+  return vals;
+}
+function _secPrevDespacho() {
+  const m = _secModelos().find(x => x.id === _secModeloId); if (!m) return;
+  const vals = _secValoresDespacho(m), g = _secVal('sec-dp-genero') || 'M', ger = _secGerente();
+  const a = document.getElementById('sec-dp-prev-assunto'), t = document.getElementById('sec-dp-prev-texto');
+  if (a) a.innerHTML = 'ASSUNTO: ' + _secPreencher(m.assunto, vals, g, ger, true);
+  if (t) t.innerHTML = _secPreencher(m.texto, vals, g, ger, true);
+}
+async function sec_copiarDespacho(qual) {
+  const m = _secModelos().find(x => x.id === _secModeloId); if (!m) return;
+  const vals = _secValoresDespacho(m);
+  const falta = Object.keys(vals).filter(k => !vals[k]);
+  if (falta.length) { _mostrarToast('Preencha: ' + falta.map(_secRotulo).join(', '), 'erro'); return; }
+  const g = _secVal('sec-dp-genero') || 'M', ger = _secGerente(), tpl = qual === 'assunto' ? m.assunto : m.texto;
+  const puro = _secPreencher(tpl, vals, g, ger, false), html = _secPreencher(tpl, vals, g, ger, true);
+  try {
+    if (window.ClipboardItem && qual === 'texto') await navigator.clipboard.write([new ClipboardItem({ 'text/plain': new Blob([puro], { type: 'text/plain' }), 'text/html': new Blob([html], { type: 'text/html' }) })]);
+    else await navigator.clipboard.writeText(puro);
+    _mostrarToast((qual === 'assunto' ? 'Assunto' : 'Texto') + ' copiado — cole no PRODOC (Ctrl+V).', 'sucesso');
+  } catch (e) { _mostrarToast('Não consegui copiar automaticamente — selecione o texto e use Ctrl+C.', 'erro'); }
+  if (qual === 'texto') auditar({ modulo: 'Secretaria', action: 'sec_despacho_copiar', alvo: _secPreencher(m.assunto, vals, g, ger, false), detalhe: 'PRODOC para ' + m.destino });
+}
+
+// ── Criar / editar modelos ────────────────────────────────────────────────────
+function sec_editarModelo(id) {
+  const m = id ? (_secModelos().find(x => x.id === id) || {}) : { destino: '', titulo: '', assunto: '', texto: _SEC_ORDEM + 'encaminho ' };
+  const destinos = [...new Set(_secModelos().map(x => x.destino))];
+  _secModal(id ? 'Editar modelo' : 'Novo modelo de despacho',
+    '<div class="form-grid">' + _secCampo('sec-md-destino', 'PRODOC para (setor)', m.destino, 'list="sec-md-destinos"') + _secCampo('sec-md-titulo', 'Nome do modelo (aparece na lista)', m.titulo) + '</div>'
+    + '<datalist id="sec-md-destinos">' + destinos.map(x => '<option>' + esc(x) + '</option>').join('') + '</datalist>'
+    + _secCampo('sec-md-assunto', 'Assunto', m.assunto, 'placeholder="Ex.: SOLICITA RELATÓRIO - {{NOME}}"')
+    + '<div class="form-field"><label>Texto</label><textarea id="sec-md-texto" rows="7">' + esc(m.texto || '') + '</textarea></div>'
+    + '<div style="font-size:.8rem;color:#475569;background:#f8fafc;border-radius:6px;padding:8px 10px;line-height:1.6">'
+    + '<b>Campos:</b> escreva entre chaves duplas e o sistema cria o campo para preencher — <code>{{NOME}}</code>, <code>{{OFICIO}}</code>, <code>{{ORGAO}}</code>, <code>{{PROJETO}}</code>, <code>{{UNIDADE}}</code> ou qualquer outro nome em MAIÚSCULAS. '
+    + 'Nomes começando com <code>DATA</code> viram campo de data. <code>{{GERENTE}}</code> entra sozinho.<br>'
+    + '<b>Gênero:</b> <code>{{G:o monitorado|a monitorada}}</code> troca conforme o botão Masculino/Feminino. <b>Negrito:</b> <code>**texto**</code>.</div>',
+    '<button class="btn-primary" onclick="sec_salvarModelo(\'' + (id || '') + '\')">Salvar modelo</button>', 760);
+}
+async function sec_salvarModelo(id) {
+  const v = { destino: _secVal('sec-md-destino'), titulo: _secVal('sec-md-titulo'), assunto: _secVal('sec-md-assunto'), texto: _secVal('sec-md-texto') };
+  if (!v.destino || !v.titulo || !v.assunto || !v.texto) { _mostrarToast('Preencha setor, nome, assunto e texto.', 'erro'); return; }
+  const tudo = v.assunto + v.texto;
+  if (tudo.split('{{').length !== tudo.split('}}').length) { _mostrarToast('Confira as chaves {{ }}: há uma aberta sem fechar.', 'erro'); return; }
+  let novoId = id;
+  const ok = await _secMutar(d => {
+    if (!d.modelos) d.modelos = JSON.parse(JSON.stringify(_SEC_MODELOS_PADRAO));
+    if (id) { const m = d.modelos.find(x => x.id === id); if (!m) return false; Object.assign(m, v, { editadoPor: usuarioAtual ? usuarioAtual.nome : '', editadoEm: new Date().toISOString() }); }
+    else { novoId = _secId('mod'); d.modelos.push(Object.assign({ id: novoId, criadoPor: usuarioAtual ? usuarioAtual.nome : '', criadoEm: new Date().toISOString() }, v)); }
+  }, { action: id ? 'sec_modelo_editar' : 'sec_modelo_criar', alvo: v.titulo, detalhe: 'PRODOC para ' + v.destino });
+  if (!ok) return;
+  _secModeloId = novoId; _secFecharModal(); _mostrarToast('Modelo salvo.', 'sucesso'); sec_renderDespachos();
+}
+async function sec_excluirModelo(id) {
+  const m = _secModelos().find(x => x.id === id); if (!m) return;
+  if (!confirm('Excluir o modelo "' + m.titulo + '"? (fica guardado na lixeira da Secretaria)')) return;
+  const ok = await _secMutar(d => {
+    if (!d.modelos) d.modelos = JSON.parse(JSON.stringify(_SEC_MODELOS_PADRAO));
+    const i = d.modelos.findIndex(x => x.id === id); if (i < 0) return false;
+    _secParaLixeira(d, 'modelo', d.modelos[i]); d.modelos.splice(i, 1);
+  }, { action: 'sec_modelo_excluir', alvo: m.titulo });
+  if (ok) { _secModeloId = null; sec_renderDespachos(); }
+}
+function sec_configGerente() {
+  _secModal('Nome do gerente nos despachos', _secCampo('sec-cfg-gerente', 'Gerente da CME (entra em {{GERENTE}})', _secGerente()),
+    '<button class="btn-primary" onclick="sec_salvarGerente()">Salvar</button>', 480);
+}
+async function sec_salvarGerente() {
+  const g = _secVal('sec-cfg-gerente'); if (g.length < 5) { _mostrarToast('Informe o nome do gerente.', 'erro'); return; }
+  const ok = await _secMutar(d => { d.config = Object.assign({}, d.config, { gerente: g }); }, { action: 'sec_config_gerente', alvo: g });
+  if (ok) { _secFecharModal(); sec_renderDespachos(); }
+}
+Object.assign(_SEC_ACOES, { sec_despacho_copiar: 'Copiou despacho PRODOC', sec_modelo_criar: 'Criou modelo', sec_modelo_editar: 'Editou modelo',
+  sec_modelo_excluir: 'Excluiu modelo', sec_config_gerente: 'Alterou o nome do gerente' });
