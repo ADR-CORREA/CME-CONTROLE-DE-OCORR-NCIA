@@ -9,7 +9,7 @@
 const _SEC_NIVEIS = ['admin', 'gerencia', 'secretaria'];
 const _SEC_EQUIPES = ['ALFA', 'BRAVO', 'CHARLIE', 'DELTA', 'ECHO', 'EXPEDIENTE'];
 const _SEC_DIREITOS = [6, 12, 24];
-let _secAba = 'despachos', _secPerfilId = null, _secPerfilAba = 'ficha', _secModeloId = null;
+let _secAba = 'hoje', _secPerfilId = null, _secPerfilAba = 'ficha', _secModeloId = null;
 
 _STORES_PROTEGIDAS.secretaria = v => (v && Array.isArray(v.servidores))
   ? v.servidores.length + (v.apoios || []).length + (v.folgas || []).length + (v.afastamentos || []).length : -1;
@@ -98,7 +98,7 @@ function sec_inicializar() {
   const root = document.getElementById('sec-root');
   if (!root) return;
   if (!_secPode()) { root.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b">Acesso restrito à Secretaria e à Gerência.</div>'; return; }
-  const abas = [['despachos', '\u{1F4E8} Despachos PRODOC'], ['servidores', '\u{1F464} Servidores'], ['ferias', '\u{1F3D6}\u{FE0F} Férias e Licenças'], ['apoios', '\u{23F1}\u{FE0F} Apoios e Dispensas'], ['folgas', '\u{1F91D} Folgas combinadas'], ['auditoria', '\u{1F50D} Auditoria']];
+  const abas = [['hoje', '\u{1F3E0} Hoje'], ['despachos', '\u{1F4E8} Despachos PRODOC'], ['servidores', '\u{1F464} Servidores'], ['ferias', '\u{1F3D6}\u{FE0F} Férias e Licenças'], ['apoios', '\u{23F1}\u{FE0F} Apoios e Dispensas'], ['folgas', '\u{1F91D} Folgas combinadas'], ['auditoria', '\u{1F50D} Auditoria']];
   root.innerHTML = '<div class="dash-header"><div><div class="dash-title">\u{1F5C2}\u{FE0F} Secretaria</div>'
     + '<div class="dash-update">Servidores, apoios e dispensas, folgas e documentos — acesso restrito à Secretaria e à Gerência</div></div></div>'
     + '<div class="sub-tabs">' + abas.map(([k, r]) => '<div class="sub-tab' + (k === _secAba ? ' active' : '') + '" id="sec-stab-' + k + '" onclick="sec_mudarAba(\'' + k + '\')">' + r + '</div>').join('') + '</div>'
@@ -113,7 +113,7 @@ function sec_mudarAba(aba) {
 function sec_render() {
   if (typeof _secRenderHoje === 'function') _secRenderHoje();
   if (_secPerfilId) return sec_renderPerfil();
-  ({ despachos: sec_renderDespachos, servidores: sec_renderServidores, ferias: sec_renderFerias, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
+  ({ hoje: sec_renderHojeDash, despachos: sec_renderDespachos, servidores: sec_renderServidores, ferias: sec_renderFerias, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
 }
 
 // ── Servidores ────────────────────────────────────────────────────────────────

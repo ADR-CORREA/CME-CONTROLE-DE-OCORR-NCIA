@@ -22,6 +22,7 @@ setInterval(() => { try { if (usuarioAtual) _secAtualizarBadge(); } catch (e) {}
 function _secRenderHoje() {
   const box = document.getElementById('sec-hoje'); if (!box) return;
   _secAtualizarBadge();
+  if (_secAba === 'hoje' && !_secPerfilId) { box.innerHTML = ''; return; } // o painel Hoje já mostra tudo
   const d = _secDados(), hoje = _secHoje();
   const fora = d.afastamentos.filter(a => _secSobrepoe(a, hoje, hoje)).sort((a, b) => a.fim.localeCompare(b.fim));
   const em30 = d.afastamentos.filter(a => a.inicio > hoje && a.inicio <= _secMaisDias(hoje, 30));
