@@ -2176,6 +2176,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
         <div class="sub-tab" id="ger-stab-calendario" onclick="mudarSubAbaGer('calendario')">📅 Calendário</div>
         <div class="sub-tab" id="ger-stab-arquivados" onclick="mudarSubAbaGer('arquivados')">📁 Arquivados</div>
         <div class="sub-tab" id="ger-stab-produtividade" onclick="mudarSubAbaGer('produtividade')">📈 Produtividade Servidores</div>
+        <div class="sub-tab" id="ger-stab-vdzona" onclick="mudarSubAbaGer('vdzona')">🚫 VD sem zona de exclusão</div>
       </div>
       <div class="sub-panel active" id="ger-panel-agenda">
         <div class="table-wrapper">
@@ -2232,6 +2233,12 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
           <div style="font-weight:600;color:var(--az1)">📅 Calendário de Compromissos</div>
         </div>
         <div id="ger-calendario"></div>
+      </div>
+
+      <!-- ── Sub-painel: VD sem zona de exclusão (robô diário, só leitura no AKILES) — vd-zonas.js ── -->
+      <div class="sub-panel" id="ger-panel-vdzona">
+        <div style="font-weight:700;color:var(--az1);font-size:1.05rem;margin-bottom:10px">🚫 Violência doméstica sem zona de exclusão</div>
+        <div id="vdz-corpo"></div>
       </div>
 
       <!-- ── Sub-painel: Produtividade dos servidores (plantões em cima, administrativo embaixo) ── -->
@@ -13289,7 +13296,7 @@ function _relSemComDocHTML(m, infoAss, isWord) {
 
 // Navegação sub-abas Gerência
 function mudarSubAbaGer(aba) {
-  ['agenda','arquivados','calendario','produtividade'].forEach(a => {
+  ['agenda','arquivados','calendario','produtividade','vdzona'].forEach(a => {
     document.getElementById('ger-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('ger-panel-' + a)?.classList.toggle('active', a === aba);
   });
@@ -13297,6 +13304,7 @@ function mudarSubAbaGer(aba) {
   if (aba === 'arquivados') renderizarGerArquivados();
   if (aba === 'calendario') cal_render('ger-calendario');
   if (aba === 'produtividade') { pl_renderizar(); if (typeof prod_renderAdm === 'function') prod_renderAdm(); }
+  if (aba === 'vdzona' && typeof vdz_render === 'function') vdz_render();
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -29325,7 +29333,7 @@ function estat_exportarResultado() {
   </div>
 </div>
 
-<script src="secretaria.js?v=20261013q"></script>
+<script src="secretaria.js?v=20261013r"></script>
 <script src="secretaria-ferias.js?v=20261013g"></script>
 <script src="secretaria-painel.js?v=20261013o"></script>
 <script src="secretaria-ponto.js?v=20261013q"></script>
@@ -29336,5 +29344,6 @@ function estat_exportarResultado() {
 <script src="plantoes-resumo.js?v=20261013o"></script>
 <script src="plantoes-detalhe.js?v=20261013o"></script>
 <script src="plantoes-servidores.js?v=20261013o"></script>
+<script src="vd-zonas.js?v=20261013p"></script>
 </body>
 </html>
