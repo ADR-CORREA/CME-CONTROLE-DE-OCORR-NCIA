@@ -11476,7 +11476,7 @@ function renderizarUsers() {
   const counts = {};
   todos.forEach(u => { counts[u.nivel || 'plantao'] = (counts[u.nivel || 'plantao']||0) + 1; });
 
-  const ORDEM_KPI = ['admin','gerencia','juridico','relatorio','comunicacao','plantao','estoque','triagem','psicossocial','estatistica'];
+  const ORDEM_KPI = ['admin','gerencia','juridico','relatorio','comunicacao','plantao','estoque','triagem','psicossocial','estatistica','secretaria'];
   const kpiBox = document.getElementById('admin-kpis');
   if (kpiBox) {
     const cardTotal = `
@@ -11486,7 +11486,8 @@ function renderizarUsers() {
         <div style="font-size:.68rem;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.06em">Total</div>
       </div>`;
 
-    const cardsNiveis = ORDEM_KPI
+    // nível que não estiver na ordem também aparece (antes sumia da tela)
+    const cardsNiveis = ORDEM_KPI.concat(Object.keys(counts).filter(n => !ORDEM_KPI.includes(n)))
       .filter(n => counts[n])
       .map(n => {
         const cor   = _NIVEL_COR[n]  || '#64748b';
@@ -11515,7 +11516,7 @@ function renderizarUsers() {
   }
 
   // Ordem de exibição das categorias
-  const ORDEM = ['admin','gerencia','juridico','relatorio','comunicacao','plantao','estoque','triagem','psicossocial','estatistica'];
+  const ORDEM = ['admin','gerencia','juridico','relatorio','comunicacao','plantao','estoque','triagem','psicossocial','estatistica','secretaria'];
 
   // Agrupar por nível
   const grupos = {};
@@ -11574,7 +11575,8 @@ function renderizarUsers() {
   const _icone = { admin:'\u{1F451}', gerencia:'\u{1F3E2}', juridico:'\u{2696}\u{FE0F}', relatorio:'\u{1F4CB}',
     comunicacao:'\u{1F4E1}', plantao:'\u{1F6E1}\u{FE0F}', estoque:'\u{1F4E6}', triagem:'\u{1F50D}', psicossocial:'\u{1F9E0}', estatistica:'\u{1F4C8}' };
 
-  document.getElementById('user-list').innerHTML = ORDEM
+  // nível que não estiver na ordem também aparece (antes o usuário sumia da lista)
+  document.getElementById('user-list').innerHTML = ORDEM.concat(Object.keys(grupos).filter(n => !ORDEM.includes(n)))
     .filter(n => grupos[n]?.length)
     .map(n => {
       const cor = _NIVEL_COR[n] || '#64748b';
@@ -29289,6 +29291,6 @@ function estat_exportarResultado() {
 <script src="secretaria-agenda.js?v=20261013g"></script>
 <script src="secretaria-arquivo.js?v=20261013g"></script>
 <script src="semcom-contatos.js?v=20261013i"></script>
-<script src="produtividade.js?v=20261013j"></script>
+<script src="produtividade.js?v=20261013k"></script>
 </body>
 </html>
