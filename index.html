@@ -1342,6 +1342,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
     <div class="nav-tab gerencia-only" onclick="mudarAba('estatisticas')"><svg viewBox="0 0 24 24"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg> Estatísticas</div>
     <div class="nav-tab gerencia-only" onclick="mudarAba('mandado')"><svg viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 11V5a2 2 0 0 1 2-2h7l5 5v3"/><circle cx="11.5" cy="16.5" r="3.5"/><path d="m21 21-3-3"/></svg> Mandado de Prisão</div>
     <div class="nav-tab gerencia-only" onclick="mudarAba('secretaria')"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></svg> Secretaria <span id="sec-badge" style="display:none" class="notif-badge">0</span></div>
+    <div class="nav-tab" onclick="mudarAba('semcom')"><svg viewBox="0 0 24 24"><path d="M12 18h.01"/><path d="M9.2 15.2a4 4 0 0 1 5.6 0"/><path d="M6.3 12.3a8 8 0 0 1 3.9-2.1m4.2.2a8 8 0 0 1 3.3 2"/><path d="M3.5 9.5a12 12 0 0 1 3.5-2.5m3.1-.9a12 12 0 0 1 10.3 3.4"/><path d="M3 3l18 18"/></svg> Sem Comunicação <span id="jur-semcom-badge" class="notif-badge" style="display:none">0</span></div>
   </div>
 
   <!-- CONTEÚDO PRINCIPAL -->
@@ -1597,10 +1598,6 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
     <div class="tab-panel" id="panel-juridico">
       <div class="sub-tabs" style="margin-bottom:0">
         <div class="sub-tab active" id="jur-stab-ocorrencias" onclick="mudarSubAbaJur('ocorrencias')">⚖️ Ocorrências Jurídicas</div>
-        <div class="sub-tab" id="jur-stab-semcom" onclick="mudarSubAbaJur('semcom')">
-          📵 Sem Comunicação
-          <span id="jur-semcom-badge" class="notif-badge" style="display:none">0</span>
-        </div>
         <div class="sub-tab" id="jur-stab-ofc" onclick="mudarSubAbaJur('ofc')">
           📋 OFC / Vinculações
           <span id="jur-ofc-badge" class="notif-badge" style="display:none">0</span>
@@ -1646,289 +1643,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
         </div>
       </div><!-- /jur-panel-ocorrencias -->
 
-      <!-- Sub-painel: Sem Comunicação -->
-      <div class="sub-panel" id="jur-panel-semcom">
 
-        <!-- Toolbar -->
-        <div class="table-toolbar" style="flex-wrap:wrap;gap:8px">
-          <div style="font-weight:600;color:var(--az1);font-size:1rem">📵 Monitorados Sem Comunicação — AKILES</div>
-          <div class="table-actions" style="flex-wrap:wrap;gap:6px">
-            <span id="semcom-ultima-importacao" style="font-size:.82rem;color:#888;align-self:center"></span>
-            <label class="btn-secondary" style="cursor:pointer;margin:0">
-              📂 Importar Excel AKILES
-              <input type="file" id="semcom-file-input" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="importarExcelSemCom(this)">
-            </label>
-            <button class="btn-secondary" onclick="renderizarSemCom()">🔄 Atualizar</button>
-            <button class="btn-secondary" onclick="exportarSemComExcel()">📥 Exportar Excel</button>
-          </div>
-        </div>
-
-        <!-- Sub-abas internas: Ativos / Desvinculados -->
-        <div class="sub-tabs" style="margin:10px 0 0 0;border-bottom:1px solid #e2e8f0">
-          <div class="sub-tab active" id="sc-stab-ativos" onclick="mudarSubAbaSemCom('ativos')" style="font-size:.88rem">📡 Ativos</div>
-          <div class="sub-tab" id="sc-stab-desvinculados" onclick="mudarSubAbaSemCom('desvinculados')" style="font-size:.88rem">
-            ✅ Desvinculados
-            <span id="sc-desvinc-badge" class="notif-badge" style="display:none;background:#16a34a">0</span>
-          </div>
-          <div class="sub-tab" id="sc-stab-arquivados" onclick="mudarSubAbaSemCom('arquivados','juridico')" style="font-size:.88rem" title="Quem voltou a comunicar — resolvidos">
-            🗄️ Arquivados <span id="sc-arq-qtd" style="color:#94a3b8;font-weight:400"></span>
-          </div>
-        </div>
-
-        <!-- ── Painel: Ativos ── -->
-        <div class="sub-panel active" id="sc-panel-ativos" style="padding:0">
-
-        <!-- KPIs -->
-        <div class="kpi-grid" style="margin:12px 0 8px 0;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
-          <div class="kpi-card" style="background:#f0f9ff;border-left:4px solid #0284c7">
-            <div class="kpi-icon">📋</div>
-            <div class="kpi-value" id="sc-kpi-total">0</div>
-            <div class="kpi-label">Total</div>
-          </div>
-          <div class="kpi-card" style="background:#f5f3ff;border-left:4px solid #7c3aed;cursor:pointer" title="Agressores com medida protetiva — prioridade: relatório ao juiz p/ mandado de prisão" onclick="_scFiltrarMedida('mpu')">
-            <div class="kpi-icon">🚨</div>
-            <div class="kpi-value" id="sc-kpi-mpu" style="color:#6d28d9">0</div>
-            <div class="kpi-label">MPU (agressores)</div>
-          </div>
-          <div class="kpi-card" style="background:#f5f3ff;border-left:4px solid #dc2626;cursor:pointer" title="MPU sem comunicar há 3 dias ou mais — enviar relatório ao juiz" onclick="_scFiltrarMedida('mpu', 3)">
-            <div class="kpi-icon">⚖️</div>
-            <div class="kpi-value" id="sc-kpi-mpu3" style="color:#dc2626">0</div>
-            <div class="kpi-label">MPU 3+ dias → relatório p/ MP</div>
-          </div>
-          <div class="kpi-card" style="background:#f8fafc;border-left:4px solid #64748b;cursor:pointer" title="Tornozeleiras que não são de medida protetiva" onclick="_scFiltrarMedida('demais')">
-            <div class="kpi-icon">📟</div>
-            <div class="kpi-value" id="sc-kpi-demais">0</div>
-            <div class="kpi-label">Demais tornozeleiras</div>
-          </div>
-          <div class="kpi-card" style="background:#fefce8;border-left:4px solid #ca8a04">
-            <div class="kpi-icon">⏱️</div>
-            <div class="kpi-value" id="sc-kpi-4h">0</div>
-            <div class="kpi-label">+4 horas</div>
-          </div>
-          <div class="kpi-card" style="background:#fff7ed;border-left:4px solid #ea580c">
-            <div class="kpi-icon">📅</div>
-            <div class="kpi-value" id="sc-kpi-1d">0</div>
-            <div class="kpi-label">+1 dia</div>
-          </div>
-          <div class="kpi-card" style="background:#fef2f2;border-left:4px solid #dc2626">
-            <div class="kpi-icon">📆</div>
-            <div class="kpi-value" id="sc-kpi-7d">0</div>
-            <div class="kpi-label">+7 dias</div>
-          </div>
-          <div class="kpi-card" style="background:#fdf4ff;border-left:4px solid #9333ea">
-            <div class="kpi-icon">🗓️</div>
-            <div class="kpi-value" id="sc-kpi-30d">0</div>
-            <div class="kpi-label">+30 dias</div>
-          </div>
-          <div class="kpi-card" style="background:#1a1a2e;border-left:4px solid #e11d48">
-            <div class="kpi-icon">⚠️</div>
-            <div class="kpi-value" id="sc-kpi-180d" style="color:#f87171">0</div>
-            <div class="kpi-label" style="color:#fca5a5">≥180 dias — DESVINCULAR</div>
-          </div>
-          <div class="kpi-card" style="background:#f0fdf4;border-left:4px solid #16a34a">
-            <div class="kpi-icon">✅</div>
-            <div class="kpi-value" id="sc-kpi-desvinc">0</div>
-            <div class="kpi-label">Desvinculados</div>
-          </div>
-        </div>
-
-        <!-- Filtros -->
-        <div class="tri-filtros">
-          <div class="tri-filtros-title">🔍 Filtros</div>
-          <div class="tri-filtros-grid">
-            <div class="form-field" style="margin:0">
-              <label>Nome</label>
-              <input type="text" id="sc-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemCom()">
-            </div>
-            <div class="form-field" style="margin:0">
-              <label>Registro</label>
-              <input type="text" id="sc-f-registro" placeholder="Nº registro..." oninput="renderizarSemCom()">
-            </div>
-            <div class="form-field" style="margin:0">
-              <label>Intervalo</label>
-              <select id="sc-f-intervalo" onchange="renderizarSemCom()">
-                <option value="">Todos</option>
-                <option>1. at&eacute; 30 min</option>
-                <option>2. at&eacute; 1 hora</option>
-                <option>3. at&eacute; 3 horas</option>
-                <option>4. at&eacute; 4 horas</option>
-                <option>5. mais de 4h</option>
-              </select>
-            </div>
-            <div class="form-field" style="margin:0">
-              <label>Medida</label>
-              <select id="sc-f-medida" onchange="renderizarSemCom()">
-                <option value="">Todas</option>
-                <option value="mpu">MPU (agressores)</option>
-                <option value="demais">Demais</option>
-              </select>
-            </div>
-            <div class="form-field" style="margin:0">
-              <label>Situação</label>
-              <select id="sc-f-situacao" onchange="renderizarSemCom()">
-                <option value="">Todas</option>
-                <option value="ativo">Ativo</option>
-                <option value="tratativa">Com tratativa</option>
-                <option value="desvinculado">Desvinculado</option>
-              </select>
-            </div>
-            <div class="form-field" style="margin:0">
-              <label>Mín. dias sem com.</label>
-              <input type="number" id="sc-f-dias-min" placeholder="ex: 180" min="0" oninput="renderizarSemCom()" style="width:100%">
-            </div>
-            <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
-              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemCom()">✕ Limpar</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="est-section-title" id="sc-count-label">Registros</div>
-        <div class="table-scroll">
-          <table class="data-table">
-            <thead><tr>
-              <th>Nº</th>
-              <th>Nome</th>
-              <th>Registro</th>
-              <th>Última Comunicação</th>
-              <th>Tempo Sem Com.</th>
-              <th>Dias</th>
-              <th>Intervalo</th>
-              <th>Unidade</th>
-              <th>Situação</th>
-              <th>Tratativas</th>
-              <th>Ações</th>
-            </tr></thead>
-            <tbody id="tbody-semcom"></tbody>
-          </table>
-        </div>
-        </div><!-- /sc-panel-ativos -->
-
-        <!-- ── Painel: Desvinculados ── -->
-        <div class="sub-panel" id="sc-panel-desvinculados" style="padding:0">
-          <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
-            <div style="font-weight:600;color:#16a34a">✅ Monitorados Desvinculados</div>
-            <div class="table-actions">
-              <button class="btn-secondary" onclick="renderizarSemComDesvinc()">🔄 Atualizar</button>
-              <button class="btn-secondary" onclick="exportarDesvinculadosExcel()">📥 Exportar Excel</button>
-            </div>
-          </div>
-
-          <!-- Filtros desvinculados -->
-          <div class="tri-filtros" style="margin-top:8px">
-            <div class="tri-filtros-title">🔍 Filtros</div>
-            <div class="tri-filtros-grid">
-              <div class="form-field" style="margin:0">
-                <label>Nome</label>
-                <input type="text" id="scde-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemComDesvinc()">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Registro</label>
-                <input type="text" id="scde-f-registro" placeholder="Nº registro..." oninput="renderizarSemComDesvinc()">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Servidor que desvinculou</label>
-                <input type="text" id="scde-f-servidor" placeholder="Nome do servidor..." oninput="renderizarSemComDesvinc()">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Data desvinculação início</label>
-                <input type="date" id="scde-f-inicio" onchange="renderizarSemComDesvinc()">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Data desvinculação fim</label>
-                <input type="date" id="scde-f-fim" onchange="renderizarSemComDesvinc()">
-              </div>
-              <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
-                <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemComDesvinc()">✕ Limpar</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="est-section-title" id="sc-desvinc-count-label">Desvinculados</div>
-          <div class="table-scroll">
-            <table class="data-table" style="font-size:.83rem">
-              <thead><tr>
-                <th>Nº</th>
-                <th>Nome</th>
-                <th>Registro</th>
-                <th>Última Comunicação</th>
-                <th>Dias (na desvinc.)</th>
-                <th>Unidade</th>
-                <th>Data Desvinculação</th>
-                <th>Servidor</th>
-                <th>Ato / Autorização</th>
-                <th>Sistema</th>
-                <th>Observações</th>
-                <th>Ações</th>
-              </tr></thead>
-              <tbody id="tbody-semcom-desvinc"></tbody>
-            </table>
-          </div>
-        </div><!-- /sc-panel-desvinculados -->
-
-        <!-- ── Painel: Arquivados (voltaram a comunicar) ── -->
-        <div class="sub-panel" id="sc-panel-arquivados" style="padding:0">
-          <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
-            <div style="font-weight:600;color:#475569">🗄️ Arquivados — voltaram a comunicar</div>
-            <div class="table-actions">
-              <button class="btn-secondary" onclick="renderizarSemComArquivados('juridico')">🔄 Atualizar</button>
-              <button class="btn-secondary" onclick="exportarArquivadosExcel('juridico')">📥 Exportar Excel</button>
-            </div>
-          </div>
-          <div style="font-size:.8rem;color:#64748b;margin:6px 0 0">Automático: quem não aparece no Excel novo do AKILES vem para cá com todo o histórico. Se voltar a aparecer sem comunicação, retorna para Ativos com as tratativas.</div>
-
-          <div class="tri-filtros" style="margin-top:8px">
-            <div class="tri-filtros-title">🔍 Filtros</div>
-            <div class="tri-filtros-grid">
-              <div class="form-field" style="margin:0">
-                <label>Nome</label>
-                <input type="text" id="scar-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemComArquivados('juridico')">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Registro</label>
-                <input type="text" id="scar-f-registro" placeholder="Nº registro..." oninput="renderizarSemComArquivados('juridico')">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Arquivado de</label>
-                <input type="date" id="scar-f-inicio" onchange="renderizarSemComArquivados('juridico')">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Arquivado até</label>
-                <input type="date" id="scar-f-fim" onchange="renderizarSemComArquivados('juridico')">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Mostrar</label>
-                <select id="scar-f-trat" onchange="renderizarSemComArquivados('juridico')">
-                  <option value="">Todos</option>
-                  <option value="com">Só com tratativa</option>
-                  <option value="reinc">Ficou sem comunicar mais de 1 vez</option>
-                </select>
-              </div>
-              <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
-                <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemComArquivados('juridico')">✕ Limpar</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="est-section-title" id="scar-count-label">Arquivados</div>
-          <div class="table-scroll">
-            <table class="data-table" style="font-size:.83rem">
-              <thead><tr>
-                <th>Nº</th>
-                <th>Nome</th>
-                <th>Registro</th>
-                <th>Sem comunicar desde</th>
-                <th>Dias sem com.</th>
-                <th title="Importação do AKILES em que a pessoa deixou de aparecer sem comunicação">Arquivado em</th>
-                <th title="Quantas vezes ficou sem comunicar">Vezes</th>
-                <th>Tratativas</th>
-                <th>Ações</th>
-              </tr></thead>
-              <tbody id="tbody-semcom-arq"></tbody>
-            </table>
-          </div>
-        </div><!-- /sc-panel-arquivados -->
-
-      </div><!-- /jur-panel-semcom -->
 
       <!-- Sub-painel: OFC / Vinculações -->
       <div class="sub-panel" id="jur-panel-ofc">
@@ -5604,6 +5319,293 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
     <!-- ─── SECRETARIA (servidores, apoios/dispensas, documentos) — secretaria.js ─── -->
     <div class="tab-panel" id="panel-secretaria"><div id="sec-root"></div></div>
 
+    <!-- ─── SEM COMUNICAÇÃO (aba própria, todos os acessos) ─── -->
+    <div class="tab-panel" id="panel-semcom">
+            <!-- Sub-painel: Sem Comunicação -->
+      <div class="sub-panel active" id="jur-panel-semcom">
+
+        <!-- Toolbar -->
+        <div class="table-toolbar" style="flex-wrap:wrap;gap:8px">
+          <div style="font-weight:600;color:var(--az1);font-size:1rem">📵 Monitorados Sem Comunicação — AKILES</div>
+          <div class="table-actions" style="flex-wrap:wrap;gap:6px">
+            <span id="semcom-ultima-importacao" style="font-size:.82rem;color:#888;align-self:center"></span>
+            <label class="btn-secondary" style="cursor:pointer;margin:0">
+              📂 Importar Excel AKILES
+              <input type="file" id="semcom-file-input" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="importarExcelSemCom(this)">
+            </label>
+            <button class="btn-secondary" onclick="renderizarSemCom()">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="exportarSemComExcel()">📥 Exportar Excel</button>
+          </div>
+        </div>
+
+        <!-- Sub-abas internas: Ativos / Desvinculados -->
+        <div class="sub-tabs" style="margin:10px 0 0 0;border-bottom:1px solid #e2e8f0">
+          <div class="sub-tab active" id="sc-stab-ativos" onclick="mudarSubAbaSemCom('ativos')" style="font-size:.88rem">📡 Ativos</div>
+          <div class="sub-tab" id="sc-stab-desvinculados" onclick="mudarSubAbaSemCom('desvinculados')" style="font-size:.88rem">
+            ✅ Desvinculados
+            <span id="sc-desvinc-badge" class="notif-badge" style="display:none;background:#16a34a">0</span>
+          </div>
+          <div class="sub-tab" id="sc-stab-arquivados" onclick="mudarSubAbaSemCom('arquivados','juridico')" style="font-size:.88rem" title="Quem voltou a comunicar — resolvidos">
+            🗄️ Arquivados <span id="sc-arq-qtd" style="color:#94a3b8;font-weight:400"></span>
+          </div>
+        </div>
+
+        <!-- ── Painel: Ativos ── -->
+        <div class="sub-panel active" id="sc-panel-ativos" style="padding:0">
+
+        <!-- KPIs -->
+        <div class="kpi-grid" style="margin:12px 0 8px 0;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
+          <div class="kpi-card" style="background:#f0f9ff;border-left:4px solid #0284c7">
+            <div class="kpi-icon">📋</div>
+            <div class="kpi-value" id="sc-kpi-total">0</div>
+            <div class="kpi-label">Total</div>
+          </div>
+          <div class="kpi-card" style="background:#f5f3ff;border-left:4px solid #7c3aed;cursor:pointer" title="Agressores com medida protetiva — prioridade: relatório ao juiz p/ mandado de prisão" onclick="_scFiltrarMedida('mpu')">
+            <div class="kpi-icon">🚨</div>
+            <div class="kpi-value" id="sc-kpi-mpu" style="color:#6d28d9">0</div>
+            <div class="kpi-label">MPU (agressores)</div>
+          </div>
+          <div class="kpi-card" style="background:#f5f3ff;border-left:4px solid #dc2626;cursor:pointer" title="MPU sem comunicar há 3 dias ou mais — enviar relatório ao juiz" onclick="_scFiltrarMedida('mpu', 3)">
+            <div class="kpi-icon">⚖️</div>
+            <div class="kpi-value" id="sc-kpi-mpu3" style="color:#dc2626">0</div>
+            <div class="kpi-label">MPU 3+ dias → relatório p/ MP</div>
+          </div>
+          <div class="kpi-card" style="background:#f8fafc;border-left:4px solid #64748b;cursor:pointer" title="Tornozeleiras que não são de medida protetiva" onclick="_scFiltrarMedida('demais')">
+            <div class="kpi-icon">📟</div>
+            <div class="kpi-value" id="sc-kpi-demais">0</div>
+            <div class="kpi-label">Demais tornozeleiras</div>
+          </div>
+          <div class="kpi-card" style="background:#fefce8;border-left:4px solid #ca8a04">
+            <div class="kpi-icon">⏱️</div>
+            <div class="kpi-value" id="sc-kpi-4h">0</div>
+            <div class="kpi-label">+4 horas</div>
+          </div>
+          <div class="kpi-card" style="background:#fff7ed;border-left:4px solid #ea580c">
+            <div class="kpi-icon">📅</div>
+            <div class="kpi-value" id="sc-kpi-1d">0</div>
+            <div class="kpi-label">+1 dia</div>
+          </div>
+          <div class="kpi-card" style="background:#fef2f2;border-left:4px solid #dc2626">
+            <div class="kpi-icon">📆</div>
+            <div class="kpi-value" id="sc-kpi-7d">0</div>
+            <div class="kpi-label">+7 dias</div>
+          </div>
+          <div class="kpi-card" style="background:#fdf4ff;border-left:4px solid #9333ea">
+            <div class="kpi-icon">🗓️</div>
+            <div class="kpi-value" id="sc-kpi-30d">0</div>
+            <div class="kpi-label">+30 dias</div>
+          </div>
+          <div class="kpi-card" style="background:#1a1a2e;border-left:4px solid #e11d48">
+            <div class="kpi-icon">⚠️</div>
+            <div class="kpi-value" id="sc-kpi-180d" style="color:#f87171">0</div>
+            <div class="kpi-label" style="color:#fca5a5">≥180 dias — DESVINCULAR</div>
+          </div>
+          <div class="kpi-card" style="background:#f0fdf4;border-left:4px solid #16a34a">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-value" id="sc-kpi-desvinc">0</div>
+            <div class="kpi-label">Desvinculados</div>
+          </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="tri-filtros">
+          <div class="tri-filtros-title">🔍 Filtros</div>
+          <div class="tri-filtros-grid">
+            <div class="form-field" style="margin:0">
+              <label>Nome</label>
+              <input type="text" id="sc-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemCom()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Registro</label>
+              <input type="text" id="sc-f-registro" placeholder="Nº registro..." oninput="renderizarSemCom()">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Intervalo</label>
+              <select id="sc-f-intervalo" onchange="renderizarSemCom()">
+                <option value="">Todos</option>
+                <option>1. at&eacute; 30 min</option>
+                <option>2. at&eacute; 1 hora</option>
+                <option>3. at&eacute; 3 horas</option>
+                <option>4. at&eacute; 4 horas</option>
+                <option>5. mais de 4h</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Medida</label>
+              <select id="sc-f-medida" onchange="renderizarSemCom()">
+                <option value="">Todas</option>
+                <option value="mpu">MPU (agressores)</option>
+                <option value="demais">Demais</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Situação</label>
+              <select id="sc-f-situacao" onchange="renderizarSemCom()">
+                <option value="">Todas</option>
+                <option value="ativo">Ativo</option>
+                <option value="tratativa">Com tratativa</option>
+                <option value="desvinculado">Desvinculado</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Mín. dias sem com.</label>
+              <input type="number" id="sc-f-dias-min" placeholder="ex: 180" min="0" oninput="renderizarSemCom()" style="width:100%">
+            </div>
+            <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemCom()">✕ Limpar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="est-section-title" id="sc-count-label">Registros</div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th>Nº</th>
+              <th>Nome</th>
+              <th>Registro</th>
+              <th>Última Comunicação</th>
+              <th>Tempo Sem Com.</th>
+              <th>Dias</th>
+              <th>Intervalo</th>
+              <th>Unidade</th>
+              <th>Situação</th>
+              <th>Tratativas</th>
+              <th>Ações</th>
+            </tr></thead>
+            <tbody id="tbody-semcom"></tbody>
+          </table>
+        </div>
+        </div><!-- /sc-panel-ativos -->
+
+        <!-- ── Painel: Desvinculados ── -->
+        <div class="sub-panel" id="sc-panel-desvinculados" style="padding:0">
+          <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
+            <div style="font-weight:600;color:#16a34a">✅ Monitorados Desvinculados</div>
+            <div class="table-actions">
+              <button class="btn-secondary" onclick="renderizarSemComDesvinc()">🔄 Atualizar</button>
+              <button class="btn-secondary" onclick="exportarDesvinculadosExcel()">📥 Exportar Excel</button>
+            </div>
+          </div>
+
+          <!-- Filtros desvinculados -->
+          <div class="tri-filtros" style="margin-top:8px">
+            <div class="tri-filtros-title">🔍 Filtros</div>
+            <div class="tri-filtros-grid">
+              <div class="form-field" style="margin:0">
+                <label>Nome</label>
+                <input type="text" id="scde-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemComDesvinc()">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Registro</label>
+                <input type="text" id="scde-f-registro" placeholder="Nº registro..." oninput="renderizarSemComDesvinc()">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Servidor que desvinculou</label>
+                <input type="text" id="scde-f-servidor" placeholder="Nome do servidor..." oninput="renderizarSemComDesvinc()">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Data desvinculação início</label>
+                <input type="date" id="scde-f-inicio" onchange="renderizarSemComDesvinc()">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Data desvinculação fim</label>
+                <input type="date" id="scde-f-fim" onchange="renderizarSemComDesvinc()">
+              </div>
+              <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+                <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemComDesvinc()">✕ Limpar</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="est-section-title" id="sc-desvinc-count-label">Desvinculados</div>
+          <div class="table-scroll">
+            <table class="data-table" style="font-size:.83rem">
+              <thead><tr>
+                <th>Nº</th>
+                <th>Nome</th>
+                <th>Registro</th>
+                <th>Última Comunicação</th>
+                <th>Dias (na desvinc.)</th>
+                <th>Unidade</th>
+                <th>Data Desvinculação</th>
+                <th>Servidor</th>
+                <th>Ato / Autorização</th>
+                <th>Sistema</th>
+                <th>Observações</th>
+                <th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-semcom-desvinc"></tbody>
+            </table>
+          </div>
+        </div><!-- /sc-panel-desvinculados -->
+
+        <!-- ── Painel: Arquivados (voltaram a comunicar) ── -->
+        <div class="sub-panel" id="sc-panel-arquivados" style="padding:0">
+          <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
+            <div style="font-weight:600;color:#475569">🗄️ Arquivados — voltaram a comunicar</div>
+            <div class="table-actions">
+              <button class="btn-secondary" onclick="renderizarSemComArquivados('juridico')">🔄 Atualizar</button>
+              <button class="btn-secondary" onclick="exportarArquivadosExcel('juridico')">📥 Exportar Excel</button>
+            </div>
+          </div>
+          <div style="font-size:.8rem;color:#64748b;margin:6px 0 0">Automático: quem não aparece no Excel novo do AKILES vem para cá com todo o histórico. Se voltar a aparecer sem comunicação, retorna para Ativos com as tratativas.</div>
+
+          <div class="tri-filtros" style="margin-top:8px">
+            <div class="tri-filtros-title">🔍 Filtros</div>
+            <div class="tri-filtros-grid">
+              <div class="form-field" style="margin:0">
+                <label>Nome</label>
+                <input type="text" id="scar-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemComArquivados('juridico')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Registro</label>
+                <input type="text" id="scar-f-registro" placeholder="Nº registro..." oninput="renderizarSemComArquivados('juridico')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Arquivado de</label>
+                <input type="date" id="scar-f-inicio" onchange="renderizarSemComArquivados('juridico')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Arquivado até</label>
+                <input type="date" id="scar-f-fim" onchange="renderizarSemComArquivados('juridico')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Mostrar</label>
+                <select id="scar-f-trat" onchange="renderizarSemComArquivados('juridico')">
+                  <option value="">Todos</option>
+                  <option value="com">Só com tratativa</option>
+                  <option value="reinc">Ficou sem comunicar mais de 1 vez</option>
+                </select>
+              </div>
+              <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+                <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemComArquivados('juridico')">✕ Limpar</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="est-section-title" id="scar-count-label">Arquivados</div>
+          <div class="table-scroll">
+            <table class="data-table" style="font-size:.83rem">
+              <thead><tr>
+                <th>Nº</th>
+                <th>Nome</th>
+                <th>Registro</th>
+                <th>Sem comunicar desde</th>
+                <th>Dias sem com.</th>
+                <th title="Importação do AKILES em que a pessoa deixou de aparecer sem comunicação">Arquivado em</th>
+                <th title="Quantas vezes ficou sem comunicar">Vezes</th>
+                <th>Tratativas</th>
+                <th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-semcom-arq"></tbody>
+            </table>
+          </div>
+        </div><!-- /sc-panel-arquivados -->
+
+      </div><!-- /jur-panel-semcom -->
+    </div>
+
     <!-- ─── MANDADO DE PRISÃO (cruzamento BNMP) ─── -->
     <div class="tab-panel" id="panel-mandado">
       <div class="dash-header">
@@ -8199,23 +8201,23 @@ function fazerLogout() {
 
 // ── Mapa de abas permitidas por nível ─────────────────────
 const TABS_POR_NIVEL = {
-  plantao:    ['dashboard', 'criticos', 'ocorrencias', 'links', 'modelos', 'arquivos', 'psicossocial'],
-  comunicacao: ['dashboard', 'comunicacao', 'links', 'modelos', 'arquivos', 'psicossocial'],
-  relatorio:  ['dashboard', 'relatorio', 'links', 'modelos', 'arquivos', 'psicossocial'],
-  juridico:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'links', 'modelos', 'arquivos', 'psicossocial'],
-  estoque:    ['dashboard', 'estoque', 'links', 'arquivos', 'psicossocial'],
-  triagem:       ['dashboard', 'triagem', 'links', 'arquivos', 'psicossocial'],
-  psicossocial:  ['dashboard', 'psicossocial', 'links', 'modelos', 'arquivos'],
-  estatistica:   ['dashboard', 'estatisticas', 'links', 'arquivos'],
-  secretaria:    ['secretaria', 'arquivos', 'links'],
+  plantao:    ['dashboard', 'criticos', 'ocorrencias', 'links', 'modelos', 'arquivos', 'psicossocial', 'semcom'],
+  comunicacao: ['dashboard', 'comunicacao', 'links', 'modelos', 'arquivos', 'psicossocial', 'semcom'],
+  relatorio:  ['dashboard', 'relatorio', 'links', 'modelos', 'arquivos', 'psicossocial', 'semcom'],
+  juridico:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'links', 'modelos', 'arquivos', 'psicossocial', 'semcom'],
+  estoque:    ['dashboard', 'estoque', 'links', 'arquivos', 'psicossocial', 'semcom'],
+  triagem:       ['dashboard', 'triagem', 'links', 'arquivos', 'psicossocial', 'semcom'],
+  psicossocial:  ['dashboard', 'psicossocial', 'links', 'modelos', 'arquivos', 'semcom'],
+  estatistica:   ['dashboard', 'estatisticas', 'links', 'arquivos', 'semcom'],
+  secretaria:    ['secretaria', 'arquivos', 'links', 'semcom'],
   gerencia:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
-               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'gerencia', 'arquivos', 'estatisticas', 'mandado', 'secretaria'],
+               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'gerencia', 'arquivos', 'estatisticas', 'mandado', 'secretaria', 'semcom'],
   admin:      ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
-               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia', 'admin', 'arquivos', 'estatisticas', 'mandado', 'secretaria'],
+               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia', 'admin', 'arquivos', 'estatisticas', 'mandado', 'secretaria', 'semcom'],
 };
 
 const _TAB_MAP = { dashboard:0, criticos:1, ocorrencias:2, juridico:3, comunicacao:4,
-                   estoque:5, triagem:6, relatorio:7, links:8, modelos:9, gerencia:10, admin:11, psicossocial:12, arquivos:13, estatisticas:14, mandado:15, secretaria:16 };
+                   estoque:5, triagem:6, relatorio:7, links:8, modelos:9, gerencia:10, admin:11, psicossocial:12, arquivos:13, estatisticas:14, mandado:15, secretaria:16, semcom:17 };
 
 function aplicarVisibilidadeTabs(nivel) {
   const permitidas = TABS_POR_NIVEL[nivel] || TABS_POR_NIVEL['plantao'];
@@ -8312,7 +8314,7 @@ function mudarAba(aba) {
   document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
   const tabs = document.querySelectorAll(".nav-tab");
-  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, comunicacao: 4, estoque: 5, triagem: 6, relatorio: 7, links: 8, modelos: 9, gerencia: 10, admin: 11, psicossocial: 12, arquivos: 13, estatisticas: 14, mandado: 15, secretaria: 16 };
+  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, comunicacao: 4, estoque: 5, triagem: 6, relatorio: 7, links: 8, modelos: 9, gerencia: 10, admin: 11, psicossocial: 12, arquivos: 13, estatisticas: 14, mandado: 15, secretaria: 16, semcom: 17 };
   if (tabs[map[aba]]) tabs[map[aba]].classList.add("active");
   const panel = document.getElementById("panel-" + aba);
   if (panel) panel.classList.add("active");
@@ -8334,6 +8336,7 @@ function mudarAba(aba) {
   if (aba === "estatisticas") { estat_inicializar(); }
   if (aba === "mandado") { mp_inicializar(); }
   if (aba === "secretaria" && typeof sec_inicializar === "function") { sec_inicializar(); }
+  if (aba === "semcom") { renderizarSemCom('juridico'); atualizarBadgeSemCom(); }
 }
 
 /* ─── ATUALIZAR TUDO ─────────────────────────────────── */
@@ -9080,11 +9083,10 @@ const _SC_CFG = {
 
 // ── Sub-abas Jurídico ──────────────────────────────────────
 function mudarSubAbaJur(aba) {
-  ['ocorrencias','semcom','ofc'].forEach(a => {
+  ['ocorrencias','ofc'].forEach(a => {
     document.getElementById('jur-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('jur-panel-' + a)?.classList.toggle('active', a === aba);
   });
-  if (aba === 'semcom') renderizarSemCom();
   if (aba === 'ofc')    renderizarOFC();
 }
 
@@ -10451,7 +10453,7 @@ function abrirModalTratativa(monId) {
   document.getElementById('trat-registro').value = m.registro;
   document.getElementById('trat-tempo').value = m.tempoSemCom || '—';
   const now = new Date();
-  document.getElementById('trat-data').value = now.toISOString().slice(0,16);
+  document.getElementById('trat-data').value = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0,16);
   document.getElementById('trat-servidor').value = usuarioAtual?.nome || '';
   document.getElementById('trat-descricao').value = '';
   // Histórico
@@ -10459,26 +10461,42 @@ function abrirModalTratativa(monId) {
   const trats = (m.tratativas||[]).slice().reverse();
   hist.innerHTML = trats.length
     ? trats.map(t => `<div style="border-left:3px solid #2563eb;padding:6px 10px;margin-bottom:6px;background:#f0f7ff;border-radius:0 6px 6px 0">
-        <div style="font-weight:600;color:#1d4ed8;font-size:.82rem">${new Date(t.data).toLocaleString('pt-BR')} — ${t.servidor}</div>
-        <div style="margin-top:3px;color:#374151">${t.descricao}</div>
+        <div style="font-weight:600;color:#1d4ed8;font-size:.82rem">${new Date(t.data).toLocaleString('pt-BR')} — ${esc(t.servidor)}</div>
+        <div style="margin-top:3px;color:#374151;white-space:pre-wrap">${esc(t.descricao)}</div>
       </div>`).join('')
     : '<div style="color:#888;font-size:.85rem;padding:8px">Nenhuma tratativa registrada ainda.</div>';
   document.getElementById('modal-semcom-tratativa').classList.add('open');
 }
 
-function salvarTratativaSemCom() {
+// Relê o banco antes de gravar: com todos os acessos registrando ao mesmo tempo, o cache
+// local pode estar velho e a gravação apagaria o que outra pessoa acabou de salvar.
+async function _scMutar(fn) {
+  let base = getSemCom();
+  try {
+    const r = await _dbLerChave('cme_semcomunicacao');
+    if (r.error) throw r.error;
+    if (r.data && r.data.value && Array.isArray(r.data.value.monitorados)) base = r.data.value;
+  } catch (e) { _mostrarToast('Sem conexão com o banco — nada foi salvo. Tente de novo.', 'erro'); return false; }
+  const novo = JSON.parse(JSON.stringify(base));
+  if (fn(novo) === false) return false;
+  salvarSemCom(novo);
+  return true;
+}
+
+async function salvarTratativaSemCom() {
   const monId = document.getElementById('trat-monit-id').value;
   const data  = document.getElementById('trat-data').value;
   const srv   = document.getElementById('trat-servidor').value.trim();
   const desc  = document.getElementById('trat-descricao').value.trim();
   if (!data || !srv || !desc) { _mostrarToast('Preencha todos os campos obrigatórios.', 'erro'); return; }
-  const dados = getSemCom();
-  const m = dados.monitorados.find(x => x.id === monId);
-  if (!m) return;
-  if (!m.tratativas) m.tratativas = [];
-  m.tratativas.push({ data: new Date(data).toISOString(), servidor: srv, descricao: desc });
-  if (m.situacao === 'ativo') m.situacao = 'ativo'; // mantém ativo, mas tratativa fica registrada
-  salvarSemCom(dados);
+  let m = null;
+  const ok = await _scMutar(d => {
+    m = d.monitorados.find(x => x.id === monId);
+    if (!m) { _mostrarToast('Esse registro mudou no banco. Atualize a página e tente de novo.', 'erro'); return false; }
+    (m.tratativas = m.tratativas || []).push({ data: new Date(data).toISOString(), servidor: srv, descricao: desc, registradoPor: usuarioAtual?.nome || '' });
+  });
+  if (!ok) return;
+  try { auditar({ modulo: 'Sem Comunicação', action: 'semcom_tratativa', alvo: m.nome, detalhe: desc.slice(0, 200) }); } catch (e) {}
   fecharModal('modal-semcom-tratativa');
   renderizarSemCom(_scAreaDe(m));
   _mostrarToast('Tratativa registrada com sucesso!', 'sucesso');
@@ -10501,24 +10519,29 @@ function abrirModalDesvinc(monId) {
   document.getElementById('modal-semcom-desvinc').classList.add('open');
 }
 
-function salvarDesvinculacao() {
+async function salvarDesvinculacao() {
   const monId = document.getElementById('desvinc-monit-id').value;
   const data  = document.getElementById('desvinc-data').value;
   const srv   = document.getElementById('desvinc-servidor').value.trim();
   if (!data || !srv) { _mostrarToast('Informe a data e o servidor.', 'erro'); return; }
-  const dados = getSemCom();
-  const m = dados.monitorados.find(x => x.id === monId);
-  if (!m) return;
-  m.situacao = 'desvinculado';
-  m.desvinculacao = {
+  const desv = {
     data,
     servidor: srv,
     ato: document.getElementById('desvinc-ato').value.trim(),
     sistema: document.getElementById('desvinc-sistema').value.trim(),
     obs: document.getElementById('desvinc-obs').value.trim(),
     registradoEm: new Date().toISOString(),
+    registradoPor: usuarioAtual?.nome || '',
   };
-  salvarSemCom(dados);
+  let m = null;
+  const ok = await _scMutar(d => {
+    m = d.monitorados.find(x => x.id === monId);
+    if (!m) { _mostrarToast('Esse registro mudou no banco. Atualize a página e tente de novo.', 'erro'); return false; }
+    m.situacao = 'desvinculado';
+    m.desvinculacao = desv;
+  });
+  if (!ok) return;
+  try { auditar({ modulo: 'Sem Comunicação', action: 'semcom_desvincular', alvo: m.nome, detalhe: [desv.ato, desv.obs].filter(Boolean).join(' · ').slice(0, 200) }); } catch (e) {}
   atualizarBadgeSemCom();
   fecharModal('modal-semcom-desvinc');
   // Redireciona automaticamente para a sub-aba Desvinculados da área correta
@@ -10564,8 +10587,8 @@ function verMonitoradoSemCom(monId) {
   const trats = (m.tratativas||[]).slice().reverse();
   hist.innerHTML = trats.length
     ? trats.map(t => `<div style="border-left:3px solid #2563eb;padding:6px 10px;margin-bottom:6px;background:#f0f7ff;border-radius:0 6px 6px 0">
-        <div style="font-weight:600;color:#1d4ed8;font-size:.82rem">${new Date(t.data).toLocaleString('pt-BR')} — ${t.servidor}</div>
-        <div style="margin-top:3px;color:#374151">${t.descricao}</div>
+        <div style="font-weight:600;color:#1d4ed8;font-size:.82rem">${new Date(t.data).toLocaleString('pt-BR')} — ${esc(t.servidor)}</div>
+        <div style="margin-top:3px;color:#374151;white-space:pre-wrap">${esc(t.descricao)}</div>
       </div>`).join('')
     : '<div style="color:#888;font-size:.85rem;padding:8px">Nenhuma tratativa registrada.</div>';
   document.getElementById('modal-semcom-ver').classList.add('open');
@@ -16383,7 +16406,7 @@ function mp_cancelarCruzamento(){
 function mp_cruzar(){
   if(!_mpMandados || !_mpMandados.nomes.length){ _mostrarToast('Carregue a planilha de mandados primeiro.','erro'); return; }
   const nomesMon = _mpFonteMon==='sistema' ? _mpNomesMonitoradosSistema() : (_mpMonitoradosArq ? _mpMonitoradosArq.nomes : []);
-  if(!nomesMon.length){ _mostrarToast(_mpFonteMon==='sistema' ? 'Não há monitorados no sistema (importe na aba Jurídico/Sem Comunicação) ou envie um arquivo.' : 'Carregue a planilha de monitorados.','erro'); return; }
+  if(!nomesMon.length){ _mostrarToast(_mpFonteMon==='sistema' ? 'Não há monitorados no sistema (importe na aba Sem Comunicação) ou envie um arquivo.' : 'Carregue a planilha de monitorados.','erro'); return; }
   _mpCruzarExec(nomesMon);
 }
 
