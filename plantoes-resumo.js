@@ -66,6 +66,7 @@ function _plrRender(d, lin, nd) {
   const frase = 'Nos últimos ' + nd + ' dias, o melhor plantão foi ' + nome(melhor.eq) + ' (nota ' + fmtNota(melhor.nota) + ').'
     + (eqs.length > 1 && piorInd && pior.ind[piorInd.k].s < 0.8 ? ' Precisa de mais atenção: ' + nome(pior.eq) + ', que ' + _PLR_FRASE[piorInd.k](pior.ind[piorInd.k]) + '.' : '');
   box.innerHTML = '<div style="font-size:.95rem;line-height:1.5;padding:10px 14px;background:#f8fafc;border-left:4px solid #2563eb;border-radius:4px;margin-bottom:12px">' + frase + '</div>'
+    + _plrHtmlStatusTroca(d)
     + _plrHtmlPassivo(d)
     + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">'
     + eqs.map((l, i) => _plrCartao(l, i + 1, fmtNota)).join('') + '</div>'
@@ -117,4 +118,14 @@ function _plrHtmlRestDetalhe(x) {
         + '<td style="padding:4px 6px;font-family:var(--font-mono)">' + esc(o.id) + '</td><td style="padding:4px 6px;font-family:var(--font-mono)">' + esc(o.reg || '') + '</td><td style="padding:4px 6px">' + esc(o.t) + '</td>'
         + '<td style="padding:4px 6px;color:' + (o.est === 'Aberto' ? '#b91c1c' : '#b45309') + '">' + esc(o.est) + (o.est === 'Aberto' ? ' (ninguém pegou)' : '') + '</td><td style="padding:4px 6px">' + esc(o.c) + '</td></tr>').join('')
       + '</tbody></table></div>' : '') + '</div>';
+}
+// A análise tem que acontecer em TODA troca (08h). Mostra se a de hoje foi feita — e avisa quando não.
+function _plrHtmlStatusTroca(d) {
+  const agora = new Date(), troca = new Date(agora); troca.setHours(8, 0, 0, 0);
+  if (agora < troca) troca.setDate(troca.getDate() - 1);
+  const ger = new Date(d && d.geradoEm), dm = x => x.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), hm = x => x.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  if (!isNaN(ger) && ger >= troca) return '<div style="font-size:.78rem;color:#15803d;margin:-6px 0 10px">\u{2705} Troca de ' + dm(troca) + ' às 08h analisada (' + dm(ger) + ' às ' + hm(ger) + ').</div>';
+  return '<div style="font-size:.85rem;line-height:1.5;padding:8px 14px;background:#fef2f2;border-left:4px solid #dc2626;border-radius:4px;margin-bottom:12px">'
+    + '\u{26A0}\u{FE0F} <b>A troca de ' + dm(troca) + ' às 08h ainda não foi analisada.</b> Última análise: ' + (isNaN(ger) ? '—' : dm(ger) + ' às ' + hm(ger)) + '. '
+    + '<span style="color:#64748b">O robô tenta das 08h10 às 11h50 no computador que está de vez. Se nenhum estiver ligado, a análise fica para o dia seguinte (os números do plantão são recuperados; as restabelecidas deixadas na troca, não).</span></div>';
 }
