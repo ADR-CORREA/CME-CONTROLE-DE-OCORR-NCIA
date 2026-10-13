@@ -12,13 +12,14 @@ const _SEC_DIREITOS = [6, 12, 24];
 let _secAba = 'despachos', _secPerfilId = null, _secPerfilAba = 'ficha', _secModeloId = null;
 
 _STORES_PROTEGIDAS.secretaria = v => (v && Array.isArray(v.servidores))
-  ? v.servidores.length + (v.apoios || []).length + (v.folgas || []).length : -1;
+  ? v.servidores.length + (v.apoios || []).length + (v.folgas || []).length + (v.afastamentos || []).length : -1;
 
 function _secPode() { return !!(usuarioAtual && _SEC_NIVEIS.includes(usuarioAtual.nivel)); }
 function _secNormal(d) {
   d = (d && typeof d === 'object') ? d : {};
   const arr = k => Array.isArray(d[k]) ? d[k] : [];
   return { servidores: arr('servidores'), apoios: arr('apoios'), folgas: arr('folgas'), lixeira: arr('lixeira'),
+    afastamentos: arr('afastamentos'),
     modelos: Array.isArray(d.modelos) ? d.modelos : null,                       // null = ainda usa os modelos padrão
     config: (d.config && typeof d.config === 'object') ? d.config : {} };
 }
@@ -97,11 +98,11 @@ function sec_inicializar() {
   const root = document.getElementById('sec-root');
   if (!root) return;
   if (!_secPode()) { root.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b">Acesso restrito à Secretaria e à Gerência.</div>'; return; }
-  const abas = [['despachos', '\u{1F4E8} Despachos PRODOC'], ['servidores', '\u{1F464} Servidores'], ['apoios', '\u{23F1}\u{FE0F} Apoios e Dispensas'], ['folgas', '\u{1F91D} Folgas combinadas'], ['auditoria', '\u{1F50D} Auditoria']];
+  const abas = [['despachos', '\u{1F4E8} Despachos PRODOC'], ['servidores', '\u{1F464} Servidores'], ['ferias', '\u{1F3D6}\u{FE0F} Férias e Licenças'], ['apoios', '\u{23F1}\u{FE0F} Apoios e Dispensas'], ['folgas', '\u{1F91D} Folgas combinadas'], ['auditoria', '\u{1F50D} Auditoria']];
   root.innerHTML = '<div class="dash-header"><div><div class="dash-title">\u{1F5C2}\u{FE0F} Secretaria</div>'
     + '<div class="dash-update">Servidores, apoios e dispensas, folgas e documentos — acesso restrito à Secretaria e à Gerência</div></div></div>'
     + '<div class="sub-tabs">' + abas.map(([k, r]) => '<div class="sub-tab' + (k === _secAba ? ' active' : '') + '" id="sec-stab-' + k + '" onclick="sec_mudarAba(\'' + k + '\')">' + r + '</div>').join('') + '</div>'
-    + '<div id="sec-conteudo" style="padding-top:12px"></div>';
+    + '<div id="sec-hoje"></div><div id="sec-conteudo" style="padding-top:12px"></div>';
   sec_render();
 }
 function sec_mudarAba(aba) {
@@ -110,8 +111,9 @@ function sec_mudarAba(aba) {
   sec_render();
 }
 function sec_render() {
+  if (typeof _secRenderHoje === 'function') _secRenderHoje();
   if (_secPerfilId) return sec_renderPerfil();
-  ({ despachos: sec_renderDespachos, servidores: sec_renderServidores, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
+  ({ despachos: sec_renderDespachos, servidores: sec_renderServidores, ferias: sec_renderFerias, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
 }
 
 // ── Servidores ────────────────────────────────────────────────────────────────
@@ -135,15 +137,17 @@ function sec_renderServidores() {
     + '<input id="sec-f-busca" placeholder="Buscar nome, matrícula, CPF ou cargo" value="' + esc(busca) + '" oninput="sec_renderServidores()" style="flex:1;min-width:220px;padding:6px 10px">'
     + '<select id="sec-f-equipe" onchange="sec_renderServidores()"><option value="">Todas as equipes</option>' + _SEC_EQUIPES.map(e => '<option' + (e === fEq ? ' selected' : '') + '>' + e + '</option>').join('') + '</select>'
     + '<select id="sec-f-sit" onchange="sec_renderServidores()"><option value="ativo"' + (fSit === 'ativo' ? ' selected' : '') + '>Ativos</option><option value="inativo"' + (fSit === 'inativo' ? ' selected' : '') + '>Inativos</option><option value=""' + (fSit === '' ? ' selected' : '') + '>Todos</option></select>'
+    + '<button class="btn-secondary" onclick="sec_baixarModeloServidores()">Baixar planilha modelo</button>'
+    + '<label class="btn-secondary" style="cursor:pointer">Importar planilha<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="sec_importarServidores(this)"></label>'
     + '<button class="btn-primary" onclick="sec_editarServidor()">+ Novo servidor</button></div>'
-    + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Nome</th><th>Cargo</th><th>Matrícula</th><th>Equipe</th><th>Telefone</th><th>Dispensas a usufruir</th><th></th></tr></thead><tbody>'
+    + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Nome</th><th>Cargo</th><th>Matrícula</th><th>Equipe</th><th>Telefone</th><th>Hoje</th><th>Dispensas a usufruir</th><th></th></tr></thead><tbody>'
     + (lista.length ? lista.map(s => {
       const sd = _secSaldo(s.id, d);
       return '<tr style="cursor:pointer" onclick="sec_abrirPerfil(\'' + s.id + '\')"><td><strong>' + esc(s.nome) + '</strong></td><td>' + esc(s.cargo || '—') + '</td>'
-        + '<td style="font-family:var(--font-mono)">' + esc(s.matricula || '—') + '</td><td>' + esc(s.equipe || '—') + '</td><td>' + esc(s.telefone || '—') + '</td>'
+        + '<td style="font-family:var(--font-mono)">' + esc(s.matricula || '—') + '</td><td>' + esc(s.equipe || '—') + '</td><td>' + esc(s.telefone || '—') + '</td><td>' + _secSeloForaHoje(s.id, d) + '</td>'
         + '<td>' + (sd.pendentes ? '<b style="color:#b45309">' + sd.horasPendentes + 'h</b> (' + sd.pendentes + ' apoio' + (sd.pendentes > 1 ? 's' : '') + ')' : '—') + '</td>'
         + '<td><button class="btn-sm btn-outline">Abrir perfil</button></td></tr>';
-    }).join('') : '<tr><td colspan="7" style="text-align:center;padding:28px;color:#888">' + (d.servidores.length ? 'Nenhum servidor com esse filtro.' : 'Nenhum servidor cadastrado. Clique em "+ Novo servidor".') + '</td></tr>')
+    }).join('') : '<tr><td colspan="8" style="text-align:center;padding:28px;color:#888">' + (d.servidores.length ? 'Nenhum servidor com esse filtro.' : 'Nenhum servidor cadastrado. Clique em "+ Novo servidor".') + '</td></tr>')
     + '</tbody></table></div>';
   const b = document.getElementById('sec-f-busca'); if (b && busca) { b.focus(); b.setSelectionRange(busca.length, busca.length); }
 }
@@ -154,7 +158,7 @@ function sec_editarServidor(id) {
   _secModal(id ? 'Editar servidor' : 'Novo servidor',
     '<div class="form-section"><div class="form-section-title">Identificação</div><div class="form-grid">'
     + _secCampo('sec-s-nome', 'Nome completo *', s.nome) + _secCampo('sec-s-matricula', 'Matrícula *', s.matricula)
-    + _secCampo('sec-s-cpf', 'CPF', _secCpfFmt(s.cpf), 'inputmode="numeric"') + _secCampo('sec-s-rg', 'RG', s.rg)
+    + _secCampo('sec-s-cpf', 'CPF', _secCpfFmt(s.cpf), 'inputmode="numeric" maxlength="14" oninput="this.value=_secCpfMascara(this.value)"') + _secCampo('sec-s-rg', 'RG', s.rg)
     + _secCampo('sec-s-nasc', 'Nascimento', s.nascimento, 'type="date"') + _secCampo('sec-s-cargo', 'Cargo', s.cargo, 'list="sec-cargos" placeholder="Ex.: Policial Penal, Educadora Social N/S"')
     + _secCampo('sec-s-formacao', 'Formação', s.formacao, 'placeholder="Ex.: Direito"') + _secCampo('sec-s-admissao', 'Admissão / lotação na CME', s.admissao, 'type="date"')
     + sel('sec-s-equipe', 'Equipe', _SEC_EQUIPES, s.equipe) + _secCampo('sec-s-setor', 'Setor', s.setor, 'placeholder="Ex.: Plantão, Jurídico, Secretaria"')
@@ -199,11 +203,11 @@ function sec_renderPerfil() {
   const d = _secDados(), s = _secServ(_secPerfilId, d);
   if (!s) { _secPerfilId = null; return sec_render(); }
   const sd = _secSaldo(s.id, d);
-  const abas = [['ficha', 'Ficha de apoio e dispensas'], ['folgas', 'Folgas combinadas'], ['documentos', 'Documentos'], ['qualificacao', 'Qualificação']];
+  const abas = [['ficha', 'Ficha de apoio e dispensas'], ['afastamentos', 'Férias e licenças'], ['folgas', 'Folgas combinadas'], ['documentos', 'Documentos'], ['qualificacao', 'Qualificação']];
   c.innerHTML = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">'
     + '<button class="btn-secondary" onclick="_secPerfilId=null;sec_render()">\u{2190} Voltar</button>'
     + '<div style="flex:1"><div style="font-size:1.15rem;font-weight:700">' + esc(s.nome) + '</div>'
-    + '<div style="color:#64748b;font-size:.85rem">' + esc([s.cargo, s.formacao && '(' + s.formacao + ')', s.matricula && 'Matrícula ' + s.matricula, s.equipe].filter(Boolean).join(' · ')) + '</div></div>'
+    + '<div style="color:#64748b;font-size:.85rem">' + esc([s.cargo, s.formacao && '(' + s.formacao + ')', s.matricula && 'Matrícula ' + s.matricula, s.equipe].filter(Boolean).join(' · ')) + ' ' + _secSeloForaHoje(s.id, d) + '</div></div>'
     + '<div style="background:#fffbeb;border-left:4px solid #d97706;padding:6px 12px;border-radius:4px"><b>' + sd.horasPendentes + 'h</b> de dispensa a usufruir<div style="font-size:.75rem;color:#64748b">' + sd.apoios + ' apoio(s) · ' + sd.usufruidas + ' usufruída(s)</div></div></div>'
     + '<div class="sub-tabs">' + abas.map(([k, r]) => '<div class="sub-tab' + (k === _secPerfilAba ? ' active' : '') + '" onclick="sec_perfilAba(\'' + k + '\')">' + r + '</div>').join('') + '</div>'
     + '<div id="sec-perfil-corpo" style="padding-top:12px"></div>';
@@ -212,6 +216,7 @@ function sec_renderPerfil() {
   else if (_secPerfilAba === 'ficha') corpo.innerHTML = _secHtmlFicha(s, d);
   else if (_secPerfilAba === 'folgas') corpo.innerHTML = _secHtmlFolgas(d.folgas.filter(f => f.servidorId === s.id), false, s.id);
   else if (_secPerfilAba === 'documentos') sec_renderDocs(corpo, 'servidores/' + s.id, s.nome);
+  else if (_secPerfilAba === 'afastamentos') corpo.innerHTML = _secHtmlAfastamentosServidor(s, d);
 }
 function _secHtmlQualificacao(s) {
   const linha = (r, v) => '<tr><th style="width:230px;background:#f8fafc;text-align:left">' + r + '</th><td>' + (v ? esc(v) : '<span style="color:#94a3b8">—</span>') + '</td></tr>';
@@ -229,6 +234,7 @@ function _secHtmlFicha(s, d) {
   const ap = _secApoiosDe(s.id, d);
   return '<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px;flex-wrap:wrap">'
     + '<button class="btn-secondary" onclick="sec_imprimirFicha(\'' + s.id + '\')">\u{1F5A8}\u{FE0F} Imprimir ficha</button>'
+    + (ap.some(a => !a.dispensa) ? '<button class="btn-secondary" onclick="sec_lancarDispensaProxima(\'' + s.id + '\')">Lançar dispensa</button>' : '')
     + '<button class="btn-primary" onclick="sec_novoApoio(\'' + s.id + '\')">+ Registrar apoio</button></div>'
     + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Data do apoio</th><th>Ação</th><th>Direito</th><th>Data da dispensa</th><th>Turno</th><th>Lançado por</th><th></th></tr></thead><tbody>'
     + (ap.length ? ap.map(a => _secLinhaApoio(a, false)).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:#888">Nenhum apoio registrado.</td></tr>')
@@ -577,14 +583,14 @@ function sec_renderDespachos() {
   const busca = (document.getElementById('sec-dp-busca')?.value || '').toLowerCase().trim();
   const grupos = {};
   mods.filter(m => !busca || (m.destino + ' ' + m.titulo + ' ' + m.assunto).toLowerCase().includes(busca)).forEach(m => { (grupos[m.destino] = grupos[m.destino] || []).push(m); });
-  c.innerHTML = '<div style="display:grid;grid-template-columns:minmax(240px,320px) 1fr;gap:16px;align-items:start">'
-    + '<div><input id="sec-dp-busca" placeholder="Buscar modelo" value="' + esc(busca) + '" oninput="sec_renderDespachos()" style="width:100%;padding:6px 10px;margin-bottom:8px">'
+  c.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">'
+    + '<div style="flex:0 1 300px;min-width:240px"><input id="sec-dp-busca" placeholder="Buscar modelo" value="' + esc(busca) + '" oninput="sec_renderDespachos()" style="width:100%;padding:6px 10px;margin-bottom:8px">'
     + Object.keys(grupos).map(g => '<div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px">PRODOC para ' + esc(g) + '</div>'
       + grupos[g].map(m => '<div onclick="_secModeloId=\'' + m.id + '\';sec_renderDespachos()" style="cursor:pointer;padding:7px 10px;border-radius:4px;margin-bottom:3px;font-size:.88rem;'
         + (m.id === _secModeloId ? 'background:#dbeafe;border-left:3px solid #2563eb;font-weight:600' : 'background:#f8fafc;border-left:3px solid transparent') + '">' + esc(m.titulo) + '</div>').join('')).join('')
     + '<div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap"><button class="btn-primary" onclick="sec_editarModelo()">+ Novo modelo</button>'
     + '<button class="btn-secondary" onclick="sec_configGerente()">Gerente: ' + esc(_secGerente(d)) + '</button></div></div>'
-    + '<div id="sec-dp-form"></div></div>';
+    + '<div id="sec-dp-form" style="flex:1 1 440px;min-width:0"></div></div>';
   const b = document.getElementById('sec-dp-busca'); if (b && busca) { b.focus(); b.setSelectionRange(busca.length, busca.length); }
   _secRenderFormDespacho();
 }
