@@ -9,8 +9,13 @@ function _secCpfMascara(v) {
   return c.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1-$2');
 }
 
-// ── Pendências: férias/licenças em curso ou futuras sem portaria anexa ────────
-function _secSemPortaria(d) { const hoje = _secHoje(); return (d || _secDados()).afastamentos.filter(a => a.fim >= hoje && !(a.anexos || []).length); }
+// ── Pendências: férias/licenças em curso ou que começam em até 30 dias, sem portaria anexa ──
+// (a programação do ano seguinte não conta: a portaria só sai perto da data)
+const _SEC_PORTARIA_DIAS = 30;
+function _secSemPortaria(d) {
+  const hoje = _secHoje(), limite = _secMaisDias(hoje, _SEC_PORTARIA_DIAS);
+  return (d || _secDados()).afastamentos.filter(a => a.fim >= hoje && a.inicio <= limite && !(a.anexos || []).length);
+}
 function _secAtualizarBadge() {
   const el = document.getElementById('sec-badge'); if (!el) return;
   const port = _secPode() ? _secSemPortaria().length : 0;
