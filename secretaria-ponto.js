@@ -207,7 +207,7 @@ function _secCartaoEquipe(titulo, sub, cor, servs, d, hoje, vazio) {
     + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div style="font-weight:700;font-size:1.02rem">' + titulo + '</div>'
     + (servs.length ? '<div style="font-size:.8rem;color:#475569"><b>' + presentes + '</b> de ' + servs.length + ' presentes</div>' : '') + '</div>'
     + '<div style="font-size:.78rem;color:#64748b;margin-bottom:6px">' + sub + '</div>'
-    + (servs.length ? '<div style="max-height:340px;overflow:auto">' + sits.sort((a, b) => a.st.fora - b.st.fora || a.s.nome.localeCompare(b.s.nome)).map(x => '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid #f1f5f9;font-size:.86rem' + (x.st.fora ? ';color:#94a3b8' : '') + '">'
+    + (servs.length ? '<div style="max-height:340px;overflow:auto">' + sits.sort((a, b) => b.st.fora - a.st.fora || a.s.nome.localeCompare(b.s.nome)).map(x => '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid #f1f5f9;font-size:.86rem' + (x.st.fora ? ';color:#94a3b8' : '') + '">'
       + '<a href="#" onclick="sec_abrirPerfil(\'' + x.s.id + '\');return false" style="color:inherit;text-decoration:' + (x.st.fora ? 'line-through' : 'none') + '">' + esc(x.s.nome) + '</a>'
       + (x.st.txt ? '<span style="font-size:.72rem;font-weight:600;color:' + x.st.cor + ';white-space:nowrap">' + esc(x.st.txt) + '</span>' : '') + '</div>').join('') + '</div>'
       : '<div style="font-size:.85rem;color:#94a3b8;padding:6px 0">' + vazio + '</div>') + '</div>';
