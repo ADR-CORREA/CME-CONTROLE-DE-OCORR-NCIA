@@ -8202,6 +8202,37 @@ async function definirPrimeiraSenha() {
   iniciarApp();
 }
 
+/* Sessão restaurada (F5) guarda o usuário do momento do login. Se o administrador mudou o
+   nível depois, a pessoa continuava com o menu antigo por até 8 h. Aqui o nível é conferido no
+   banco (mesma validação do login) e, se mudou, aplicado na hora. Credencial que não vale mais
+   (senha trocada / usuário removido) encerra a sessão. Sem conexão: segue com a sessão salva. */
+async function _sessaoConferirNivel(u, h) {
+  if (!window._db || !usuarioAtual) return;
+  let r;
+  try { r = await window._db.rpc('cme_login_guarded', { p_username: u, p_hash: h }); } catch (e) { return; }
+  if (!r || r.error) return;
+  if (!r.data) {
+    if (usuarioAtual) fazerLogout();
+    const errEl = document.getElementById('login-error');
+    if (errEl) { errEl.textContent = 'Seu acesso mudou. Entre novamente.'; errEl.style.display = 'block'; }
+    return;
+  }
+  const novo = r.data.nivel || '';
+  if (!usuarioAtual || novo === (usuarioAtual.nivel || '')) return;
+  const { senha, senhaSalt, senhaVersao, ...limpo } = r.data;
+  usuarioAtual = Object.assign({}, usuarioAtual, limpo);
+  try {
+    const s = JSON.parse(localStorage.getItem('cme_sessao') || '{}');
+    localStorage.setItem('cme_sessao', JSON.stringify(Object.assign({}, s, limpo)));
+  } catch (e) {}
+  addLog('Nível de acesso atualizado na sessão: ' + usuarioAtual.nome + ' (' + novo + ')');
+  document.body.classList.toggle('is-admin', novo === 'admin');
+  document.getElementById('role-badge').textContent = (_NIVEL_NOME[novo] || novo || 'Operador').toUpperCase();
+  atualizarTudo();
+  aplicarVisibilidadeTabs(novo);
+  _mostrarToast('Seu nível de acesso foi atualizado pelo administrador.', 'sucesso');
+}
+
 function fazerLogout() {
   addLog(`Logout: ${usuarioAtual.nome}`);
   usuarioAtual = null;
@@ -8301,7 +8332,7 @@ function _iniciarAppTela() {
   const nivelLabel = {
     admin:'ADMINISTRADOR', gerencia:'GERÊNCIA', juridico:'JURÍDICO',
     comunicacao:'COMUNICAÇÃO', plantao:'OPERADOR', estoque:'ESTOQUE',
-    triagem:'TRIAGEM', relatorio:'RELATÓRIO', estatistica:'ESTATÍSTICA'
+    triagem:'TRIAGEM', relatorio:'RELATÓRIO', estatistica:'ESTATÍSTICA', secretaria:'SECRETARIA', psicossocial:'PSICOSSOCIAL'
   };
   document.getElementById("role-badge").textContent = nivelLabel[nivel] || nivel.toUpperCase();
 
@@ -20402,7 +20433,8 @@ function r2_iconeArquivo(nome) {
         const userFresco = lista ? lista.find(u => u.usuario === s.usuario && u.nivel === s.nivel) : null;
         usuarioAtual = userFresco || snapshot;
         overlay.style.display = 'none';
-        iniciarApp();
+        // O nível pode ter mudado depois do login (o admin trocou o acesso): confere no banco.
+        Promise.resolve(iniciarApp()).then(() => { if (_su && _sh) _sessaoConferirNivel(_su, _sh); });
         // Recarrega a lista completa de usuários (admin/subgerente) agora que
         // temos as credenciais — evita o painel cair no USUARIOS_PADRAO.
         if (['admin','subgerente'].includes(usuarioAtual.nivel) && window._db && _su && _sh) {
