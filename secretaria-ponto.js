@@ -219,7 +219,7 @@ function sec_renderHojeDash() {
   const dow = new Date(hoje + 'T12:00:00').getDay(), feriado = ((d.config || {}).feriados || []).includes(hoje);
   const diaUtil = dow >= 1 && dow <= 5 && !feriado;
   const guarn = ativos.filter(s => s.equipe === pl.guarnicao), exp = ativos.filter(s => s.equipe === 'EXPEDIENTE');
-  const apoioHoje = d.apoios.filter(a => a.data === hoje), foraHoje = ativos.filter(s => _secSituacaoHoje(s, d, hoje).fora);
+  const foraHoje = ativos.filter(s => _secSituacaoHoje(s, d, hoje).fora);
   const ultImp = ((d.config || {}).pontoImportado || []).slice(-1)[0];
   const diaTxt = new Date(hoje + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
   c.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
@@ -227,14 +227,11 @@ function sec_renderHojeDash() {
     + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="font-size:.78rem;color:#64748b">' + (ultImp ? 'Folhas de ponto importadas: ' + ultImp.mes.split('-').reverse().join('/') : 'Nenhuma folha de ponto importada ainda') + '</span>'
     + '<label class="btn-primary" style="cursor:pointer">Importar folhas de ponto (PDF)<input type="file" accept=".pdf" multiple style="display:none" onchange="sec_importarPonto(this)"></label></div></div>'
     + (!d.servidores.length ? '<div style="background:#eff6ff;border-left:4px solid #2563eb;padding:10px 14px;border-radius:4px;font-size:.88rem;margin-bottom:12px"><b>Comece por aqui:</b> importe os PDFs das folhas de ponto do mês (plantão e expediente). O sistema cadastra os servidores com a guarnição de cada um, e as férias e licenças marcadas.</div>' : '')
+    + (typeof _secCartaoCompromissos === 'function' ? _secCartaoCompromissos() : '')
     + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">'
     + _secCartaoEquipe('\u{1F6E1}\u{FE0F} Plantão — ' + pl.guarnicao, 'Das 08h de ' + _secBRc(pl.dia) + ' às 08h de ' + _secBRc(_secMaisDias(pl.dia, 1)) + ' · próximo: ' + pl.proxima, '#0d9488', guarn, d, hoje, 'Nenhum servidor cadastrado na guarnição ' + pl.guarnicao + '.')
     + (diaUtil ? _secCartaoEquipe('\u{1F3E2} Expediente', 'Segunda a sexta', '#2563eb', exp, d, hoje, 'Nenhum servidor de expediente cadastrado.')
       : '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #94a3b8;border-radius:6px;padding:12px 14px"><div style="font-weight:700">\u{1F3E2} Expediente</div><div style="font-size:.86rem;color:#64748b;margin-top:6px">Hoje não há expediente (' + (feriado ? 'feriado' : 'fim de semana') + ').</div></div>')
-    + '<div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #7c3aed;border-radius:6px;padding:12px 14px"><div style="font-weight:700;font-size:1.02rem">\u{1F91D} De apoio hoje</div>'
-    + (apoioHoje.length ? apoioHoje.map(a => '<div style="padding:4px 0;border-top:1px solid #f1f5f9;font-size:.86rem"><a href="#" onclick="sec_abrirPerfil(\'' + a.servidorId + '\');return false">' + esc(_secNomeServ(a.servidorId, d)) + '</a> <span style="color:#64748b">— ' + esc(a.acao) + ' (' + a.horas + 'h)</span></div>').join('')
-      : '<div style="font-size:.85rem;color:#94a3b8;padding:6px 0">Nenhum apoio registrado para hoje.</div>')
-    + '<div style="margin-top:8px"><button class="btn-sm btn-outline" onclick="sec_novoApoio()">+ Registrar apoio</button></div></div>'
     + '<div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #dc2626;border-radius:6px;padding:12px 14px"><div style="font-weight:700;font-size:1.02rem">\u{1F6AB} Fora hoje</div>'
     + (foraHoje.length ? foraHoje.map(s => { const st = _secSituacaoHoje(s, d, hoje); return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid #f1f5f9;font-size:.86rem"><a href="#" onclick="sec_abrirPerfil(\'' + s.id + '\');return false">' + esc(s.nome) + '</a><span style="font-size:.72rem;font-weight:600;color:' + st.cor + ';white-space:nowrap">' + esc(st.txt) + '</span></div>'; }).join('')
       : '<div style="font-size:.85rem;color:#94a3b8;padding:6px 0">Ninguém afastado hoje.</div>') + '</div></div>';

@@ -13,9 +13,11 @@ function _secCpfMascara(v) {
 function _secSemPortaria(d) { const hoje = _secHoje(); return (d || _secDados()).afastamentos.filter(a => a.fim >= hoje && !(a.anexos || []).length); }
 function _secAtualizarBadge() {
   const el = document.getElementById('sec-badge'); if (!el) return;
-  const n = _secPode() ? _secSemPortaria().length : 0;
+  const port = _secPode() ? _secSemPortaria().length : 0;
+  const comp = _secPode() && typeof _secCompromissosPendentes === 'function' ? _secCompromissosPendentes().length : 0;
+  const n = port + comp;
   el.textContent = n; el.style.display = n > 0 ? 'flex' : 'none';
-  el.title = n ? n + ' férias/licença(s) sem portaria anexa' : '';
+  el.title = [comp && comp + ' compromisso(s) para hoje/atrasado(s)', port && port + ' férias/licença(s) sem portaria anexa'].filter(Boolean).join(' · ');
 }
 setInterval(() => { try { if (usuarioAtual) _secAtualizarBadge(); } catch (e) {} }, 60000);
 
@@ -38,6 +40,7 @@ function _secRenderHoje() {
   box.innerHTML = '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Hoje, ' + _secBR(hoje).slice(0, 5) + '</span>'
     + item('#0d9488', '<b>' + fora.length + '</b> afastado(s)' + (fora.length ? ': ' + fora.slice(0, 4).map(a => esc(_secNomeServ(a.servidorId, d).split(' ')[0]) + ' até ' + _secBRc(a.fim)).join(', ') + (fora.length > 4 ? '…' : '') : ''), 'ferias')
     + item('#d97706', '<b>' + em30.length + '</b> começa(m) em 30 dias', 'ferias')
+    + (typeof _secCompromissosPendentes === 'function' && _secCompromissosPendentes().length ? item('#e11d48', '<b>' + _secCompromissosPendentes().length + '</b> compromisso(s) pendente(s)', 'agenda') : '')
     + item('#2563eb', '<b>' + horas + 'h</b> de dispensa a usufruir', 'apoios')
     + (semPort ? item('#dc2626', '<b>' + semPort + '</b> sem portaria anexa', 'ferias') : '') + '</div>';
 }
