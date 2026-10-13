@@ -118,7 +118,8 @@ function _secPlanoPonto(folhas, d) {
     if (!s) plano.novos.push({ f, equipe });
     else {
       const mud = [];
-      if (_SEC_EQUIPES.includes(equipe) && s.equipe !== equipe) mud.push('equipe ' + (s.equipe || '—') + ' → ' + equipe);
+      // equipeFixa: a gerência definiu a guarnição à mão (ex.: folha gerada por outra guarnição)
+      if (_SEC_EQUIPES.includes(equipe) && s.equipe !== equipe && !s.equipeFixa) mud.push('equipe ' + (s.equipe || '—') + ' → ' + equipe);
       if (f.cpf && !s.cpf && _secCpfValido(f.cpf)) mud.push('CPF');
       if (f.cargo && !s.cargo) mud.push('cargo');
       plano.mudancas.push({ f, s, equipe, mud });
@@ -157,7 +158,8 @@ async function sec_confirmarPonto() {
         d.servidores.push(s); nNovos++;
       } else {
         let mudou = false;
-        if (_SEC_EQUIPES.includes(equipe) && s.equipe !== equipe) { s.equipe = equipe; mudou = true; }
+        if (_SEC_EQUIPES.includes(equipe) && s.equipe !== equipe && !s.equipeFixa) { s.equipe = equipe; mudou = true; }
+        if (s.equipeFixa && _SEC_EQUIPES.includes(equipe)) s.equipeFolha = equipe; // só registra de qual guarnição veio a folha
         if (!s.cpf && _secCpfValido(f.cpf)) { s.cpf = f.cpf; mudou = true; }
         if (!s.cargo && f.cargo) { s.cargo = f.cargo.charAt(0) + f.cargo.slice(1).toLowerCase(); mudou = true; }
         if (!s.setor) { s.setor = f.tipo === 'plantao' ? 'Plantão' : 'Expediente'; mudou = true; }

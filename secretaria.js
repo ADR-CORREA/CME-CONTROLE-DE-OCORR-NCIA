@@ -186,7 +186,12 @@ async function sec_salvarServidor(id) {
   const agora = new Date().toISOString(), por = usuarioAtual ? usuarioAtual.nome : '';
   let novoId = id;
   const ok = await _secMutar(d => {
-    if (id) { const s = d.servidores.find(x => x.id === id); if (!s) return false; Object.assign(s, v, { atualizadoEm: agora, atualizadoPor: por }); }
+    if (id) {
+      const s = d.servidores.find(x => x.id === id); if (!s) return false;
+      const trocouEquipe = v.equipe && s.equipe && v.equipe !== s.equipe;
+      Object.assign(s, v, { atualizadoEm: agora, atualizadoPor: por });
+      if (trocouEquipe) s.equipeFixa = true; // correção da gerência: a importação da folha de ponto não desfaz
+    }
     else { novoId = _secId('srv'); d.servidores.push(Object.assign({ id: novoId, criadoEm: agora, criadoPor: por }, v)); }
   }, { action: id ? 'sec_servidor_editar' : 'sec_servidor_criar', alvo: v.nome, detalhe: 'Matrícula ' + v.matricula });
   if (!ok) return;
