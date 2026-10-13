@@ -10922,8 +10922,8 @@ function pl_renderizar() {
       av.style.display = '';
       av.innerHTML = '<div onclick="pl_detalhe(\'' + ult.equipe + '\', \'' + ult.dia + '\', true)" style="cursor:pointer;border:1px solid #fca5a5;border-left:4px solid #7c3aed;background:#faf5ff;border-radius:6px;padding:9px 12px;font-size:.82rem">'
         + '<b style="color:#6d28d9">\u26A0 Violência doméstica — plantão ' + ult.equipe + ' de ' + _plDataBR(ult.dia) + ':</b> '
-        + ult.vd.violacoes + ' violação(ões), ' + ult.vd.pendencias.length + ' com pendência — '
-        + '<b style="color:#b91c1c">' + ult.vd.semAcao + ' sem ação de operador</b> · <b style="color:#c2410c">' + ult.vd.foraPrazo + ' fora do prazo do POP</b> · <b style="color:#a16207">' + ult.vd.semRegistro + ' confirmada(s) sem registro no perfil</b>. <u>Ver lista</u></div>';
+        + '<b style="color:#b91c1c">' + ult.vd.pendencias.length + ' de ' + ult.vd.violacoes + '</b> casos ficaram com pendência'
+        + ' <span style="color:#64748b">(' + ult.vd.semAcao + ' sem ação · ' + ult.vd.foraPrazo + ' fora do prazo · ' + ult.vd.semRegistro + ' sem registro no perfil)</span>. <u>Clique para ver quais</u></div>';
     } else { av.style.display = 'none'; av.innerHTML = ''; }
   }
   const linha = (rot, val, cor) => '<div style="display:flex;justify-content:space-between;gap:6px"><span style="color:#64748b">' + rot + '</span><b style="font-family:var(--font-mono);' + (cor ? 'color:' + cor : '') + '">' + val + '</b></div>';
@@ -10960,7 +10960,8 @@ function pl_renderizar() {
              rec: comRec.length ? rec / comRec.length : null, pct: rec ? Math.round(trat / rec * 100) : null, porOp: opsTot ? rec / opsTot : null,
              pop: (() => { const a = xs.reduce((s2, x) => s2 + ((x.pop && x.pop.avaliadas) || 0), 0), b = xs.reduce((s2, x) => s2 + ((x.pop && x.pop.noPrazo) || 0), 0); return a ? Math.round(b / a * 100) : null; })(),
              repasse: xs.length ? xs.reduce((s2, x) => s2 + (x.repasse || 0), 0) / xs.length : null,
-             buracoMin: xs.reduce((s2, x) => s2 + ((x.buracos && x.buracos.totalMin) || 0), 0) };
+             buracoMin: xs.reduce((s2, x) => s2 + ((x.buracos && x.buracos.totalMin) || 0), 0),
+             vdViol: xs.reduce((s2, x) => s2 + ((x.vd && x.vd.violacoes) || 0), 0), vdPend: xs.reduce((s2, x) => s2 + ((x.vd && x.vd.pendencias.length) || 0), 0) };
   });
   const max = Math.max(1, ...lin.map(l => l.conf + l.nao));
   comp.innerHTML = '<div style="font-size:.8rem;font-weight:700;color:#0f2742;margin-bottom:6px">Comparativo — média por plantão (' + nd + ' dias)</div>'
@@ -10979,6 +10980,7 @@ function pl_renderizar() {
       + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + (l.resp != null ? l.resp + ' min' : '—') + '</td>'
       + '<td style="padding:5px 6px;font-family:var(--font-mono)">' + l.cont.toFixed(0) + '</td></tr>').join('')
     + '</tbody></table></div><div style="font-size:.7rem;color:#94a3b8;margin-top:4px">Recebidas = todas as ocorrências que entraram no plantão (qualquer tipo). % tratadas = arquivadas no AKILES. % no POP = 1ª ação do operador dentro do prazo do POP (tabela do CME), sem contar as tratadas só pelo sistema. Repasse = ocorrências do plantão sem nenhuma ação de operador até as 08h. \u2714 confirmadas · \u2718 não confirmadas (pela última avaliação). Resposta = mediana do início da violação até o 1º atendimento.</div>';
+  if (typeof _plrRender === 'function') _plrRender(d, lin, nd);
 }
 function pl_detalhe(eq, diaEscolhido, focoVD) {
   const d = _plDados(); if (!d) return;
@@ -29292,5 +29294,6 @@ function estat_exportarResultado() {
 <script src="secretaria-arquivo.js?v=20261013g"></script>
 <script src="semcom-contatos.js?v=20261013i"></script>
 <script src="produtividade.js?v=20261013k"></script>
+<script src="plantoes-resumo.js?v=20261013l"></script>
 </body>
 </html>
