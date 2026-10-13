@@ -5,28 +5,34 @@
    Usa a média do período escolhido em "Comparar" (calculada em pl_renderizar → lin).
    Emojis só por \u{...}. Prefixo _plr (não colidir com o index). */
 
+// Nota revista em 13/10/2026 com os dados reais de 15 plantões:
+//  • saiu "ocorrências resolvidas" (85–97% em todos; conta o que o plantão seguinte e o sistema arquivaram);
+//  • entrou "deixou para o próximo plantão" = sem nenhuma ação até as 08h (repasse) + restabelecidas abertas;
+//  • VD inclui o registro no perfil (obrigatório na VD, menos descarregamento de bateria — decisão da gerência).
 const _PLR_PARADO_ZERO = 180; // minutos parado por plantão que zeram o indicador "tempo parado"
-const _PLR_REST_ZERO = 20;    // restabelecidas deixadas abertas por plantão que zeram o indicador
+const _PLR_DEIXOU_ZERO = 40;  // ocorrências deixadas para o próximo plantão (sem ação + restabelecidas) que zeram o indicador
 const _PLR_IND = [
-  { k: 'pop', rot: 'Agiu no prazo', peso: 0.3, dica: '1ª ação do operador dentro do prazo do POP' },
-  { k: 'trat', rot: 'Ocorrências resolvidas', peso: 0.15, dica: 'ocorrências arquivadas no AKILES' },
-  { k: 'parado', rot: 'Tempo parado', peso: 0.15, dica: 'períodos de 1h ou mais sem nenhuma ação de operador' },
-  { k: 'rest', rot: 'Restabelecidas deixadas', peso: 0.2, dica: 'ocorrências que começaram no plantão, já restabelecidas e ainda abertas na troca das 08h (só as "em andamento" podem passar)' },
-  { k: 'vd', rot: 'Violência doméstica em dia', peso: 0.2, dica: 'violações de VD sem pendência (ação, prazo do POP e registro no perfil)' },
+  { k: 'pop', rot: 'Agiu no prazo', peso: 0.35, dica: '1ª ação do operador dentro do prazo do POP' },
+  { k: 'deixou', rot: 'Deixou para o próximo plantão', peso: 0.25, dica: 'ocorrências sem nenhuma ação até as 08h + ocorrências já restabelecidas ainda abertas na troca (as "em andamento" podem passar)' },
+  { k: 'vd', rot: 'Violência doméstica em dia', peso: 0.2, dica: 'violações de VD sem pendência: atendida, dentro do prazo do POP e (se confirmada) registrada no perfil' },
+  { k: 'parado', rot: 'Tempo parado', peso: 0.2, dica: 'períodos de 1h ou mais sem nenhuma ação de operador, com ocorrências chegando' },
 ];
-let _plrVerTudo = false;
+let _plrVerTudo = false, _plrVisao = 'equipes';
 
 function _plrMin(m) { m = Math.round(m); if (m < 60) return m + ' min'; const h = Math.floor(m / 60), r = m % 60; return h + 'h' + (r ? ' ' + String(r).padStart(2, '0') + 'min' : ''); }
 function _plrClamp(v) { return Math.max(0, Math.min(1, v)); }
 // valores de 0 a 1 (1 = ótimo) e o texto de cada indicador
+// l: médias do período (pl_renderizar → lin) ou UM plantão (l.unico = true)
 function _plrIndicadores(l) {
-  const parado = l.n ? l.buracoMin / l.n : null;
+  const parado = l.n ? l.buracoMin / l.n : null, por = l.unico ? '' : ' por plantão';
+  const rest = l.restMed ? l.restN / l.restMed : null, deixou = l.repasse != null ? l.repasse + (rest || 0) : null;
+  const num = v => (Math.round(v * 10) / 10).toString().replace('.', ',');
   return {
     pop: l.pop != null ? { s: l.pop / 100, txt: l.pop + '%' } : null,
-    trat: l.pct != null ? { s: l.pct / 100, txt: l.pct + '%' } : null,
-    parado: parado != null ? { s: _plrClamp(1 - parado / _PLR_PARADO_ZERO), txt: parado ? _plrMin(parado) + ' por plantão' : 'nenhum' } : null,
-    rest: l.restMed ? (m => ({ s: _plrClamp(1 - m / _PLR_REST_ZERO), txt: m ? (Math.round(m * 10) / 10).toString().replace('.', ',') + ' por plantão' : 'nenhuma' }))(l.restN / l.restMed) : null,
+    deixou: deixou != null ? { s: _plrClamp(1 - deixou / _PLR_DEIXOU_ZERO), txt: deixou ? num(deixou) + por : 'nenhuma',
+      det: num(l.repasse) + ' sem ação' + (rest != null ? ' + ' + num(rest) + ' restabelecida(s)' : '') } : null,
     vd: l.vdViol ? { s: _plrClamp(1 - l.vdPend / l.vdViol), txt: Math.round((1 - l.vdPend / l.vdViol) * 100) + '% em dia' } : null,
+    parado: parado != null ? { s: _plrClamp(1 - parado / _PLR_PARADO_ZERO), txt: parado ? _plrMin(parado) + por : 'nenhum' } : null,
   };
 }
 function _plrNota(ind) {
@@ -43,10 +49,9 @@ function _plrFaixa(nota) {
 function _plrCorBarra(s) { return s >= 0.8 ? '#16a34a' : s >= 0.6 ? '#d97706' : '#dc2626'; }
 const _PLR_FRASE = {
   pop: x => 'demorou para dar a 1ª resposta (só ' + x.txt + ' no prazo do POP)',
-  trat: x => 'deixou ocorrências sem resolver (' + x.txt + ' resolvidas)',
   parado: x => 'ficou tempo sem nenhuma ação (' + x.txt + ')',
   vd: x => 'deixou casos de violência doméstica com pendência (só ' + x.txt + ')',
-  rest: x => 'deixou ocorrências já restabelecidas abertas para o próximo plantão (' + x.txt + ')',
+  deixou: x => 'empurrou ocorrências para o próximo plantão (' + x.txt + ': ' + x.det + ')',
 };
 function _plrPior(ind) {
   return _PLR_IND.filter(i => ind[i.k]).sort((a, b) => ind[a.k].s - ind[b.k].s)[0] || null;
@@ -58,20 +63,24 @@ function _plrRender(d, lin, nd) {
   if (!box) { box = document.createElement('div'); box.id = 'pl-resumo'; cards.parentNode.insertBefore(box, cards); }
   const eqs = lin.filter(l => l.n).map(l => { const ind = _plrIndicadores(l); return Object.assign({}, l, { ind, nota: _plrNota(ind) }); })
     .sort((a, b) => (b.nota ?? -1) - (a.nota ?? -1));
-  cards.style.display = comp.style.display = _plrVerTudo ? '' : 'none';
+  cards.style.display = comp.style.display = _plrVerTudo && _plrVisao === 'equipes' ? '' : 'none';
   if (!eqs.length) { box.innerHTML = ''; return; }
+  const aba = (k, r) => '<button type="button" onclick="_plrVisao=\'' + k + '\';pl_renderizar()" style="padding:6px 16px;border:1px solid #cbd5e1;cursor:pointer;font-size:.85rem;font-weight:600;'
+    + (k === _plrVisao ? 'background:#1e3a8a;color:#fff;border-color:#1e3a8a' : 'background:#fff;color:#334155') + (k === 'equipes' ? ';border-radius:4px 0 0 4px' : ';border-radius:0 4px 4px 0;margin-left:-1px') + '">' + r + '</button>';
+  const abas = '<div style="display:flex;margin-bottom:12px">' + aba('equipes', '\u{1F6E1}\u{FE0F} Equipes') + aba('servidores', '\u{1F464} Servidores (individual)') + '</div>';
+  if (_plrVisao === 'servidores' && typeof _plsRender === 'function') { box.innerHTML = abas + _plrHtmlStatusTroca(d) + '<div id="pls-corpo"></div>'; _plsRender(d, nd); return; }
   const melhor = eqs[0], pior = eqs[eqs.length - 1], piorInd = _plrPior(pior.ind);
   const nome = eq => '<b style="color:' + (PLANTAO_CORES[eq] || '#1d4ed8') + '">' + eq + '</b>';
   const fmtNota = n => n == null ? '—' : n.toFixed(1).replace('.', ',');
   const frase = 'Nos últimos ' + nd + ' dias, o melhor plantão foi ' + nome(melhor.eq) + ' (nota ' + fmtNota(melhor.nota) + ').'
     + (eqs.length > 1 && piorInd && pior.ind[piorInd.k].s < 0.8 ? ' Precisa de mais atenção: ' + nome(pior.eq) + ', que ' + _PLR_FRASE[piorInd.k](pior.ind[piorInd.k]) + '.' : '');
-  box.innerHTML = '<div style="font-size:.95rem;line-height:1.5;padding:10px 14px;background:#f8fafc;border-left:4px solid #2563eb;border-radius:4px;margin-bottom:12px">' + frase + '</div>'
+  box.innerHTML = abas + '<div style="font-size:.95rem;line-height:1.5;padding:10px 14px;background:#f8fafc;border-left:4px solid #2563eb;border-radius:4px;margin-bottom:12px">' + frase + '</div>'
     + _plrHtmlStatusTroca(d)
     + _plrHtmlPassivo(d)
     + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">'
     + eqs.map((l, i) => _plrCartao(l, i + 1, fmtNota)).join('') + '</div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px">'
-    + '<div style="font-size:.72rem;color:#94a3b8">Nota de 0 a 10 = prazo do POP (30%) + ocorrências resolvidas (15%) + tempo parado (15%; ' + _plrMin(_PLR_PARADO_ZERO) + ' parado por plantão zera) + restabelecidas deixadas (20%; ' + _PLR_REST_ZERO + ' por plantão zera; conta a partir de 14/10/2026) + violência doméstica em dia (20%). Indicador sem dado fica fora da conta. Clique num plantão para ver o detalhe.</div>'
+    + '<div style="font-size:.72rem;color:#94a3b8">Nota de 0 a 10 = agiu no prazo do POP (35%) + deixou para o próximo plantão (25%; ' + _PLR_DEIXOU_ZERO + ' por plantão zera; restabelecidas contam desde 13/10/2026) + violência doméstica em dia (20%; inclui registro no perfil, menos descarregamento) + tempo parado (20%; ' + _plrMin(_PLR_PARADO_ZERO) + ' por plantão zera). Clique num plantão para ver o relato das 24 h.</div>'
     + '<button class="btn-secondary" style="font-size:.8rem" onclick="_plrVerTudo=!_plrVerTudo;pl_renderizar()">' + (_plrVerTudo ? 'Esconder os números' : '\u{1F4CA} Ver todos os números') + '</button></div>';
 }
 function _plrCartao(l, pos, fmtNota) {

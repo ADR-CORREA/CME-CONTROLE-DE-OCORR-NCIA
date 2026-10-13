@@ -11082,9 +11082,13 @@ function pl_detalhe(eq, diaEscolhido, focoVD) {
         + x.sens.map(s => { const hr = new Date(s.ts).getHours(); const mad = hr < 6; return '<tr style="border-top:1px solid #f1f5f9' + (mad ? ';background:#fef2f2' : '') + '">' + td(new Date(s.ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + (mad ? ' <span style="background:#dc2626;color:#fff;border-radius:3px;padding:0 4px;font-size:.62rem">MADRUGADA</span>' : ''), 1) + td(esc(nome(s.op))) + td(esc(s.tipo)) + td(esc(s.idOc || '—'), 1) + '</tr>'; }).join('') + '</tbody></table></div>'
       : '<div style="font-size:.78rem;color:#64748b">Nenhuma.</div>')
     + '<div style="font-size:.7rem;color:#94a3b8;margin-top:10px">Fonte: auditoria do AKILES (só leitura). Quem está como "Expediente / supervisão" não entra nos números do plantão.</div>';
+  // Relato das 24 h em cima (plantoes-detalhe.js); os números técnicos abrem num clique
+  const corpo = typeof _pldRelato === 'function'
+    ? _pldRelato(d, x, eq, dia, dias) + '<details id="pl-det-num"' + (focoVD ? ' open' : '') + ' style="margin-top:14px;border-top:1px solid #e2e8f0;padding-top:10px"><summary style="cursor:pointer;font-weight:600;color:#1d4ed8">\u{1F4CA} Ver todos os números do plantão</summary><div style="margin-top:10px">' + html + '</div></details>'
+    : html;
   let ov = document.getElementById('pl-modal');
   if (!ov) { ov = document.createElement('div'); ov.id = 'pl-modal'; ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow:auto'; ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); }); document.body.appendChild(ov); }
-  ov.innerHTML = '<div style="background:#fff;border-radius:8px;max-width:980px;width:100%;padding:16px 20px;box-shadow:0 10px 40px rgba(0,0,0,.3)"><div style="display:flex;justify-content:flex-end"><button type="button" onclick="document.getElementById(\'pl-modal\').remove()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:4px 12px;cursor:pointer">Fechar \u2715</button></div>' + html + '</div>';
+  ov.innerHTML = '<div style="background:#fff;border-radius:8px;max-width:980px;width:100%;padding:16px 20px;box-shadow:0 10px 40px rgba(0,0,0,.3)"><div style="display:flex;justify-content:flex-end"><button type="button" onclick="document.getElementById(\'pl-modal\').remove()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:4px 12px;cursor:pointer">Fechar \u2715</button></div>' + corpo + '</div>';
   if (focoVD) { const sec = document.getElementById('pl-vd-sec'); if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: 'start' }); }
 }
 // Ocorrências de UM servidor no plantão: quanto tempo levou cada uma (1ª ação dele)
@@ -29329,6 +29333,8 @@ function estat_exportarResultado() {
 <script src="secretaria-arquivo.js?v=20261013g"></script>
 <script src="semcom-contatos.js?v=20261013i"></script>
 <script src="produtividade.js?v=20261013k"></script>
-<script src="plantoes-resumo.js?v=20261013n"></script>
+<script src="plantoes-resumo.js?v=20261013o"></script>
+<script src="plantoes-detalhe.js?v=20261013o"></script>
+<script src="plantoes-servidores.js?v=20261013o"></script>
 </body>
 </html>
