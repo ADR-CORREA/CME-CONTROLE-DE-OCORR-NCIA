@@ -1,0 +1,514 @@
+/* ═══════════════════════════ SECRETARIA (apoio direto à Gerência) ═══════════════════════════
+   Servidores (qualificação + anexos), Ficha de Apoio e Dispensas (igual à ficha de papel),
+   Folgas combinadas com a chefia e Auditoria.
+   • Dados: chave cme_secretaria — o banco só entrega a administrador, gerência e secretaria.
+   • Arquivos: Worker /sec/* (área _secretaria/, auditada; apagar move para a lixeira).
+   • Cada gravação relê a versão do banco antes (não sobrescreve o que outra pessoa salvou).
+   Emojis só por \u{...} (emoji cru some no parse deste projeto). */
+
+const _SEC_NIVEIS = ['admin', 'gerencia', 'secretaria'];
+const _SEC_EQUIPES = ['ALFA', 'BRAVO', 'CHARLIE', 'DELTA', 'ECHO', 'EXPEDIENTE'];
+const _SEC_DIREITOS = [6, 12, 24];
+let _secAba = 'servidores', _secPerfilId = null, _secPerfilAba = 'ficha';
+
+_STORES_PROTEGIDAS.secretaria = v => (v && Array.isArray(v.servidores))
+  ? v.servidores.length + (v.apoios || []).length + (v.folgas || []).length : -1;
+
+function _secPode() { return !!(usuarioAtual && _SEC_NIVEIS.includes(usuarioAtual.nivel)); }
+function _secNormal(d) {
+  d = (d && typeof d === 'object') ? d : {};
+  const arr = k => Array.isArray(d[k]) ? d[k] : [];
+  return { servidores: arr('servidores'), apoios: arr('apoios'), folgas: arr('folgas'), lixeira: arr('lixeira') };
+}
+function _secDados() { return _secNormal(carregarStore('secretaria', null)); }
+function _secId(p) { return p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function _secBR(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; }
+function _secHoje() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function _secServ(id, dados) { return (dados || _secDados()).servidores.find(s => s.id === id) || null; }
+function _secNomeServ(id, dados) { const s = _secServ(id, dados); return s ? s.nome : '(servidor removido)'; }
+function _secVal(id) { const el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; }
+function _secCpfValido(c) {
+  c = String(c || '').replace(/\D/g, '');
+  if (c.length !== 11 || /^(\d)\1+$/.test(c)) return false;
+  const dv = n => { let s = 0; for (let i = 0; i < n; i++) s += +c[i] * (n + 1 - i); const r = (s * 10) % 11; return r === 10 ? 0 : r; };
+  return dv(9) === +c[9] && dv(10) === +c[10];
+}
+function _secCpfFmt(c) { c = String(c || '').replace(/\D/g, ''); return c.length === 11 ? c.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : c; }
+
+// Lê a versão atual do banco, aplica a mudança e grava (evita perder o que outro computador salvou).
+async function _secMutar(fn, audit) {
+  let base = _secDados();
+  try {
+    const r = await _dbLerChave('cme_secretaria');
+    if (r.error) throw r.error;
+    if (r.data && r.data.value) base = _secNormal(r.data.value);
+  } catch (e) { _mostrarToast('Sem conexão com o banco — nada foi salvo. Tente de novo.', 'erro'); return false; }
+  const novo = JSON.parse(JSON.stringify(base));
+  if (fn(novo) === false) return false;
+  salvarStore('secretaria', novo);
+  if (audit) auditar(Object.assign({ modulo: 'Secretaria' }, audit));
+  return true;
+}
+// Excluir nunca apaga: guarda o item na lixeira interna, com quem e quando.
+function _secParaLixeira(d, tipo, item) {
+  d.lixeira.push({ tipo, item, por: usuarioAtual ? usuarioAtual.nome : '', em: new Date().toISOString() });
+  if (d.lixeira.length > 500) d.lixeira = d.lixeira.slice(-500);
+}
+
+// ── Saldo de dispensas ────────────────────────────────────────────────────────
+function _secApoiosDe(id, dados) { return (dados || _secDados()).apoios.filter(a => a.servidorId === id).sort((a, b) => String(a.data).localeCompare(String(b.data))); }
+function _secSaldo(id, dados) {
+  const ap = _secApoiosDe(id, dados), pend = ap.filter(a => !a.dispensa);
+  return { apoios: ap.length, usufruidas: ap.length - pend.length, pendentes: pend.length, horasPendentes: pend.reduce((s, a) => s + (+a.horas || 0), 0) };
+}
+
+// ── Modal genérico (mesmas classes dos modais do CME) ─────────────────────────
+function _secModal(titulo, corpo, botoes, largura) {
+  let ov = document.getElementById('sec-modal');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'sec-modal'; ov.className = 'modal-overlay'; document.body.appendChild(ov); }
+  ov.innerHTML = '<div class="modal-box" style="max-width:' + (largura || 620) + 'px"><div class="modal-header"><h3>' + titulo + '</h3>'
+    + '<button class="modal-close" onclick="_secFecharModal()">\u{2715}</button></div><div class="modal-body">' + corpo + '</div>'
+    + '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid var(--borda,#e2e8f0)">'
+    + '<button class="btn-secondary" onclick="_secFecharModal()">Cancelar</button>' + (botoes || '') + '</div></div>';
+  ov.classList.add('open');
+}
+function _secFecharModal() { const ov = document.getElementById('sec-modal'); if (ov) ov.classList.remove('open'); }
+function _secCampo(id, rotulo, valor, extra) {
+  return '<div class="form-field"><label>' + rotulo + '</label><input id="' + id + '" value="' + esc(valor || '') + '" ' + (extra || '') + '></div>';
+}
+function _secChips(nome, opcoes, atual) {
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap">' + opcoes.map(o => {
+    const v = Array.isArray(o) ? o[0] : o, r = Array.isArray(o) ? o[1] : o;
+    return '<button type="button" class="chip' + (String(v) === String(atual) ? ' active' : '') + '" data-grupo="' + nome + '" data-valor="' + esc(String(v)) + '" onclick="_secChip(this)" '
+      + 'style="padding:6px 14px;border-radius:4px;border:1px solid #cbd5e1;background:' + (String(v) === String(atual) ? '#dbeafe' : '#fff') + ';cursor:pointer;font-weight:600">' + esc(r) + '</button>';
+  }).join('') + '</div><input type="hidden" id="' + nome + '" value="' + esc(String(atual == null ? '' : atual)) + '">';
+}
+function _secChip(btn) {
+  const g = btn.dataset.grupo;
+  document.querySelectorAll('[data-grupo="' + g + '"]').forEach(b => { b.classList.remove('active'); b.style.background = '#fff'; });
+  btn.classList.add('active'); btn.style.background = '#dbeafe';
+  document.getElementById(g).value = btn.dataset.valor;
+}
+
+// ── Estrutura da aba ──────────────────────────────────────────────────────────
+function sec_inicializar() {
+  const root = document.getElementById('sec-root');
+  if (!root) return;
+  if (!_secPode()) { root.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b">Acesso restrito à Secretaria e à Gerência.</div>'; return; }
+  const abas = [['servidores', '\u{1F464} Servidores'], ['apoios', '\u{23F1}\u{FE0F} Apoios e Dispensas'], ['folgas', '\u{1F91D} Folgas combinadas'], ['auditoria', '\u{1F50D} Auditoria']];
+  root.innerHTML = '<div class="dash-header"><div><div class="dash-title">\u{1F5C2}\u{FE0F} Secretaria</div>'
+    + '<div class="dash-update">Servidores, apoios e dispensas, folgas e documentos — acesso restrito à Secretaria e à Gerência</div></div></div>'
+    + '<div class="sub-tabs">' + abas.map(([k, r]) => '<div class="sub-tab' + (k === _secAba ? ' active' : '') + '" id="sec-stab-' + k + '" onclick="sec_mudarAba(\'' + k + '\')">' + r + '</div>').join('') + '</div>'
+    + '<div id="sec-conteudo" style="padding-top:12px"></div>';
+  sec_render();
+}
+function sec_mudarAba(aba) {
+  _secAba = aba; _secPerfilId = null;
+  document.querySelectorAll('#sec-root .sub-tab').forEach(t => t.classList.toggle('active', t.id === 'sec-stab-' + aba));
+  sec_render();
+}
+function sec_render() {
+  if (_secPerfilId) return sec_renderPerfil();
+  ({ servidores: sec_renderServidores, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
+}
+
+// ── Servidores ────────────────────────────────────────────────────────────────
+function sec_renderServidores() {
+  const c = document.getElementById('sec-conteudo'); if (!c) return;
+  const d = _secDados();
+  const busca = (document.getElementById('sec-f-busca')?.value || '').toLowerCase().trim();
+  const fEq = document.getElementById('sec-f-equipe')?.value || '';
+  const fSit = document.getElementById('sec-f-sit')?.value ?? 'ativo';
+  let lista = d.servidores.slice().sort((a, b) => a.nome.localeCompare(b.nome));
+  if (busca) lista = lista.filter(s => [s.nome, s.matricula, s.cpf, s.cargo].join(' ').toLowerCase().includes(busca));
+  if (fEq) lista = lista.filter(s => s.equipe === fEq);
+  if (fSit) lista = lista.filter(s => (s.situacao || 'ativo') === fSit);
+  const ativos = d.servidores.filter(s => (s.situacao || 'ativo') === 'ativo');
+  const horasPend = ativos.reduce((t, s) => t + _secSaldo(s.id, d).horasPendentes, 0);
+  c.innerHTML = '<div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:12px">'
+    + '<div class="kpi-card" style="border-left:4px solid #0d9488"><div class="kpi-value">' + ativos.length + '</div><div class="kpi-label">Servidores ativos</div></div>'
+    + '<div class="kpi-card" style="border-left:4px solid #d97706"><div class="kpi-value">' + horasPend + 'h</div><div class="kpi-label">Dispensas a usufruir</div></div>'
+    + '<div class="kpi-card" style="border-left:4px solid #2563eb"><div class="kpi-value">' + d.apoios.filter(a => String(a.data).slice(0, 7) === _secHoje().slice(0, 7)).length + '</div><div class="kpi-label">Apoios neste mês</div></div></div>'
+    + '<div class="table-toolbar" style="flex-wrap:wrap;gap:8px">'
+    + '<input id="sec-f-busca" placeholder="Buscar nome, matrícula, CPF ou cargo" value="' + esc(busca) + '" oninput="sec_renderServidores()" style="flex:1;min-width:220px;padding:6px 10px">'
+    + '<select id="sec-f-equipe" onchange="sec_renderServidores()"><option value="">Todas as equipes</option>' + _SEC_EQUIPES.map(e => '<option' + (e === fEq ? ' selected' : '') + '>' + e + '</option>').join('') + '</select>'
+    + '<select id="sec-f-sit" onchange="sec_renderServidores()"><option value="ativo"' + (fSit === 'ativo' ? ' selected' : '') + '>Ativos</option><option value="inativo"' + (fSit === 'inativo' ? ' selected' : '') + '>Inativos</option><option value=""' + (fSit === '' ? ' selected' : '') + '>Todos</option></select>'
+    + '<button class="btn-primary" onclick="sec_editarServidor()">+ Novo servidor</button></div>'
+    + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Nome</th><th>Cargo</th><th>Matrícula</th><th>Equipe</th><th>Telefone</th><th>Dispensas a usufruir</th><th></th></tr></thead><tbody>'
+    + (lista.length ? lista.map(s => {
+      const sd = _secSaldo(s.id, d);
+      return '<tr style="cursor:pointer" onclick="sec_abrirPerfil(\'' + s.id + '\')"><td><strong>' + esc(s.nome) + '</strong></td><td>' + esc(s.cargo || '—') + '</td>'
+        + '<td style="font-family:var(--font-mono)">' + esc(s.matricula || '—') + '</td><td>' + esc(s.equipe || '—') + '</td><td>' + esc(s.telefone || '—') + '</td>'
+        + '<td>' + (sd.pendentes ? '<b style="color:#b45309">' + sd.horasPendentes + 'h</b> (' + sd.pendentes + ' apoio' + (sd.pendentes > 1 ? 's' : '') + ')' : '—') + '</td>'
+        + '<td><button class="btn-sm btn-outline">Abrir perfil</button></td></tr>';
+    }).join('') : '<tr><td colspan="7" style="text-align:center;padding:28px;color:#888">' + (d.servidores.length ? 'Nenhum servidor com esse filtro.' : 'Nenhum servidor cadastrado. Clique em "+ Novo servidor".') + '</td></tr>')
+    + '</tbody></table></div>';
+  const b = document.getElementById('sec-f-busca'); if (b && busca) { b.focus(); b.setSelectionRange(busca.length, busca.length); }
+}
+
+function sec_editarServidor(id) {
+  const s = id ? (_secServ(id) || {}) : {};
+  const sel = (idc, rot, ops, v) => '<div class="form-field"><label>' + rot + '</label><select id="' + idc + '"><option value="">—</option>' + ops.map(o => '<option' + (o === v ? ' selected' : '') + '>' + o + '</option>').join('') + '</select></div>';
+  _secModal(id ? 'Editar servidor' : 'Novo servidor',
+    '<div class="form-section"><div class="form-section-title">Identificação</div><div class="form-grid">'
+    + _secCampo('sec-s-nome', 'Nome completo *', s.nome) + _secCampo('sec-s-matricula', 'Matrícula *', s.matricula)
+    + _secCampo('sec-s-cpf', 'CPF', _secCpfFmt(s.cpf), 'inputmode="numeric"') + _secCampo('sec-s-rg', 'RG', s.rg)
+    + _secCampo('sec-s-nasc', 'Nascimento', s.nascimento, 'type="date"') + _secCampo('sec-s-cargo', 'Cargo', s.cargo, 'list="sec-cargos" placeholder="Ex.: Policial Penal, Educadora Social N/S"')
+    + _secCampo('sec-s-formacao', 'Formação', s.formacao, 'placeholder="Ex.: Direito"') + _secCampo('sec-s-admissao', 'Admissão / lotação na CME', s.admissao, 'type="date"')
+    + sel('sec-s-equipe', 'Equipe', _SEC_EQUIPES, s.equipe) + _secCampo('sec-s-setor', 'Setor', s.setor, 'placeholder="Ex.: Plantão, Jurídico, Secretaria"')
+    + '</div></div><div class="form-section"><div class="form-section-title">Contato</div><div class="form-grid">'
+    + _secCampo('sec-s-tel', 'Telefone', s.telefone, 'inputmode="tel"') + _secCampo('sec-s-email', 'E-mail', s.email, 'type="email"')
+    + _secCampo('sec-s-end', 'Endereço', s.endereco) + _secCampo('sec-s-emerg', 'Contato de emergência (nome e telefone)', s.emergencia)
+    + '</div></div><div class="form-section"><div class="form-section-title">Situação</div><div class="form-grid">'
+    + sel('sec-s-sit', 'Situação', ['ativo', 'inativo'], s.situacao || 'ativo')
+    + '<div class="form-field" style="grid-column:1/-1"><label>Observações</label><textarea id="sec-s-obs" rows="2">' + esc(s.obs || '') + '</textarea></div></div></div>'
+    + '<datalist id="sec-cargos"><option>Policial Penal</option><option>Educadora Social N/S</option><option>Educador Social N/S</option><option>Assistente Social</option><option>Psicólogo(a)</option><option>Agente Administrativo</option></datalist>',
+    '<button class="btn-primary" onclick="sec_salvarServidor(\'' + (id || '') + '\')">Salvar</button>', 760);
+}
+async function sec_salvarServidor(id) {
+  const v = {
+    nome: _secVal('sec-s-nome').toUpperCase(), matricula: _secVal('sec-s-matricula'), cpf: _secVal('sec-s-cpf').replace(/\D/g, ''), rg: _secVal('sec-s-rg'),
+    nascimento: _secVal('sec-s-nasc'), cargo: _secVal('sec-s-cargo'), formacao: _secVal('sec-s-formacao'), admissao: _secVal('sec-s-admissao'),
+    equipe: _secVal('sec-s-equipe'), setor: _secVal('sec-s-setor'), telefone: _secVal('sec-s-tel'), email: _secVal('sec-s-email'),
+    endereco: _secVal('sec-s-end'), emergencia: _secVal('sec-s-emerg'), situacao: _secVal('sec-s-sit') || 'ativo', obs: _secVal('sec-s-obs'),
+  };
+  if (v.nome.length < 5) { _mostrarToast('Informe o nome completo.', 'erro'); return; }
+  if (!v.matricula) { _mostrarToast('Informe a matrícula.', 'erro'); return; }
+  if (v.cpf && !_secCpfValido(v.cpf)) { _mostrarToast('CPF inválido — confira os números.', 'erro'); return; }
+  const dup = _secDados().servidores.find(s => s.id !== id && ((v.cpf && s.cpf === v.cpf) || s.matricula === v.matricula));
+  if (dup) { _mostrarToast('Já existe servidor com essa matrícula ou CPF: ' + dup.nome, 'erro'); return; }
+  const agora = new Date().toISOString(), por = usuarioAtual ? usuarioAtual.nome : '';
+  let novoId = id;
+  const ok = await _secMutar(d => {
+    if (id) { const s = d.servidores.find(x => x.id === id); if (!s) return false; Object.assign(s, v, { atualizadoEm: agora, atualizadoPor: por }); }
+    else { novoId = _secId('srv'); d.servidores.push(Object.assign({ id: novoId, criadoEm: agora, criadoPor: por }, v)); }
+  }, { action: id ? 'sec_servidor_editar' : 'sec_servidor_criar', alvo: v.nome, detalhe: 'Matrícula ' + v.matricula });
+  if (!ok) return;
+  _secFecharModal(); _mostrarToast('Servidor salvo.', 'sucesso');
+  if (!id) { _secPerfilId = novoId; _secPerfilAba = 'qualificacao'; }
+  sec_render();
+}
+
+// ── Perfil do servidor ────────────────────────────────────────────────────────
+function sec_abrirPerfil(id) { _secPerfilId = id; _secPerfilAba = 'ficha'; sec_render(); auditar({ modulo: 'Secretaria', action: 'sec_perfil_abrir', alvo: _secNomeServ(id) }); }
+function sec_perfilAba(a) { _secPerfilAba = a; sec_renderPerfil(); }
+function sec_renderPerfil() {
+  const c = document.getElementById('sec-conteudo'); if (!c) return;
+  const d = _secDados(), s = _secServ(_secPerfilId, d);
+  if (!s) { _secPerfilId = null; return sec_render(); }
+  const sd = _secSaldo(s.id, d);
+  const abas = [['ficha', 'Ficha de apoio e dispensas'], ['folgas', 'Folgas combinadas'], ['documentos', 'Documentos'], ['qualificacao', 'Qualificação']];
+  c.innerHTML = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">'
+    + '<button class="btn-secondary" onclick="_secPerfilId=null;sec_render()">\u{2190} Voltar</button>'
+    + '<div style="flex:1"><div style="font-size:1.15rem;font-weight:700">' + esc(s.nome) + '</div>'
+    + '<div style="color:#64748b;font-size:.85rem">' + esc([s.cargo, s.formacao && '(' + s.formacao + ')', s.matricula && 'Matrícula ' + s.matricula, s.equipe].filter(Boolean).join(' · ')) + '</div></div>'
+    + '<div style="background:#fffbeb;border-left:4px solid #d97706;padding:6px 12px;border-radius:4px"><b>' + sd.horasPendentes + 'h</b> de dispensa a usufruir<div style="font-size:.75rem;color:#64748b">' + sd.apoios + ' apoio(s) · ' + sd.usufruidas + ' usufruída(s)</div></div></div>'
+    + '<div class="sub-tabs">' + abas.map(([k, r]) => '<div class="sub-tab' + (k === _secPerfilAba ? ' active' : '') + '" onclick="sec_perfilAba(\'' + k + '\')">' + r + '</div>').join('') + '</div>'
+    + '<div id="sec-perfil-corpo" style="padding-top:12px"></div>';
+  const corpo = document.getElementById('sec-perfil-corpo');
+  if (_secPerfilAba === 'qualificacao') corpo.innerHTML = _secHtmlQualificacao(s);
+  else if (_secPerfilAba === 'ficha') corpo.innerHTML = _secHtmlFicha(s, d);
+  else if (_secPerfilAba === 'folgas') corpo.innerHTML = _secHtmlFolgas(d.folgas.filter(f => f.servidorId === s.id), false, s.id);
+  else if (_secPerfilAba === 'documentos') sec_renderDocs(corpo, 'servidores/' + s.id, s.nome);
+}
+function _secHtmlQualificacao(s) {
+  const linha = (r, v) => '<tr><th style="width:230px;background:#f8fafc;text-align:left">' + r + '</th><td>' + (v ? esc(v) : '<span style="color:#94a3b8">—</span>') + '</td></tr>';
+  return '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn-primary" onclick="sec_editarServidor(\'' + s.id + '\')">Editar dados</button></div>'
+    + '<table class="data-table"><tbody>' + linha('Nome', s.nome) + linha('Matrícula', s.matricula) + linha('CPF', _secCpfFmt(s.cpf)) + linha('RG', s.rg)
+    + linha('Nascimento', _secBR(s.nascimento)) + linha('Cargo', s.cargo) + linha('Formação', s.formacao) + linha('Admissão / lotação', _secBR(s.admissao))
+    + linha('Equipe', s.equipe) + linha('Setor', s.setor) + linha('Telefone', s.telefone) + linha('E-mail', s.email) + linha('Endereço', s.endereco)
+    + linha('Contato de emergência', s.emergencia) + linha('Situação', s.situacao || 'ativo') + linha('Observações', s.obs)
+    + linha('Cadastrado', [s.criadoPor, s.criadoEm && new Date(s.criadoEm).toLocaleString('pt-BR')].filter(Boolean).join(' em ')) + '</tbody></table>';
+}
+
+// ── Ficha de Apoio e Dispensas (igual à ficha de papel) ──────────────────────
+function _secTurnoTxt(t) { return ({ diurno: 'Diurna', noturno: 'Noturna', integral: 'Integral' })[t] || t || ''; }
+function _secHtmlFicha(s, d) {
+  const ap = _secApoiosDe(s.id, d);
+  return '<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px;flex-wrap:wrap">'
+    + '<button class="btn-secondary" onclick="sec_imprimirFicha(\'' + s.id + '\')">\u{1F5A8}\u{FE0F} Imprimir ficha</button>'
+    + '<button class="btn-primary" onclick="sec_novoApoio(\'' + s.id + '\')">+ Registrar apoio</button></div>'
+    + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Data do apoio</th><th>Ação</th><th>Direito</th><th>Data da dispensa</th><th>Turno</th><th>Lançado por</th><th></th></tr></thead><tbody>'
+    + (ap.length ? ap.map(a => _secLinhaApoio(a, false)).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:#888">Nenhum apoio registrado.</td></tr>')
+    + '</tbody></table></div>';
+}
+function _secLinhaApoio(a, comNome, dados) {
+  const disp = a.dispensa;
+  return '<tr' + (disp ? '' : ' style="background:#fffbeb"') + '>' + (comNome ? '<td><a href="#" onclick="sec_abrirPerfil(\'' + a.servidorId + '\');return false"><strong>' + esc(_secNomeServ(a.servidorId, dados)) + '</strong></a></td>' : '')
+    + '<td style="font-family:var(--font-mono)">' + _secBR(a.data) + '</td><td>' + esc(a.acao) + '</td><td><b>' + a.horas + 'h</b></td>'
+    + '<td style="font-family:var(--font-mono)">' + (disp ? _secBR(disp.data) : '<span style="color:#b45309;font-weight:600">a usufruir</span>') + '</td>'
+    + '<td>' + (disp ? _secTurnoTxt(disp.turno) : '') + '</td>'
+    + '<td style="font-size:.8rem;color:#64748b">' + esc(disp ? disp.por : a.criadoPor || '') + '</td>'
+    + '<td style="white-space:nowrap">' + (disp
+      ? '<button class="btn-sm btn-outline" title="Desfazer o lançamento da dispensa" onclick="sec_desfazerDispensa(\'' + a.id + '\')">Desfazer</button>'
+      : '<button class="btn-sm btn-primary" onclick="sec_lancarDispensa(\'' + a.id + '\')">Lançar dispensa</button> '
+        + '<button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_excluirApoio(\'' + a.id + '\')">Excluir</button>') + '</td></tr>';
+}
+
+function sec_novoApoio(servidorId) {
+  const d = _secDados();
+  const ativos = d.servidores.filter(s => (s.situacao || 'ativo') === 'ativo' || s.id === servidorId).sort((a, b) => a.nome.localeCompare(b.nome));
+  if (!ativos.length) { _mostrarToast('Cadastre os servidores antes.', 'erro'); return; }
+  const acoes = [...new Set(d.apoios.map(a => a.acao).filter(Boolean))].slice(-40);
+  _secModal('Registrar apoio prestado',
+    '<div class="form-field"><label>Servidor(es) — marque todos que prestaram o apoio</label>'
+    + '<div style="max-height:180px;overflow:auto;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px">'
+    + ativos.map(s => '<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-weight:400"><input type="checkbox" class="sec-ap-serv" value="' + s.id + '"' + (s.id === servidorId ? ' checked' : '') + '> ' + esc(s.nome) + ' <span style="color:#94a3b8;font-size:.8rem">' + esc(s.equipe || '') + '</span></label>').join('')
+    + '</div></div><div class="form-grid">'
+    + _secCampo('sec-ap-ini', 'Data do apoio (ou 1º dia)', _secHoje(), 'type="date"') + _secCampo('sec-ap-fim', 'Último dia (se for mais de um dia)', '', 'type="date"')
+    + '</div>' + _secCampo('sec-ap-acao', 'Ação / evento', '', 'list="sec-ap-acoes" placeholder="Ex.: Apoio EXPO 2026 – OCB, 7 de Setembro"')
+    + '<datalist id="sec-ap-acoes">' + acoes.map(a => '<option>' + esc(a) + '</option>').join('') + '</datalist>'
+    + '<div class="form-field"><label>Cada dia de apoio dá direito a</label>' + _secChips('sec-ap-horas', _SEC_DIREITOS.map(h => [h, h + ' horas']), 12) + '</div>'
+    + '<div class="form-field"><label>Observação</label><input id="sec-ap-obs"></div>'
+    + '<div style="font-size:.8rem;color:#64748b">É criada uma linha na ficha de cada servidor para cada dia de apoio, como na ficha de papel.</div>',
+    '<button class="btn-primary" onclick="sec_salvarApoio()">Registrar</button>', 640);
+}
+async function sec_salvarApoio() {
+  const servs = [...document.querySelectorAll('.sec-ap-serv:checked')].map(i => i.value);
+  const ini = _secVal('sec-ap-ini'), fim = _secVal('sec-ap-fim') || ini, acao = _secVal('sec-ap-acao'), horas = +_secVal('sec-ap-horas');
+  if (!servs.length) { _mostrarToast('Marque ao menos um servidor.', 'erro'); return; }
+  if (!ini || fim < ini) { _mostrarToast('Confira as datas.', 'erro'); return; }
+  if (!acao) { _mostrarToast('Descreva a ação / evento.', 'erro'); return; }
+  if (!_SEC_DIREITOS.includes(horas)) { _mostrarToast('Escolha 6, 12 ou 24 horas.', 'erro'); return; }
+  const dias = []; for (let t = new Date(ini + 'T12:00:00'); t <= new Date(fim + 'T12:00:00'); t = new Date(t.getTime() + 864e5)) dias.push(t.toISOString().slice(0, 10));
+  if (dias.length > 31) { _mostrarToast('Período longo demais (máx. 31 dias por lançamento).', 'erro'); return; }
+  const agora = new Date().toISOString(), por = usuarioAtual ? usuarioAtual.nome : '', obs = _secVal('sec-ap-obs');
+  let criados = 0, repetidos = 0;
+  const ok = await _secMutar(d => {
+    servs.forEach(sid => dias.forEach(dia => {
+      if (d.apoios.some(a => a.servidorId === sid && a.data === dia && a.acao.toLowerCase() === acao.toLowerCase())) { repetidos++; return; }
+      d.apoios.push({ id: _secId('apo'), servidorId: sid, data: dia, acao, horas, obs, criadoPor: por, criadoEm: agora, dispensa: null }); criados++;
+    }));
+  }, { action: 'sec_apoio_registrar', alvo: acao, detalhe: servs.length + ' servidor(es) · ' + dias.length + ' dia(s) · ' + horas + 'h cada' });
+  if (!ok) return;
+  _secFecharModal();
+  _mostrarToast(criados + ' apoio(s) registrado(s)' + (repetidos ? ' · ' + repetidos + ' já existia(m)' : '') + '.', 'sucesso');
+  sec_render();
+}
+function sec_lancarDispensa(apoioId) {
+  const a = _secDados().apoios.find(x => x.id === apoioId); if (!a) return;
+  const turnos = a.horas >= 24 ? [['integral', 'Integral (24h)']] : [['diurno', a.horas + 'h diurna'], ['noturno', a.horas + 'h noturna']];
+  _secModal('Lançar dispensa',
+    '<div style="background:#f8fafc;border-radius:6px;padding:8px 12px;margin-bottom:10px"><b>' + esc(_secNomeServ(a.servidorId)) + '</b><br>'
+    + 'Apoio de ' + _secBR(a.data) + ' — ' + esc(a.acao) + ' · direito a <b>' + a.horas + 'h</b></div>'
+    + _secCampo('sec-di-data', 'Data da dispensa', _secHoje(), 'type="date"')
+    + '<div class="form-field"><label>Turno</label>' + _secChips('sec-di-turno', turnos, turnos[0][0]) + '</div>'
+    + '<div class="form-field"><label>Observação</label><input id="sec-di-obs"></div>',
+    '<button class="btn-primary" onclick="sec_salvarDispensa(\'' + apoioId + '\')">Lançar</button>', 520);
+}
+async function sec_salvarDispensa(apoioId) {
+  const data = _secVal('sec-di-data'), turno = _secVal('sec-di-turno');
+  if (!data || !turno) { _mostrarToast('Informe a data e o turno.', 'erro'); return; }
+  let alvo = '';
+  const ok = await _secMutar(d => {
+    const a = d.apoios.find(x => x.id === apoioId); if (!a) return false;
+    if (a.dispensa) { _mostrarToast('Essa dispensa já foi lançada por ' + a.dispensa.por + '.', 'erro'); return false; }
+    a.dispensa = { data, turno, obs: _secVal('sec-di-obs'), por: usuarioAtual ? usuarioAtual.nome : '', em: new Date().toISOString() };
+    alvo = _secNomeServ(a.servidorId, d) + ' — apoio de ' + _secBR(a.data);
+  });
+  if (!ok) return;
+  auditar({ modulo: 'Secretaria', action: 'sec_dispensa_lancar', alvo, detalhe: 'Dispensa em ' + _secBR(data) + ' (' + _secTurnoTxt(turno) + ')' });
+  _secFecharModal(); _mostrarToast('Dispensa lançada.', 'sucesso'); sec_render();
+}
+async function sec_desfazerDispensa(apoioId) {
+  if (!confirm('Desfazer o lançamento desta dispensa? O apoio volta a ficar "a usufruir".')) return;
+  let alvo = '';
+  const ok = await _secMutar(d => {
+    const a = d.apoios.find(x => x.id === apoioId); if (!a || !a.dispensa) return false;
+    _secParaLixeira(d, 'dispensa', Object.assign({ apoioId }, a.dispensa));
+    alvo = _secNomeServ(a.servidorId, d) + ' — dispensa de ' + _secBR(a.dispensa.data); a.dispensa = null;
+  });
+  if (ok) { auditar({ modulo: 'Secretaria', action: 'sec_dispensa_desfazer', alvo }); sec_render(); }
+}
+async function sec_excluirApoio(apoioId) {
+  if (!confirm('Excluir este apoio da ficha? (fica guardado na lixeira da Secretaria)')) return;
+  let alvo = '';
+  const ok = await _secMutar(d => {
+    const i = d.apoios.findIndex(x => x.id === apoioId); if (i < 0) return false;
+    if (d.apoios[i].dispensa) { _mostrarToast('Desfaça a dispensa antes de excluir o apoio.', 'erro'); return false; }
+    alvo = _secNomeServ(d.apoios[i].servidorId, d) + ' — ' + _secBR(d.apoios[i].data) + ' ' + d.apoios[i].acao;
+    _secParaLixeira(d, 'apoio', d.apoios[i]); d.apoios.splice(i, 1);
+  });
+  if (ok) { auditar({ modulo: 'Secretaria', action: 'sec_apoio_excluir', alvo }); sec_render(); }
+}
+
+// Ficha para imprimir e colher as assinaturas (mesmo layout da ficha de papel)
+function sec_imprimirFicha(id) {
+  const d = _secDados(), s = _secServ(id, d); if (!s) return;
+  const ap = _secApoiosDe(id, d), linhas = Math.max(22, ap.length + 4);
+  const td = 'border:1px solid #000;padding:5px 6px;font-size:11pt;height:22px';
+  const marca = (a, t) => a.dispensa && (a.dispensa.turno === t || (t === 'diurno' && a.dispensa.turno === 'integral')) ? 'X' + (a.horas !== 12 ? ' (' + a.horas + 'h)' : '') : '';
+  let corpo = '';
+  for (let i = 0; i < linhas; i++) {
+    const a = ap[i];
+    corpo += '<tr><td style="' + td + '">' + (a ? _secBR(a.data) : '___/___/___') + '</td><td style="' + td + '">' + (a ? esc(a.acao) + (a.horas !== 12 ? ' — ' + a.horas + 'h' : '') : '') + '</td>'
+      + '<td style="' + td + '">' + (a && a.dispensa ? _secBR(a.dispensa.data) : '___/___/___') + '</td><td style="' + td + ';text-align:center">' + (a ? marca(a, 'diurno') : '') + '</td>'
+      + '<td style="' + td + ';text-align:center">' + (a ? marca(a, 'noturno') : '') + '</td><td style="' + td + '"></td><td style="' + td + '"></td></tr>';
+  }
+  const th = 'border:1px solid #000;padding:5px;font-size:10pt;background:#eee';
+  const cab = esc(String(s.cargo || '').toUpperCase()) + ': ' + esc(s.nome) + (s.formacao ? ' (' + esc(s.formacao.toUpperCase()) + ')' : '');
+  const html = '<!doctype html><html><head><meta charset="utf-8"><title>Ficha - ' + esc(s.nome) + '</title>'
+    + '<style>@page{size:A4;margin:14mm}body{font-family:Arial,Helvetica,sans-serif;color:#000}table{border-collapse:collapse;width:100%}@media print{.np{display:none}}</style></head><body>'
+    + '<div class="np" style="text-align:right;margin-bottom:8px"><button onclick="print()" style="padding:6px 14px">Imprimir</button></div>'
+    + '<div style="text-align:center;font-weight:bold;font-size:13pt">FICHA INDIVIDUAL DO SERVIDOR<br>CENTRAL DE MONITORAMENTO ELETRÔNICO – CME</div>'
+    + '<div style="margin:10px 0 2px;font-weight:bold;font-size:11pt">' + cab + '</div><div style="margin-bottom:6px;font-weight:bold;font-size:11pt">MATRÍCULA: <span style="font-weight:normal">' + esc(s.matricula || '') + '</span></div>'
+    + '<table><thead><tr><th colspan="7" style="' + th + '">CONTROLE DE APOIO E DISPENSAS</th></tr><tr>'
+    + ['DATA DO APOIO', 'AÇÃO', 'DATA DA DISPENSA', '12H DIURNAS', '12H NOTURNAS', 'ASS. SERVIDOR', 'ASS. CME'].map(h => '<th style="' + th + '">' + h + '</th>').join('')
+    + '</tr></thead><tbody>' + corpo + '</tbody></table>'
+    + '<div style="font-size:8pt;color:#555;margin-top:6px">Emitida pelo sistema CME em ' + new Date().toLocaleString('pt-BR') + ' por ' + esc(usuarioAtual ? usuarioAtual.nome : '') + '.</div></body></html>';
+  _entregarDoc(new Blob([html], { type: 'text/html' }), 'Ficha ' + s.nome + '.html');
+  auditar({ modulo: 'Secretaria', action: 'sec_ficha_imprimir', alvo: s.nome });
+}
+
+// ── Aba geral: Apoios e Dispensas ─────────────────────────────────────────────
+function sec_renderApoios() {
+  const c = document.getElementById('sec-conteudo'); if (!c) return;
+  const d = _secDados();
+  const fMes = document.getElementById('sec-a-mes')?.value ?? _secHoje().slice(0, 7);
+  const fServ = document.getElementById('sec-a-serv')?.value || '';
+  const fSit = document.getElementById('sec-a-sit')?.value || '';
+  let lista = d.apoios.slice().sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  if (fMes) lista = lista.filter(a => String(a.data).slice(0, 7) === fMes || (a.dispensa && String(a.dispensa.data).slice(0, 7) === fMes));
+  if (fServ) lista = lista.filter(a => a.servidorId === fServ);
+  if (fSit === 'pendente') lista = lista.filter(a => !a.dispensa);
+  if (fSit === 'usufruida') lista = lista.filter(a => a.dispensa);
+  const pend = d.apoios.filter(a => !a.dispensa);
+  const servs = d.servidores.slice().sort((a, b) => a.nome.localeCompare(b.nome));
+  c.innerHTML = '<div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:12px">'
+    + '<div class="kpi-card" style="border-left:4px solid #2563eb"><div class="kpi-value">' + d.apoios.filter(a => String(a.data).slice(0, 7) === _secHoje().slice(0, 7)).length + '</div><div class="kpi-label">Apoios neste mês</div></div>'
+    + '<div class="kpi-card" style="border-left:4px solid #d97706"><div class="kpi-value">' + pend.reduce((t, a) => t + (+a.horas || 0), 0) + 'h</div><div class="kpi-label">A usufruir (' + pend.length + ' apoios)</div></div>'
+    + '<div class="kpi-card" style="border-left:4px solid #16a34a"><div class="kpi-value">' + d.apoios.filter(a => a.dispensa && String(a.dispensa.data).slice(0, 7) === _secHoje().slice(0, 7)).length + '</div><div class="kpi-label">Dispensas usufruídas no mês</div></div></div>'
+    + '<div class="table-toolbar" style="flex-wrap:wrap;gap:8px">'
+    + '<label style="font-size:.85rem">Mês <input type="month" id="sec-a-mes" value="' + esc(fMes) + '" onchange="sec_renderApoios()"></label>'
+    + '<select id="sec-a-serv" onchange="sec_renderApoios()"><option value="">Todos os servidores</option>' + servs.map(s => '<option value="' + s.id + '"' + (s.id === fServ ? ' selected' : '') + '>' + esc(s.nome) + '</option>').join('') + '</select>'
+    + '<select id="sec-a-sit" onchange="sec_renderApoios()"><option value="">Todas</option><option value="pendente"' + (fSit === 'pendente' ? ' selected' : '') + '>A usufruir</option><option value="usufruida"' + (fSit === 'usufruida' ? ' selected' : '') + '>Usufruídas</option></select>'
+    + '<button class="btn-secondary" onclick="document.getElementById(\'sec-a-mes\').value=\'\';sec_renderApoios()">Todos os meses</button>'
+    + '<span style="flex:1"></span><button class="btn-primary" onclick="sec_novoApoio()">+ Registrar apoio</button></div>'
+    + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Servidor</th><th>Data do apoio</th><th>Ação</th><th>Direito</th><th>Data da dispensa</th><th>Turno</th><th>Lançado por</th><th></th></tr></thead><tbody>'
+    + (lista.length ? lista.map(a => _secLinhaApoio(a, true, d)).join('') : '<tr><td colspan="8" style="text-align:center;padding:24px;color:#888">Nenhum apoio com esse filtro.</td></tr>')
+    + '</tbody></table></div>';
+}
+
+// ── Folgas combinadas com a chefia ────────────────────────────────────────────
+function _secHtmlFolgas(lista, comNome, servidorId) {
+  const d = _secDados();
+  lista = lista.slice().sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  return '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn-primary" onclick="sec_novaFolga(\'' + (servidorId || '') + '\')">+ Folga combinada</button></div>'
+    + '<div class="table-scroll"><table class="data-table"><thead><tr>' + (comNome ? '<th>Servidor</th>' : '') + '<th>Data</th><th>Até</th><th>Combinado / motivo</th><th>Autorizado por</th><th>Lançado por</th><th></th></tr></thead><tbody>'
+    + (lista.length ? lista.map(f => '<tr>' + (comNome ? '<td><a href="#" onclick="sec_abrirPerfil(\'' + f.servidorId + '\');return false"><strong>' + esc(_secNomeServ(f.servidorId, d)) + '</strong></a></td>' : '')
+      + '<td style="font-family:var(--font-mono)">' + _secBR(f.data) + '</td><td style="font-family:var(--font-mono)">' + (f.ate && f.ate !== f.data ? _secBR(f.ate) : '—') + '</td>'
+      + '<td>' + esc(f.descricao) + '</td><td>' + esc(f.autorizadoPor || '') + '</td><td style="font-size:.8rem;color:#64748b">' + esc(f.criadoPor || '') + '</td>'
+      + '<td><button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_excluirFolga(\'' + f.id + '\')">Excluir</button></td></tr>').join('')
+      : '<tr><td colspan="' + (comNome ? 7 : 6) + '" style="text-align:center;padding:24px;color:#888">Nenhuma folga combinada registrada.</td></tr>')
+    + '</tbody></table></div>';
+}
+function sec_renderFolgas() {
+  const c = document.getElementById('sec-conteudo'); if (!c) return;
+  const d = _secDados(), fMes = document.getElementById('sec-fo-mes')?.value ?? '';
+  let lista = d.folgas;
+  if (fMes) lista = lista.filter(f => String(f.data).slice(0, 7) === fMes || String(f.ate || '').slice(0, 7) === fMes);
+  c.innerHTML = '<div class="table-toolbar"><label style="font-size:.85rem">Mês <input type="month" id="sec-fo-mes" value="' + esc(fMes) + '" onchange="sec_renderFolgas()"></label></div>'
+    + _secHtmlFolgas(lista, true, '');
+}
+function sec_novaFolga(servidorId) {
+  const d = _secDados(), servs = d.servidores.filter(s => (s.situacao || 'ativo') === 'ativo' || s.id === servidorId).sort((a, b) => a.nome.localeCompare(b.nome));
+  if (!servs.length) { _mostrarToast('Cadastre os servidores antes.', 'erro'); return; }
+  _secModal('Folga combinada com a chefia',
+    '<div class="form-field"><label>Servidor</label><select id="sec-fo-serv">' + servs.map(s => '<option value="' + s.id + '"' + (s.id === servidorId ? ' selected' : '') + '>' + esc(s.nome) + '</option>').join('') + '</select></div>'
+    + '<div class="form-grid">' + _secCampo('sec-fo-data', 'Data', _secHoje(), 'type="date"') + _secCampo('sec-fo-ate', 'Até (se for mais de um dia)', '', 'type="date"') + '</div>'
+    + _secCampo('sec-fo-desc', 'O que foi combinado', '', 'placeholder="Ex.: folga em troca do apoio ao plantão de 12/10"')
+    + _secCampo('sec-fo-aut', 'Autorizado por', usuarioAtual ? usuarioAtual.nome : ''),
+    '<button class="btn-primary" onclick="sec_salvarFolga()">Registrar</button>', 560);
+}
+async function sec_salvarFolga() {
+  const f = { servidorId: _secVal('sec-fo-serv'), data: _secVal('sec-fo-data'), ate: _secVal('sec-fo-ate'), descricao: _secVal('sec-fo-desc'), autorizadoPor: _secVal('sec-fo-aut') };
+  if (!f.servidorId || !f.data) { _mostrarToast('Informe o servidor e a data.', 'erro'); return; }
+  if (f.ate && f.ate < f.data) { _mostrarToast('A data final é anterior à inicial.', 'erro'); return; }
+  if (!f.descricao) { _mostrarToast('Descreva o que foi combinado.', 'erro'); return; }
+  const ok = await _secMutar(d => { d.folgas.push(Object.assign({ id: _secId('fol'), criadoPor: usuarioAtual ? usuarioAtual.nome : '', criadoEm: new Date().toISOString() }, f)); },
+    { action: 'sec_folga_registrar', alvo: _secNomeServ(f.servidorId), detalhe: _secBR(f.data) + (f.ate ? ' a ' + _secBR(f.ate) : '') + ' · ' + f.descricao });
+  if (ok) { _secFecharModal(); _mostrarToast('Folga registrada.', 'sucesso'); sec_render(); }
+}
+async function sec_excluirFolga(id) {
+  if (!confirm('Excluir esta folga combinada? (fica guardada na lixeira da Secretaria)')) return;
+  let alvo = '';
+  const ok = await _secMutar(d => {
+    const i = d.folgas.findIndex(x => x.id === id); if (i < 0) return false;
+    alvo = _secNomeServ(d.folgas[i].servidorId, d) + ' — ' + _secBR(d.folgas[i].data);
+    _secParaLixeira(d, 'folga', d.folgas[i]); d.folgas.splice(i, 1);
+  });
+  if (ok) { auditar({ modulo: 'Secretaria', action: 'sec_folga_excluir', alvo }); sec_render(); }
+}
+
+// ── Documentos (Worker /sec/*) ────────────────────────────────────────────────
+async function sec_renderDocs(el, pasta, referencia) {
+  el.innerHTML = '<div class="table-toolbar" style="flex-wrap:wrap;gap:8px"><input id="sec-doc-desc" placeholder="Descrição (ex.: Portaria de férias 2026, RG, comprovante de residência)" style="flex:1;min-width:240px;padding:6px 10px">'
+    + '<label class="btn-primary" style="cursor:pointer">+ Anexar arquivo<input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.odt,.txt" style="display:none" onchange="sec_enviarDocs(this,\'' + pasta + '\',\'' + esc(referencia).replace(/'/g, '') + '\')"></label></div>'
+    + '<div id="sec-doc-lista" style="color:#64748b;padding:12px">Carregando…</div>';
+  try {
+    const r = await r2_api('GET', '/sec/list?pasta=' + encodeURIComponent(pasta));
+    const arq = (r.arquivos || []).sort((a, b) => String(b.enviadoEm).localeCompare(String(a.enviadoEm)));
+    const box = document.getElementById('sec-doc-lista'); if (!box) return;
+    box.style.padding = '0';
+    box.innerHTML = '<div class="table-scroll"><table class="data-table"><thead><tr><th>Arquivo</th><th>Descrição</th><th>Enviado</th><th>Por</th><th></th></tr></thead><tbody>'
+      + (arq.length ? arq.map(a => '<tr><td><a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + esc(a.nome).replace(/'/g, '') + '\');return false"><strong>' + esc(a.nome) + '</strong></a>'
+        + ' <span style="color:#94a3b8;font-size:.75rem">' + Math.max(1, Math.round((a.tamanho || 0) / 1024)) + ' KB</span></td><td>' + esc(a.descricao || '') + '</td>'
+        + '<td style="font-family:var(--font-mono);font-size:.8rem">' + (a.enviadoEm ? new Date(a.enviadoEm).toLocaleString('pt-BR') : '') + '</td><td style="font-size:.8rem">' + esc(a.enviadoPor || '') + '</td>'
+        + '<td><button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_apagarDoc(\'' + encodeURIComponent(a.key) + '\',\'' + pasta + '\',\'' + esc(referencia).replace(/'/g, '') + '\')">Apagar</button></td></tr>').join('')
+        : '<tr><td colspan="5" style="text-align:center;padding:24px;color:#888">Nenhum documento anexado.</td></tr>') + '</tbody></table></div>';
+  } catch (e) {
+    const box = document.getElementById('sec-doc-lista');
+    if (box) box.textContent = 'Não consegui abrir os documentos: ' + (e.message || e) + '. Se acabou de ser liberado o acesso, saia e entre de novo no sistema.';
+  }
+}
+function _secLerArquivo(f) { return new Promise((ok, erro) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => erro(r.error); r.readAsDataURL(f); }); }
+async function sec_enviarDocs(input, pasta, referencia) {
+  const arquivos = [...(input.files || [])]; input.value = '';
+  const desc = _secVal('sec-doc-desc');
+  let ok = 0;
+  for (const f of arquivos) {
+    if (f.size > 15 * 1024 * 1024) { _mostrarToast(f.name + ': maior que 15 MB.', 'erro'); continue; }
+    try {
+      _mostrarToast('Enviando ' + f.name + '…');
+      await r2_api('POST', '/sec/upload', { 'Content-Type': 'application/json' }, JSON.stringify({ pasta, nome: f.name, conteudo: await _secLerArquivo(f), descricao: desc, referencia }));
+      ok++;
+    } catch (e) { _mostrarToast(f.name + ': ' + (e.message || e), 'erro'); }
+  }
+  if (ok) _mostrarToast(ok + ' arquivo(s) anexado(s).', 'sucesso');
+  sec_renderPerfil();
+}
+async function sec_abrirDoc(keyEnc, nome) {
+  try {
+    const res = await r2_api('GET', '/sec/download?key=' + keyEnc);
+    _entregarDoc(await res.blob(), nome);
+  } catch (e) { _mostrarToast('Não consegui abrir: ' + (e.message || e), 'erro'); }
+}
+async function sec_apagarDoc(keyEnc, pasta, referencia) {
+  if (!confirm('Apagar este documento? (ele vai para a lixeira da Secretaria e pode ser recuperado pelo administrador)')) return;
+  try {
+    await r2_api('POST', '/sec/delete', { 'Content-Type': 'application/json' }, JSON.stringify({ key: decodeURIComponent(keyEnc) }));
+    _mostrarToast('Documento movido para a lixeira.', 'sucesso');
+  } catch (e) { _mostrarToast('Não consegui apagar: ' + (e.message || e), 'erro'); }
+  sec_renderPerfil();
+}
+
+// ── Auditoria (só administrador, gerência e secretaria) ──────────────────────
+const _SEC_ACOES = {
+  sec_servidor_criar: 'Cadastrou servidor', sec_servidor_editar: 'Editou servidor', sec_perfil_abrir: 'Abriu perfil',
+  sec_apoio_registrar: 'Registrou apoio', sec_apoio_excluir: 'Excluiu apoio', sec_dispensa_lancar: 'Lançou dispensa', sec_dispensa_desfazer: 'Desfez dispensa',
+  sec_folga_registrar: 'Registrou folga combinada', sec_folga_excluir: 'Excluiu folga combinada', sec_ficha_imprimir: 'Imprimiu ficha',
+  sec_enviar: 'Anexou documento', sec_abrir: 'Abriu documento', sec_apagar: 'Apagou documento (lixeira)',
+};
+async function sec_renderAuditoria() {
+  const c = document.getElementById('sec-conteudo'); if (!c) return;
+  c.innerHTML = '<div style="color:#64748b;padding:12px">Carregando auditoria…</div>';
+  try {
+    const r = await r2_api('GET', '/sec/audit?limit=500');
+    const linhas = r.audit || [];
+    c.innerHTML = '<div style="font-size:.85rem;color:#64748b;margin-bottom:8px">Últimos 500 registros da Secretaria — visível só para Administração, Gerência e Secretaria.</div>'
+      + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Data e hora</th><th>Usuário</th><th>Ação</th><th>Sobre</th><th>Detalhe</th></tr></thead><tbody>'
+      + (linhas.length ? linhas.map(a => '<tr><td style="font-family:var(--font-mono);font-size:.8rem;white-space:nowrap">' + new Date(a.ts).toLocaleString('pt-BR') + '</td>'
+        + '<td>' + esc(a.usuario || '') + '</td><td>' + esc(_SEC_ACOES[a.action] || a.action) + '</td><td>' + esc(a.alvo || '') + '</td><td style="font-size:.82rem">' + esc(a.detalhe || '') + '</td></tr>').join('')
+        : '<tr><td colspan="5" style="text-align:center;padding:24px;color:#888">Nenhum registro ainda.</td></tr>') + '</tbody></table></div>';
+  } catch (e) { c.innerHTML = '<div style="color:#b91c1c;padding:12px">Não consegui carregar a auditoria: ' + esc(e.message || String(e)) + '</div>'; }
+}

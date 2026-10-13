@@ -1341,6 +1341,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
     <div class="nav-tab" onclick="mudarAba('arquivos')"><svg viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9L9.6 3.9A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg> Arquivos</div>
     <div class="nav-tab gerencia-only" onclick="mudarAba('estatisticas')"><svg viewBox="0 0 24 24"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg> Estatísticas</div>
     <div class="nav-tab gerencia-only" onclick="mudarAba('mandado')"><svg viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 11V5a2 2 0 0 1 2-2h7l5 5v3"/><circle cx="11.5" cy="16.5" r="3.5"/><path d="m21 21-3-3"/></svg> Mandado de Prisão</div>
+    <div class="nav-tab gerencia-only" onclick="mudarAba('secretaria')"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></svg> Secretaria <span id="sec-badge" style="display:none" class="notif-badge">0</span></div>
   </div>
 
   <!-- CONTEÚDO PRINCIPAL -->
@@ -3546,7 +3547,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
                   <option value="gerencia">Gerência</option>
                   <option value="estoque">Estoque</option>
                   <option value="triagem">Triagem</option>
-                  <option value="psicossocial">Psicossocial</option>
+                  <option value="psicossocial">Psicossocial</option><option value="secretaria">Secretaria</option>
                   <option value="estatistica">Estatística</option>
                   <option value="admin">Administrador</option>
                 </select>
@@ -5600,6 +5601,9 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
       </div>
     </div>
 
+    <!-- ─── SECRETARIA (servidores, apoios/dispensas, documentos) — secretaria.js ─── -->
+    <div class="tab-panel" id="panel-secretaria"><div id="sec-root"></div></div>
+
     <!-- ─── MANDADO DE PRISÃO (cruzamento BNMP) ─── -->
     <div class="tab-panel" id="panel-mandado">
       <div class="dash-header">
@@ -5989,7 +5993,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
           <option value="gerencia">Gerência</option>
           <option value="estoque">Estoque</option>
           <option value="triagem">Triagem</option>
-          <option value="psicossocial">Psicossocial</option>
+          <option value="psicossocial">Psicossocial</option><option value="secretaria">Secretaria</option>
           <option value="estatistica">Estatística</option>
           <option value="admin">Administrador</option>
         </select>
@@ -8203,14 +8207,15 @@ const TABS_POR_NIVEL = {
   triagem:       ['dashboard', 'triagem', 'links', 'arquivos', 'psicossocial'],
   psicossocial:  ['dashboard', 'psicossocial', 'links', 'modelos', 'arquivos'],
   estatistica:   ['dashboard', 'estatisticas', 'links', 'arquivos'],
+  secretaria:    ['secretaria', 'dashboard', 'gerencia', 'links', 'modelos', 'arquivos'],
   gerencia:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
-               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'gerencia', 'arquivos', 'estatisticas', 'mandado'],
+               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'gerencia', 'arquivos', 'estatisticas', 'mandado', 'secretaria'],
   admin:      ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
-               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia', 'admin', 'arquivos', 'estatisticas', 'mandado'],
+               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia', 'admin', 'arquivos', 'estatisticas', 'mandado', 'secretaria'],
 };
 
 const _TAB_MAP = { dashboard:0, criticos:1, ocorrencias:2, juridico:3, comunicacao:4,
-                   estoque:5, triagem:6, relatorio:7, links:8, modelos:9, gerencia:10, admin:11, psicossocial:12, arquivos:13, estatisticas:14, mandado:15 };
+                   estoque:5, triagem:6, relatorio:7, links:8, modelos:9, gerencia:10, admin:11, psicossocial:12, arquivos:13, estatisticas:14, mandado:15, secretaria:16 };
 
 function aplicarVisibilidadeTabs(nivel) {
   const permitidas = TABS_POR_NIVEL[nivel] || TABS_POR_NIVEL['plantao'];
@@ -8307,7 +8312,7 @@ function mudarAba(aba) {
   document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
   const tabs = document.querySelectorAll(".nav-tab");
-  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, comunicacao: 4, estoque: 5, triagem: 6, relatorio: 7, links: 8, modelos: 9, gerencia: 10, admin: 11, psicossocial: 12, arquivos: 13, estatisticas: 14, mandado: 15 };
+  const map = { dashboard: 0, criticos: 1, ocorrencias: 2, juridico: 3, comunicacao: 4, estoque: 5, triagem: 6, relatorio: 7, links: 8, modelos: 9, gerencia: 10, admin: 11, psicossocial: 12, arquivos: 13, estatisticas: 14, mandado: 15, secretaria: 16 };
   if (tabs[map[aba]]) tabs[map[aba]].classList.add("active");
   const panel = document.getElementById("panel-" + aba);
   if (panel) panel.classList.add("active");
@@ -8328,6 +8333,7 @@ function mudarAba(aba) {
   if (aba === "arquivos") { r2_inicializarAba(); }
   if (aba === "estatisticas") { estat_inicializar(); }
   if (aba === "mandado") { mp_inicializar(); }
+  if (aba === "secretaria" && typeof sec_inicializar === "function") { sec_inicializar(); }
 }
 
 /* ─── ATUALIZAR TUDO ─────────────────────────────────── */
@@ -11046,7 +11052,7 @@ function _dashRenderPlantaoHoje() {
 }
 
 /* ═══════ DASHBOARD PESSOAL (por servidor) — gerência/admin veem o operacional ═══════ */
-const _DASH_NIVEL_LABEL = { plantao:'Operador / Plantão', comunicacao:'Comunicação', relatorio:'Relatório', juridico:'Jurídico', estoque:'Estoque', triagem:'Triagem', psicossocial:'Psicossocial', estatistica:'Estatística', gerencia:'Gerência', admin:'Administrador' };
+const _DASH_NIVEL_LABEL = { plantao:'Operador / Plantão', comunicacao:'Comunicação', relatorio:'Relatório', juridico:'Jurídico', estoque:'Estoque', triagem:'Triagem', psicossocial:'Psicossocial', estatistica:'Estatística', secretaria:'Secretaria', gerencia:'Gerência', admin:'Administrador' };
 const _DASH_ATALHOS = {
   plantao:      [['\u{1F6A8} Casos Críticos','criticos'],['\u{1F4CB} Ocorrências','ocorrencias'],['\u{1F4DD} Modelos','modelos'],['\u{1F4C1} Arquivos','arquivos']],
   comunicacao:  [['\u{1F4E1} Comunicação','comunicacao'],['\u{1F4DD} Modelos','modelos'],['\u{1F4C1} Arquivos','arquivos']],
@@ -11405,10 +11411,10 @@ function salvarJuridico() {
 /* ─── ADMINISTRAÇÃO ──────────────────────────────────── */
 const _NIVEL_COR  = { admin:'#1F4E78', gerencia:'#7c3aed', juridico:'#b45309',
   relatorio:'#0369a1', comunicacao:'#0f766e', plantao:'#15803d',
-  estoque:'#b91c1c', triagem:'#0891b2', psicossocial:'#db2777', estatistica:'#4f46e5' };
+  estoque:'#b91c1c', triagem:'#0891b2', psicossocial:'#db2777', estatistica:'#4f46e5', secretaria:'#0d9488' };
 const _NIVEL_NOME = { admin:'Administrador', gerencia:'Gerência', juridico:'Jurídico',
   relatorio:'Relatório', comunicacao:'Comunicação', plantao:'Plantão',
-  estoque:'Estoque', triagem:'Triagem', psicossocial:'Psicossocial', estatistica:'Estatística' };
+  estoque:'Estoque', triagem:'Triagem', psicossocial:'Psicossocial', estatistica:'Estatística', secretaria:'Secretaria' };
 
 function renderizarUsers() {
   const todos  = getUsuarios();
@@ -29230,5 +29236,6 @@ function estat_exportarResultado() {
   </div>
 </div>
 
+<script src="secretaria.js?v=20261013"></script>
 </body>
 </html>
