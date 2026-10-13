@@ -14,7 +14,7 @@ function _vdzNorm(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/
 function _vdzFiltrar(lista) {
   const q = _vdzNorm(_vdzBusca).trim();
   return lista.filter(x => (!_vdzInst || _vdzInstalador(x) === _vdzInst) && (!_vdzSit || (_vdzSit === 'nenhuma' ? !x.zonas : x.zonas > 0))
-    && (!q || _vdzNorm(x.nome + ' ' + x.reg + ' ' + _vdzInstalador(x)).includes(q)));
+    && (!q || _vdzNorm(x.nome + ' ' + x.reg + ' ' + (x.comarca || '') + ' ' + _vdzInstalador(x)).includes(q)));
 }
 
 function vdz_render() {
@@ -38,7 +38,7 @@ function vdz_render() {
     + '<div style="font-weight:700;margin-bottom:4px">Por servidor que fez a instalação <span style="font-weight:400;font-size:.75rem;color:#64748b">— clique para filtrar</span></div>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">' + ranking.map(([k, n]) => '<button type="button" onclick="_vdzInst=' + (_vdzInst === k ? '\'\'' : '\'' + esc(k).replace(/'/g, '') + '\'') + ';vdz_render()" style="padding:4px 10px;border-radius:4px;cursor:pointer;font-size:.8rem;border:1px solid '
       + (_vdzInst === k ? '#dc2626;background:#fee2e2;font-weight:600;box-shadow:inset 2px 0 0 #dc2626' : '#cbd5e1;background:#fff') + '">' + esc(k) + ' <b style="color:#b91c1c">' + n + '</b></button>').join('') + '</div>'
-    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="vdz-busca" value="' + esc(_vdzBusca) + '" oninput="_vdzBusca=this.value;_vdzRenderTabela()" placeholder="Buscar por nome, registro ou servidor…" style="flex:1;min-width:240px;padding:7px 10px">'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="vdz-busca" value="' + esc(_vdzBusca) + '" oninput="_vdzBusca=this.value;_vdzRenderTabela()" placeholder="Buscar por nome, registro, comarca ou servidor…" style="flex:1;min-width:240px;padding:7px 10px">'
     + '<select onchange="_vdzSit=this.value;_vdzRenderTabela()" style="padding:6px 8px"><option value="">Todas as situações</option><option value="nenhuma"' + (_vdzSit === 'nenhuma' ? ' selected' : '') + '>Sem nenhuma zona</option><option value="inclusao"' + (_vdzSit === 'inclusao' ? ' selected' : '') + '>Só zona de inclusão</option></select></div>'
     + '<div id="vdz-tabela"></div>';
   _vdzRenderTabela();
@@ -48,19 +48,19 @@ function _vdzRenderTabela() {
   const lista = _vdzFiltrar(r.lista || []);
   const td = (v, s) => '<td style="padding:6px;' + (s || '') + '">' + v + '</td>';
   el.innerHTML = '<div style="font-size:.78rem;color:#64748b;margin-bottom:4px">' + lista.length + ' monitorado(s)</div>'
-    + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Monitorado</th><th>Registro</th><th>Situação</th><th>Instalado por</th><th>Monitorado desde</th><th>Na lista desde</th></tr></thead><tbody>'
+    + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Monitorado</th><th>Registro</th><th>Comarca</th><th>Situação</th><th>Instalado por</th><th>Monitorado desde</th><th>Na lista desde</th></tr></thead><tbody>'
     + (lista.length ? lista.map(x => '<tr>' + td('<b>' + esc(x.nome) + '</b><div style="font-size:.72rem;color:#64748b">' + esc(x.grupo) + '</div>')
-        + td(esc(x.reg), 'font-family:var(--font-mono)')
+        + td(esc(x.reg), 'font-family:var(--font-mono)') + td(esc(x.comarca || '—'), 'font-size:.82rem')
         + td(x.zonas ? '<span style="font-size:.72rem;font-weight:600;padding:2px 7px;border-radius:3px;border-left:2px solid #d97706;background:#fef3c7;color:#b45309">SÓ INCLUSÃO (' + x.inclusao + ')</span>'
           : '<span style="font-size:.72rem;font-weight:600;padding:2px 7px;border-radius:3px;border-left:2px solid #dc2626;background:#fee2e2;color:#b91c1c">SEM NENHUMA ZONA</span>')
         + td(esc(_vdzInstalador(x)) + (!x.instNome && x.inst ? '<div style="font-size:.7rem;color:#94a3b8">operador antigo/inativo</div>' : ''))
         + td(_vdzBR(x.desde), 'font-family:var(--font-mono);font-size:.82rem') + td(_vdzBR(x.semZonaDesde), 'font-family:var(--font-mono);font-size:.82rem') + '</tr>').join('')
-      : '<tr><td colspan="6" style="text-align:center;padding:24px;color:#888">Nenhum monitorado com esse filtro.</td></tr>')
+      : '<tr><td colspan="7" style="text-align:center;padding:24px;color:#888">Nenhum monitorado com esse filtro.</td></tr>')
     + '</tbody></table></div>';
 }
 function vdz_exportar() {
   const r = _vdzDados(); if (!r) return;
-  const rows = _vdzFiltrar(r.lista || []).map(x => ({ 'Monitorado': x.nome, 'Registro': x.reg, 'Grupo': x.grupo, 'Situação': x.zonas ? 'Só zona de inclusão (' + x.inclusao + ')' : 'Sem nenhuma zona',
+  const rows = _vdzFiltrar(r.lista || []).map(x => ({ 'Monitorado': x.nome, 'Registro': x.reg, 'Comarca': x.comarca || '', 'Grupo': x.grupo, 'Situação': x.zonas ? 'Só zona de inclusão (' + x.inclusao + ')' : 'Sem nenhuma zona',
     'Instalado por': _vdzInstalador(x), 'Monitorado desde': _vdzBR(x.desde), 'Na lista desde': _vdzBR(x.semZonaDesde) }));
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'VD sem zona de exclusão');
   XLSX.writeFile(wb, 'VD_sem_zona_de_exclusao_' + String(r.geradoEm).slice(0, 10) + '.xlsx');
