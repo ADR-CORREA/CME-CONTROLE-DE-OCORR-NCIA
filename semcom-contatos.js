@@ -135,7 +135,7 @@ function _scLinhaContato(m) {
   const c = m && m.contato; if (!c) return '';
   const refs = (c.refs || []).filter(r => r.telefone);
   return '<div style="font-size:.78rem;margin-top:3px;font-weight:400;color:#475569">'
-    + (c.telefone ? '\u{1F4DE} ' + _sccLinkTel(c.telefone) : '<span style="color:#94a3b8">sem telefone próprio</span>')
+    + (c.telefone ? '<span style="white-space:nowrap">\u{1F4DE} ' + _sccLinkTel(c.telefone) + '</span>' :'<span style="color:#94a3b8">sem telefone próprio</span>')
     + (refs.length ? ' <span style="color:#64748b;cursor:help" title="' + esc(refs.map(r => (r.nome || 'Contato') + ': ' + _sccFmtTel(r.telefone)).join(' · ')) + '">· +' + refs.length + ' de referência</span>' : '')
     + '</div>';
 }
