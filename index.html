@@ -5333,6 +5333,10 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
               📂 Importar Excel AKILES
               <input type="file" id="semcom-file-input" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="importarExcelSemCom(this)">
             </label>
+            <label class="btn-secondary" style="cursor:pointer;margin:0" title="Relatório &quot;Cadastro completo dos monitorados&quot; do AKILES — guarda o telefone e os contatos de referência de quem está sem comunicação">
+              📇 Importar contatos (cadastro)
+              <input type="file" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="sc_importarContatos(this)">
+            </label>
             <button class="btn-secondary" onclick="renderizarSemCom()">🔄 Atualizar</button>
             <button class="btn-secondary" onclick="exportarSemComExcel()">📥 Exportar Excel</button>
           </div>
@@ -6305,6 +6309,10 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
         </div>
       </div>
       <div class="form-section">
+        <div class="form-section-title">📞 Contatos</div>
+        <div id="trat-contatos"></div>
+      </div>
+      <div class="form-section">
         <div class="form-section-title">Nova Tratativa</div>
         <div class="form-grid">
           <div class="form-field">
@@ -6414,6 +6422,10 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
           <div class="form-field"><label>Importado em</label><input class="auto-field" readonly id="vsem-importado"></div>
           <div class="form-field"><label>Situação</label><input class="auto-field" readonly id="vsem-situacao" style="font-weight:bold"></div>
         </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">📞 Contatos</div>
+        <div id="vsem-contatos"></div>
       </div>
       <div class="form-section" id="vsem-sec-desvinc" style="display:none">
         <div class="form-section-title" style="color:#dc2626">⚡ Desvinculação Registrada</div>
@@ -10407,7 +10419,7 @@ function renderizarSemCom(area) {
     const btnMover = `<button class="btn-sm btn-outline" style="color:#8957e5;border-color:#c4a5f0;font-size:.78rem" title="Reclassificar entre Jurídico e Psicossocial (DPP)" onclick="_scMoverArea('${m.id}','${_destino}')">${_moverTxt}</button>`;
     return `<tr style="${rowStyle}">
       <td>${i+1}</td>
-      <td><strong>${esc(m.nome)}</strong>${_scSeloVD(m)}${badges180}</td>
+      <td><strong>${esc(m.nome)}</strong>${_scSeloVD(m)}${badges180}${typeof _scLinhaContato === 'function' ? _scLinhaContato(m) : ''}</td>
       <td style="font-family:var(--font-mono)">${esc(m.registro)}</td>
       <td style="font-size:.82rem">${esc((m.ultimaComunicacao||'').slice(0,16).replace('T',' '))}</td>
       <td style="font-size:.82rem">${esc(m.tempoSemCom)||'—'}</td>
@@ -10456,6 +10468,7 @@ function abrirModalTratativa(monId) {
   document.getElementById('trat-data').value = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0,16);
   document.getElementById('trat-servidor').value = usuarioAtual?.nome || '';
   document.getElementById('trat-descricao').value = '';
+  document.getElementById('trat-contatos').innerHTML = typeof _scHtmlContatos === 'function' ? _scHtmlContatos(m) : '';
   // Histórico
   const hist = document.getElementById('trat-historico');
   const trats = (m.tratativas||[]).slice().reverse();
@@ -10555,6 +10568,7 @@ function verMonitoradoSemCom(monId) {
   const m = dados.monitorados.find(x => x.id === monId);
   if (!m) return;
   document.getElementById('ver-semcom-title').textContent = m.nome;
+  document.getElementById('vsem-contatos').innerHTML = typeof _scHtmlContatos === 'function' ? _scHtmlContatos(m) : '';
   document.getElementById('vsem-nome').value      = m.nome;
   document.getElementById('vsem-registro').value  = m.registro;
   document.getElementById('vsem-unidade').value   = m.unidade || '—';
@@ -10611,6 +10625,8 @@ function exportarSemComExcel(area) {
     'Dias Sem Comunicação': _diasSemComAtual(m),
     'Intervalo':            m.intervalo || '',
     'Unidade Prisional':    m.unidade || '',
+    'Telefone':             m.contato && m.contato.telefone ? _sccFmtTel(m.contato.telefone) : '',
+    'Contatos de referência': m.contato ? (m.contato.refs || []).filter(r => r.telefone).map(r => (r.nome || 'Contato') + ': ' + _sccFmtTel(r.telefone)).join(' · ') : '',
     'Situação':             m.situacao === 'desvinculado' ? 'Desvinculado' : 'Ativo',
     'Qtd. Tratativas':      (m.tratativas||[]).length,
     'Última Tratativa':     m.tratativas?.length ? new Date(m.tratativas[m.tratativas.length-1].data).toLocaleString('pt-BR') : '',
@@ -29265,5 +29281,6 @@ function estat_exportarResultado() {
 <script src="secretaria-ponto.js?v=20261013g"></script>
 <script src="secretaria-agenda.js?v=20261013g"></script>
 <script src="secretaria-arquivo.js?v=20261013g"></script>
+<script src="semcom-contatos.js?v=20261013h"></script>
 </body>
 </html>
