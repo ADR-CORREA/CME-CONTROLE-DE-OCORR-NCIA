@@ -6,8 +6,11 @@
    • Painel de escala no Hoje, editado NO PRÓPRIO QUADRO: os sábados de cada mês aparecem sozinhos (colunas);
      arraste o nome do expediente para o sábado (ou "+ adicionar"); clique na etiqueta para trocar CME/PEF;
      clique no nome (depois do sábado) para marcar compareceu/faltou; ✕ tira; arraste entre sábados para mudar.
-   • "Preencher automaticamente": distribui o expediente pelos sábados do mês (cada um 1 vez), pula afastados,
-     prioriza quem está há mais tempo sem sábado e alterna CME/PEF de quem é "rodízio".
+   • Regra (gerência, 14/10/2026): Bruna, Olidete, Francisco e Débora → 1 sábado no mês, na CME; Everton → não tira;
+     todos os demais do administrativo → 2 sábados no mês: 1 na CME + 1 na PEF (Penitenciária Feminina).
+     O campo "Apoio de sábado" do cadastro do servidor manda mais que essa regra padrão.
+   • "Preencher automaticamente": aplica a regra, pula afastados, espalha pelos sábados e prioriza quem está há mais
+     tempo sem sábado. Depois a secretaria ajusta à mão (arrastar, trocar local, tirar).
    Depende de secretaria*.js. Emojis só por \u{...}. Prefixo _secEsc / sec_esc. */
 
 const _SEC_ESC_LOCAIS = ['CME', 'PEF'];
@@ -45,13 +48,26 @@ function _secEscAfastadosMes(mes, d) {
   return d.afastamentos.filter(a => a.inicio <= fim && (a.fim || a.inicio) >= ini).sort((a, b) => String(a.inicio).localeCompare(String(b.inicio)));
 }
 function _secEscAfastadoEm(sid, dt, d) { return d.afastamentos.find(a => a.servidorId === sid && a.inicio <= dt && (a.fim || a.inicio) >= dt) || null; }
+// Regra padrão da gerência (vale quando o cadastro do servidor não diz nada em "Apoio de sábado")
+const _SEC_ESC_SO_CME = ['BRUNA', 'OLIDETE', 'FRANCISCO', 'DEBORA'];
+const _SEC_ESC_NAO_TIRA = ['EVERTON'];
+// CME = 1 sábado na CME · ROD = 1 na CME + 1 na PEF · NAO = não tira
+function _secEscRegime(s) {
+  if (!s) return '';
+  if (s.apoioSabado) return s.apoioSabado; // exceção marcada no cadastro (o antigo apoioRegime seguia a regra velha e é ignorado)
+  const primeiro = _secEscNorm(s.nome).split(' ')[0];
+  if (_SEC_ESC_SO_CME.includes(primeiro)) return 'CME';
+  if (_SEC_ESC_NAO_TIRA.includes(primeiro)) return 'NAO';
+  return s.equipe === 'EXPEDIENTE' ? 'ROD' : '';
+}
+function _secEscPrecisa(s) { const r = _secEscRegime(s); return r === 'ROD' ? ['CME', 'PEF'] : r === 'CME' ? ['CME'] : []; }
 // quem faz sábado: expediente ativo (e quem tiver "apoio de sábado" marcado no cadastro)
-function _secEscPessoal(d) { return d.servidores.filter(s => (s.situacao || 'ativo') === 'ativo' && (s.equipe === 'EXPEDIENTE' || s.apoioRegime)).sort((a, b) => a.nome.localeCompare(b.nome)); }
-// local padrão: "só CME" → CME; "rodízio" → o contrário do último sábado dele; senão CME
-function _secEscLocalPadrao(sid, d, ateData) {
-  const s = _secServ(sid, d); if (!s || s.apoioRegime !== 'ROD') return 'CME';
-  const ult = d.escalaSabado.filter(x => x.servidorId === sid && (!ateData || x.data < ateData)).sort((a, b) => b.data.localeCompare(a.data))[0];
-  return ult ? (ult.local === 'PEF' ? 'CME' : 'PEF') : 'CME';
+function _secEscPessoal(d) { return d.servidores.filter(s => (s.situacao || 'ativo') === 'ativo' && (s.equipe === 'EXPEDIENTE' || s.apoioSabado)).sort((a, b) => a.nome.localeCompare(b.nome)); }
+// local sugerido: o que ainda FALTA para ele no mês (CME + PEF de quem faz os dois); senão CME
+function _secEscLocalPadrao(sid, d, dt) {
+  const s = _secServ(sid, d), mes = String(dt || '').slice(0, 7);
+  const tem = l => d.escalaSabado.some(x => x.servidorId === sid && x.data.slice(0, 7) === mes && x.local === l);
+  return _secEscRegime(s) === 'ROD' && tem('CME') && !tem('PEF') ? 'PEF' : 'CME';
 }
 function _secEscAtualizar() { const el = document.getElementById('sec-esc-card'); if (el) el.outerHTML = _secCartaoEscala(); }
 
@@ -83,20 +99,25 @@ function _secCartaoEscala() {
       + '<div style="display:flex;gap:4px">' + _SEC_ESC_LOCAIS.map(l => '<button type="button" onclick="sec_escConfirmarPicker(\'' + dt + '\',\'' + l + '\')" style="flex:1;padding:4px;border-radius:4px;cursor:pointer;font-weight:700;font-size:.78rem;' + (l === 'PEF' ? 'background:#fef3c7;color:#92400e;border:1px solid #fcd34d' : 'background:#dbeafe;color:#1e40af;border:1px solid #93c5fd') + '">+ ' + l + '</button>').join('')
       + '<button type="button" onclick="_secEscPicker=null;_secEscAtualizar()" style="padding:4px 8px;border-radius:4px;cursor:pointer;border:1px solid #cbd5e1;background:#fff">\u{2715}</button></div></div>'
       : '<div onclick="_secEscPicker=\'' + dt + '\';_secEscAtualizar()" style="margin-top:6px;padding:6px;border:1px dashed #cbd5e1;border-radius:6px;text-align:center;font-size:.8rem;color:#64748b;cursor:pointer">+ adicionar</div>';
-    return '<div ondragover="event.preventDefault();this.style.background=\'#f5f3ff\'" ondragleave="this.style.background=\'\'" ondrop="sec_escSoltar(event,\'' + dt + '\')" style="flex:1 1 160px;min-width:150px;border:2px solid ' + destaque + ';border-radius:8px;padding:8px;' + (passou && !ehHoje ? 'background:#f8fafc' : '') + '">'
+    return '<div ondragover="event.preventDefault();this.style.background=\'#f5f3ff\'" ondragleave="this.style.background=\'\'" ondrop="sec_escSoltar(event,\'' + dt + '\')" style="flex:1 1 170px;min-width:160px;min-height:150px;border:2px solid ' + destaque + ';border-radius:8px;padding:8px;' + (passou && !ehHoje ? 'background:#f8fafc' : '') + '">'
       + '<div style="display:flex;justify-content:space-between;align-items:baseline"><div><div style="font-size:.7rem;font-weight:700;color:#64748b;text-transform:uppercase">' + dia.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '') + '</div>'
       + '<div style="font-size:1.4rem;font-weight:700;line-height:1;color:' + (ehHoje || ehProx ? '#6d28d9' : '#0f172a') + '">' + String(dia.getDate()).padStart(2, '0') + '<span style="font-size:.8rem;color:#94a3b8">/' + String(dia.getMonth() + 1).padStart(2, '0') + '</span></div></div>'
       + '<div style="text-align:right;font-size:.68rem;font-weight:700;color:' + (ehHoje || ehProx ? '#6d28d9' : '#94a3b8') + '">' + (ehHoje ? 'HOJE' : ehProx ? 'PRÓXIMO' : passou ? 'REALIZADO' : '') + '<div style="font-weight:400;color:#94a3b8">' + lst.length + ' pessoa(s)</div></div></div>'
       + lst.map(chip).join('') + picker + '</div>';
   };
 
-  const lateral = '<div style="flex:0 0 220px;min-width:200px;border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#fcfcfd">'
-    + '<div style="font-weight:700;font-size:.85rem">Expediente</div><div style="font-size:.72rem;color:#64748b;margin-bottom:6px">Arraste o nome para um sábado</div>'
-    + '<div style="max-height:360px;overflow:auto">' + pessoal.map(s => {
-      const n = qtd(s.id), af = afast.find(a => a.servidorId === s.id);
-      return '<div draggable="true" ondragstart="sec_escArrastar(event,\'serv\',\'' + s.id + '\')" title="' + esc(s.nome) + '" style="display:flex;justify-content:space-between;gap:6px;align-items:center;padding:5px 6px;margin-bottom:3px;border-radius:5px;cursor:grab;background:#fff;border:1px solid #e2e8f0' + (af ? ';opacity:.55' : '') + '">'
-        + '<span style="font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(_secEscCurto(s.nome)) + (s.apoioRegime === 'ROD' ? ' <span title="Rodízio CME/PEF" style="font-size:.62rem;color:#92400e">\u{21C4}</span>' : '') + '</span>'
-        + '<span style="font-size:.66rem;font-weight:700;white-space:nowrap;color:' + (af ? '#64748b' : n ? '#15803d' : '#b45309') + '">' + (af ? esc(af.tipo.split(' ')[0].toLowerCase()) : n ? '\u{2714} ' + n : 'sem sábado') + '</span></div>';
+  const lateral = '<div style="margin-top:12px;border:1px solid #e2e8f0;border-radius:8px;padding:10px;background:#fcfcfd">'
+    + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px"><div style="font-weight:700;font-size:.9rem">\u{1F465} Expediente <span style="font-weight:400;font-size:.78rem;color:#64748b">— arraste o nome para um sábado</span></div>'
+    + '<div style="font-size:.74rem;color:#64748b">Regra: <b>1 CME + 1 PEF</b> por mês · Bruna, Olidete, Francisco e Débora: <b>só CME</b> · Everton: <b>não tira</b></div></div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px">' + pessoal.map(s => {
+      const af = afast.find(a => a.servidorId === s.id), reg = _secEscRegime(s), precisa = _secEscPrecisa(s);
+      const tem = l => doMes.some(x => x.servidorId === s.id && x.local === l);
+      const falta = precisa.filter(l => !tem(l));
+      const status = reg === 'NAO' ? '<span style="color:#94a3b8">não tira</span>'
+        : precisa.map(l => '<span style="color:' + (tem(l) ? '#15803d' : '#b45309') + '">' + l + (tem(l) ? ' \u{2714}' : ' falta') + '</span>').join(' · ');
+      return '<div draggable="true" ondragstart="sec_escArrastar(event,\'serv\',\'' + s.id + '\')" title="' + esc(s.nome) + ' — ' + esc(_SEC_APOIO_REGIME[reg] || 'sem regra') + (af ? ' · ' + esc(af.tipo) : '') + '" style="padding:6px 8px;border-radius:6px;cursor:grab;background:' + (falta.length && !af && reg !== 'NAO' ? '#fffbeb' : '#fff') + ';border:1px solid #e2e8f0' + (af || reg === 'NAO' ? ';opacity:.55' : '') + '">'
+        + '<div style="font-size:.84rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(_secEscCurto(s.nome)) + '</div>'
+        + '<div style="font-size:.7rem;font-weight:700;white-space:nowrap">' + (af ? '<span style="color:#64748b">' + esc(af.tipo.toLowerCase()) + ' · </span>' : '') + status + '</div></div>';
     }).join('') + '</div></div>';
 
   const tabelaAfast = !afast.length ? '' : '<div style="margin-top:12px"><div style="font-weight:700;font-size:.88rem;margin-bottom:4px">Férias e licenças em ' + esc(_secEscMesTxt(mes)) + '</div>'
@@ -119,9 +140,9 @@ function _secCartaoEscala() {
     + (vazio ? bt('\u{2728} Preencher automaticamente', 'sec_escAutomatico(\'' + mes + '\')', 'border:1px solid #7c3aed;background:#7c3aed;color:#fff') : '')
     + bt('\u{1F5A8}\u{FE0F} Imprimir', 'sec_escImprimir(\'' + mes + '\')') + '</div></div>'
     + (vazio ? '<div style="font-size:.85rem;color:#475569;background:#f8fafc;border-radius:6px;padding:8px 12px;margin-bottom:10px">Escala de ' + esc(_secEscMesTxt(mes)) + ' ainda não montada. Use <b>Preencher automaticamente</b> ou arraste os nomes do expediente para os sábados.</div>' : '')
-    + '<div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><div style="flex:1 1 600px;display:flex;gap:8px;flex-wrap:wrap">' + datas.map(coluna).join('')
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:stretch">' + datas.map(coluna).join('')
     + '<div onclick="sec_escDataExtra(\'' + mes + '\')" title="Incluir um dia que não é sábado (feriado, mutirão…)" style="flex:0 0 46px;border:1px dashed #cbd5e1;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#94a3b8;cursor:pointer;font-size:1.2rem;min-height:80px">+</div></div>'
-    + lateral + '</div>'
+    + lateral
     + '<div style="font-size:.72rem;color:#94a3b8;margin-top:8px">Clique na etiqueta CME/PEF para trocar · depois do sábado, clique no nome para marcar compareceu (\u{2714}) ou faltou (\u{2718}) · \u{2715} tira · arraste um nome de um sábado para outro para mudar o dia.</div>'
     + tabelaAfast + '</div>';
 }
@@ -186,30 +207,32 @@ function sec_escDataExtra(mes) {
 
 // ── Preencher automaticamente: cada servidor 1 sábado no mês ──────────────────
 function _secEscPlanoAuto(mes, d) {
-  const sabs = _secEscSabados(mes), pessoal = _secEscPessoal(d);
+  const sabs = _secEscSabados(mes), pessoal = _secEscPessoal(d).filter(s => _secEscPrecisa(s).length);
   if (!sabs.length || !pessoal.length) return [];
   const ultimo = sid => d.escalaSabado.filter(x => x.servidorId === sid && x.data < mes + '-01').reduce((m, x) => x.data > m ? x.data : m, '');
-  // quem está há mais tempo sem sábado vai primeiro (vai para o 1º sábado livre); empate: ordem alfabética
+  // quem está há mais tempo sem sábado escolhe primeiro; empate: ordem alfabética
   const fila = pessoal.slice().sort((a, b) => ultimo(a.id).localeCompare(ultimo(b.id)) || a.nome.localeCompare(b.nome));
-  const porSab = {}; sabs.forEach(s => porSab[s] = []);
+  const cont = {}; sabs.forEach(s => cont[s] = { CME: 0, PEF: 0, tot: 0, pessoas: new Set() });
   const plano = [];
-  fila.forEach((s, i) => {
-    // tenta o sábado com menos gente em que ele NÃO está afastado (começando pelo da vez, para espalhar)
-    const ordem = sabs.map((_, k) => sabs[(i + k) % sabs.length]).sort((a, b) => porSab[a].length - porSab[b].length);
-    const dt = ordem.find(x => !_secEscAfastadoEm(s.id, x, d));
-    if (!dt) return; // afastado o mês todo
-    porSab[dt].push(s.id);
-    plano.push({ dt, sid: s.id, local: _secEscLocalPadrao(s.id, d, dt) });
-  });
-  return plano.sort((a, b) => a.dt.localeCompare(b.dt));
+  // PEF primeiro (vaga mais disputada), depois CME; cada vaga vai para o sábado com menos gente daquele local
+  ['PEF', 'CME'].forEach(local => fila.forEach((s, i) => {
+    if (!_secEscPrecisa(s).includes(local)) return;
+    const ordem = sabs.map((_, k) => sabs[(i + k) % sabs.length])
+      .filter(dt => !cont[dt].pessoas.has(s.id) && !_secEscAfastadoEm(s.id, dt, d))
+      .sort((a, b) => cont[a][local] - cont[b][local] || cont[a].tot - cont[b].tot);
+    const dt = ordem[0]; if (!dt) return; // afastado em todos os sábados possíveis
+    cont[dt][local]++; cont[dt].tot++; cont[dt].pessoas.add(s.id);
+    plano.push({ dt, sid: s.id, local });
+  }));
+  return plano.sort((a, b) => a.dt.localeCompare(b.dt) || a.local.localeCompare(b.local));
 }
 async function sec_escAutomatico(mes) {
   const d0 = _secDados();
   if (d0.escalaSabado.some(x => x.data.slice(0, 7) === mes)) { _mostrarToast('Este mês já tem escala.', 'erro'); return; }
   const plano = _secEscPlanoAuto(mes, d0);
   if (!plano.length) { _mostrarToast('Não há servidores do expediente disponíveis.', 'erro'); return; }
-  const fora = _secEscPessoal(d0).filter(s => !plano.some(p => p.sid === s.id)).map(s => _secEscCurto(s.nome));
-  if (!confirm('Montar a escala de ' + _secEscMesTxt(mes) + ': ' + plano.length + ' servidor(es) em ' + _secEscSabados(mes).length + ' sábados (cada um uma vez)?' + (fora.length ? '\n\nFicam de fora (afastados o mês todo): ' + fora.join(', ') : '') + '\n\nDepois é só ajustar arrastando.')) return;
+  const fora = _secEscPessoal(d0).filter(s => !plano.some(p => p.sid === s.id)).map(s => _secEscCurto(s.nome) + (_secEscRegime(s) === 'NAO' ? ' (não tira)' : ''));
+  if (!confirm('Montar a escala de ' + _secEscMesTxt(mes) + ' com a regra (1 CME + 1 PEF por servidor; Bruna, Olidete, Francisco e Débora só CME; Everton não tira): ' + plano.length + ' vaga(s) em ' + _secEscSabados(mes).length + ' sábados?' + (fora.length ? '\n\nFicam de fora (afastados ou sem obrigação): ' + fora.join(', ') : '') + '\n\nDepois é só ajustar arrastando.')) return;
   const agora = new Date().toISOString(), por = usuarioAtual ? usuarioAtual.nome : '';
   const ok = await _secMutar(d => {
     if (d.escalaSabado.some(x => x.data.slice(0, 7) === mes)) return false;

@@ -13,7 +13,7 @@ const _SEC_DIREITOS = [6, 12, 24];
 const _SEC_POSTOS = { '1': 'Posto 1 — instalação, inspeção e zona', '2': 'Posto 2 — ocorrências, endereço, drive e livro' };
 const _SEC_TURNOS = { M: 'Manhã', T: 'Tarde' };
 // Apoio do administrativo aos sábados: uns fazem só na CME, outros alternam o mês entre CME e PEF
-const _SEC_APOIO_REGIME = { CME: 'Só na CME', ROD: 'Rodízio CME / PEF (alterna por mês)' };
+const _SEC_APOIO_REGIME = { CME: 'Só na CME (1 sábado no mês)', ROD: '1 sábado na CME + 1 na PEF (todo mês)', NAO: 'Não tira apoio de sábado' };
 function _secRotuloEscala(s) { return s && s.posto && _SEC_POSTOS[s.posto] ? 'Posto ' + s.posto : s && s.turno && _SEC_TURNOS[s.turno] ? _SEC_TURNOS[s.turno] : ''; }
 let _secAba = 'hoje', _secPerfilId = null, _secPerfilAba = 'ficha', _secModeloId = null;
 
@@ -170,7 +170,7 @@ function sec_editarServidor(id) {
     + _secCampo('sec-s-formacao', 'Formação', s.formacao, 'placeholder="Ex.: Direito"') + _secCampo('sec-s-admissao', 'Admissão / lotação na CME', s.admissao, 'type="date"')
     + sel('sec-s-equipe', 'Equipe', _SEC_EQUIPES, s.equipe) + _secCampo('sec-s-setor', 'Setor', s.setor, 'placeholder="Ex.: Plantão, Jurídico, Secretaria"')
     + selV('sec-s-posto', 'Posto (plantão)', _SEC_POSTOS, s.posto) + selV('sec-s-turno', 'Turno (expediente)', _SEC_TURNOS, s.turno)
-    + selV('sec-s-apoio', 'Apoio de sábado (expediente)', _SEC_APOIO_REGIME, s.apoioRegime)
+    + selV('sec-s-apoio', 'Apoio de sábado (vazio = regra padrão)', _SEC_APOIO_REGIME, s.apoioSabado)
     + '</div></div><div class="form-section"><div class="form-section-title">Contato</div><div class="form-grid">'
     + _secCampo('sec-s-tel', 'Telefone', s.telefone, 'inputmode="tel"') + _secCampo('sec-s-email', 'E-mail', s.email, 'type="email"')
     + _secCampo('sec-s-end', 'Endereço', s.endereco) + _secCampo('sec-s-emerg', 'Contato de emergência (nome e telefone)', s.emergencia)
@@ -184,7 +184,7 @@ async function sec_salvarServidor(id) {
   const v = {
     nome: _secVal('sec-s-nome').toUpperCase(), matricula: _secVal('sec-s-matricula'), cpf: _secVal('sec-s-cpf').replace(/\D/g, ''), rg: _secVal('sec-s-rg'),
     nascimento: _secVal('sec-s-nasc'), cargo: _secVal('sec-s-cargo'), formacao: _secVal('sec-s-formacao'), admissao: _secVal('sec-s-admissao'),
-    equipe: _secVal('sec-s-equipe'), setor: _secVal('sec-s-setor'), posto: _secVal('sec-s-posto'), turno: _secVal('sec-s-turno'), apoioRegime: _secVal('sec-s-apoio'), telefone: _secVal('sec-s-tel'), email: _secVal('sec-s-email'),
+    equipe: _secVal('sec-s-equipe'), setor: _secVal('sec-s-setor'), posto: _secVal('sec-s-posto'), turno: _secVal('sec-s-turno'), apoioSabado: _secVal('sec-s-apoio'), telefone: _secVal('sec-s-tel'), email: _secVal('sec-s-email'),
     endereco: _secVal('sec-s-end'), emergencia: _secVal('sec-s-emerg'), situacao: _secVal('sec-s-sit') || 'ativo', obs: _secVal('sec-s-obs'),
   };
   if (v.nome.length < 5) { _mostrarToast('Informe o nome completo.', 'erro'); return; }
@@ -241,7 +241,7 @@ function _secHtmlQualificacao(s) {
     + '<table class="data-table"><tbody>' + linha('Nome', s.nome) + linha('Matrícula', s.matricula) + linha('CPF', _secCpfFmt(s.cpf)) + linha('RG', s.rg)
     + linha('Nascimento', _secBR(s.nascimento)) + linha('Cargo', s.cargo) + linha('Formação', s.formacao) + linha('Admissão / lotação', _secBR(s.admissao))
     + (s.posto ? linha('Posto (plantão)', _SEC_POSTOS[s.posto] || s.posto) : '') + (s.turno ? linha('Turno (expediente)', _SEC_TURNOS[s.turno] || s.turno) : '')
-    + (s.apoioRegime ? linha('Apoio de sábado', _SEC_APOIO_REGIME[s.apoioRegime] || s.apoioRegime) : '')
+    + (s.apoioSabado ? linha('Apoio de sábado', _SEC_APOIO_REGIME[s.apoioSabado] || s.apoioSabado) : '')
     + linha('Equipe', s.equipe) + linha('Setor', s.setor) + linha('Telefone', s.telefone) + linha('E-mail', s.email) + linha('Endereço', s.endereco)
     + linha('Contato de emergência', s.emergencia) + linha('Situação', s.situacao || 'ativo') + linha('Observações', s.obs)
     + linha('Cadastrado', [s.criadoPor, s.criadoEm && new Date(s.criadoEm).toLocaleString('pt-BR')].filter(Boolean).join(' em ')) + '</tbody></table>';
