@@ -1,5 +1,6 @@
 /* ═══════════════════════════ GERÊNCIA — VD SEM ZONA DE EXCLUSÃO ═══════════════════════════
-   Monitorados de violência doméstica com tornozeleira ativa que NÃO têm zona de exclusão cadastrada
+   Monitorados de violência doméstica ATIVOS com tornozeleira vinculada (a DPP da vítima fica de fora)
+   que NÃO têm zona de exclusão cadastrada
    no AKILES, com o servidor que fez a instalação. Atualizado todo dia de manhã pelo robô
    (atualizar-plantoes.js → vd-zonas-akiles.js, só leitura no AKILES), junto com a análise da troca
    de plantão; vem dentro de cme_plantao_auto (o banco só entrega à gerência e ao administrador).
@@ -28,10 +29,10 @@ function vdz_render() {
   const ranking = Object.entries(porInst).sort((a, b) => b[1] - a[1]);
   const pct = r.totalVd ? Math.round(lista.length / r.totalVd * 100) : 0;
   box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
-    + '<div style="font-size:.8rem;color:#64748b">Atualizado em ' + new Date(r.geradoEm).toLocaleString('pt-BR') + ' · todo dia de manhã (junto com a análise da troca de plantão) · consulta só de leitura no AKILES</div>'
+    + '<div style="font-size:.8rem;color:#64748b">Atualizado em ' + new Date(r.geradoEm).toLocaleString('pt-BR') + ' · a lista é refeita <b>todo dia de manhã</b> (junto com a análise da troca de plantão): quem tiver a zona de exclusão cadastrada no AKILES <b>sai da lista</b> na atualização seguinte · consulta só de leitura</div>'
     + '<button class="btn-secondary" onclick="vdz_exportar()">\u{1F4E5} Exportar Excel</button></div>'
     + '<div style="font-size:1rem;line-height:1.5;padding:12px 16px;background:#fef2f2;border-left:4px solid #dc2626;border-radius:4px;margin-bottom:12px">'
-    + '<b style="color:#b91c1c;font-size:1.3rem">' + lista.length + '</b> de ' + r.totalVd + ' monitorados de violência doméstica com tornozeleira (<b>' + pct + '%</b>) estão <b>sem zona de exclusão</b> cadastrada no AKILES: '
+    + '<b style="color:#b91c1c;font-size:1.3rem">' + lista.length + '</b> de ' + r.totalVd + ' monitorados de violência doméstica <b>ativos com tornozeleira</b> (<b>' + pct + '%</b>) estão <b>sem zona de exclusão</b> cadastrada no AKILES: '
     + '<b>' + nenhuma + '</b> sem nenhuma zona e <b>' + soInc + '</b> só com zona de inclusão.'
     + (novos ? ' <b style="color:#b91c1c">' + novos + ' entraram na lista hoje.</b>' : '')
     + (r.falhas ? '<div style="font-size:.78rem;color:#b45309;margin-top:4px">\u{26A0}\u{FE0F} ' + r.falhas + ' monitorado(s) não puderam ser conferidos nesta coleta.</div>' : '') + '</div>'
@@ -40,7 +41,7 @@ function vdz_render() {
       + (_vdzInst === k ? '#dc2626;background:#fee2e2;font-weight:600;box-shadow:inset 2px 0 0 #dc2626' : '#cbd5e1;background:#fff') + '">' + esc(k) + ' <b style="color:#b91c1c">' + n + '</b></button>').join('') + '</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="vdz-busca" value="' + esc(_vdzBusca) + '" oninput="_vdzBusca=this.value;_vdzRenderTabela()" placeholder="Buscar por nome, registro, comarca ou servidor…" style="flex:1;min-width:240px;padding:7px 10px">'
     + '<select onchange="_vdzSit=this.value;_vdzRenderTabela()" style="padding:6px 8px"><option value="">Todas as situações</option><option value="nenhuma"' + (_vdzSit === 'nenhuma' ? ' selected' : '') + '>Sem nenhuma zona</option><option value="inclusao"' + (_vdzSit === 'inclusao' ? ' selected' : '') + '>Só zona de inclusão</option></select></div>'
-    + '<div id="vdz-tabela"></div>';
+    + '<div id="vdz-tabela"></div>' + _vdzHtmlSaidas(r);
   _vdzRenderTabela();
 }
 function _vdzRenderTabela() {
@@ -53,7 +54,7 @@ function _vdzRenderTabela() {
         + td(esc(x.reg), 'font-family:var(--font-mono)') + td(esc(x.comarca || '—'), 'font-size:.82rem')
         + td(x.zonas ? '<span style="font-size:.72rem;font-weight:600;padding:2px 7px;border-radius:3px;border-left:2px solid #d97706;background:#fef3c7;color:#b45309">SÓ INCLUSÃO (' + x.inclusao + ')</span>'
           : '<span style="font-size:.72rem;font-weight:600;padding:2px 7px;border-radius:3px;border-left:2px solid #dc2626;background:#fee2e2;color:#b91c1c">SEM NENHUMA ZONA</span>')
-        + td(esc(_vdzInstalador(x)) + (!x.instNome && x.inst ? '<div style="font-size:.7rem;color:#94a3b8">operador antigo/inativo</div>' : ''))
+        + td(esc(_vdzInstalador(x)) + (!x.instNome && x.inst ? '<div style="font-size:.7rem;color:#94a3b8">operador antigo/inativo</div>' : '') + (x.naoConferido ? '<div style="font-size:.7rem;color:#b45309">não conferido hoje (consulta falhou)</div>' : ''))
         + td(_vdzBR(x.desde), 'font-family:var(--font-mono);font-size:.82rem') + td(_vdzBR(x.semZonaDesde), 'font-family:var(--font-mono);font-size:.82rem') + '</tr>').join('')
       : '<tr><td colspan="7" style="text-align:center;padding:24px;color:#888">Nenhum monitorado com esse filtro.</td></tr>')
     + '</tbody></table></div>';
@@ -65,4 +66,19 @@ function vdz_exportar() {
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'VD sem zona de exclusão');
   XLSX.writeFile(wb, 'VD_sem_zona_de_exclusao_' + String(r.geradoEm).slice(0, 10) + '.xlsx');
   try { auditar({ modulo: 'Gerência', action: 'vdz_exportar', alvo: rows.length + ' monitorado(s)' }); } catch (e) {}
+}
+
+// Quem saiu da lista nos últimos 30 dias (zona cadastrada × deixou de estar ativo)
+function _vdzHtmlSaidas(r) {
+  const lim = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+  const s = (r.saidas || []).filter(x => x.dia >= lim).sort((a, b) => b.dia.localeCompare(a.dia));
+  const zona = s.filter(x => x.motivo === 'zona').length, inat = s.length - zona;
+  const td = (v, st) => '<td style="padding:5px 6px;' + (st || '') + '">' + v + '</td>';
+  return '<details style="margin-top:14px;border-top:1px solid #e2e8f0;padding-top:10px"' + (s.length ? '' : '') + '><summary style="cursor:pointer;font-weight:600;color:#15803d">\u{2705} Saíram da lista nos últimos 30 dias: ' + s.length
+    + (s.length ? ' <span style="font-weight:400;color:#64748b">(' + zona + ' com zona de exclusão cadastrada · ' + inat + ' deixaram de estar ativos)</span>' : ' <span style="font-weight:400;color:#64748b">— começa a contar a partir de 14/10/2026</span>') + '</summary>'
+    + (s.length ? '<div class="table-scroll" style="margin-top:8px"><table class="data-table"><thead><tr><th>Saiu em</th><th>Monitorado</th><th>Registro</th><th>Motivo</th><th>Instalado por</th><th>Ficou na lista</th></tr></thead><tbody>'
+      + s.map(x => '<tr>' + td(_vdzBR(x.dia), 'font-family:var(--font-mono)') + td('<b>' + esc(x.nome) + '</b>') + td(esc(x.reg), 'font-family:var(--font-mono)')
+        + td(x.motivo === 'zona' ? '<span style="color:#15803d;font-weight:600">zona de exclusão cadastrada</span>' : '<span style="color:#64748b">deixou de estar ativo (tornozeleira desvinculada)</span>')
+        + td(esc(x.instNome || '—')) + td(x.dias + ' dia(s)', 'font-family:var(--font-mono)') + '</tr>').join('') + '</tbody></table></div>' : '')
+    + '</details>';
 }
