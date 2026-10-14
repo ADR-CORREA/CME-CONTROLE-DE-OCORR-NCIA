@@ -18,7 +18,7 @@ function _secRotuloEscala(s) { return s && s.posto && _SEC_POSTOS[s.posto] ? 'Po
 let _secAba = 'hoje', _secPerfilId = null, _secPerfilAba = 'ficha', _secModeloId = null;
 
 _STORES_PROTEGIDAS.secretaria = v => (v && Array.isArray(v.servidores))
-  ? v.servidores.length + (v.apoios || []).length + (v.folgas || []).length + (v.afastamentos || []).length + (v.compromissos || []).length + (v.documentos || []).length + (v.escalaSabado || []).length : -1;
+  ? v.servidores.length + (v.apoios || []).length + (v.folgas || []).length + (v.afastamentos || []).length + (v.compromissos || []).length + (v.documentos || []).length + (v.escalaSabado || []).length + Object.keys(v.escalaServico || {}).length : -1;
 
 function _secPode() { return !!(usuarioAtual && _SEC_NIVEIS.includes(usuarioAtual.nivel)); }
 function _secNormal(d) {
@@ -26,6 +26,7 @@ function _secNormal(d) {
   const arr = k => Array.isArray(d[k]) ? d[k] : [];
   return { servidores: arr('servidores'), apoios: arr('apoios'), folgas: arr('folgas'), lixeira: arr('lixeira'),
     afastamentos: arr('afastamentos'), compromissos: arr('compromissos'), documentos: arr('documentos'), escalaSabado: arr('escalaSabado'),
+    escalaServico: (d.escalaServico && typeof d.escalaServico === 'object' && !Array.isArray(d.escalaServico)) ? d.escalaServico : {}, // { 'AAAA-MM': { linhas, guardadoEm } }
     modelos: Array.isArray(d.modelos) ? d.modelos : null,                       // null = ainda usa os modelos padrão
     config: (d.config && typeof d.config === 'object') ? d.config : {} };
 }

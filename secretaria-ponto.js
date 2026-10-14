@@ -238,5 +238,6 @@ function sec_renderHojeDash() {
       : '<div style="font-size:.85rem;color:#94a3b8;padding:6px 0">Ninguém afastado hoje.</div>') + '</div></div>';
   // a escala de sábado mora na sub-aba "Escala de Serviço e Apoio", mas continua sendo montada sozinha ao abrir a Secretaria
   if (typeof _secEscAutoAgendar === 'function') [hoje.slice(0, 7), _secEscMaisMes(hoje.slice(0, 7), 1)].forEach(_secEscAutoAgendar);
+  if (typeof _secServGuardarAuto === 'function') _secServGuardarAuto(); // guarda a escala de serviço do mês no histórico
 }
 Object.assign(_SEC_ACOES, { sec_ponto_importar: 'Importou folhas de ponto' });
