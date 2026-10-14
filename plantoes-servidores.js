@@ -48,9 +48,12 @@ function _plsAgregar(d, nd) {
   return Object.values(ag).map(a => {
     const nomeAk = ((d.operadores || {})[a.op] || {}).nome || ('operador ' + a.op), sec = _plsServidorSecretaria(nomeAk);
     const eqMais = Object.entries(a.porEq).sort((x, y) => y[1] - x[1])[0];
-    const equipe = sec && sec.equipe ? sec.equipe : eqMais ? eqMais[0] : '';
+    // equipe = SÓ a da folha de ponto (Secretaria). Quem não está na folha fica "fora da lista" (não chuta).
+    const equipe = sec && sec.equipe ? sec.equipe : '';
     const funcao = a.n === 0 && a.inst + a.desinst ? 'Instalação' : (a.inst + a.desinst) > a.n ? 'Instalação e monitoramento' : 'Monitoramento';
-    return Object.assign(a, { nome: sec ? sec.nome : nomeAk, secId: sec ? sec.id : null, equipe, funcao, nPl: a.plantoes.length, pct: a.pop ? Math.round(a.popOk / a.pop * 100) : null, med: _plsMediana(a.meds) });
+    const proprios = a.plantoes.filter(p => !equipe || equipe === 'EXPEDIENTE' || p.eq === equipe).length;
+    return Object.assign(a, { nome: sec ? sec.nome : nomeAk, secId: sec ? sec.id : null, equipe, equipeRobo: eqMais ? eqMais[0] : '', funcao,
+      nPl: proprios || a.plantoes.length, nOutros: a.plantoes.length - proprios, pct: a.pop ? Math.round(a.popOk / a.pop * 100) : null, med: _plsMediana(a.meds) });
   });
 }
 function _plsMediaEquipe(lista, eq) {
@@ -71,21 +74,26 @@ function _plsRender(d, nd) {
   const box = document.getElementById('pls-corpo'); if (!box) return;
   const todos = _plsAgregar(d, nd);
   const medias = {}; _PLS_EQUIPES.forEach(eq => medias[eq] = _plsMediaEquipe(todos, eq));
-  const lista = todos.filter(l => !_plsEquipe || l.equipe === _plsEquipe)
-    .sort((a, b) => (_PLS_EQUIPES.indexOf(a.equipe) + 1 || 99) - (_PLS_EQUIPES.indexOf(b.equipe) + 1 || 99) || b.n - a.n);
+  const ordem = _PLS_EQUIPES.concat(['EXPEDIENTE', '']);
+  const lista = todos.filter(l => !_plsEquipe || (_plsEquipe === '-' ? !l.equipe : l.equipe === _plsEquipe))
+    .sort((a, b) => ordem.indexOf(a.equipe) - ordem.indexOf(b.equipe) || b.n - a.n);
   const chip = (v, r) => '<button type="button" onclick="_plsEquipe=\'' + v + '\';pl_renderizar()" style="padding:4px 12px;border-radius:4px;cursor:pointer;font-size:.8rem;border:1px solid '
     + (v === _plsEquipe ? '#2563eb;background:#dbeafe;font-weight:600;box-shadow:inset 2px 0 0 #2563eb' : '#cbd5e1;background:#fff') + ';color:' + (PLANTAO_CORES[v] || '#334155') + '">' + r + '</button>';
   const th = h => '<th style="padding:5px 6px;font-weight:600;text-align:left">' + h + '</th>';
   const td = (v, s) => '<td style="padding:6px;vertical-align:top;' + (s || '') + '">' + v + '</td>';
   box.innerHTML = '<div style="font-size:.85rem;color:#475569;margin-bottom:8px">Trabalho de cada servidor nos últimos ' + nd + ' dias, comparado com a média da própria equipe. <b>Sem nota e sem ranking</b>: as funções são diferentes (monitoramento × instalação). Clique no nome para ver a ficha.</div>'
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' + chip('', 'Todas as equipes') + _PLS_EQUIPES.concat(['EXPEDIENTE']).map(eq => chip(eq, eq === 'EXPEDIENTE' ? 'Expediente' : eq)).join('') + '</div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' + chip('', 'Todas as equipes') + _PLS_EQUIPES.concat(['EXPEDIENTE']).map(eq => chip(eq, eq === 'EXPEDIENTE' ? 'Expediente' : eq)).join('') + (todos.some(l => !l.equipe) ? chip('-', 'Fora da folha de ponto') : '') + '</div>'
     + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr style="color:#64748b">'
     + ['Servidor', 'Equipe', 'Plantões', 'Atendeu primeiro', 'No prazo', 'Tempo típico', 'Violência doméstica', 'Violações avaliadas', 'Instal. / desinst.', 'Ações sensíveis'].map(th).join('') + '</tr></thead><tbody>'
-    + (lista.length ? lista.map(l => { const m = medias[l.equipe] || {}, porPl = l.nPl ? l.n / l.nPl : 0;
-      return '<tr style="border-top:1px solid #f1f5f9">'
+    + (lista.length ? lista.map((l, i) => { const m = medias[l.equipe] || {}, porPl = l.nPl ? l.n / l.nPl : 0;
+      const novoGrupo = i === 0 || lista[i - 1].equipe !== l.equipe, qtd = lista.filter(x => x.equipe === l.equipe).length;
+      const cab = !novoGrupo ? '' : '<tr><td colspan="10" style="padding:10px 6px 4px;border-bottom:2px solid ' + (PLANTAO_CORES[l.equipe] || '#94a3b8') + '">'
+        + '<b style="font-size:.95rem;color:' + (PLANTAO_CORES[l.equipe] || '#475569') + '">' + (l.equipe === 'EXPEDIENTE' ? 'Expediente' : l.equipe ? 'Plantão ' + l.equipe : 'Fora da folha de ponto') + '</b>'
+        + ' <span style="color:#64748b;font-size:.78rem">' + qtd + ' servidor(es)' + (l.equipe ? '' : ' — o nome não confere com a lista de servidores da Secretaria; confira o cadastro') + '</span></td></tr>';
+      return cab + '<tr style="border-top:1px solid #f1f5f9">'
         + td('<a href="#" onclick="pl_fichaServidor(\'' + l.op + '\');return false" style="color:#1d4ed8;font-weight:600">' + esc(l.nome) + '</a><div style="font-size:.7rem;color:#94a3b8">' + l.funcao + '</div>')
-        + td('<b style="color:' + (PLANTAO_CORES[l.equipe] || '#64748b') + '">' + esc(l.equipe || '—') + '</b>')
-        + td(l.nPl, 'font-family:var(--font-mono)')
+        + td(l.equipe ? '<b style="color:' + (PLANTAO_CORES[l.equipe] || '#64748b') + '">' + esc(l.equipe) + '</b>' : '<span style="color:#94a3b8">— <span style="font-size:.7rem">(AKILES: ' + esc(l.equipeRobo || '?') + ')</span></span>')
+        + td(l.nPl + (l.nOutros ? '<div style="font-size:.7rem;color:#64748b">+' + l.nOutros + ' em outra equipe</div>' : ''), 'font-family:var(--font-mono)')
         + td('<b>' + l.n + '</b> <span style="color:#64748b;font-size:.75rem">(' + (Math.round(porPl * 10) / 10).toString().replace('.', ',') + ' por plantão)</span>' + _plsComp(porPl, m.nPorPl, 'maior', v => (Math.round(v * 10) / 10).toString().replace('.', ',')))
         + td(l.pct != null ? '<b style="color:' + _plrCorBarra(l.pct / 100) + '">' + l.pct + '%</b>' + _plsComp(l.pct, m.pct, 'pct', v => v + '%') : '—')
         + td(l.med != null ? _plrMin(l.med) + _plsComp(l.med, m.med, 'menor', _plrMin) : '—')
@@ -95,7 +103,7 @@ function _plsRender(d, nd) {
         + td(l.sens || '—', 'font-family:var(--font-mono)') + '</tr>'; }).join('')
       : '<tr><td colspan="10" style="padding:20px;text-align:center;color:#94a3b8">Nenhum servidor com trabalho no período.</td></tr>')
     + '</tbody></table></div>'
-    + '<div style="font-size:.72rem;color:#94a3b8;margin-top:6px">Atendeu primeiro = ocorrências em que foi o 1º operador a agir. No prazo = dessas, quantas dentro do prazo do POP. Tempo típico = mediana do tempo até a 1ª ação. Equipe = a da folha de ponto (Secretaria) quando o nome confere.</div>';
+    + '<div style="font-size:.72rem;color:#94a3b8;margin-top:6px">Atendeu primeiro = ocorrências em que foi o 1º operador a agir. No prazo = dessas, quantas dentro do prazo do POP. Tempo típico = mediana do tempo até a 1ª ação. Equipe = a da folha de ponto (Secretaria). Quem começa antes da troca das 08h ou fica depois (até 2 h) conta no plantão da PRÓPRIA equipe; "+N em outra equipe" = plantões de outra equipe em que agiu (apoio).</div>';
 }
 
 // ── Ficha do servidor: evolução plantão a plantão ─────────────────────────────
@@ -105,7 +113,8 @@ function pl_fichaServidor(op) {
   const todos = _plsAgregar(d, nd), l = todos.find(x => x.op === op); if (!l) return;
   const m = _plsMediaEquipe(todos, l.equipe), porPl = l.nPl ? l.n / l.nPl : 0, num = v => (Math.round(v * 10) / 10).toString().replace('.', ',');
   const frases = [
-    'Trabalhou em <b>' + l.nPl + '</b> plantão(ões) nos últimos ' + nd + ' dias' + (l.equipe ? ', equipe <b style="color:' + (PLANTAO_CORES[l.equipe] || '#334155') + '">' + esc(l.equipe) + '</b>' : '') + '. Função principal: ' + l.funcao.toLowerCase() + '.',
+    'Trabalhou em <b>' + l.nPl + '</b> plantão(ões) nos últimos ' + nd + ' dias' + (l.equipe ? ', equipe <b style="color:' + (PLANTAO_CORES[l.equipe] || '#334155') + '">' + esc(l.equipe) + '</b> (folha de ponto)' : ' <span style="color:#b45309">(não está na folha de ponto da Secretaria)</span>')
+      + (l.nOutros ? ', e agiu em mais <b>' + l.nOutros + '</b> plantão(ões) de outra equipe (apoio)' : '') + '. Função principal: ' + l.funcao.toLowerCase() + '.',
     'Foi o primeiro a agir em <b>' + l.n + '</b> ocorrências (' + num(porPl) + ' por plantão' + (m.nPorPl != null ? '; média da equipe: ' + num(m.nPorPl) : '') + ').',
     l.pct != null ? 'Respondeu <b>dentro do prazo do POP em ' + l.pct + '%</b> das vezes' + (m.pct != null ? ' (equipe: ' + m.pct + '%)' : '') + (l.med != null ? '; tempo típico de ' + _plrMin(l.med) + (m.med != null ? ' (equipe: ' + _plrMin(m.med) + ')' : '') : '') + '.' : 'Não deu a 1ª resposta em ocorrências com prazo no período.',
     l.vd ? 'Atendeu <b>' + l.vd + '</b> caso(s) de violência doméstica' + (l.vdP ? ', <b style="color:#b91c1c">' + l.vdP + ' com pendência</b> (fora do prazo ou sem registro no perfil)' : ', todos em dia') + '.' : '',

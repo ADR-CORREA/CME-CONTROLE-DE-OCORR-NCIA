@@ -87,14 +87,16 @@ function _pldQuemTrabalhou(d, x, eq, dia, ops) {
   const pend = {}; ((x.vd && x.vd.pendencias) || []).forEach(p => { if (p.op) pend[p.op] = (pend[p.op] || 0) + 1; });
   const lin = ops.map(op => { const sv = x.servidores[op] || {}, o = x.porOp[op] || {};
     return { op, n: sv.n || 0, pct: sv.pop ? Math.round(sv.popOk / sv.pop * 100) : null, med: sv.med, vd: sv.vd || 0, vdP: pend[op] || 0, inst: (o.instalacao || 0) + (o.desinstalacao || 0), conf: (o.confirmadas || 0) + (o.naoConfirmadas || 0) }; })
-    .sort((a, b) => b.n - a.n || b.inst - a.inst);
+    .map(l => { const sec = typeof _plsServidorSecretaria === 'function' ? _plsServidorSecretaria(((d.operadores || {})[l.op] || {}).nome) : null; return Object.assign(l, { eqFolha: sec && sec.equipe ? sec.equipe : '' }); })
+    .sort((a, b) => ((a.eqFolha && a.eqFolha !== eq) - (b.eqFolha && b.eqFolha !== eq)) || b.n - a.n || b.inst - a.inst);
   const tot = lin.reduce((s, l) => s + l.n, 0) || 1;
   const td = (v, s) => '<td style="padding:5px 6px;' + (s || '') + '">' + v + '</td>';
   return '<div style="font-weight:700;margin-bottom:4px">\u{1F465} Quem trabalhou <span style="font-weight:400;font-size:.75rem;color:#64748b">— clique no nome para ver cada ocorrência que ele atendeu</span></div>'
     + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr style="color:#64748b;text-align:left">'
     + ['Servidor', 'Atendeu primeiro', 'No prazo', 'Tempo típico', 'Violência doméstica', 'Violações avaliadas', 'Instal. / desinst.'].map(h => '<th style="padding:4px 6px;font-weight:600">' + h + '</th>').join('') + '</tr></thead><tbody>'
     + lin.map(l => '<tr style="border-top:1px solid #f1f5f9">'
-      + td('<a href="#" onclick="pl_servidor(\'' + eq + '\', \'' + dia + '\', \'' + l.op + '\');return false" style="color:#1d4ed8;font-weight:600">' + esc(_pldNomeOp(d, l.op)) + '</a>')
+      + td('<a href="#" onclick="pl_servidor(\'' + eq + '\', \'' + dia + '\', \'' + l.op + '\');return false" style="color:#1d4ed8;font-weight:600">' + esc(_pldNomeOp(d, l.op)) + '</a>'
+        + (l.eqFolha && l.eqFolha !== eq ? '<div style="font-size:.7rem;color:#b45309">de outra equipe: ' + esc(l.eqFolha === 'EXPEDIENTE' ? 'Expediente' : l.eqFolha) + ' (apoio ou antes/depois da troca)</div>' : ''))
       + td('<div style="display:flex;align-items:center;gap:6px"><b style="min-width:26px">' + l.n + '</b><div style="flex:1;min-width:60px;height:6px;background:#f1f5f9;border-radius:2px"><div style="height:100%;width:' + Math.round(l.n / tot * 100) + '%;background:#3b82f6;border-radius:2px"></div></div></div>')
       + td(l.pct != null ? '<b style="color:' + _plrCorBarra(l.pct / 100) + '">' + l.pct + '%</b>' : '—')
       + td(l.med != null ? _plrMin(l.med) : '—', 'font-family:var(--font-mono)')
