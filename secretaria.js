@@ -145,6 +145,7 @@ function sec_renderServidores() {
     + '<select id="sec-f-sit" onchange="sec_renderServidores()"><option value="ativo"' + (fSit === 'ativo' ? ' selected' : '') + '>Ativos</option><option value="inativo"' + (fSit === 'inativo' ? ' selected' : '') + '>Inativos</option><option value=""' + (fSit === '' ? ' selected' : '') + '>Todos</option></select>'
     + '<button class="btn-secondary" onclick="sec_baixarModeloServidores()">Baixar planilha modelo</button>'
     + '<label class="btn-secondary" style="cursor:pointer">Importar planilha<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="sec_importarServidores(this)"></label>'
+    + '<label class="btn-secondary" style="cursor:pointer" title="PDFs mensais do SIGRH (plantão e expediente): atualiza guarnições, férias e licenças">Importar folhas de ponto (PDF)<input type="file" accept=".pdf" multiple style="display:none" onchange="sec_importarPonto(this)"></label>'
     + '<button class="btn-primary" onclick="sec_editarServidor()">+ Novo servidor</button></div>'
     + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Nome</th><th>Cargo</th><th>Matrícula</th><th>Equipe</th><th>Telefone</th><th>Hoje</th><th>Dispensas a usufruir</th><th></th></tr></thead><tbody>'
     + (lista.length ? lista.map(s => {

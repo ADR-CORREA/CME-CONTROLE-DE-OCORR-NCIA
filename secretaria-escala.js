@@ -9,20 +9,13 @@
    • Regra (gerência, 14/10/2026): Bruna, Olidete, Francisco e Débora → 1 sábado no mês, na CME; Everton → não tira;
      todos os demais do administrativo → 2 sábados no mês: 1 na CME + 1 na PEF (Penitenciária Feminina).
      O campo "Apoio de sábado" do cadastro do servidor manda mais que essa regra padrão.
-   • "Preencher automaticamente": aplica a regra, pula afastados, espalha pelos sábados e prioriza quem está há mais
-     tempo sem sábado. Depois a secretaria ajusta à mão (arrastar, trocar local, tirar).
+   • Montagem AUTOMÁTICA (sem botão, pedido de 14/10): ao abrir o painel, o sistema monta sozinho o mês atual (só os
+     sábados que ainda vão acontecer) e o próximo, se estiverem vazios — aplica a regra, pula afastados e espalha pelos
+     sábados. Cada mês é montado uma vez só (config.escalaAutoMeses); depois a secretaria ajusta à mão.
    Depende de secretaria*.js. Emojis só por \u{...}. Prefixo _secEsc / sec_esc. */
 
 const _SEC_ESC_LOCAIS = ['CME', 'PEF'];
 const _SEC_ESC_HORARIO = 'das 08h às 12h';
-// Escala de outubro/2026 enviada pela gerência em 14/10 (botão "carregar" aparece só enquanto o mês estiver vazio)
-const _SEC_ESC_OUT2026 = {
-  '2026-10-03': [['ADRIANO', 'CME'], ['RONI', 'CME'], ['EVERTON', 'CME'], ['P ALEXANDRE', 'PEF']],
-  '2026-10-10': [['PATRICIA', 'CME'], ['FABIOLLA', 'CME'], ['LENILDA', 'PEF']],
-  '2026-10-17': [['DIEGO SOUZA', 'CME'], ['DEBORA', 'CME'], ['P GABRIEL', 'PEF']],
-  '2026-10-24': [['VALDIRENE', 'CME'], ['PEDRO', 'CME'], ['EDICLEYDE', 'PEF']],
-  '2026-10-31': [['BRUNA', 'CME'], ['ROZANE', 'CME'], ['SILMARA', 'PEF']],
-};
 let _secEscMesVis = null, _secEscPicker = null, _secEscExtra = null;
 
 // ── Funções de apoio ──────────────────────────────────────────────────────────
@@ -37,12 +30,6 @@ function _secEscNome(x, d) { return x.servidorId ? _secNomeServ(x.servidorId, d)
 function _secEscCurto(nome) { const p = String(nome).split(' ').filter(Boolean); return p.length > 2 ? p[0] + ' ' + p[p.length - 1] : nome; }
 function _secEscMesTxt(mes) { return new Date(mes + '-15T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); }
 function _secEscMaisMes(mes, n) { const [a, m] = mes.split('-').map(Number), x = new Date(a, m - 1 + n, 1); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0'); }
-// servidor pelo nome curto do papel ("P ALEXANDRE" = Paulo Alexandre…): só casa se for ÚNICO
-function _secEscAcharServidor(curto, d) {
-  const toks = _secEscNorm(curto).split(' ').filter(Boolean);
-  const cands = d.servidores.filter(s => { const n = _secEscNorm(s.nome).split(' '); return toks.every(t => t.length === 1 ? n.some(x => x[0] === t) : n.includes(t)); });
-  return cands.length === 1 ? cands[0] : null;
-}
 function _secEscAfastadosMes(mes, d) {
   const ini = mes + '-01', fim = mes + '-31';
   return d.afastamentos.filter(a => a.inicio <= fim && (a.fim || a.inicio) >= ini).sort((a, b) => String(a.inicio).localeCompare(String(b.inicio)));
@@ -78,6 +65,7 @@ function _secCartaoEscala() {
   const doMes = d.escalaSabado.filter(x => x.data.slice(0, 7) === mes), vazio = !doMes.length;
   const pessoal = _secEscPessoal(d), afast = _secEscAfastadosMes(mes, d);
   const qtd = sid => doMes.filter(x => x.servidorId === sid).length;
+  const atual = hoje.slice(0, 7); [atual, _secEscMaisMes(atual, 1), mes].forEach(_secEscAutoAgendar);
   const bt = (txt, on, estilo) => '<button type="button" onclick="' + on + '" style="padding:5px 12px;border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:600;' + (estilo || 'border:1px solid #cbd5e1;background:#fff;color:#334155') + '">' + txt + '</button>';
 
   const coluna = dt => {
@@ -136,10 +124,9 @@ function _secCartaoEscala() {
     + '<div style="display:flex;align-items:center;gap:6px">' + bt('\u{2039}', '_secEscMesVis=_secEscMaisMes(\'' + mes + '\',-1);_secEscPicker=null;_secEscAtualizar()')
     + '<div style="min-width:150px;text-align:center;font-weight:700;text-transform:capitalize">' + esc(_secEscMesTxt(mes)) + '</div>'
     + bt('\u{203A}', '_secEscMesVis=_secEscMaisMes(\'' + mes + '\',1);_secEscPicker=null;_secEscAtualizar()') + '</div>'
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap">' + (mes === '2026-10' && vazio ? bt('Carregar a escala de outubro (papel)', 'sec_escCarregarOutubro()', 'border:1px solid #7c3aed;background:#f5f3ff;color:#6d28d9') : '')
-    + (vazio ? bt('\u{2728} Preencher automaticamente', 'sec_escAutomatico(\'' + mes + '\')', 'border:1px solid #7c3aed;background:#7c3aed;color:#fff') : '')
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
     + bt('\u{1F5A8}\u{FE0F} Imprimir', 'sec_escImprimir(\'' + mes + '\')') + '</div></div>'
-    + (vazio ? '<div style="font-size:.85rem;color:#475569;background:#f8fafc;border-radius:6px;padding:8px 12px;margin-bottom:10px">Escala de ' + esc(_secEscMesTxt(mes)) + ' ainda não montada. Use <b>Preencher automaticamente</b> ou arraste os nomes do expediente para os sábados.</div>' : '')
+    + (vazio ? '<div style="font-size:.85rem;color:#475569;background:#f8fafc;border-radius:6px;padding:8px 12px;margin-bottom:10px">' + (mes < atual ? 'Sem escala registrada em ' + esc(_secEscMesTxt(mes)) + '.' : 'Montando a escala de ' + esc(_secEscMesTxt(mes)) + ' pela regra… se não aparecer, arraste os nomes do expediente para os sábados.') + '</div>' : '')
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:stretch">' + datas.map(coluna).join('')
     + '<div onclick="sec_escDataExtra(\'' + mes + '\')" title="Incluir um dia que não é sábado (feriado, mutirão…)" style="flex:0 0 46px;border:1px dashed #cbd5e1;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#94a3b8;cursor:pointer;font-size:1.2rem;min-height:80px">+</div></div>'
     + lateral
@@ -205,9 +192,9 @@ function sec_escDataExtra(mes) {
   _secEscExtra = dt; _secEscPicker = dt; _secEscAtualizar();
 }
 
-// ── Preencher automaticamente: cada servidor 1 sábado no mês ──────────────────
+// ── Montagem automática pela regra (só sábados de hoje em diante) ─────────────
 function _secEscPlanoAuto(mes, d) {
-  const sabs = _secEscSabados(mes), pessoal = _secEscPessoal(d).filter(s => _secEscPrecisa(s).length);
+  const hoje = _secHoje(), sabs = _secEscSabados(mes).filter(s => s >= hoje), pessoal = _secEscPessoal(d).filter(s => _secEscPrecisa(s).length);
   if (!sabs.length || !pessoal.length) return [];
   const ultimo = sid => d.escalaSabado.filter(x => x.servidorId === sid && x.data < mes + '-01').reduce((m, x) => x.data > m ? x.data : m, '');
   // quem está há mais tempo sem sábado escolhe primeiro; empate: ordem alfabética
@@ -226,33 +213,29 @@ function _secEscPlanoAuto(mes, d) {
   }));
   return plano.sort((a, b) => a.dt.localeCompare(b.dt) || a.local.localeCompare(b.local));
 }
-async function sec_escAutomatico(mes) {
-  const d0 = _secDados();
-  if (d0.escalaSabado.some(x => x.data.slice(0, 7) === mes)) { _mostrarToast('Este mês já tem escala.', 'erro'); return; }
-  const plano = _secEscPlanoAuto(mes, d0);
-  if (!plano.length) { _mostrarToast('Não há servidores do expediente disponíveis.', 'erro'); return; }
-  const fora = _secEscPessoal(d0).filter(s => !plano.some(p => p.sid === s.id)).map(s => _secEscCurto(s.nome) + (_secEscRegime(s) === 'NAO' ? ' (não tira)' : ''));
-  if (!confirm('Montar a escala de ' + _secEscMesTxt(mes) + ' com a regra (1 CME + 1 PEF por servidor; Bruna, Olidete, Francisco e Débora só CME; Everton não tira): ' + plano.length + ' vaga(s) em ' + _secEscSabados(mes).length + ' sábados?' + (fora.length ? '\n\nFicam de fora (afastados ou sem obrigação): ' + fora.join(', ') : '') + '\n\nDepois é só ajustar arrastando.')) return;
-  const agora = new Date().toISOString(), por = usuarioAtual ? usuarioAtual.nome : '';
-  const ok = await _secMutar(d => {
-    if (d.escalaSabado.some(x => x.data.slice(0, 7) === mes)) return false;
-    plano.forEach(p => d.escalaSabado.push({ id: _secId('esc'), data: p.dt, servidorId: p.sid, nome: '', local: p.local, status: '', criadoPor: por, criadoEm: agora }));
-  }, { action: 'sec_esc_auto', alvo: _secEscMesTxt(mes), detalhe: plano.length + ' servidor(es)' });
-  if (ok) { _mostrarToast('Escala montada. Ajuste arrastando, se precisar.', 'sucesso'); _secEscAtualizar(); }
+// meses já tentados nesta sessão (evita repetir a gravação ou o aviso de erro a cada redesenho)
+const _secEscAutoTentado = new Set();
+function _secEscAutoAgendar(mes) {
+  const d = _secDados();
+  if (!mes || mes < _secHoje().slice(0, 7) || _secEscAutoTentado.has(mes) || !d.servidores.length) return; // passado ou dados ainda não carregados
+  if (d.escalaSabado.some(x => x.data.slice(0, 7) === mes) || ((d.config || {}).escalaAutoMeses || []).includes(mes)) return;
+  _secEscAutoTentado.add(mes);
+  setTimeout(() => _secEscAutoGerar(mes), 0);
 }
-async function sec_escCarregarOutubro() {
-  const d0 = _secDados();
-  if (d0.escalaSabado.some(x => x.data.slice(0, 7) === '2026-10')) { _mostrarToast('Outubro já tem escala.', 'erro'); return; }
-  const linhas = [];
-  Object.entries(_SEC_ESC_OUT2026).forEach(([dt, lst]) => lst.forEach(([curto, local]) => { const s = _secEscAcharServidor(curto, d0); linhas.push({ dt, local, sid: s ? s.id : '', nome: s ? '' : curto }); }));
-  const semCasar = linhas.filter(l => !l.sid).map(l => l.nome);
-  if (!confirm('Carregar a escala de outubro/2026 (' + linhas.length + ' pessoas em 5 sábados)?' + (semCasar.length ? '\n\nNão achei na lista de servidores (entram só com o nome): ' + semCasar.join(', ') : ''))) return;
-  const agora = new Date().toISOString(), por = usuarioAtual ? usuarioAtual.nome : '';
+async function _secEscAutoGerar(mes) {
+  let n = 0;
   const ok = await _secMutar(d => {
-    if (d.escalaSabado.some(x => x.data.slice(0, 7) === '2026-10')) return false;
-    linhas.forEach(l => d.escalaSabado.push({ id: _secId('esc'), data: l.dt, servidorId: l.sid, nome: l.nome, local: l.local, status: '', criadoPor: por, criadoEm: agora }));
-  }, { action: 'sec_esc_carregar', alvo: 'outubro/2026', detalhe: linhas.length + ' pessoa(s)' });
-  if (ok) { _mostrarToast('Escala de outubro carregada.', 'sucesso'); _secEscAtualizar(); }
+    const feitos = Array.isArray(d.config.escalaAutoMeses) ? d.config.escalaAutoMeses : [];
+    // relê o banco: se alguém já montou (ou já foi montado e esvaziado de propósito), não mexe
+    if (feitos.includes(mes) || d.escalaSabado.some(x => x.data.slice(0, 7) === mes)) return false;
+    const plano = _secEscPlanoAuto(mes, d); if (!plano.length) return false;
+    const agora = new Date().toISOString();
+    plano.forEach(p => d.escalaSabado.push({ id: _secId('esc'), data: p.dt, servidorId: p.sid, nome: '', local: p.local, status: '', criadoPor: 'Automático (regra da gerência)', criadoEm: agora }));
+    d.config = Object.assign({}, d.config, { escalaAutoMeses: feitos.concat(mes) });
+    n = plano.length;
+  }, { action: 'sec_esc_auto', alvo: _secEscMesTxt(mes), detalhe: 'montada automaticamente pela regra' });
+  _secEscAtualizar();
+  return ok ? n : 0;
 }
 
 // ── Impressão no formato do papel ─────────────────────────────────────────────

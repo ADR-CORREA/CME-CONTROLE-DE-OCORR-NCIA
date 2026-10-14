@@ -223,13 +223,11 @@ function sec_renderHojeDash() {
   const diaUtil = dow >= 1 && dow <= 5 && !feriado;
   const guarn = ativos.filter(s => s.equipe === pl.guarnicao), exp = ativos.filter(s => s.equipe === 'EXPEDIENTE');
   const foraHoje = ativos.filter(s => _secSituacaoHoje(s, d, hoje).fora);
-  const ultImp = ((d.config || {}).pontoImportado || []).slice(-1)[0];
   const diaTxt = new Date(hoje + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
   c.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
     + '<div style="font-size:1.05rem;font-weight:700;text-transform:capitalize">' + esc(diaTxt) + (feriado ? ' <span style="color:#dc2626;font-size:.8rem">· FERIADO</span>' : '') + '</div>'
-    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="font-size:.78rem;color:#64748b">' + (ultImp ? 'Folhas de ponto importadas: ' + ultImp.mes.split('-').reverse().join('/') : 'Nenhuma folha de ponto importada ainda') + '</span>'
-    + '<label class="btn-primary" style="cursor:pointer">Importar folhas de ponto (PDF)<input type="file" accept=".pdf" multiple style="display:none" onchange="sec_importarPonto(this)"></label></div></div>'
-    + (!d.servidores.length ? '<div style="background:#eff6ff;border-left:4px solid #2563eb;padding:10px 14px;border-radius:4px;font-size:.88rem;margin-bottom:12px"><b>Comece por aqui:</b> importe os PDFs das folhas de ponto do mês (plantão e expediente). O sistema cadastra os servidores com a guarnição de cada um, e as férias e licenças marcadas.</div>' : '')
+    + '</div>'
+    + (!d.servidores.length ? '<div style="background:#eff6ff;border-left:4px solid #2563eb;padding:10px 14px;border-radius:4px;font-size:.88rem;margin-bottom:12px"><b>Comece por aqui:</b> na aba Servidores, importe os PDFs das folhas de ponto do mês (plantão e expediente). O sistema cadastra os servidores com a guarnição de cada um, e as férias e licenças marcadas.</div>' : '')
     + (typeof _secCartaoCompromissos === 'function' ? _secCartaoCompromissos() : '')
     + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">'
     + _secCartaoEquipe('\u{1F6E1}\u{FE0F} Plantão — ' + pl.guarnicao, 'Das 08h de ' + _secBRc(pl.dia) + ' às 08h de ' + _secBRc(_secMaisDias(pl.dia, 1)) + ' · próximo: ' + pl.proxima, '#0d9488', guarn, d, hoje, 'Nenhum servidor cadastrado na guarnição ' + pl.guarnicao + '.')
