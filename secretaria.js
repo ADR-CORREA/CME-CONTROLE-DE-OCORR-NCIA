@@ -104,7 +104,7 @@ function sec_inicializar() {
   const root = document.getElementById('sec-root');
   if (!root) return;
   if (!_secPode()) { root.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b">Acesso restrito à Secretaria e à Gerência.</div>'; return; }
-  const abas = [['hoje', '\u{1F3E0} Hoje'], ['agenda', '\u{1F4C5} Agenda'], ['despachos', '\u{1F4E8} Despachos PRODOC'], ['arquivo', '\u{1F5C4}\u{FE0F} Arquivo'], ['servidores', '\u{1F464} Servidores'], ['ferias', '\u{1F3D6}\u{FE0F} Férias e Licenças'], ['apoios', '\u{23F1}\u{FE0F} Apoios e Dispensas'], ['folgas', '\u{1F91D} Folgas combinadas'], ['auditoria', '\u{1F50D} Auditoria']];
+  const abas = [['hoje', '\u{1F3E0} Hoje'], ['agenda', '\u{1F4C5} Agenda'], ['despachos', '\u{1F4E8} Despachos PRODOC'], ['arquivo', '\u{1F5C4}\u{FE0F} Arquivo'], ['servidores', '\u{1F464} Servidores'], ['ferias', '\u{1F3D6}\u{FE0F} Férias e Licenças'], ['escalas', '\u{1F4C6} Escala de Serviço e Apoio'], ['apoios', '\u{23F1}\u{FE0F} Apoios e Dispensas'], ['folgas', '\u{1F91D} Folgas combinadas'], ['auditoria', '\u{1F50D} Auditoria']];
   root.innerHTML = '<div class="dash-header"><div><div class="dash-title">\u{1F5C2}\u{FE0F} Secretaria</div>'
     + '<div class="dash-update">Servidores, apoios e dispensas, folgas e documentos — acesso restrito à Secretaria e à Gerência</div></div></div>'
     + '<div class="sub-tabs">' + abas.map(([k, r]) => '<div class="sub-tab' + (k === _secAba ? ' active' : '') + '" id="sec-stab-' + k + '" onclick="sec_mudarAba(\'' + k + '\')">' + r + '</div>').join('') + '</div>'
@@ -119,7 +119,7 @@ function sec_mudarAba(aba) {
 function sec_render() {
   if (typeof _secRenderHoje === 'function') _secRenderHoje();
   if (_secPerfilId) return sec_renderPerfil();
-  ({ hoje: sec_renderHojeDash, agenda: sec_renderAgenda, despachos: sec_renderDespachos, arquivo: sec_renderArquivo, servidores: sec_renderServidores, ferias: sec_renderFerias, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
+  ({ hoje: sec_renderHojeDash, agenda: sec_renderAgenda, despachos: sec_renderDespachos, arquivo: sec_renderArquivo, servidores: sec_renderServidores, ferias: sec_renderFerias, escalas: sec_renderEscalas, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
 }
 
 // ── Servidores ────────────────────────────────────────────────────────────────

@@ -235,7 +235,8 @@ function sec_renderHojeDash() {
       : '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #94a3b8;border-radius:6px;padding:12px 14px"><div style="font-weight:700">\u{1F3E2} Expediente</div><div style="font-size:.86rem;color:#64748b;margin-top:6px">Hoje não há expediente (' + (feriado ? 'feriado' : 'fim de semana') + ').</div></div>')
     + '<div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #dc2626;border-radius:6px;padding:12px 14px"><div style="font-weight:700;font-size:1.02rem">\u{1F6AB} Fora hoje</div>'
     + (foraHoje.length ? foraHoje.map(s => { const st = _secSituacaoHoje(s, d, hoje); return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid #f1f5f9;font-size:.86rem"><a href="#" onclick="sec_abrirPerfil(\'' + s.id + '\');return false">' + esc(s.nome) + '</a><span style="font-size:.72rem;font-weight:600;color:' + st.cor + ';white-space:nowrap">' + esc(st.txt) + '</span></div>'; }).join('')
-      : '<div style="font-size:.85rem;color:#94a3b8;padding:6px 0">Ninguém afastado hoje.</div>') + '</div></div>'
-    + (typeof _secCartaoEscala === 'function' ? _secCartaoEscala() : '');
+      : '<div style="font-size:.85rem;color:#94a3b8;padding:6px 0">Ninguém afastado hoje.</div>') + '</div></div>';
+  // a escala de sábado mora na sub-aba "Escala de Serviço e Apoio", mas continua sendo montada sozinha ao abrir a Secretaria
+  if (typeof _secEscAutoAgendar === 'function') [hoje.slice(0, 7), _secEscMaisMes(hoje.slice(0, 7), 1)].forEach(_secEscAutoAgendar);
 }
 Object.assign(_SEC_ACOES, { sec_ponto_importar: 'Importou folhas de ponto' });

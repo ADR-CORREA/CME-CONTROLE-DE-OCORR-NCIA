@@ -3,7 +3,7 @@
    NÃO gera dispensa (não mexe na Ficha de Apoio e Dispensas; apoio em evento de folga é outra coisa).
    • Dados: cme_secretaria.escalaSabado = [{ id, data, servidorId | nome, local: CME|PEF, status: ''|presente|falta }]
      e cme_secretaria.config.escalaHorario (padrão "das 08h às 12h").
-   • Painel de escala no Hoje, editado NO PRÓPRIO QUADRO: os sábados de cada mês aparecem sozinhos (colunas);
+   • Painel na sub-aba "Escala de Serviço e Apoio" (secretaria-escserv.js), editado NO PRÓPRIO QUADRO: os sábados de cada mês aparecem sozinhos (colunas);
      arraste o nome do expediente para o sábado (ou "+ adicionar"); clique na etiqueta para trocar CME/PEF;
      clique no nome (depois do sábado) para marcar compareceu/faltou; ✕ tira; arraste entre sábados para mudar.
    • Regra (gerência, 14/10/2026): Bruna, Olidete, Francisco e Débora → 1 sábado no mês, na CME; Everton → não tira;
@@ -56,7 +56,10 @@ function _secEscLocalPadrao(sid, d, dt) {
   const tem = l => d.escalaSabado.some(x => x.servidorId === sid && x.data.slice(0, 7) === mes && x.local === l);
   return _secEscRegime(s) === 'ROD' && tem('CME') && !tem('PEF') ? 'PEF' : 'CME';
 }
-function _secEscAtualizar() { const el = document.getElementById('sec-esc-card'); if (el) el.outerHTML = _secCartaoEscala(); }
+function _secEscAtualizar() {
+  const el = document.getElementById('sec-esc-card'); if (el) el.outerHTML = _secCartaoEscala();
+  const sv = document.getElementById('sec-serv-card'); if (sv && typeof _secCartaoServico === 'function') sv.outerHTML = _secCartaoServico(); // escala de serviço acompanha o mês
+}
 
 // ── Painel (editado no próprio quadro) ───────────────────────────────────────
 function _secCartaoEscala() {
