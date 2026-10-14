@@ -83,7 +83,10 @@ function _secCartaoServico() {
   const solta = alvo => ' ondragover="event.preventDefault();this.style.outline=\'2px dashed #0d9488\'" ondragleave="this.style.outline=\'\'" ondrop="sec_servSoltar(event,\'' + mes + '\',\'' + alvo + '\')"';
 
   // fundo suave por posto (plantão) ou turno (expediente) + barrinha à esquerda, para ler de relance sem chamar atenção
-  const TOM = { P1: ['#fef5f5', '#f5d0d0', '#dc2626'], P2: ['#f3f7fe', '#cddcf7', '#2563eb'], M: ['#fdf8ec', '#efdcae', '#b45309'], T: ['#f7f4fe', '#ddd3f5', '#7c3aed'], X: ['#fff', '#e2e8f0', '#cbd5e1'] };
+  const TOM = { P1: ['#fff', '#f1d4d4', '#dc2626'], P2: ['#fff', '#cfdcf5', '#2563eb'], M: ['#fff', '#ecdcb6', '#b45309'], T: ['#fff', '#ddd3f5', '#7c3aed'], X: ['#fff', '#e2e8f0', '#cbd5e1'] };
+  // cada guarnição e cada setor com um fundo próprio, suave (nome em cartão branco por cima, para ler fácil)
+  const CAIXA = [['#eaf2ff', '#c3d6f7'], ['#eaf8ef', '#bfe3cc'], ['#fdf4e3', '#efd9a9'], ['#f3eefe', '#d6c9f6'], ['#e8f7f5', '#b9e2dc'], ['#fdeef2', '#f2c9d4'], ['#eef1f6', '#cfd6e2']];
+  const CAIXA_G = { ALFA: CAIXA[0], BRAVO: CAIXA[1], CHARLIE: CAIXA[2], DELTA: CAIXA[3], ECHO: CAIXA[4] };
   const tomDe = l => TOM[l.equipe === 'EXPEDIENTE' ? (l.turno || 'X') : (l.posto ? 'P' + l.posto : 'X')] || TOM.X;
   const chip = (sid, etiqueta) => {
     const l = linhas[sid], af = _secServAfastNoMes(sid, mes, d), [fundo, borda, barra] = tomDe(l);
@@ -101,7 +104,7 @@ function _secCartaoServico() {
     const fora = membros.filter(id => _secServForaMes(_secServAfastNoMes(id, mes, d), mes));
     const lista = membros.filter(id => !fora.includes(id)).sort((a, b) => String(linhas[a].posto || '9').localeCompare(String(linhas[b].posto || '9')) || linhas[a].nome.localeCompare(linhas[b].nome));
     const atual = g === deHoje;
-    return '<div' + solta('G:' + g) + ' style="flex:1 1 190px;min-width:180px;border:2px solid ' + (atual ? '#0d9488' : '#e2e8f0') + ';border-radius:8px;padding:8px;background:' + (atual ? '#f0fdfa' : '#fafafa') + '">'
+    return '<div' + solta('G:' + g) + ' style="flex:1 1 190px;min-width:180px;border:2px solid ' + (atual ? '#0d9488' : CAIXA_G[g][1]) + ';border-radius:8px;padding:8px;background:' + CAIXA_G[g][0] + '">'
       + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px"><div style="font-weight:700;font-size:.9rem">Guarnição ' + g + '</div>'
       + (atual ? '<div style="font-size:.66rem;font-weight:700;color:#0d9488">DE PLANTÃO</div>' : '') + '</div>'
       + '<div style="font-size:.72rem;color:#475569;font-family:var(--font-mono);margin:2px 0 8px">Dias: ' + (dias[g] || []).join(', ') + '</div>'
@@ -112,7 +115,7 @@ function _secCartaoServico() {
 
   // ── Setor administrativo (expediente) ──
   const setores = {}; ids.filter(id => linhas[id].equipe === 'EXPEDIENTE').forEach(id => { const k = _secServSetor(linhas[id]); (setores[k] = setores[k] || []).push(id); });
-  const setorCard = k => '<div' + solta('S:' + k) + ' style="border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#fafafa">'
+  const setorCard = (k, i) => '<div' + solta('S:' + k) + ' style="border:1px solid ' + CAIXA[i % CAIXA.length][1] + ';border-radius:8px;padding:8px;background:' + CAIXA[i % CAIXA.length][0] + '">'
     + '<div style="font-weight:700;font-size:.82rem;margin-bottom:6px">' + esc(k) + ' <span style="font-weight:400;color:#94a3b8">(' + setores[k].length + ')</span></div>'
     + '<div style="display:flex;flex-direction:column;gap:4px">' + setores[k].sort((a, b) => String(linhas[a].turno || 'Z').localeCompare(String(linhas[b].turno || 'Z')) || linhas[a].nome.localeCompare(linhas[b].nome))
       .map(id => chip(id, etqTurno(id))).join('') + '</div></div>';
