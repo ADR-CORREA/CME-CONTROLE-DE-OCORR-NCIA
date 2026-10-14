@@ -214,8 +214,8 @@ function sec_servImprimir(mes) {
   const porTipo = {}; _secEscAfastadosMes(mes, d).forEach(a => (porTipo[a.tipo] = porTipo[a.tipo] || []).push(a));
   const equipeDe = sid => { const s = _secServ(sid, d); return s ? (s.equipe === 'EXPEDIENTE' ? (_secServSetor(s) === _SEC_SERV_SEM_SETOR ? '' : _secServSetor(s)) :s.equipe ? s.equipe.charAt(0) + s.equipe.slice(1).toLowerCase() : '') : ''; };
   const obs = Object.entries(porTipo).map(([t, l]) => '<b><u>' + esc(t.toUpperCase()) + '</u>:</b> ' + l.map(a => '<b>PP. ' + esc(_secNomeServ(a.servidorId, d).toUpperCase()) + '</b>' + (equipeDe(a.servidorId) ? ' (' + esc(equipeDe(a.servidorId)) + ')' : '') + ' – ' + _secBR(a.inicio) + ' a ' + _secBR(a.fim || a.inicio)).join('; ') + ';').join('<br>');
-  // data: emitida antes do mês (último dia do mês anterior), ou hoje se for impressa com antecedência
-  const dataTxt = _secDataEmissao(mes);
+  // data: o dia em que o documento é gerado
+  const dataTxt = _secDataEmissao();
   const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Escala de Serviço - ' + MESES[mesNum - 1] + '/' + ano + '</title>'
     + '<style>@page{size:A4 landscape;margin:8mm 10mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:9pt}@media screen{body{padding:12px 18px}}@media print{.np{display:none}}</style></head><body>'
     + '<div class="np" style="text-align:right;margin-bottom:6px"><button onclick="print()" style="padding:6px 16px;font-size:11pt;cursor:pointer">Imprimir</button></div>'

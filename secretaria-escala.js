@@ -242,10 +242,10 @@ async function _secEscAutoGerar(mes) {
 }
 
 // ── Impressão no formato do papel ─────────────────────────────────────────────
-// "Macapá-AP, 30 de Setembro de 2026." — a escala sai datada do último dia do mês anterior (ou de hoje, se impressa antes)
-function _secDataEmissao(mes) {
+// "Macapá-AP, 14 de Outubro de 2026." — o documento sai com a data do dia em que é gerado (pedido de 14/10/2026)
+function _secDataEmissao() {
   const MES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-  const hoje = _secHoje(), e = hoje < mes + '-01' ? new Date(hoje + 'T12:00:00') : new Date(+mes.slice(0, 4), +mes.slice(5, 7) - 1, 0);
+  const e = new Date(_secHoje() + 'T12:00:00');
   return 'Macapá-AP, ' + e.getDate() + ' de ' + MES[e.getMonth()] + ' de ' + e.getFullYear() + '.';
 }
 // nome como no papel: dois primeiros nomes, pulando "de/da/dos" ("BRUNA MARIA", "PATRÍCIA CARNEIRO")
@@ -294,7 +294,7 @@ function sec_escImprimir(mes) {
     + '<tr><td colspan="' + Math.max(1, Math.ceil((n + 1) / 2)) + '" style="' + cinza + ';font-size:8.5pt;text-align:justify;vertical-align:top;height:64px">' + (ferias.length ? '<b>OBS:</b>' + grupo(ferias) : '<b>OBS:</b>') + '</td>'
     + '<td colspan="' + Math.max(1, n + 1 - Math.ceil((n + 1) / 2)) + '" style="' + cinza + ';font-size:8pt;vertical-align:top">' + grupo(outros) + '</td></tr>'
     + '</table>'
-    + '<div style="text-align:right;margin-top:26px;font-size:10pt">' + _secDataEmissao(mes) + '</div>'
+    + '<div style="text-align:right;margin-top:26px;font-size:10pt">' + _secDataEmissao() + '</div>'
     + '<div style="text-align:center;font-size:9.5pt;line-height:1.3"><b>' + esc(_secGerente(d).toUpperCase()) + '</b><br>Gerente da Central de Monitoramento Eletrônico<br>' + esc(cfg.gerenteDecreto || 'Decreto nº 5953/2025 – GEA') + '</div>'
     + '<div style="border-top:1.5px solid #000;margin-top:4px;padding-top:6px;text-align:center;font-size:8.5pt;line-height:1.6"><b>CENTRAL DE MONITORAMENTO ELETRÔNICO – CME -</b> Av. Machado de Assis, 372 – Centro - CEP: 68900-066, Macapá-AP.<br>Email: cme@iapen.ap.gov.br - Telefone (96) 98415 2844</div>'
     + '</body></html>';
