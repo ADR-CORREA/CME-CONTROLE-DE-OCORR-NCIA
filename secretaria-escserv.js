@@ -82,9 +82,12 @@ function _secCartaoServico() {
   const guardado = (d.escalaServico || {})[mes];
   const solta = alvo => ' ondragover="event.preventDefault();this.style.outline=\'2px dashed #0d9488\'" ondragleave="this.style.outline=\'\'" ondrop="sec_servSoltar(event,\'' + mes + '\',\'' + alvo + '\')"';
 
+  // fundo suave por posto (plantão) ou turno (expediente) + barrinha à esquerda, para ler de relance sem chamar atenção
+  const TOM = { P1: ['#fef5f5', '#f5d0d0', '#dc2626'], P2: ['#f3f7fe', '#cddcf7', '#2563eb'], M: ['#fdf8ec', '#efdcae', '#b45309'], T: ['#f7f4fe', '#ddd3f5', '#7c3aed'], X: ['#fff', '#e2e8f0', '#cbd5e1'] };
+  const tomDe = l => TOM[l.equipe === 'EXPEDIENTE' ? (l.turno || 'X') : (l.posto ? 'P' + l.posto : 'X')] || TOM.X;
   const chip = (sid, etiqueta) => {
-    const l = linhas[sid], af = _secServAfastNoMes(sid, mes, d);
-    return '<div draggable="true" ondragstart="event.dataTransfer.setData(\'text/plain\',\'escserv:' + sid + '\')" onclick="sec_editarServidor(\'' + sid + '\')" title="' + esc(l.nome) + ' — arraste para mudar de guarnição/setor · clique para abrir o cadastro' + (af ? ' · ' + esc(af.tipo) + ' ' + _secBRc(af.inicio) + ' a ' + _secBRc(af.fim || af.inicio) : '') + '" style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:5px 8px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:grab">'
+    const l = linhas[sid], af = _secServAfastNoMes(sid, mes, d), [fundo, borda, barra] = tomDe(l);
+    return '<div draggable="true" ondragstart="event.dataTransfer.setData(\'text/plain\',\'escserv:' + sid + '\')" onclick="sec_editarServidor(\'' + sid + '\')" title="' + esc(l.nome) + ' — arraste para mudar de guarnição/setor · clique para abrir o cadastro' + (af ? ' · ' + esc(af.tipo) + ' ' + _secBRc(af.inicio) + ' a ' + _secBRc(af.fim || af.inicio) : '') + '" style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:5px 8px;border:1px solid ' + borda + ';border-left:3px solid ' + barra + ';border-radius:6px;background:' + fundo + ';cursor:grab">'
       + '<div style="min-width:0"><div style="font-size:.84rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(_secEscCurto(l.nome)) + '</div>'
       + (af ? '<div style="font-size:.68rem;font-weight:600;color:' + _secCorTipo(af.tipo) + '">' + esc(af.tipo.toLowerCase()) + ' ' + _secBRc(af.inicio) + '–' + _secBRc(af.fim || af.inicio) + '</div>' : '') + '</div>'
       + (etiqueta || '') + '</div>';
