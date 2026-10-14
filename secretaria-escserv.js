@@ -215,8 +215,7 @@ function sec_servImprimir(mes) {
   const equipeDe = sid => { const s = _secServ(sid, d); return s ? (s.equipe === 'EXPEDIENTE' ? (_secServSetor(s) === _SEC_SERV_SEM_SETOR ? '' : _secServSetor(s)) :s.equipe ? s.equipe.charAt(0) + s.equipe.slice(1).toLowerCase() : '') : ''; };
   const obs = Object.entries(porTipo).map(([t, l]) => '<b><u>' + esc(t.toUpperCase()) + '</u>:</b> ' + l.map(a => '<b>PP. ' + esc(_secNomeServ(a.servidorId, d).toUpperCase()) + '</b>' + (equipeDe(a.servidorId) ? ' (' + esc(equipeDe(a.servidorId)) + ')' : '') + ' – ' + _secBR(a.inicio) + ' a ' + _secBR(a.fim || a.inicio)).join('; ') + ';').join('<br>');
   // data: emitida antes do mês (último dia do mês anterior), ou hoje se for impressa com antecedência
-  const hoje = _secHoje(), antes = new Date(+ano, mesNum - 1, 0), emissao = hoje < mes + '-01' ? new Date(hoje + 'T12:00:00') : antes;
-  const dataTxt = 'Macapá-AP, ' + emissao.getDate() + ' de ' + MESES[emissao.getMonth()].charAt(0) + MESES[emissao.getMonth()].slice(1).toLowerCase() + ' de ' + emissao.getFullYear() + '.';
+  const dataTxt = _secDataEmissao(mes);
   const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Escala de Serviço - ' + MESES[mesNum - 1] + '/' + ano + '</title>'
     + '<style>@page{size:A4 landscape;margin:8mm 10mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:9pt}@media screen{body{padding:12px 18px}}@media print{.np{display:none}}</style></head><body>'
     + '<div class="np" style="text-align:right;margin-bottom:6px"><button onclick="print()" style="padding:6px 16px;font-size:11pt;cursor:pointer">Imprimir</button></div>'

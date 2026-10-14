@@ -242,21 +242,67 @@ async function _secEscAutoGerar(mes) {
 }
 
 // ── Impressão no formato do papel ─────────────────────────────────────────────
+// "Macapá-AP, 30 de Setembro de 2026." — a escala sai datada do último dia do mês anterior (ou de hoje, se impressa antes)
+function _secDataEmissao(mes) {
+  const MES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  const hoje = _secHoje(), e = hoje < mes + '-01' ? new Date(hoje + 'T12:00:00') : new Date(+mes.slice(0, 4), +mes.slice(5, 7) - 1, 0);
+  return 'Macapá-AP, ' + e.getDate() + ' de ' + MES[e.getMonth()] + ' de ' + e.getFullYear() + '.';
+}
+// nome como no papel: dois primeiros nomes, pulando "de/da/dos" ("BRUNA MARIA", "PATRÍCIA CARNEIRO")
+function _secEscNomePapel(nome) {
+  const p = String(nome || '').toUpperCase().split(' ').filter(Boolean), lig = ['DE', 'DA', 'DO', 'DAS', 'DOS', 'E'];
+  const seg = p.slice(1).find(x => !lig.includes(x));
+  return p.length ? p[0] + (seg ? ' ' + seg : '') : '';
+}
+// Impressão no formato oficial "ESCALA DE APOIO DO ADMINISTRATIVO DA CME" (A4 deitado): cabeçalho IAPEN / Polícia Penal / CME,
+// uma linha por servidor escalado e uma coluna por sábado, OBS de férias e licenças do administrativo, assinatura e rodapé.
 function sec_escImprimir(mes) {
-  const d = _secDados(), datas = _secEscDatas(mes, d).filter(dt => d.escalaSabado.some(x => x.data === dt) || new Date(dt + 'T12:00:00').getDay() === 6);
-  const horario = (d.config || {}).escalaHorario || _SEC_ESC_HORARIO, afast = _secEscAfastadosMes(mes, d);
-  const b = 'border:1px solid #000;padding:6px;font-size:10.5pt;vertical-align:top';
-  const nomes = dt => d.escalaSabado.filter(x => x.data === dt).sort((a, c) => a.local.localeCompare(c.local)).map(x => esc(_secEscCurto(_secEscNome(x, d)).toUpperCase()) + ' – ' + esc(x.local)).join('<br>');
-  const porTipo = {}; afast.forEach(a => (porTipo[a.tipo] = porTipo[a.tipo] || []).push(a));
-  const html = '<!doctype html><html><head><meta charset="utf-8"><title>Escala de apoio - ' + esc(_secEscMesTxt(mes)) + '</title>'
-    + '<style>@page{size:A4 landscape;margin:12mm}body{font-family:Arial,Helvetica,sans-serif;color:#000}table{border-collapse:collapse;width:100%}@media print{.np{display:none}}</style></head><body>'
-    + '<div class="np" style="text-align:right;margin-bottom:8px"><button onclick="print()" style="padding:6px 14px">Imprimir</button></div>'
-    + '<table><tr><th colspan="' + datas.length + '" style="' + b + ';background:#ddd;font-size:12pt">ESCALA DE APOIO DO ADMINISTRATIVO<br><span style="font-weight:normal">Horário: ' + esc(horario) + '</span></th></tr>'
-    + '<tr>' + datas.map(dt => '<th style="' + b + '">DIA: ' + _secBR(dt) + '</th>').join('') + '</tr>'
-    + '<tr>' + datas.map(dt => '<td style="' + b + ';height:90px">' + nomes(dt) + '</td>').join('') + '</tr></table>'
-    + (afast.length ? '<div style="margin-top:12px;font-size:10.5pt;line-height:1.5">' + Object.entries(porTipo).map(([t, l]) => '<b><u>' + esc(t.toUpperCase()) + '</u>:</b> ' + l.map(a => 'PP. ' + esc(_secNomeServ(a.servidorId, d)) + ' – ' + _secBR(a.inicio) + ' a ' + _secBR(a.fim || a.inicio)).join('; ') + '.').join('<br>') + '</div>' : '')
-    + '<div style="font-size:8pt;color:#555;margin-top:10px">Emitida pelo sistema CME em ' + new Date().toLocaleString('pt-BR') + '.</div></body></html>';
+  const d = _secDados(), cfg = d.config || {};
+  const MESES = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
+  const mesNum = +mes.slice(5, 7), ano = mes.slice(0, 4), mesAno = MESES[mesNum - 1] + '/' + ano;
+  const datas = _secEscDatas(mes, d).filter(dt => d.escalaSabado.some(x => x.data === dt) || new Date(dt + 'T12:00:00').getDay() === 6);
+  const horario = String(cfg.escalaHorario || _SEC_ESC_HORARIO).replace(/0(\d)h/g, '$1h');
+  const lin = d.escalaSabado.filter(x => x.data.slice(0, 7) === mes)
+    .sort((a, b) => a.data.localeCompare(b.data) || a.local.localeCompare(b.local) || _secEscNome(a, d).localeCompare(_secEscNome(b, d)));
+  const img = (b64, tipo, alt) => b64 ? '<img src="data:' + tipo + ';base64,' + b64 + '" alt="' + alt + '" style="height:76px;width:auto">' : '';
+  const cinza = 'background:#d9d9d9', bd = 'border:1px solid #000';
+  // OBS: só férias/licenças de quem é do administrativo (expediente)
+  const doAdm = a => { const s = _secServ(a.servidorId, d); return s && (s.equipe === 'EXPEDIENTE' || s.apoioSabado); };
+  const afast = _secEscAfastadosMes(mes, d).filter(doAdm);
+  const setorDe = sid => { const s = _secServ(sid, d); return s && s.setor && !['Expediente', 'Plantão'].includes(s.setor) ? s.setor : ''; };
+  const pessoa = a => '<b>' + esc(_secServNomePapelCurto(_secNomeServ(a.servidorId, d))) + '</b>' + (setorDe(a.servidorId) ? '(' + esc(setorDe(a.servidorId)) + ')' : '') + ' - ' + _secBR(a.inicio) + ' a ' + _secBR(a.fim || a.inicio);
+  const grupo = tipos => { const g = {}; tipos.forEach(a => (g[a.tipo] = g[a.tipo] || []).push(a)); return Object.entries(g).map(([t, l]) => '<b>' + esc(_secEscSiglaTipo(t)) + ':</b> ' + l.map(pessoa).join('; ') + '.').join('<br><br>'); };
+  const ferias = afast.filter(a => /^f[ée]rias/i.test(a.tipo)), outros = afast.filter(a => !/^f[ée]rias/i.test(a.tipo));
+  const diasTxt = datas.map(dt => dt.slice(8)).join(', ') + '/' + mes.slice(5, 7) + '/' + ano + '– ' + horario;
+  const n = datas.length;
+  const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Escala de Apoio - ' + mesAno + '</title>'
+    + '<style>@page{size:A4 landscape;margin:6mm 8mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:10pt}'
+    + 'table{border-collapse:collapse;width:100%}td,th{' + bd + ';padding:2px 8px}@media screen{body{padding:10px 16px}}@media print{.np{display:none}}'
+    + '</style></head><body' + (lin.length > 16 ? ' style="zoom:' + Math.max(0.55, 26 / (lin.length + 8)).toFixed(2) + '"' : '') + '>' // muitas linhas: reduz tudo para caber em 1 folha
+    + '<div class="np" style="text-align:right;margin-bottom:6px"><button onclick="print()" style="padding:6px 16px;font-size:11pt;cursor:pointer">Imprimir</button></div>'
+    + '<div style="display:flex;align-items:center;gap:8px;border-bottom:1.5px solid #000;padding-bottom:4px">'
+    + img(window._IAPEN_LOGO_B64, 'image/png', 'IAPEN') + img(window._PPENAL_LOGO_B64, 'image/jpeg', 'Polícia Penal')
+    + '<div style="flex:1;text-align:center;font-weight:bold;font-size:9.5pt;line-height:1.9">GOVERNO DO ESTADO DO AMAPÁ<br>SECRETARIA DE ESTADO DE JUSTIÇA E SEGURANÇA PÚBLICA - SEJUSP<br>INSTITUTO DE ADMINISTRAÇÃO PENITENCIÁRIA DO AMAPÁ - IAPEN</div>'
+    + img(window._CME_LOGO_B64, 'image/png', 'CME') + '</div>'
+    + '<table style="width:88%;margin:10px auto 0">'
+    + '<tr><th colspan="' + (n + 1) + '" style="font-size:16pt;padding:6px">ESCALA DE APOIO DO ADMINISTRATIVO DA CME - ' + mesAno + '</th></tr>'
+    + '<tr><th colspan="' + (n + 1) + '" style="' + cinza + ';font-size:10pt;padding:6px">ADMINISTRATIVO DA CENTRAL DE MONITORAÇÃO ELETRÔNICA DO IAPEN</th></tr>'
+    + '<tr><th style="' + cinza + ';width:26%;padding:12px 8px;font-size:9.5pt">SERVIDORES:</th><th colspan="' + n + '" style="font-size:9pt">DIAS E HORÁRIOS: ' + esc(diasTxt) + '</th></tr>'
+    + (lin.length ? lin.map(x => '<tr><td style="' + cinza + ';font-size:9.5pt">' + esc(_secEscNomePapel(_secEscNome(x, d))) + ' – ' + esc(x.local) + '</td>'
+        + datas.map(dt => '<td style="font-weight:bold;font-size:10pt;text-align:center;width:' + (74 / Math.max(n, 1)).toFixed(1) + '%">' + (x.data === dt ? _secBR(dt) : '') + '</td>').join('') + '</tr>').join('')
+      : '<tr><td style="' + cinza + '">&nbsp;</td>' + datas.map(() => '<td></td>').join('') + '</tr>')
+    + '<tr><td colspan="' + Math.max(1, Math.ceil((n + 1) / 2)) + '" style="' + cinza + ';font-size:8.5pt;text-align:justify;vertical-align:top;height:64px">' + (ferias.length ? '<b>OBS:</b>' + grupo(ferias) : '<b>OBS:</b>') + '</td>'
+    + '<td colspan="' + Math.max(1, n + 1 - Math.ceil((n + 1) / 2)) + '" style="' + cinza + ';font-size:8pt;vertical-align:top">' + grupo(outros) + '</td></tr>'
+    + '</table>'
+    + '<div style="text-align:right;margin-top:26px;font-size:10pt">' + _secDataEmissao(mes) + '</div>'
+    + '<div style="text-align:center;font-size:9.5pt;line-height:1.3"><b>' + esc(_secGerente(d).toUpperCase()) + '</b><br>Gerente da Central de Monitoramento Eletrônico<br>' + esc(cfg.gerenteDecreto || 'Decreto nº 5953/2025 – GEA') + '</div>'
+    + '<div style="border-top:1.5px solid #000;margin-top:4px;padding-top:6px;text-align:center;font-size:8.5pt;line-height:1.6"><b>CENTRAL DE MONITORAMENTO ELETRÔNICO – CME -</b> Av. Machado de Assis, 372 – Centro - CEP: 68900-066, Macapá-AP.<br>Email: cme@iapen.ap.gov.br - Telefone (96) 98415 2844</div>'
+    + '</body></html>';
   _entregarDoc(new Blob([html], { type: 'text/html' }), 'Escala de apoio ' + mes + '.html');
 }
+// "DIANE BRITO", "ADRIANE BASTOS": primeiro + último nome, em maiúsculas
+function _secServNomePapelCurto(nome) { const p = String(nome || '').toUpperCase().split(' ').filter(Boolean); return p.length > 2 ? p[0] + ' ' + p[p.length - 1] : p.join(' '); }
+// tipo do afastamento como no papel: "FÉRIAS", "L.MATERNIDADE", "L.PRÊMIO"…
+function _secEscSiglaTipo(t) { const u = String(t || '').toUpperCase(); return /^LICEN[ÇC]A[- ]/.test(u) ? 'L.' + u.replace(/^LICEN[ÇC]A[- ]+/, '').replace(/^PARA /, '') : u; }
 Object.assign(_SEC_ACOES, { sec_esc_add: 'Escalou no apoio de sábado', sec_esc_remover: 'Tirou da escala de sábado', sec_esc_local: 'Trocou o local na escala', sec_esc_presenca: 'Marcou presença na escala',
   sec_esc_mover: 'Mudou o sábado na escala', sec_esc_horario: 'Alterou o horário da escala', sec_esc_carregar: 'Carregou a escala do mês', sec_esc_auto: 'Montou a escala automaticamente' });
