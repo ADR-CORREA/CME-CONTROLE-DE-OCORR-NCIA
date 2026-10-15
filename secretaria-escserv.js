@@ -1,7 +1,7 @@
 /* ═══════════════════════════ SECRETARIA — ESCALA DE SERVIÇO E APOIO ═══════════════════════════
-   Sub-aba própria (pedido de 14/10/2026), separada de "Apoios e Dispensas" — são coisas diferentes:
-   • em cima: a escala de apoio do administrativo aos sábados (secretaria-escala.js, _secCartaoEscala);
-   • embaixo: a escala de serviço do mês, igual ao papel "ESCALA DE SERVIÇO (24x96)":
+   Grupo "Escalas" com duas sub-abas (15/10/2026), separadas de "Apoios e Dispensas" — são coisas diferentes:
+   • "Apoio de sábado": a escala de apoio do administrativo aos sábados (secretaria-escala.js, _secCartaoEscala);
+   • "Escala de serviço (24x96)": a escala de serviço do mês, igual ao papel "ESCALA DE SERVIÇO (24x96)":
      guarnições ALFA–ECHO com os dias de plantão do mês e o posto de cada um, e o setor administrativo
      com o turno (M/T). Férias e licenças vêm da aba Férias e Licenças.
    • Atualiza sozinha: o mês atual e os seguintes saem do CADASTRO dos servidores (equipe, posto, setor, turno) e os
@@ -18,10 +18,16 @@ const _PL_EQUIPES_SEC = ['ALFA', 'BRAVO', 'CHARLIE', 'DELTA', 'ECHO'];
 const _SEC_SERV_SEM_SETOR = 'Sem setor definido';
 const _SEC_SERV_DECRETO = 'Decreto nº 5953/2025 – GEA';
 
+// 15/10/2026: cada escala na sua sub-aba (grupo Escalas): "Apoio de sábado" e "Escala de serviço (24x96)"
 function sec_renderEscalas() {
   const c = document.getElementById('sec-conteudo'); if (!c) return;
   _secServGuardarAuto();
-  c.innerHTML = _secCartaoEscala() + _secCartaoServico();
+  c.innerHTML = _secCartaoEscala();
+}
+function sec_renderEscServ() {
+  const c = document.getElementById('sec-conteudo'); if (!c) return;
+  _secServGuardarAuto();
+  c.innerHTML = _secCartaoServico();
 }
 
 // ── Funções de apoio ──────────────────────────────────────────────────────────
@@ -90,30 +96,26 @@ function _secServGuardarAuto() {
 }
 
 // ── Painel ────────────────────────────────────────────────────────────────────
+// 15/10/2026: tema escuro, nomes em 14px, posto/turno como etiqueta legível ("POSTO 1", "MANHÃ"); guarnição de plantão hoje
+// em destaque; setores vazios compactos; o quadro fixo de impressão e a ajuda ficam recolhidos.
 function _secCartaoServico() {
+  if (typeof _secEscxCss === 'function') _secEscxCss();
   const d = _secDados(), hoje = _secHoje(), mes = _secEscMesVis || hoje.slice(0, 7), passado = mes < _secServAtual();
   _secServApoioCongelar(mes);
   const linhas = _secServLinhas(mes, d), ids = Object.keys(linhas);
   const dias = _secServDiasGuarnicao(mes), deHoje = mes === _secServAtual() ? _secPlantaoAgora().guarnicao : '';
-  const corPosto = { '1': '#dc2626', '2': '#2563eb' }, corTurno = { M: '#b45309', T: '#7c3aed' };
   const guardado = (d.escalaServico || {})[mes];
-  const solta = alvo => ' ondragover="event.preventDefault();this.style.outline=\'2px dashed #0d9488\'" ondragleave="this.style.outline=\'\'" ondrop="sec_servSoltar(event,\'' + mes + '\',\'' + _jsq(alvo) + '\')"';
+  const solta = alvo => ' ondragover="event.preventDefault();this.style.borderColor=\'var(--ac)\'" ondragleave="this.style.borderColor=\'\'" ondrop="sec_servSoltar(event,\'' + mes + '\',\'' + _jsq(alvo) + '\')"';
 
-  // fundo suave por posto (plantão) ou turno (expediente) + barrinha à esquerda, para ler de relance sem chamar atenção
-  const TOM = { P1: ['#fff', '#f1d4d4', '#dc2626'], P2: ['#fff', '#cfdcf5', '#2563eb'], M: ['#fff', '#ecdcb6', '#b45309'], T: ['#fff', '#ddd3f5', '#7c3aed'], X: ['#fff', '#e2e8f0', '#cbd5e1'] };
-  // cada guarnição e cada setor com um fundo próprio, suave (nome em cartão branco por cima, para ler fácil)
-  const CAIXA = [['#eaf2ff', '#c3d6f7'], ['#eaf8ef', '#bfe3cc'], ['#fdf4e3', '#efd9a9'], ['#f3eefe', '#d6c9f6'], ['#e8f7f5', '#b9e2dc'], ['#fdeef2', '#f2c9d4'], ['#eef1f6', '#cfd6e2']];
-  const CAIXA_G = { ALFA: CAIXA[0], BRAVO: CAIXA[1], CHARLIE: CAIXA[2], DELTA: CAIXA[3], ECHO: CAIXA[4] };
-  const tomDe = l => TOM[l.equipe === 'EXPEDIENTE' ? (l.turno || 'X') : (l.posto ? 'P' + l.posto : 'X')] || TOM.X;
-  const chip = (sid, etiqueta) => {
-    const l = linhas[sid], af = _secServAfastNoMes(sid, mes, d), [fundo, borda, barra] = tomDe(l);
-    return '<div draggable="true" ondragstart="event.dataTransfer.setData(\'text/plain\',\'escserv:' + sid + '\')" onclick="sec_editarServidor(\'' + sid + '\')" title="' + esc(l.nome) + ' — arraste para mudar de guarnição/setor · clique para abrir o cadastro' + (af ? ' · ' + esc(af.tipo) + ' ' + _secBRc(af.inicio) + ' a ' + _secBRc(af.fim || af.inicio) : '') + '" style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:5px 8px;border:1px solid ' + borda + ';border-left:3px solid ' + barra + ';border-radius:6px;background:' + fundo + ';cursor:grab">'
-      + '<div style="min-width:0"><div style="font-size:.84rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(_secEscCurto(l.nome)) + '</div>'
-      + (af ? '<div style="font-size:.68rem;font-weight:600;color:' + _secCorTipo(af.tipo) + '">' + esc(af.tipo.toLowerCase()) + ' ' + _secBRc(af.inicio) + '–' + _secBRc(af.fim || af.inicio) + '</div>' : '') + '</div>'
+  const linha = (sid, etiqueta, apagado) => {
+    const l = linhas[sid], af = _secServAfastNoMes(sid, mes, d);
+    return '<div class="escx-row' + (apagado ? ' apagado' : '') + '" draggable="true" ondragstart="event.dataTransfer.setData(\'text/plain\',\'escserv:' + sid + '\')" onclick="sec_editarServidor(\'' + sid + '\')" title="' + esc(l.nome) + ' — arraste para mudar de guarnição/setor · clique para abrir o cadastro">'
+      + '<span class="escx-nome">' + esc(_secEscCurto(l.nome))
+      + (af ? '<span class="escx-det">' + esc(af.tipo.toLowerCase()) + ' <span class="mono">' + _secBRc(af.inicio) + '–' + _secBRc(af.fim || af.inicio) + '</span></span>' : '') + '</span>'
       + (etiqueta || '') + '</div>';
   };
-  const etqPosto = sid => { const p = linhas[sid].posto; return '<span onclick="event.stopPropagation();sec_servPosto(\'' + mes + '\',\'' + sid + '\')" title="Clique para trocar o posto" style="font-size:.68rem;font-weight:700;white-space:nowrap;cursor:pointer;padding:1px 4px;border-radius:3px;color:' + (corPosto[p] || '#94a3b8') + '">' + (p ? 'Posto ' + esc(p) : 'sem posto') + '</span>'; };
-  const etqTurno = sid => { const t = linhas[sid].turno; return '<span onclick="event.stopPropagation();sec_servTurno(\'' + mes + '\',\'' + sid + '\')" title="' + (t ? esc(_SEC_TURNOS[t] || t) + ' — ' : '') + 'clique para trocar o turno" style="font-size:.7rem;font-weight:700;cursor:pointer;padding:1px 4px;border-radius:3px;color:' + (corTurno[t] || '#94a3b8') + '">' + (t ? '(' + esc(t) + ')' : '(—)') + '</span>'; };
+  const etqPosto = sid => { const p = linhas[sid].posto; return '<span class="escx-badge ' + (p === '1' ? 'b-da' : p === '2' ? 'b-ac' : 'b-mu') + '" onclick="event.stopPropagation();sec_servPosto(\'' + mes + '\',\'' + sid + '\')" title="Clique para trocar o posto">' + (p ? 'Posto ' + esc(p) : 'sem posto') + '</span>'; };
+  const etqTurno = sid => { const t = linhas[sid].turno; return '<span class="escx-badge ' + (t === 'M' ? 'b-wa' : t === 'T' ? 'b-pu' : 'b-mu') + '" onclick="event.stopPropagation();sec_servTurno(\'' + mes + '\',\'' + sid + '\')" title="Clique para trocar o turno">' + (t === 'M' ? 'Manhã' : t === 'T' ? 'Tarde' : 'sem turno') + '</span>'; };
 
   // ── Plantão 24x96 ──
   const guarnicao = g => {
@@ -121,40 +123,46 @@ function _secCartaoServico() {
     const fora = membros.filter(id => _secServForaMes(_secServAfastNoMes(id, mes, d), mes));
     const lista = membros.filter(id => !fora.includes(id)).sort((a, b) => String(linhas[a].posto || '9').localeCompare(String(linhas[b].posto || '9')) || linhas[a].nome.localeCompare(linhas[b].nome));
     const atual = g === deHoje;
-    return '<div' + solta('G:' + g) + ' style="flex:1 1 190px;min-width:180px;border:2px solid ' + (atual ? '#0d9488' : CAIXA_G[g][1]) + ';border-radius:8px;padding:8px;background:' + CAIXA_G[g][0] + '">'
-      + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px"><div style="font-weight:700;font-size:.9rem">Guarnição ' + g + '</div>'
-      + (atual ? '<div style="font-size:.66rem;font-weight:700;color:#0d9488">DE PLANTÃO</div>' : '') + '</div>'
-      + '<div style="font-size:.72rem;color:#475569;font-family:var(--font-mono);margin:2px 0 8px">Dias: ' + (dias[g] || []).join(', ') + '</div>'
-      + '<div style="display:flex;flex-direction:column;gap:4px">' + (lista.length ? lista.map(id => chip(id, etqPosto(id))).join('') : '<div style="font-size:.8rem;color:#94a3b8">Arraste um nome para cá.</div>') + '</div>'
-      + (fora.length ? '<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #cbd5e1;display:flex;flex-direction:column;gap:4px">' + fora.map(id => '<div style="opacity:.6">' + chip(id, etqPosto(id)) + '</div>').join('') + '</div>' : '')
+    return '<div class="escx-card' + (atual ? ' plantao' : '') + '"' + solta('G:' + g) + '>'
+      + '<div class="escx-cab"><div style="font-size:16px;font-weight:600">' + g + '</div>' + (atual ? '<span class="escx-badge b-ok">De plantão hoje</span>' : '') + '</div>'
+      + '<div class="mono" style="font-size:13px;color:var(--mu);margin-bottom:4px" title="Dias de plantão no mês">Dias ' + (dias[g] || []).join(' · ') + '</div>'
+      + (lista.length ? lista.map(id => linha(id, etqPosto(id))).join('') : '<div class="vazio">Arraste um nome para cá.</div>')
+      + (fora.length ? '<div class="escx-rot" style="margin-top:10px">Fora no mês</div>' + fora.map(id => linha(id, etqPosto(id), true)).join('') : '')
       + '</div>';
   };
 
   // ── Setor administrativo (expediente) ──
   const setores = {}; _secServSetoresConhecidos(d, linhas).forEach(k => { setores[k] = []; });
   ids.filter(id => linhas[id].equipe === 'EXPEDIENTE').forEach(id => { const k = _secServSetor(linhas[id]); (setores[k] = setores[k] || []).push(id); });
-  const setorCard = (k, i) => '<div' + solta('S:' + k) + ' style="border:1px solid ' + CAIXA[i % CAIXA.length][1] + ';border-radius:8px;padding:8px;background:' + CAIXA[i % CAIXA.length][0] + '">'
-    + '<div style="font-weight:700;font-size:.82rem;margin-bottom:6px">' + esc(k) + ' <span style="font-weight:400;color:#94a3b8">(' + setores[k].length + ')</span></div>'
-    + (!setores[k].length ? '<div style="font-size:.78rem;color:#94a3b8;padding:6px 0">Arraste um nome para cá.' + (k !== _SEC_SERV_SEM_SETOR ? ' <a href="#" onclick="sec_servRemoverSetor(\'' + _jsq(k) + '\');return false" style="color:#b91c1c">remover setor</a>' : '') + '</div>' : '')
-    + '<div style="display:flex;flex-direction:column;gap:4px">' + setores[k].sort((a, b) => String(linhas[a].turno || 'Z').localeCompare(String(linhas[b].turno || 'Z')) || linhas[a].nome.localeCompare(linhas[b].nome))
-      .map(id => chip(id, etqTurno(id))).join('') + '</div></div>';
-  const novoSetor = '<div' + solta('S:+') + ' style="border:1px dashed #cbd5e1;border-radius:8px;padding:8px;display:flex;align-items:center;justify-content:center;text-align:center;color:#94a3b8;font-size:.8rem;min-height:70px">+ arraste um nome aqui para criar um setor novo</div>';
+  const ordem = Object.keys(setores).filter(k => k !== _SEC_SERV_SEM_SETOR || setores[k].length).sort((a, b) => _secServOrdemSetor(a).localeCompare(_secServOrdemSetor(b)));
+  const setorCard = k => '<div class="escx-card"' + solta('S:' + k) + '>'
+    + '<div class="escx-cab"><div style="font-size:14px;font-weight:600">' + esc(k) + '</div><span style="font-size:12px;color:var(--mu)">' + setores[k].length + '</span></div>'
+    + setores[k].sort((a, b) => String(linhas[a].turno || 'Z').localeCompare(String(linhas[b].turno || 'Z')) || linhas[a].nome.localeCompare(linhas[b].nome)).map(id => linha(id, etqTurno(id))).join('') + '</div>';
+  const cheios = ordem.filter(k => setores[k].length), vazios = ordem.filter(k => !setores[k].length);
+  const blocoVazios = '<div class="escx-grid" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr));margin-top:10px">'
+    + vazios.map(k => '<div class="escx-card" style="padding:8px 12px;border-style:dashed"' + solta('S:' + k) + '><div style="font-size:13px;font-weight:600;color:var(--mu)">' + esc(k) + '</div>'
+      + '<div style="font-size:12px;color:var(--sb)">Vazio — arraste um nome · <a href="#" onclick="sec_servRemoverSetor(\'' + _jsq(k) + '\');return false" style="color:var(--da)">remover</a></div></div>').join('')
+    + '<div class="escx-card" style="padding:8px 12px;border-style:dashed;color:var(--mu);font-size:13px;display:flex;align-items:center;justify-content:center;text-align:center"' + solta('S:+') + '>+ arraste um nome aqui para criar um setor</div></div>';
 
   const aviso = passado
-    ? 'Mês encerrado — ' + (guardado ? 'escala guardada como estava em ' + _secBR(guardado.guardadoEm) + '. Mudanças aqui valem só para este mês.' : 'não havia registro guardado; mostrando o cadastro atual.')
-    : 'Atualiza sozinha pelo cadastro · arraste o nome para mudar de guarnição ou setor · clique no Posto ou no turno para trocar · clique no nome para abrir o cadastro';
-  return '<div id="sec-serv-card" style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #0d9488;border-radius:6px;padding:12px 14px;margin-top:12px">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
-    + '<div><div style="font-weight:700;font-size:1.05rem">\u{1F6E1}\u{FE0F} Escala de serviço (24x96) — Plantão da CME</div>'
-    + '<div style="font-size:.78rem;color:' + (passado ? '#b45309' : '#64748b') + '">' + aviso + '</div></div>'
-    + '<div style="display:flex;align-items:center;gap:10px"><div style="font-weight:700;text-transform:capitalize">' + esc(_secEscMesTxt(mes)) + '</div>'
-    + '<button type="button" onclick="sec_servImprimir(\'' + mes + '\')" style="padding:5px 12px;border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:600;border:1px solid #0d9488;background:#0d9488;color:#fff">\u{1F5A8}\u{FE0F} Imprimir escala do mês</button></div></div>'
-    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:stretch">' + _PL_EQUIPES_SEC.map(guarnicao).join('') + '</div>'
-    + '<div style="font-size:.74rem;color:#475569;margin-top:6px"><b style="color:#dc2626">Posto 1</b> — instalação, inspeção, criação de zona · <b style="color:#2563eb">Posto 2</b> — tratamento de ocorrência, mudança de endereço, alimentação do drive, livro · <b>\u{1F504} os postos trocam sozinhos todo mês (1 ↔ 2)</b></div>'
-    + '<div style="margin-top:14px;font-weight:700;font-size:.95rem">\u{1F3E2} Setor administrativo <span style="font-weight:400;font-size:.78rem;color:#64748b">— Manhã (M) · Tarde (T)</span></div>'
-    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-top:6px">'
-    + Object.keys(setores).filter(k => k !== _SEC_SERV_SEM_SETOR || setores[k].length).sort((a, b) => _secServOrdemSetor(a).localeCompare(_secServOrdemSetor(b))).map(setorCard).join('') + novoSetor
-    + '</div>' + _secServHtmlQuadroApoio(mes, d) + '</div>';
+    ? '<div class="escx-faixa"><span class="escx-badge b-wa">Mês encerrado</span><span>' + (guardado ? 'Escala guardada como estava em ' + _secBR(guardado.guardadoEm) + '. Mudanças aqui valem só para este mês.' : 'Não havia registro guardado; mostrando o cadastro atual.') + '</span></div>'
+    : '';
+  const ajuda = '<details><summary>Como usar e o que é cada posto</summary><div class="dentro" style="font-size:13px;color:var(--mu)">'
+    + '<p style="margin:0 0 6px"><span class="escx-badge b-da">Posto 1</span> instalação, inspeção, criação de zona &nbsp; <span class="escx-badge b-ac">Posto 2</span> tratamento de ocorrência, mudança de endereço, alimentação do drive, livro. Os postos trocam sozinhos todo mês (1 \u{2194} 2).</p>'
+    + '<p style="margin:0">A escala atualiza sozinha pelo cadastro · arraste o nome para mudar de guarnição ou setor · clique na etiqueta do posto ou do turno para trocar · clique no nome para abrir o cadastro.</p></div></details>';
+  return '<div id="sec-serv-card" class="escx">'
+    + '<div class="escx-top"><div><div class="escx-tit">Escala de serviço (24x96)</div><div class="escx-sub">Plantão da CME e setor administrativo</div></div>'
+    + '<div class="escx-nav"><button type="button" class="escx-btn" onclick="_secEscMesVis=_secEscMaisMes(\'' + mes + '\',-1);_secEscAtualizar()" title="Mês anterior">\u{2039}</button>'
+    + '<div class="escx-mes">' + esc(_secEscMesTxt(mes)) + '</div>'
+    + '<button type="button" class="escx-btn" onclick="_secEscMesVis=_secEscMaisMes(\'' + mes + '\',1);_secEscAtualizar()" title="Próximo mês">\u{203A}</button>'
+    + '<button type="button" class="escx-btn pri" onclick="sec_servImprimir(\'' + mes + '\')">\u{1F5A8}\u{FE0F} Imprimir escala do mês</button></div></div>'
+    + aviso
+    + '<div class="escx-sec" style="margin-top:0">Plantão — guarnições</div>'
+    + '<div class="escx-grid">' + _PL_EQUIPES_SEC.map(guarnicao).join('') + '</div>'
+    + '<div class="escx-sec">Setor administrativo</div>'
+    + '<div class="escx-grid" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr))">' + cheios.map(setorCard).join('') + '</div>'
+    + blocoVazios
+    + _secServHtmlQuadroApoio(mes, d) + ajuda + '</div>';
 }
 
 // ── Quadro "Escala de apoio" da escala de serviço: nomes FIXOS (pedido de 14/10/2026) ──
@@ -178,14 +186,14 @@ function _secServApoioCongelar(mes) {
 }
 function _secServHtmlQuadroApoio(mes, d) {
   const q = _secServQuadroApoio(mes, d), dts = Object.keys(q).sort(), fixo = !!(d.escalaServApoio || {})[mes];
-  return '<div style="margin-top:14px;border:1px solid #e2e8f0;border-radius:8px;padding:10px;background:#fafafa">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px"><div><div style="font-weight:700;font-size:.92rem">\u{1F4CB} Quadro "Escala de apoio" desta escala de serviço</div>'
-    + '<div style="font-size:.74rem;color:#64748b">Sai na impressão da escala de serviço com estes nomes fixos — mudar a escala de apoio de sábado <b>não</b> muda este quadro. Um nome por linha (ex.: BRUNA SANTOS – CME).' + (fixo ? '' : ' <b style="color:#b45309">Ainda não guardado — mostrando a escala de apoio atual.</b>') + '</div></div>'
-    + '<button class="btn-sm btn-outline" onclick="sec_servApoioRecopiar(\'' + mes + '\')">Copiar de novo da escala de apoio</button></div>'
-    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px">'
-    + dts.map(dt => '<div><div style="font-size:.74rem;font-weight:700;margin-bottom:2px">DIA ' + _secBR(dt) + '</div>'
-      + '<textarea rows="5" onchange="sec_servApoioSalvar(\'' + mes + '\',\'' + dt + '\',this.value)" style="width:100%;font-size:.8rem;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;resize:vertical">' + esc(q[dt] || '') + '</textarea></div>').join('')
-    + '</div></div>';
+  return '<details><summary>Quadro "Escala de apoio" que sai na impressão <span class="n">(nomes fixos' + (fixo ? '' : ' — ainda não guardado') + ')</span></summary><div class="dentro">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
+    + '<div style="font-size:13px;color:var(--mu)">Mudar o apoio de sábado <b style="color:var(--tx)">não</b> muda este quadro. Um nome por linha (ex.: BRUNA SANTOS – CME).</div>'
+    + '<button type="button" class="escx-btn" onclick="sec_servApoioRecopiar(\'' + mes + '\')">Copiar de novo do apoio de sábado</button></div>'
+    + '<div class="escx-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">'
+    + dts.map(dt => '<div><div class="escx-rot" style="margin-bottom:4px">Dia ' + _secBR(dt) + '</div>'
+      + '<textarea rows="5" onchange="sec_servApoioSalvar(\'' + mes + '\',\'' + dt + '\',this.value)" style="width:100%;padding:6px 8px;resize:vertical">' + esc(q[dt] || '') + '</textarea></div>').join('')
+    + '</div></div></details>';
 }
 async function sec_servApoioSalvar(mes, dt, valor) {
   const txt = String(valor || '').split('\n').map(l => l.trim()).filter(Boolean).join('\n').slice(0, 1000);

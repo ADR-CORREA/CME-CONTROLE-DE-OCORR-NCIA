@@ -145,7 +145,7 @@ const _SEC_GRUPOS = [
   ['hoje', '\u{1F3E0} Hoje', [['hoje', 'Hoje']]],
   ['docs', '\u{1F4C5} Agenda e Documentos', [['agenda', '\u{1F4C5} Agenda'], ['despachos', '\u{1F4E8} Despachos PRODOC'], ['arquivo', '\u{1F5C4}\u{FE0F} Arquivo']]],
   ['pessoal', '\u{1F465} Pessoal', [['servidores', '\u{1F464} Servidores'], ['faltas', '\u{1F4DD} Faltas e Folha de Ponto'], ['ferias', '\u{1F3D6}\u{FE0F} Férias e Licenças'], ['apoios', '\u{23F1}\u{FE0F} Apoios e Dispensas'], ['folgas', '\u{1F91D} Folgas combinadas']]],
-  ['escalas', '\u{1F4C6} Escalas', [['escalas', 'Escala de Serviço e Apoio']]],
+  ['escalas', '\u{1F4C6} Escalas', [['escalas', '\u{1F4CB} Apoio de sábado'], ['escserv', '\u{1F6E1}\u{FE0F} Escala de serviço (24x96)']]],
 ];
 const _secUltimaDoGrupo = {};
 function _secGrupoDe(aba) { const g = _SEC_GRUPOS.find(x => x[2].some(a => a[0] === aba)); return g ? g[0] : ''; }
@@ -188,7 +188,7 @@ function sec_render() {
   _secRenderMenu();
   if (typeof _secRenderHoje === 'function') _secRenderHoje();
   if (_secPerfilId) return sec_renderPerfil();
-  ({ hoje: sec_renderHojeDash, agenda: sec_renderAgenda, despachos: sec_renderDespachos, arquivo: sec_renderArquivo, servidores: sec_renderServidores, ferias: sec_renderFerias, escalas: sec_renderEscalas, faltas: sec_renderFaltas, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
+  ({ hoje: sec_renderHojeDash, agenda: sec_renderAgenda, despachos: sec_renderDespachos, arquivo: sec_renderArquivo, servidores: sec_renderServidores, ferias: sec_renderFerias, escalas: sec_renderEscalas, escserv: sec_renderEscServ, faltas: sec_renderFaltas, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
 }
 
 // ── Servidores ────────────────────────────────────────────────────────────────
