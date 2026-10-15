@@ -80,6 +80,7 @@ function _secLinhaCompromisso(x, d, diaRef) {
     + '<div style="font-size:.74rem;color:#64748b">' + esc(x.categoria) + (x.responsavel ? ' · ' + esc(x.responsavel) : '') + (x.data !== diaRef ? ' · marcado para ' + _secBR(x.data) : '') + '</div>'
     + (atraso ? '<div style="font-size:.74rem;font-weight:700;color:#e11d48">\u{21BB} Atrasado desde ' + _secBRc(x.data) + ' (' + atraso + ' dia' + (atraso > 1 ? 's' : '') + ')</div>' : '')
     + (x.descricao ? '<div style="font-size:.82rem;color:#334155;margin-top:2px;white-space:pre-wrap">' + esc(x.descricao) + '</div>' : '')
+    + ((x.arquivos || []).length ? '<div style="font-size:.8rem;margin-top:3px">' + x.arquivos.map(a => '<a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + esc(a.nome).replace(/'/g, '') + '\');return false">\u{1F4CE} ' + esc(a.nome) + '</a>').join(' · ') + '</div>' : '')
     + (x.concluido ? '<div style="font-size:.72rem;color:#16a34a">Concluído por ' + esc(x.concluidoPor || '') + ' em ' + new Date(x.concluidoEm).toLocaleString('pt-BR') + '</div>' : '')
     + '</div><div style="display:flex;flex-direction:column;gap:3px"><button class="btn-sm btn-outline" onclick="sec_agNovo(\'\',\'' + x.id + '\')">Editar</button>'
     + '<button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_agExcluir(\'' + x.id + '\')">Excluir</button></div></div>';
@@ -111,7 +112,8 @@ function sec_agNovo(dia, id) {
   const cats = _secCategorias(d), cat = x.categoria || cats[0].nome;
   const nomes = [...new Set(d.servidores.map(s => s.nome).concat(usuarioAtual ? [usuarioAtual.nome] : []))].sort();
   _secModal(id ? 'Editar compromisso' : 'Novo compromisso',
-    _secCampo('sec-ag-titulo', 'O que precisa ser feito *', x.titulo || '', 'placeholder="Ex.: Enviar folhas de ponto assinadas à UNIPES"')
+    (typeof _secAgHtmlAnexo === 'function' ? _secAgHtmlAnexo(x) : '')
+    + _secCampo('sec-ag-titulo', 'O que precisa ser feito *', x.titulo || '', 'placeholder="Ex.: Enviar folhas de ponto assinadas à UNIPES"')
     + '<div class="form-grid">' + _secCampo('sec-ag-data', 'Data *', x.data || dia || _secHoje(), 'type="date"') + _secCampo('sec-ag-hora', 'Hora (opcional)', x.hora || '', 'type="time"') + '</div>'
     + '<div class="form-field"><label>Categoria</label><div style="display:flex;gap:6px;flex-wrap:wrap">' + cats.map(k => '<button type="button" data-grupo="sec-ag-cat" data-valor="' + esc(k.nome) + '" onclick="_secAgEscolherCat(this)" style="cursor:pointer;padding:5px 10px;border-radius:4px;border:2px solid '
       + (k.nome === cat ? k.cor : 'transparent') + ';background:' + k.cor + '22;color:#0f172a;font-weight:600;font-size:.82rem" class="' + (k.nome === cat ? 'active' : '') + '"><span style="display:inline-block;width:9px;height:9px;background:' + k.cor + ';margin-right:5px"></span>' + esc(k.nome) + '</button>').join('')
@@ -119,7 +121,7 @@ function sec_agNovo(dia, id) {
     + _secCampo('sec-ag-resp', 'Responsável (opcional)', x.responsavel || '', 'list="sec-ag-nomes"') + '<datalist id="sec-ag-nomes">' + nomes.map(n => '<option>' + esc(n) + '</option>').join('') + '</datalist>'
     + '<div class="form-field"><label>Detalhes (opcional)</label><textarea id="sec-ag-desc" rows="3">' + esc(x.descricao || '') + '</textarea></div>'
     + '<div style="font-size:.78rem;color:#64748b">Se não for marcado como concluído no dia, ele continua aparecendo nos dias seguintes (no painel Hoje e no contador do menu) até ser concluído.</div>',
-    '<button class="btn-primary" onclick="sec_agSalvar(\'' + (id || '') + '\')">Salvar</button>', 600);
+    '<button class="btn-primary" id="sec-ag-salvar" onclick="sec_agSalvar(\'' + (id || '') + '\')">Salvar</button>', 640);
   setTimeout(() => document.getElementById('sec-ag-titulo')?.focus(), 50);
 }
 function _secAgEscolherCat(btn) {
@@ -131,12 +133,21 @@ async function sec_agSalvar(id) {
   const v = { titulo: _secVal('sec-ag-titulo'), data: _secVal('sec-ag-data'), hora: _secVal('sec-ag-hora'), categoria: _secVal('sec-ag-cat'), responsavel: _secVal('sec-ag-resp'), descricao: _secVal('sec-ag-desc') };
   if (v.titulo.length < 3) { _mostrarToast('Escreva o que precisa ser feito.', 'erro'); return; }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v.data)) { _mostrarToast('Informe a data.', 'erro'); return; }
+  const files = [...(document.getElementById('sec-ag-files')?.files || [])];
+  const grande = files.find(f => f.size > 15 * 1024 * 1024); if (grande) { _mostrarToast(grande.name + ': maior que 15 MB.', 'erro'); return; }
+  const btn = document.getElementById('sec-ag-salvar'); if (btn && files.length) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+  let enviados = [];
+  try { if (files.length) enviados = await _secAgEnviarAnexos(files, v); }
+  catch (e) {
+    _mostrarToast('Não consegui enviar o anexo: ' + (e.message || e) + '. Nada foi salvo.', 'erro');
+    await _secMoverParaLixeiraR2(enviados); if (btn) { btn.disabled = false; btn.textContent = 'Salvar'; } return;
+  }
   const agora = new Date().toISOString(), por = usuarioAtual ? usuarioAtual.nome : '';
   const ok = await _secMutar(d => {
-    if (id) { const x = d.compromissos.find(c => c.id === id); if (!x) return false; Object.assign(x, v, { editadoPor: por, editadoEm: agora }); }
-    else d.compromissos.push(Object.assign({ id: _secId('cmp'), concluido: false, criadoPor: por, criadoEm: agora }, v));
-  }, { action: id ? 'sec_comp_editar' : 'sec_comp_criar', alvo: v.titulo, detalhe: _secBR(v.data) + (v.hora ? ' ' + v.hora : '') + ' · ' + v.categoria });
-  if (!ok) return;
+    if (id) { const x = d.compromissos.find(c => c.id === id); if (!x) return false; Object.assign(x, v, { arquivos: (x.arquivos || []).concat(enviados), editadoPor: por, editadoEm: agora }); }
+    else d.compromissos.push(Object.assign({ id: _secId('cmp'), concluido: false, criadoPor: por, criadoEm: agora, arquivos: enviados }, v));
+  }, { action: id ? 'sec_comp_editar' : 'sec_comp_criar', alvo: v.titulo, detalhe: _secBR(v.data) + (v.hora ? ' ' + v.hora : '') + ' · ' + v.categoria + (enviados.length ? ' · ' + enviados.length + ' anexo(s)' : '') });
+  if (!ok) { await _secMoverParaLixeiraR2(enviados); if (btn) { btn.disabled = false; btn.textContent = 'Salvar'; } return; }
   _secFecharModal(); _mostrarToast('Compromisso salvo.', 'sucesso');
   if (_secAba === 'agenda') { _secAgMes = v.data.slice(0, 7); _secAgDia = v.data; }
   sec_render();
@@ -157,7 +168,9 @@ async function sec_agExcluir(id) {
   if (!confirm('Excluir o compromisso "' + x.titulo + '"? (fica guardado na lixeira da Secretaria)')) return;
   const ok = await _secMutar(d => { const i = d.compromissos.findIndex(c => c.id === id); if (i < 0) return false; _secParaLixeira(d, 'compromisso', d.compromissos[i]); d.compromissos.splice(i, 1); },
     { action: 'sec_comp_excluir', alvo: x.titulo, detalhe: _secBR(x.data) });
-  if (ok) sec_render();
+  if (!ok) return;
+  if ((x.arquivos || []).length) await _secMoverParaLixeiraR2(x.arquivos);
+  sec_render();
 }
 
 // ── Categorias e cores ────────────────────────────────────────────────────────
