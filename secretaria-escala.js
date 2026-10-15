@@ -173,8 +173,8 @@ async function sec_escAlterar(id, mudar, acao) {
     { action: acao, alvo: _secEscNome(x0, d0) + ' — ' + _secBR(x0.data), detalhe: mudar.status !== undefined ? (mudar.status || 'sem marcação') : mudar.local });
   if (ok) _secEscAtualizar();
 }
-function sec_escLocal(id) { const x = _secDados().escalaSabado.find(e => e.id === id); if (x) sec_escAlterar(id, { local: x.local === 'PEF' ? 'CME' : 'PEF' }, 'sec_esc_local'); }
-function sec_escPresenca(id) { const x = _secDados().escalaSabado.find(e => e.id === id); if (x) sec_escAlterar(id, { status: x.status === 'presente' ? 'falta' : x.status === 'falta' ? '' : 'presente' }, 'sec_esc_presenca'); }
+function sec_escLocal(id) { const x = _secDados().escalaSabado.find(e => e.id === id); if (x) return sec_escAlterar(id, { local: x.local === 'PEF' ? 'CME' : 'PEF' }, 'sec_esc_local'); }
+function sec_escPresenca(id) { const x = _secDados().escalaSabado.find(e => e.id === id); if (x) return sec_escAlterar(id, { status: x.status === 'presente' ? 'falta' : x.status === 'falta' ? '' : 'presente' }, 'sec_esc_presenca'); }
 async function sec_escRemover(id) {
   const d0 = _secDados(), x = d0.escalaSabado.find(e => e.id === id); if (!x) return;
   if (!confirm('Tirar ' + _secEscNome(x, d0) + ' da escala de ' + _secBR(x.data) + '?')) return;

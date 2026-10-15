@@ -58,17 +58,44 @@ function _secCpfValido(c) {
 function _secCpfFmt(c) { c = String(c || '').replace(/\D/g, ''); return c.length === 11 ? c.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : c; }
 
 // Lê a versão atual do banco, aplica a mudança e grava (evita perder o que outro computador salvou).
-async function _secMutar(fn, audit) {
-  let base = _secDados();
+// FILA (achado no teste com os dados reais em 14/10/2026): o salvarStore não espera a gravação terminar, então duas
+// gravações seguidas (as automáticas ao abrir a Secretaria, ou dois cliques rápidos) liam o banco ANTES da anterior
+// terminar e a última apagava a outra. Agora cada gravação espera a anterior terminar de gravar.
+let _secFilaGravacao = Promise.resolve();
+function _secMutar(fn, audit) {
+  const p = _secFilaGravacao.then(() => _secMutarAgora(fn, audit));
+  _secFilaGravacao = p.catch(() => false);
+  return p;
+}
+async function _secMutarAgora(fn, audit) {
+  let base = _secDados(), lidoDoBanco = false;
   try {
     const r = await _dbLerChave('cme_secretaria');
     if (r.error) throw r.error;
-    if (r.data && r.data.value) base = _secNormal(r.data.value);
+    if (r.data && r.data.value) { base = _secNormal(r.data.value); lidoDoBanco = true; }
   } catch (e) { _mostrarToast('Sem conexão com o banco — nada foi salvo. Tente de novo.', 'erro'); return false; }
   const novo = JSON.parse(JSON.stringify(base));
   if (fn(novo) === false) return false;
-  salvarStore('secretaria', novo);
+  if (!(await _secGravarBanco(novo, lidoDoBanco ? base : null))) return false;
   if (audit) auditar(Object.assign({ modulo: 'Secretaria' }, audit));
+  return true;
+}
+// grava e ESPERA terminar; mesma proteção anti-perda do salvarStore (bloqueia gravação que apagaria muitos registros)
+async function _secGravarBanco(novo, base) {
+  if (!window._db) { salvarStore('secretaria', novo); return true; } // sem banco (ambiente de teste)
+  const contar = _STORES_PROTEGIDAS.secretaria, nNovo = contar(novo), nBase = base ? contar(base) : -1;
+  if (nBase >= 3 && nNovo >= 0) {
+    const perda = nBase - nNovo;
+    if (nNovo <= 1 || (perda > 3 && perda / nBase > 0.4)) {
+      _mostrarToast('\u{1F6E1}\u{FE0F} Proteção anti-perda: bloqueei uma gravação que apagaria ' + perda + ' de ' + nBase + ' registros da Secretaria. Recarregue a página (F5) e tente de novo.', 'erro');
+      return false;
+    }
+  }
+  try {
+    const { error } = await _dbGravar('cme_secretaria', novo);
+    if (error) throw error;
+  } catch (e) { _mostrarToast('\u{26A0}\u{FE0F} Erro ao salvar no banco: ' + (e.message || e) + '. Tente de novo.', 'erro'); return false; }
+  _cache.secretaria = novo;
   return true;
 }
 // Excluir nunca apaga: guarda o item na lixeira interna, com quem e quando.
