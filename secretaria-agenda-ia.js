@@ -3,7 +3,9 @@
    a IA lê e já preenche "O que precisa ser feito" e "Detalhes" (e a data, se o documento tiver prazo).
    • O texto é tirado NO NAVEGADOR: PDF com texto (pdf.js), PDF escaneado/foto (OCR local — mesmas funções da
      Comunicação: _comExtrairJpegsPdf/_comJpegParaCanvas/_comOcrCanvas), Word .docx (mammoth) e .txt.
-   • O resumo vem do Worker: POST /sec/resumir (só admin/gerência/secretaria; Workers AI, llama 3.1 8B).
+   • O resumo vem do Worker: POST /sec/resumir (só admin/gerência/secretaria) — "leitura conferida" (15/10/2026):
+     duas IAs grátis (llama 3.3 70B + mistral small) comparadas, conferência contra o texto e faixa de confiança.
+     Também usado pelo Arquivo (modo 'arquivo'). Faixa comum: leitura-conferida.js.
    • O arquivo fica guardado no compromisso (Worker /sec, pasta agenda/AAAA-MM) e abre pela lista.
    Depende de secretaria*.js e das funções de OCR do index.html. Emojis só por \u{...}. Prefixo _secAgIa / sec_agIa. */
 
@@ -177,8 +179,9 @@ async function sec_arqIaLer(input) {
   const st = (txt, cor) => { const el = document.getElementById('sec-arq-ia'); if (el) el.innerHTML = '<span style="color:' + (cor || '#475569') + '">' + txt + '</span>'; };
   const files = [...(input.files || [])]; if (!files.length) return;
   st('\u{23F3} Lendo o documento…');
-  let texto = '';
+  let texto = ''; _secIaPagsIlegiveis = [];
   try { for (const f of files) texto += '\n\n' + await _secTextoDoArquivo(f); } catch (e) { console.warn('[Arquivo] leitura:', e); }
+  const avisosLeitura = _secIaPagsIlegiveis.map(p => typeof p === 'number' ? 'a página ' + p + ' não pôde ser lida — confira-a no documento' : p);
   if (texto.replace(/\s/g, '').length < 30) { st('Não consegui ler o texto — preencha à mão. O arquivo será anexado mesmo assim.', '#b45309'); return; }
   st('\u{1F916} A IA está lendo o documento…');
   let r;
@@ -188,7 +191,8 @@ async function sec_arqIaLer(input) {
   const chip = r.tipo && document.querySelector('[data-grupo="sec-arq-tipo"][data-valor="' + r.tipo.replace(/"/g, '') + '"]');
   if (chip) { _secChip(chip); feitos.push('tipo'); }
   campo('sec-arq-num', r.numero, 'número'); campo('sec-arq-assunto', r.assunto, 'assunto'); campo('sec-arq-origem', r.origem, 'origem');
-  const dt = document.getElementById('sec-arq-data'); if (dt && r.data) { dt.value = r.data; feitos.push('data'); }
+  // data: só troca se o campo estiver vazio ou com a data de hoje (o padrão) — não apaga uma data já digitada
+  const dt = document.getElementById('sec-arq-data'); if (dt && r.data && (!dt.value || dt.value === _secHoje())) { dt.value = r.data; feitos.push('data'); }
   // servidores citados: nome completo ou primeiro + último nome no texto
   const tn = ' ' + _secIaNorm(texto) + ' ';
   let marcados = 0;
@@ -198,5 +202,20 @@ async function sec_arqIaLer(input) {
     if (tn.includes(' ' + p.join(' ') + ' ') || (p.length > 2 && tn.includes(' ' + p[0] + ' ' + p[p.length - 1] + ' '))) { cb.checked = true; marcados++; }
   });
   if (marcados) feitos.push(marcados + ' servidor(es) citado(s)');
-  st(feitos.length ? '\u{2705} A IA preencheu: ' + feitos.join(', ') + '. Confira antes de salvar.' : 'A IA não achou informação suficiente — preencha à mão.', feitos.length ? '#15803d' : '#b45309');
+  if (!feitos.length) { st('A IA não achou informação suficiente — preencha à mão.', '#b45309'); return; }
+  // faixa de confiança (leitura conferida — leitura-conferida.js)
+  window.__secArqConf = Object.assign({}, r, { primeira: { tipo: r.tipo, numero: r.numero, data: r.data }, _feitos: feitos, _leitura: avisosLeitura });
+  const el = document.getElementById('sec-arq-ia');
+  if (el) el.innerHTML = lc_faixa(window.__secArqConf, { preencheu: feitos, avisosLeitura, acaoAlt: 'sec_arqUsarAlternativa()', verbo: 'salvar' });
+}
+// "Usar a 2ª leitura" / "Voltar para a 1ª" no Arquivo: troca tipo, número e data
+function sec_arqUsarAlternativa() {
+  const c = window.__secArqConf, a = c && c.alternativa; if (!a) return;
+  const chip = a.tipo && document.querySelector('[data-grupo="sec-arq-tipo"][data-valor="' + a.tipo.replace(/"/g, '') + '"]'); if (chip) _secChip(chip);
+  const num = document.getElementById('sec-arq-num'); if (num) num.value = a.numero || '';
+  const dt = document.getElementById('sec-arq-data'); if (dt && a.data) dt.value = a.data;
+  const voltar = !c._naSegunda;
+  window.__secArqConf = Object.assign({}, c, { alternativa: c.primeira, primeira: a, _naSegunda: voltar });
+  const el = document.getElementById('sec-arq-ia');
+  if (el) el.innerHTML = lc_faixa(window.__secArqConf, { preencheu: c._feitos, avisosLeitura: c._leitura, acaoAlt: 'sec_arqUsarAlternativa()', verbo: 'salvar', rotuloAlt: voltar ? 'Voltar para a 1ª leitura' : 'Usar a 2ª leitura' });
 }
