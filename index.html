@@ -25333,19 +25333,24 @@ async function _getTessWorker() {
 // OCR local que travar/sumir (15/10/2026: a CSP bloqueava o Tesseract e ele ficava esperando PARA SEMPRE)
 // → limite de tempo; depois de falhar uma vez nesta sessão, vai direto ao leitor de imagem da nuvem.
 let _tessFalhou = false;
+// nota de qualidade (0–100) da última página lida pelo OCR local; null = não se sabe (leitor da nuvem).
+// A Agenda usa para avisar "página lida com dificuldade — confira" (15/10/2026).
+let _comOcrUltimaConfianca = null;
 async function _comOcrCanvas(canvas) {
   let txt = '';
+  _comOcrUltimaConfianca = null;
   if (!_tessFalhou) try {
     const limite = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('OCR local passou de ' + ms / 1000 + ' s')), ms))]);
     const w = await limite(_getTessWorker(), 60000);
     const { data } = await limite(w.recognize(canvas), 90000);
     txt = (data.text || '').trim();
+    _comOcrUltimaConfianca = typeof data.confidence === 'number' ? Math.round(data.confidence) : null;
   } catch(e) { console.warn('[CME] OCR local falhou:', e.message); if (/passou de/.test(e.message)) { _tessFalhou = true; _tessWorker = null; _tessLoading = null; } }
   if (txt.replace(/\s/g, '').length < 25) { // texto insuficiente → fallback visão
     try {
       const b64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
       const r = await _comOcrViaWorker(b64);
-      if (r && r.length > txt.length) txt = r;
+      if (r && r.length > txt.length) { txt = r; _comOcrUltimaConfianca = null; }
     } catch(e) {}
   }
   return txt;
@@ -29550,7 +29555,7 @@ function estat_exportarResultado() {
 <script src="secretaria-painel.js?v=20261014b"></script>
 <script src="secretaria-ponto.js?v=20261014o"></script>
 <script src="secretaria-agenda.js?v=20261015s"></script>
-<script src="secretaria-agenda-ia.js?v=20261015s"></script>
+<script src="secretaria-agenda-ia.js?v=20261015f"></script>
 <script src="secretaria-arquivo.js?v=20261015s"></script>
 <script src="logo-policia-penal.js?v=20261014h"></script>
 <script src="secretaria-escala.js?v=20261015e"></script>

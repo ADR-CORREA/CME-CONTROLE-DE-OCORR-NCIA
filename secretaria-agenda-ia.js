@@ -19,7 +19,7 @@ async function _secTextoDoArquivo(file, onProgresso) {
   }
   if (['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
     const bmp = await createImageBitmap(file), c = _comBitmapParaCanvas(bmp, 1600); if (bmp.close) bmp.close();
-    return await _comOcrCanvas(c);
+    const txt = await _comOcrCanvas(c); _secIaNotaOcr(file.name); return txt;
   }
   if (ext !== 'pdf') return '';
   // PDF: página por página, NA ORDEM. Página com texto → usa o texto; página escaneada (sem texto) → OCR.
@@ -44,7 +44,7 @@ async function _secTextoDoArquivo(file, onProgresso) {
     let canvas = jpg ? await _comJpegParaCanvas(jpg, 2000) : null;
     if (!canvas) canvas = await _secRenderPagina(page);
     const ocr = canvas ? await _comOcrCanvas(canvas) : '';
-    if (!ocr.trim()) _secIaPagsIlegiveis.push(p);
+    if (!ocr.trim()) _secIaPagsIlegiveis.push(p); else _secIaNotaOcr('a página ' + p);
     partes.push(ocr || txt);
     if (partes.join('\n').length > 12000) break; // já há texto de sobra para a IA
   }
@@ -53,6 +53,13 @@ async function _secTextoDoArquivo(file, onProgresso) {
 }
 // páginas que a leitura não conseguiu ler — aparecem como aviso para a pessoa conferir à mão
 let _secIaPagsIlegiveis = [];
+// OCR com nota de qualidade baixa (foto torta, borrada, carimbo): nomes e números podem ter saído errados
+const _SEC_OCR_NOTA_MIN = 75;
+function _secIaNotaOcr(onde) {
+  const n = typeof _comOcrUltimaConfianca === 'number' ? _comOcrUltimaConfianca : null;
+  if (n != null && n < _SEC_OCR_NOTA_MIN) _secIaPagsIlegiveis.push(onde + ' foi lida com dificuldade (qualidade ' + n + '%) — confira nomes e números');
+  (window.__secOcrNotas = window.__secOcrNotas || []).push([onde, n]); // (para conferência/testes)
+}
 const _SEC_IA_MAX_PAGS = 10;
 // JPEGs embutidos (scan do celular/CamScanner) NA ORDEM do arquivo — cada página escaneada é uma imagem grande
 function _secJpegsEmOrdem(u) {
@@ -110,12 +117,47 @@ async function sec_agIaLer(input) {
   const cats = [...document.querySelectorAll('[data-grupo="sec-ag-cat"]')];
   const cat = cats.find(b => (r.prazo || r.urgente ? /prazo/i : /prodoc|documento/i).test(b.dataset.valor || ''));
   if (cat) _secAgEscolherCat(cat);
-  r.avisos = _secIaPagsIlegiveis.map(p => typeof p === 'number' ? 'a página ' + p + ' não pôde ser lida — confira-a no documento' : p).concat(r.avisos || []);
-  const avisos = (r.avisos || []).length ? '<div style="color:#b45309;margin-top:3px">\u{26A0}\u{FE0F} Conferir: ' + r.avisos.map(esc).join(' · ') + '</div>' : '';
-  const urg = r.urgente ? '<div style="color:#b91c1c;font-weight:700;margin-top:3px">\u{1F6A8} O documento fala em URGÊNCIA.</div>' : '';
+  const leitura = _secIaPagsIlegiveis.map(p => typeof p === 'number' ? 'a página ' + p + ' não pôde ser lida — confira-a no documento' : p);
+  r.avisos = leitura.concat(r.avisos || []);
+  if (leitura.length && r.confianca === 'alta') r.confianca = 'baixa'; // leitura das letras ruim → não dá para confiar
+  window.__secIaUltima = r; // (para conferência/testes e para "usar a 2ª leitura")
   const el = document.getElementById('sec-ag-ia');
-  if (el) el.innerHTML = '<span style="color:' + (feitos.length ? '#15803d' : '#b45309') + '">' + (feitos.length ? '\u{2705} A IA preencheu: ' + feitos.join(', ') + '. Confira antes de salvar.' : 'A IA não achou informação suficiente — preencha à mão.') + '</span>' + urg + avisos;
-  window.__secIaUltima = r; // (para conferência/testes)
+  if (el) el.innerHTML = _secAgHtmlConfianca(r, feitos);
+}
+// Faixa que diz se dá para confiar na leitura (15/10/2026 — sem IA paga: em vez de prometer 100%, AVISAR quando há dúvida)
+function _secAgHtmlConfianca(r, feitos) {
+  const urg = r.urgente ? '<div style="color:#b91c1c;font-weight:700;margin-top:4px">\u{1F6A8} O documento fala em URGÊNCIA.</div>' : '';
+  if (!feitos.length) return '<span style="color:#b45309">A IA não achou informação suficiente — preencha à mão.</span>' + urg;
+  const preencheu = '<div style="font-size:.78rem;color:#475569;margin-top:2px">A IA preencheu: ' + feitos.join(', ') + '.</div>';
+  const duvidas = r.duvidas || [], avisos = r.avisos || [];
+  if (r.confianca === 'alta' && !avisos.length) {
+    return '<div style="border:1px solid #86efac;background:#f0fdf4;border-left:4px solid #16a34a;border-radius:6px;padding:8px 10px">'
+      + '<div style="font-weight:700;color:#15803d">\u{2705} Leitura conferida</div>'
+      + '<div style="font-size:.8rem;color:#166534">Duas IAs leram o documento e concordaram; números e datas batem com o texto. Dê uma olhada rápida antes de salvar.</div>' + preencheu + urg + '</div>';
+  }
+  const forte = r.confianca === 'baixa';
+  const lista = duvidas.map(d => '<li><b>' + esc(d.campo) + ':</b> 1ª leitura <i>' + esc(d.campo === 'prazo' ? _secAgBRouTxt(d.a) : d.a) + '</i> · 2ª leitura <i>' + esc(d.campo === 'prazo' ? _secAgBRouTxt(d.b) : d.b) + '</i></li>').join('')
+    + avisos.map(a => '<li>' + esc(a) + '</li>').join('');
+  return '<div style="border:1px solid ' + (forte ? '#fcd34d' : '#cbd5e1') + ';background:' + (forte ? '#fffbeb' : '#f8fafc') + ';border-left:4px solid ' + (forte ? '#d97706' : '#64748b') + ';border-radius:6px;padding:8px 10px">'
+    + '<div style="font-weight:700;color:' + (forte ? '#b45309' : '#334155') + '">' + (forte ? '\u{26A0}\u{FE0F} Confira antes de salvar — a leitura pode ter erro' : '\u{2139}\u{FE0F} Confira antes de salvar') + '</div>'
+    + (duvidas.length ? '<div style="font-size:.8rem;color:#92400e">As duas IAs leram o documento de jeitos diferentes. Veja no documento qual está certa.</div>' : '')
+    + (lista ? '<ul style="margin:4px 0 0 18px;padding:0;font-size:.8rem;color:#334155">' + lista + '</ul>' : '')
+    + (r.alternativa ? '<button type="button" class="btn-sm btn-outline" style="margin-top:6px" onclick="sec_agUsarAlternativa()">Usar a 2ª leitura</button>' : '')
+    + preencheu + urg + '</div>';
+}
+function _secAgBRouTxt(v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v)) ? _secBR(v) : v; }
+// troca o que a IA preencheu pela 2ª leitura (o resto que a pessoa digitou fica)
+function sec_agUsarAlternativa() {
+  const r = window.__secIaUltima, a = r && r.alternativa; if (!a) return;
+  const tit = document.getElementById('sec-ag-titulo'), desc = document.getElementById('sec-ag-desc'), data = document.getElementById('sec-ag-data'), resp = document.getElementById('sec-ag-resp');
+  if (tit && a.assunto) tit.value = a.assunto;
+  if (desc && a.detalhes) desc.value = r.detalhes && desc.value.includes(r.detalhes) ? desc.value.replace(r.detalhes, a.detalhes) : a.detalhes;
+  if (resp && a.responsavel) resp.value = a.responsavel;
+  if (data) { if (a.prazo && a.prazo >= _secHoje()) data.value = a.prazo; else if (r.prazo && data.value === r.prazo) data.value = _secHoje(); }
+  window.__secIaUltima = Object.assign({}, r, { assunto: a.assunto, detalhes: a.detalhes, responsavel: a.responsavel, prazo: a.prazo, alternativa: { assunto: r.assunto, detalhes: r.detalhes, responsavel: r.responsavel, prazo: r.prazo } });
+  const el = document.getElementById('sec-ag-ia');
+  if (el) el.innerHTML = _secAgHtmlConfianca(window.__secIaUltima, ['assunto', 'detalhes', 'responsável']).replace('Usar a 2ª leitura', 'Voltar para a 1ª leitura');
+  _mostrarToast('Campos trocados pela 2ª leitura — confira no documento.', 'sucesso');
 }
 
 // envia os arquivos escolhidos no modal (chamado pelo sec_agSalvar); devolve [{key,nome,tamanho}]
