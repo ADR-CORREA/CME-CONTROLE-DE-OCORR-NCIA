@@ -26,21 +26,34 @@ async function _secTextoDoArquivo(file, onProgresso) {
   // (antes: só as 2 maiores imagens do arquivo, fora de ordem, e o OCR podia travar para sempre)
   const pdfjs = await _secCarregarPdfJs(), buf = await file.arrayBuffer();
   const pdf = await pdfjs.getDocument({ data: buf.slice(0) }).promise, total = Math.min(pdf.numPages, _SEC_IA_MAX_PAGS);
-  const jpegs = _secJpegsEmOrdem(new Uint8Array(buf)), partes = [];
+  const jpegs = _secJpegsEmOrdem(new Uint8Array(buf)), paginas = [], partes = [];
   for (let p = 1; p <= total; p++) {
     const page = await pdf.getPage(p);
     const txt = (await page.getTextContent()).items.map(i => i.str).join(' ').trim();
-    if (txt.replace(/\s/g, '').length >= 40) { partes.push(txt); continue; }
+    paginas.push({ page, txt, escaneada: txt.replace(/\s/g, '').length < 40 });
+  }
+  // imagem de cada página escaneada: 1 JPEG por página do PDF, ou 1 JPEG por página ESCANEADA (PDF misto), na ordem
+  const escaneadas = paginas.filter(x => x.escaneada).length;
+  const porEscaneada = jpegs.length === escaneadas && jpegs.length !== pdf.numPages;
+  let k = 0;
+  for (let p = 1; p <= paginas.length; p++) {
+    const { page, txt, escaneada } = paginas[p - 1];
+    if (!escaneada) { partes.push(txt); continue; }
     if (onProgresso) onProgresso('\u{1F50D} Lendo página ' + p + ' de ' + total + ' (escaneada)…');
-    let canvas = jpegs.length === pdf.numPages ? await _comJpegParaCanvas(jpegs[p - 1], 2000) : null;
+    const jpg = jpegs.length === pdf.numPages ? jpegs[p - 1] : porEscaneada ? jpegs[k++] : null;
+    let canvas = jpg ? await _comJpegParaCanvas(jpg, 2000) : null;
     if (!canvas) canvas = await _secRenderPagina(page);
     const ocr = canvas ? await _comOcrCanvas(canvas) : '';
+    if (!ocr.trim()) _secIaPagsIlegiveis.push(p);
     partes.push(ocr || txt);
     if (partes.join('\n').length > 12000) break; // já há texto de sobra para a IA
   }
+  if (pdf.numPages > total) _secIaPagsIlegiveis.push('as páginas depois da ' + total + ' não foram lidas (limite de ' + total + ')');
   return partes.map((t, i) => '[Página ' + (i + 1) + ']\n' + t).join('\n\n');
 }
-const _SEC_IA_MAX_PAGS = 8;
+// páginas que a leitura não conseguiu ler — aparecem como aviso para a pessoa conferir à mão
+let _secIaPagsIlegiveis = [];
+const _SEC_IA_MAX_PAGS = 10;
 // JPEGs embutidos (scan do celular/CamScanner) NA ORDEM do arquivo — cada página escaneada é uma imagem grande
 function _secJpegsEmOrdem(u) {
   const out = [];
@@ -57,7 +70,7 @@ async function _secRenderPagina(page) {
     const vp = page.getViewport({ scale: 2 }), c = document.createElement('canvas');
     c.width = vp.width; c.height = vp.height;
     const task = page.render({ canvasContext: c.getContext('2d'), viewport: vp });
-    await Promise.race([task.promise, new Promise((_, rej) => setTimeout(() => { try { task.cancel(); } catch (e) {} rej(new Error('render')); }, 15000))]);
+    await Promise.race([task.promise, new Promise((_, rej) => setTimeout(() => { try { task.cancel(); } catch (e) {} rej(new Error('render')); }, 40000))]);
     return c;
   } catch (e) { return null; }
 }
@@ -78,7 +91,7 @@ async function sec_agIaLer(input) {
   const files = [...(input.files || [])]; if (!files.length) return;
   const grande = files.find(f => f.size > 15 * 1024 * 1024); if (grande) { _secAgIaStatus(esc(grande.name) + ': maior que 15 MB.', '#b91c1c'); return; }
   _secAgIaStatus('\u{23F3} Lendo o documento…');
-  let texto = '';
+  let texto = ''; _secIaPagsIlegiveis = [];
   try { for (const f of files) texto += '\n\n=== ' + f.name + ' ===\n' + await _secTextoDoArquivo(f, m => _secAgIaStatus(m)); }
   catch (e) { console.warn('[Agenda] leitura do anexo:', e); }
   if (texto.replace(/===[^\n]*===/g, '').replace(/\s/g, '').length < 30) { _secAgIaStatus('Não consegui ler o texto do documento — preencha à mão. O arquivo será anexado mesmo assim.', '#b45309'); return; }
@@ -97,6 +110,7 @@ async function sec_agIaLer(input) {
   const cats = [...document.querySelectorAll('[data-grupo="sec-ag-cat"]')];
   const cat = cats.find(b => (r.prazo || r.urgente ? /prazo/i : /prodoc|documento/i).test(b.dataset.valor || ''));
   if (cat) _secAgEscolherCat(cat);
+  r.avisos = _secIaPagsIlegiveis.map(p => typeof p === 'number' ? 'a página ' + p + ' não pôde ser lida — confira-a no documento' : p).concat(r.avisos || []);
   const avisos = (r.avisos || []).length ? '<div style="color:#b45309;margin-top:3px">\u{26A0}\u{FE0F} Conferir: ' + r.avisos.map(esc).join(' · ') + '</div>' : '';
   const urg = r.urgente ? '<div style="color:#b91c1c;font-weight:700;margin-top:3px">\u{1F6A8} O documento fala em URGÊNCIA.</div>' : '';
   const el = document.getElementById('sec-ag-ia');
