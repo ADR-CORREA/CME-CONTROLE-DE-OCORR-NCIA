@@ -75,3 +75,33 @@ async function _secAgEnviarAnexos(files, v) {
   }
   return enviados;
 }
+
+// ── Arquivo geral: a IA preenche a ficha do documento (tipo, número, data, origem, assunto) e marca os servidores citados ──
+function _secIaNorm(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+async function sec_arqIaLer(input) {
+  const st = (txt, cor) => { const el = document.getElementById('sec-arq-ia'); if (el) el.innerHTML = '<span style="color:' + (cor || '#475569') + '">' + txt + '</span>'; };
+  const files = [...(input.files || [])]; if (!files.length) return;
+  st('\u{23F3} Lendo o documento…');
+  let texto = '';
+  try { for (const f of files) texto += '\n\n' + await _secTextoDoArquivo(f); } catch (e) { console.warn('[Arquivo] leitura:', e); }
+  if (texto.replace(/\s/g, '').length < 30) { st('Não consegui ler o texto — preencha à mão. O arquivo será anexado mesmo assim.', '#b45309'); return; }
+  st('\u{1F916} A IA está lendo o documento…');
+  let r;
+  try { r = await r2_api('POST', '/sec/resumir', { 'Content-Type': 'application/json' }, JSON.stringify({ texto: texto.slice(0, 9000), nome: files.map(f => f.name).join(', ').slice(0, 120), modo: 'arquivo' })); }
+  catch (e) { st('A IA não respondeu (' + esc(e.message || e) + ') — preencha à mão.', '#b91c1c'); return; }
+  const feitos = [], campo = (id, v, rot) => { const el = document.getElementById(id); if (el && v && !el.value.trim()) { el.value = v; feitos.push(rot); } };
+  const chip = r.tipo && document.querySelector('[data-grupo="sec-arq-tipo"][data-valor="' + r.tipo.replace(/"/g, '') + '"]');
+  if (chip) { _secChip(chip); feitos.push('tipo'); }
+  campo('sec-arq-num', r.numero, 'número'); campo('sec-arq-assunto', r.assunto, 'assunto'); campo('sec-arq-origem', r.origem, 'origem');
+  const dt = document.getElementById('sec-arq-data'); if (dt && r.data) { dt.value = r.data; feitos.push('data'); }
+  // servidores citados: nome completo ou primeiro + último nome no texto
+  const tn = ' ' + _secIaNorm(texto) + ' ';
+  let marcados = 0;
+  document.querySelectorAll('#sec-arq-servs input[type=checkbox]').forEach(cb => {
+    const s = _secServ(cb.value); if (!s || cb.checked) return;
+    const p = _secIaNorm(s.nome).split(' ');
+    if (tn.includes(' ' + p.join(' ') + ' ') || (p.length > 2 && tn.includes(' ' + p[0] + ' ' + p[p.length - 1] + ' '))) { cb.checked = true; marcados++; }
+  });
+  if (marcados) feitos.push(marcados + ' servidor(es) citado(s)');
+  st(feitos.length ? '\u{2705} A IA preencheu: ' + feitos.join(', ') + '. Confira antes de salvar.' : 'A IA não achou informação suficiente — preencha à mão.', feitos.length ? '#15803d' : '#b45309');
+}

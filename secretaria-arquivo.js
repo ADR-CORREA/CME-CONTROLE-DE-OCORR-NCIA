@@ -93,7 +93,8 @@ function sec_arqNovo(id) {
     + '</div></div>'
     + (x.arquivos && x.arquivos.length ? '<div class="form-field"><label>Arquivos já anexados</label><div style="font-size:.85rem">' + x.arquivos.map(a => '\u{1F4CE} ' + esc(a.nome)).join('<br>') + '</div></div>' : '')
     + '<div class="form-field"><label>' + (id ? 'Anexar mais arquivos (opcional)' : 'Arquivo(s) * — PDF, imagem, Word ou Excel, até 15 MB cada') + '</label>'
-    + '<input type="file" id="sec-arq-files" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.odt,.txt"></div>',
+    + '<input type="file" id="sec-arq-files" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.odt,.txt"' + (typeof sec_arqIaLer === 'function' ? ' onchange="sec_arqIaLer(this)"' : '') + '>'
+    + '<div id="sec-arq-ia" style="font-size:.8rem;margin-top:4px;color:#64748b">\u{1F916} Ao escolher o arquivo, a IA lê e preenche tipo, número, data, assunto e os servidores citados.</div></div>',
     '<button class="btn-primary" id="sec-arq-salvar" onclick="sec_arqSalvar(\'' + (id || '') + '\')">Salvar</button>', 680);
 }
 function _secArqFiltrarServs(q) {

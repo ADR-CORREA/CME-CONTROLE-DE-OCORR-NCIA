@@ -113,23 +113,52 @@ function _secChip(btn) {
 }
 
 // ── Estrutura da aba ──────────────────────────────────────────────────────────
+// Menu em 4 grupos (pedido de 14/10/2026: mais simples para o uso diário); a Auditoria fica num ícone discreto.
+const _SEC_GRUPOS = [
+  ['hoje', '\u{1F3E0} Hoje', [['hoje', 'Hoje']]],
+  ['docs', '\u{1F4C5} Agenda e Documentos', [['agenda', '\u{1F4C5} Agenda'], ['despachos', '\u{1F4E8} Despachos PRODOC'], ['arquivo', '\u{1F5C4}\u{FE0F} Arquivo']]],
+  ['pessoal', '\u{1F465} Pessoal', [['servidores', '\u{1F464} Servidores'], ['faltas', '\u{1F4DD} Faltas e Folha de Ponto'], ['ferias', '\u{1F3D6}\u{FE0F} Férias e Licenças'], ['apoios', '\u{23F1}\u{FE0F} Apoios e Dispensas'], ['folgas', '\u{1F91D} Folgas combinadas']]],
+  ['escalas', '\u{1F4C6} Escalas', [['escalas', 'Escala de Serviço e Apoio']]],
+];
+const _secUltimaDoGrupo = {};
+function _secGrupoDe(aba) { const g = _SEC_GRUPOS.find(x => x[2].some(a => a[0] === aba)); return g ? g[0] : ''; }
 function sec_inicializar() {
   const root = document.getElementById('sec-root');
   if (!root) return;
   if (!_secPode()) { root.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b">Acesso restrito à Secretaria e à Gerência.</div>'; return; }
-  const abas = [['hoje', '\u{1F3E0} Hoje'], ['agenda', '\u{1F4C5} Agenda'], ['despachos', '\u{1F4E8} Despachos PRODOC'], ['arquivo', '\u{1F5C4}\u{FE0F} Arquivo'], ['servidores', '\u{1F464} Servidores'], ['ferias', '\u{1F3D6}\u{FE0F} Férias e Licenças'], ['escalas', '\u{1F4C6} Escala de Serviço e Apoio'], ['faltas', '\u{1F4DD} Faltas e Folha de Ponto'], ['apoios', '\u{23F1}\u{FE0F} Apoios e Dispensas'], ['folgas', '\u{1F91D} Folgas combinadas'], ['auditoria', '\u{1F50D} Auditoria']];
-  root.innerHTML = '<div class="dash-header"><div><div class="dash-title">\u{1F5C2}\u{FE0F} Secretaria</div>'
-    + '<div class="dash-update">Servidores, apoios e dispensas, folgas e documentos — acesso restrito à Secretaria e à Gerência</div></div></div>'
-    + '<div class="sub-tabs">' + abas.map(([k, r]) => '<div class="sub-tab' + (k === _secAba ? ' active' : '') + '" id="sec-stab-' + k + '" onclick="sec_mudarAba(\'' + k + '\')">' + r + '</div>').join('') + '</div>'
-    + '<div id="sec-hoje"></div><div id="sec-conteudo" style="padding-top:12px"></div>';
+  root.innerHTML = '<div class="dash-header" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><div class="dash-title">\u{1F5C2}\u{FE0F} Secretaria</div>'
+    + '<div class="dash-update">Servidores, apoios e dispensas, folgas e documentos — acesso restrito à Secretaria e à Gerência</div></div>'
+    + '<div style="display:flex;gap:6px;align-items:center"><input id="sec-busca" list="sec-busca-lista" placeholder="\u{1F50E} Buscar servidor pelo nome…" onchange="sec_buscaAbrir(this.value)" style="min-width:250px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px"><datalist id="sec-busca-lista"></datalist>'
+    + '<button type="button" id="sec-stab-auditoria" title="Auditoria — quem fez o quê na Secretaria" onclick="sec_mudarAba(\'auditoria\')" style="padding:6px 9px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;cursor:pointer">\u{1F50D}</button></div></div>'
+    + '<div id="sec-menu"></div><div id="sec-hoje"></div><div id="sec-conteudo" style="padding-top:12px"></div>';
   sec_render();
 }
+function _secRenderMenu() {
+  const m = document.getElementById('sec-menu'); if (!m) return;
+  const g = _secGrupoDe(_secAba), grupo = _SEC_GRUPOS.find(x => x[0] === g);
+  m.innerHTML = '<div class="sub-tabs">' + _SEC_GRUPOS.map(([k, r]) => '<div class="sub-tab' + (k === g ? ' active' : '') + '" id="sec-grp-' + k + '" onclick="sec_mudarGrupo(\'' + k + '\')">' + r + '</div>').join('') + '</div>'
+    + (grupo && grupo[2].length > 1 ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' + grupo[2].map(([k, r]) => '<button type="button" id="sec-stab-' + k + '" onclick="sec_mudarAba(\'' + k + '\')" style="padding:5px 12px;border-radius:4px;cursor:pointer;font-size:.84rem;'
+      + (k === _secAba ? 'border:1px solid #2563eb;background:#eff6ff;color:#1d4ed8;font-weight:700;box-shadow:inset 2px 0 0 #2563eb' : 'border:1px solid #cbd5e1;background:#fff;color:#475569') + '">' + r + '</button>').join('') + '</div>' : '');
+  const aud = document.getElementById('sec-stab-auditoria'); if (aud) aud.style.background = _secAba === 'auditoria' ? '#eff6ff' : '#fff';
+  const lst = document.getElementById('sec-busca-lista');
+  if (lst) lst.innerHTML = _secDados().servidores.filter(s => (s.situacao || 'ativo') === 'ativo').map(s => s.nome).sort().map(n => '<option value="' + esc(n) + '">').join('');
+}
+function sec_mudarGrupo(g) { const grupo = _SEC_GRUPOS.find(x => x[0] === g); if (grupo) sec_mudarAba(_secUltimaDoGrupo[g] || grupo[2][0][0]); }
 function sec_mudarAba(aba) {
   _secAba = aba; _secPerfilId = null;
-  document.querySelectorAll('#sec-root .sub-tab').forEach(t => t.classList.toggle('active', t.id === 'sec-stab-' + aba));
+  const g = _secGrupoDe(aba); if (g) _secUltimaDoGrupo[g] = aba;
   sec_render();
 }
+// busca rápida: escolher o nome abre o perfil do servidor
+function sec_buscaAbrir(nome) {
+  const el = document.getElementById('sec-busca'), alvo = String(nome || '').trim().toUpperCase(); if (!alvo) return;
+  const d = _secDados(), s = d.servidores.find(x => x.nome === alvo) || d.servidores.filter(x => x.nome.includes(alvo)).sort((a, b) => a.nome.length - b.nome.length)[0];
+  if (!s) { _mostrarToast('Servidor não encontrado: ' + nome, 'erro'); return; }
+  if (el) el.value = '';
+  sec_abrirPerfil(s.id);
+}
 function sec_render() {
+  _secRenderMenu();
   if (typeof _secRenderHoje === 'function') _secRenderHoje();
   if (_secPerfilId) return sec_renderPerfil();
   ({ hoje: sec_renderHojeDash, agenda: sec_renderAgenda, despachos: sec_renderDespachos, arquivo: sec_renderArquivo, servidores: sec_renderServidores, ferias: sec_renderFerias, escalas: sec_renderEscalas, faltas: sec_renderFaltas, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
@@ -231,7 +260,7 @@ function sec_renderPerfil() {
   const d = _secDados(), s = _secServ(_secPerfilId, d);
   if (!s) { _secPerfilId = null; return sec_render(); }
   const sd = _secSaldo(s.id, d);
-  const abas = [['ficha', 'Ficha de apoio e dispensas'], ['afastamentos', 'Férias e licenças'], ['folgas', 'Folgas combinadas'], ['documentos', 'Documentos'], ['qualificacao', 'Qualificação']];
+  const abas = [['ficha', 'Ficha de apoio e dispensas'], ['afastamentos', 'Férias e licenças'], ['folgas', 'Folgas combinadas'], ['faltas', 'Faltas'], ['documentos', 'Documentos'], ['qualificacao', 'Qualificação']];
   c.innerHTML = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">'
     + '<button class="btn-secondary" onclick="_secPerfilId=null;sec_render()">\u{2190} Voltar</button>'
     + '<div style="flex:1"><div style="font-size:1.15rem;font-weight:700">' + esc(s.nome) + '</div>'
@@ -248,6 +277,7 @@ function sec_renderPerfil() {
     sec_renderDocs(document.getElementById('sec-docs-pessoais'), 'servidores/' + s.id, s.nome);
   }
   else if (_secPerfilAba === 'afastamentos') corpo.innerHTML = _secHtmlAfastamentosServidor(s, d);
+  else if (_secPerfilAba === 'faltas') corpo.innerHTML = typeof _secHtmlFaltasDoServidor === 'function' ? _secHtmlFaltasDoServidor(s, d) : '';
 }
 function _secHtmlQualificacao(s) {
   const linha = (r, v) => '<tr><th style="width:230px;background:#f8fafc;text-align:left">' + r + '</th><td>' + (v ? esc(v) : '<span style="color:#94a3b8">—</span>') + '</td></tr>';

@@ -53,7 +53,8 @@ function sec_renderFaltas() {
     + '<div class="form-field" style="margin:0;min-width:280px"><label>Servidor(es)</label><select id="sec-fol-alvo">'
     + '<option value="EXP">Todo o expediente (administrativo)</option><option value="PLA">Todos os plantonistas</option><option value="TODOS">Todos os servidores</option>'
     + '<optgroup label="Um servidor">' + servs.map(s => '<option value="' + s.id + '">' + esc(s.nome) + ' — ' + esc(s.equipe || 'sem equipe') + '</option>').join('') + '</optgroup></select></div>'
-    + '<button class="btn-primary" onclick="sec_folhaGerar()">\u{1F5A8}\u{FE0F} Gerar folha de ponto</button></div></div>';
+    + '<button class="btn-primary" onclick="sec_folhaGerar()">\u{1F5A8}\u{FE0F} Gerar folha de ponto</button>'
+    + '<button class="btn-secondary" onclick="sec_fecharMes(document.getElementById(\'sec-fol-mes\').value)">\u{1F4E6} Fechar o mês (folhas + escalas)</button></div></div>';
 }
 
 function _secFalLinha(f, d) {
@@ -71,29 +72,45 @@ function _secFalLinha(f, d) {
 }
 
 // ── Registrar falta ───────────────────────────────────────────────────────────
-function sec_falNova() {
+function sec_falNova(sid) {
   const servs = _secDados().servidores.filter(s => (s.situacao || 'ativo') === 'ativo').sort((a, b) => a.nome.localeCompare(b.nome));
   _secModal('Registrar falta',
-    '<div class="form-field"><label>Servidor *</label><select id="sec-fal-serv"><option value="">— escolha —</option>' + servs.map(s => '<option value="' + s.id + '">' + esc(s.nome) + ' — ' + esc(s.equipe || '') + '</option>').join('') + '</select></div>'
-    + _secCampo('sec-fal-data', 'Dia da falta *', _secHoje(), 'type="date"')
+    '<div class="form-field"><label>Servidor *</label><select id="sec-fal-serv"><option value="">— escolha —</option>' + servs.map(s => '<option value="' + s.id + '"' + (s.id === sid ? ' selected' : '') + '>' + esc(s.nome) + ' — ' + esc(s.equipe || '') + '</option>').join('') + '</select></div>'
+    + '<div class="form-grid">' + _secCampo('sec-fal-data', 'Dia da falta *', _secHoje(), 'type="date"') + _secCampo('sec-fal-ate', 'Até (opcional — vários dias)', '', 'type="date"') + '</div>'
+    + '<div style="font-size:.75rem;color:#64748b;margin:-4px 0 8px">Com "até", lança um registro por dia de serviço: plantonista só nos dias da guarnição dele; expediente pula sábado, domingo e feriado.</div>'
     + _secCampo('sec-fal-obs', 'Observação (opcional)', '', 'placeholder="Ex.: não compareceu ao plantão"'),
     '<button class="btn-primary" id="sec-fal-salvar" onclick="sec_falSalvar()">Registrar</button>', 520);
 }
+// dias de serviço do servidor entre duas datas (plantão: dias da guarnição; expediente: dias úteis)
+function _secFalDiasDeServico(s, de, ate, d) {
+  const dias = [], feriados = (d.config || {}).feriados || [];
+  for (let dt = de; dt <= ate && dias.length < 62; dt = _secMaisDias(dt, 1)) {
+    if (_PL_EQUIPES_SEC.includes(s.equipe)) { if (getPlantaoParaData(dt) === s.equipe) dias.push(dt); continue; }
+    const dow = new Date(dt + 'T12:00:00').getDay();
+    if (dow !== 0 && dow !== 6 && !feriados.includes(dt)) dias.push(dt);
+  }
+  return dias;
+}
 async function sec_falSalvar() {
-  const v = { servidorId: _secVal('sec-fal-serv'), data: _secVal('sec-fal-data'), obs: _secVal('sec-fal-obs').slice(0, 300) };
+  const v = { servidorId: _secVal('sec-fal-serv'), data: _secVal('sec-fal-data'), obs: _secVal('sec-fal-obs').slice(0, 300) }, ate = _secVal('sec-fal-ate');
   if (!v.servidorId) { _mostrarToast('Escolha o servidor.', 'erro'); return; }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v.data)) { _mostrarToast('Informe o dia da falta.', 'erro'); return; }
-  const d0 = _secDados(), nome = _secNomeServ(v.servidorId, d0);
-  if (d0.faltas.some(f => f.servidorId === v.servidorId && f.data === v.data)) { _mostrarToast('Já existe falta de ' + nome + ' em ' + _secBR(v.data) + '.', 'erro'); return; }
-  const af = _secAfastamentoEm(v.servidorId, v.data, d0);
-  if (af && !confirm(nome + ' está de ' + af.tipo + ' nesse dia. Registrar a falta mesmo assim?')) return;
+  if (ate && (!/^\d{4}-\d{2}-\d{2}$/.test(ate) || ate < v.data)) { _mostrarToast('"Até" precisa ser depois do dia da falta.', 'erro'); return; }
+  const d0 = _secDados(), s0 = _secServ(v.servidorId, d0), nome = _secNomeServ(v.servidorId, d0);
+  let dias = ate && ate > v.data ? _secFalDiasDeServico(s0, v.data, ate, d0) : [v.data];
+  const ja = dias.filter(dt => d0.faltas.some(f => f.servidorId === v.servidorId && f.data === dt));
+  dias = dias.filter(dt => !ja.includes(dt));
+  if (!dias.length) { _mostrarToast(ja.length ? 'Já existe falta de ' + nome + ' em ' + ja.map(_secBR).join(', ') + '.' : 'Nenhum dia de serviço nesse período.', 'erro'); return; }
+  const afast = dias.filter(dt => _secAfastamentoEm(v.servidorId, dt, d0));
+  if (afast.length && !confirm(nome + ' está afastado(a) em ' + afast.map(_secBRc).join(', ') + '. Registrar a falta mesmo assim?')) return;
+  if (dias.length > 1 && !confirm('Registrar ' + dias.length + ' faltas de ' + nome + ':\n' + dias.map(_secBRc).join(', ') + (ja.length ? '\n\n(já existiam: ' + ja.map(_secBRc).join(', ') + ')' : '') + '?')) return;
   const agora = new Date().toISOString(), por = usuarioAtual ? usuarioAtual.nome : '';
   const ok = await _secMutar(d => {
-    if (d.faltas.some(f => f.servidorId === v.servidorId && f.data === v.data)) return false;
-    d.faltas.push(Object.assign({ id: _secId('fal'), status: 'pendente', criadoPor: por, criadoEm: agora }, v));
-  }, { action: 'sec_falta_registrar', alvo: nome, detalhe: _secBR(v.data) + (v.obs ? ' · ' + v.obs : '') });
+    const novos = dias.filter(dt => !d.faltas.some(f => f.servidorId === v.servidorId && f.data === dt)); if (!novos.length) return false;
+    novos.forEach(dt => d.faltas.push(Object.assign({ id: _secId('fal'), status: 'pendente', criadoPor: por, criadoEm: agora }, v, { data: dt })));
+  }, { action: 'sec_falta_registrar', alvo: nome, detalhe: dias.map(_secBR).join(', ') + (v.obs ? ' · ' + v.obs : '') });
   if (!ok) return;
-  _secFecharModal(); _mostrarToast('Falta registrada.', 'sucesso');
+  _secFecharModal(); _mostrarToast(dias.length > 1 ? dias.length + ' faltas registradas.' : 'Falta registrada.', 'sucesso');
   _secFalMes = v.data.slice(0, 7); sec_render();
 }
 
@@ -124,9 +141,17 @@ function sec_falAtestado(id) {
   const f = _secDados().faltas.find(x => x.id === id); if (!f) return;
   _secModal('Atestado — ' + esc(_secNomeServ(f.servidorId)),
     '<div style="font-size:.85rem;color:#475569;margin-bottom:8px">Falta de <b>' + _secBR(f.data) + '</b>. Com o atestado anexado a falta é <b>retirada</b> e a folha de ponto mostra "ATESTADO" nesse dia.</div>'
+    + _secFalHtmlOutrasPendentes(f)
     + '<div class="form-field"><label>Arquivo do atestado * — PDF ou foto, até 15 MB</label><input type="file" id="sec-fal-arq" multiple accept=".pdf,.jpg,.jpeg,.png,.webp"></div>'
     + _secCampo('sec-fal-atobs', 'Observação (opcional)', '', 'placeholder="Ex.: atestado de 1 dia"'),
     '<button class="btn-primary" id="sec-fal-atsalvar" onclick="sec_falAtestadoSalvar(\'' + id + '\')">Anexar e justificar</button>', 540);
+}
+// outras faltas pendentes do mesmo servidor, para um atestado de vários dias (começam DESMARCADAS: quem lança escolhe os dias)
+function _secFalHtmlOutrasPendentes(f) {
+  const outras = _secDados().faltas.filter(x => x.servidorId === f.servidorId && x.id !== f.id && x.status === 'pendente').sort((a, b) => a.data.localeCompare(b.data));
+  if (!outras.length) return '';
+  return '<div class="form-field"><label>O atestado também cobre outras faltas? Marque os dias:</label><div id="sec-fal-outras" style="display:flex;gap:10px;flex-wrap:wrap">'
+    + outras.map(x => '<label style="display:flex;gap:5px;align-items:center;font-weight:400;font-size:.85rem;cursor:pointer"><input type="checkbox" value="' + x.id + '">' + _secBR(x.data) + '</label>').join('') + '</div></div>';
 }
 async function sec_falAtestadoSalvar(id) {
   const files = [...(document.getElementById('sec-fal-arq')?.files || [])], obs = _secVal('sec-fal-atobs').slice(0, 300);
@@ -148,10 +173,11 @@ async function sec_falAtestadoSalvar(id) {
     return;
   }
   const agora = new Date().toISOString(), por = usuarioAtual ? usuarioAtual.nome : '';
+  const ids = [id].concat([...document.querySelectorAll('#sec-fal-outras input:checked')].map(i => i.value));
   const ok = await _secMutar(d => {
-    const f = d.faltas.find(x => x.id === id); if (!f || f.status !== 'pendente') return false;
-    Object.assign(f, { status: 'justificada', atestado: { arquivos: enviados, obs, registradoPor: por, registradoEm: agora } });
-  }, { action: 'sec_falta_atestado', alvo: nome, detalhe: 'falta de ' + _secBR(f0.data) + ' justificada · ' + enviados.length + ' arquivo(s)' });
+    const alvo = d.faltas.filter(x => ids.includes(x.id) && x.status === 'pendente'); if (!alvo.some(x => x.id === id)) return false;
+    alvo.forEach(f => Object.assign(f, { status: 'justificada', atestado: { arquivos: enviados, obs, registradoPor: por, registradoEm: agora } }));
+  }, { action: 'sec_falta_atestado', alvo: nome, detalhe: 'falta(s) de ' + _secDados().faltas.filter(x => ids.includes(x.id)).map(x => _secBR(x.data)).join(', ') + ' justificada(s) · ' + enviados.length + ' arquivo(s)' });
   if (!ok) { await _secMoverParaLixeiraR2(enviados); if (btn) { btn.disabled = false; btn.textContent = 'Anexar e justificar'; } return; }
   _secFecharModal(); _mostrarToast('Atestado anexado — falta retirada.', 'sucesso'); sec_render();
 }
@@ -163,7 +189,10 @@ async function sec_falExcluir(id) {
   const ok = await _secMutar(d => { const i = d.faltas.findIndex(x => x.id === id); if (i < 0) return false; _secParaLixeira(d, 'falta', d.faltas[i]); d.faltas.splice(i, 1); },
     { action: 'sec_falta_excluir', alvo: nome, detalhe: _secBR(f0.data) });
   if (!ok) return;
-  if (f0.atestado && f0.atestado.arquivos) await _secMoverParaLixeiraR2(f0.atestado.arquivos);
+  if (f0.atestado && f0.atestado.arquivos) {
+    const usados = new Set(_secDados().faltas.flatMap(x => ((x.atestado && x.atestado.arquivos) || []).map(a => a.key)));
+    await _secMoverParaLixeiraR2(f0.atestado.arquivos.filter(a => !usados.has(a.key)));
+  }
   _mostrarToast('Falta excluída (na lixeira).', 'sucesso'); sec_render();
 }
 
@@ -227,8 +256,8 @@ function _secFolhaPagina(s, mes, d) {
     + '<div style="font-size:6.5pt;color:#444;margin-top:4px;text-align:right">Emitida pelo sistema CME em ' + new Date().toLocaleString('pt-BR') + (usuarioAtual ? ' por ' + esc(usuarioAtual.nome) : '') + '</div>'
     + '</div>';
 }
-function sec_folhaGerar() {
-  const mes = _secVal('sec-fol-mes'), alvo = _secVal('sec-fol-alvo');
+function sec_folhaGerar(mesP, alvoP) {
+  const mes = mesP || _secVal('sec-fol-mes'), alvo = alvoP || _secVal('sec-fol-alvo');
   if (!/^\d{4}-\d{2}$/.test(mes)) { _mostrarToast('Escolha o mês.', 'erro'); return; }
   const d = _secDados(), ativos = d.servidores.filter(s => (s.situacao || 'ativo') === 'ativo');
   const lista = (alvo === 'EXP' ? ativos.filter(s => s.equipe === 'EXPEDIENTE') : alvo === 'PLA' ? ativos.filter(s => _PL_EQUIPES_SEC.includes(s.equipe)) : alvo === 'TODOS' ? ativos : d.servidores.filter(s => s.id === alvo))
@@ -242,4 +271,64 @@ function sec_folhaGerar() {
   _entregarDoc(new Blob([html], { type: 'text/html' }), 'Folha de ponto ' + mes + (lista.length === 1 ? ' - ' + lista[0].nome : '') + '.html');
   auditar({ modulo: 'Secretaria', action: 'sec_folha_gerar', alvo: _secEscMesTxt(mes), detalhe: lista.length + ' servidor(es)' });
 }
-Object.assign(_SEC_ACOES, { sec_falta_registrar: 'Registrou falta de serviço', sec_falta_paga: 'Marcou falta como paga (reposta)', sec_falta_atestado: 'Anexou atestado (falta justificada)', sec_falta_excluir: 'Excluiu falta (lixeira)', sec_folha_gerar: 'Gerou folha de ponto' });
+// ── Perfil do servidor: aba Faltas ────────────────────────────────────────────
+function _secHtmlFaltasDoServidor(s, d) {
+  const lista = d.faltas.filter(f => f.servidorId === s.id).sort((a, b) => b.data.localeCompare(a.data));
+  const n = st => lista.filter(f => f.status === st).length;
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
+    + '<div style="font-size:.85rem;color:#475569"><b>' + lista.length + '</b> falta(s) · ' + n('pendente') + ' pendente(s) · ' + n('paga') + ' paga(s) · ' + n('justificada') + ' com atestado</div>'
+    + '<button class="btn-primary" onclick="sec_falNova(\'' + s.id + '\')">+ Registrar falta</button></div>'
+    + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Data</th><th>Servidor</th><th>Situação</th><th>Detalhe</th><th></th></tr></thead><tbody>'
+    + (lista.length ? lista.map(f => _secFalLinha(f, d)).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:14px">Nenhuma falta registrada.</td></tr>') + '</tbody></table></div>';
+}
+
+// ── Fechar o mês: confere pendências e gera folhas de ponto + escala de serviço + escala de apoio num documento só ──
+function _secFecharMesPendencias(mes, d) {
+  const ini = mes + '-01', fim = _secServFimMes(mes);
+  return {
+    faltas: d.faltas.filter(f => f.data.slice(0, 7) === mes && f.status === 'pendente'),
+    semPortaria: d.afastamentos.filter(a => a.inicio <= fim && (a.fim || a.inicio) >= ini && !(a.anexos || []).length),
+    apoio: d.escalaSabado.filter(x => x.data.slice(0, 7) === mes).length,
+  };
+}
+function sec_fecharMes(mes) {
+  mes = /^\d{4}-\d{2}$/.test(mes || '') ? mes : _secHoje().slice(0, 7);
+  const d = _secDados(), p = _secFecharMesPendencias(mes, d);
+  const item = (okk, txt) => '<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-top:1px solid #f1f5f9;font-size:.86rem"><span style="font-weight:700;color:' + (okk ? '#15803d' : '#b45309') + '">' + (okk ? '\u{2714}' : '\u{26A0}\u{FE0F}') + '</span><span>' + txt + '</span></div>';
+  _secModal('\u{1F4E6} Fechar o mês',
+    '<div class="form-field"><label>Mês</label><input type="month" id="sec-fm-mes" value="' + mes + '" onchange="sec_fecharMes(this.value)"></div>'
+    + '<div style="font-weight:700;font-size:.88rem;margin-bottom:2px">Conferência antes de gerar</div>'
+    + item(!p.faltas.length, p.faltas.length ? '<b>' + p.faltas.length + '</b> falta(s) ainda pendente(s) — vão sair como FALTA na folha: ' + p.faltas.slice(0, 6).map(f => esc(_secNomeServ(f.servidorId, d).split(' ')[0]) + ' ' + _secBRc(f.data)).join(', ') : 'Nenhuma falta pendente no mês.')
+    + item(!p.semPortaria.length, p.semPortaria.length ? '<b>' + p.semPortaria.length + '</b> férias/licença(s) do mês sem portaria anexada.' : 'Férias e licenças do mês com portaria.')
+    + item(p.apoio > 0, p.apoio ? 'Escala de apoio de sábado montada (' + p.apoio + ' vaga(s)).' : 'A escala de apoio de sábado deste mês está vazia.')
+    + '<div style="font-size:.8rem;color:#64748b;margin-top:8px">Gera <b>um documento só</b>, pronto para imprimir: escala de serviço e escala de apoio (folha deitada) + folha de ponto de todos os servidores (folha em pé, uma por servidor).</div>',
+    '<button class="btn-primary" id="sec-fm-gerar" onclick="sec_fecharMesGerar(document.getElementById(\'sec-fm-mes\').value)">\u{1F5A8}\u{FE0F} Gerar tudo</button>', 600);
+}
+// junta vários HTML (cada um com seu @page) num documento só, mantendo a orientação de cada parte (CSS "page" nomeado)
+function _secCombinarDocs(htmls, titulo) {
+  const estilos = [], corpos = [];
+  htmls.forEach((h, i) => {
+    const css = (h.match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '', attrs = (h.match(/<body([^>]*)>/) || [])[1] || '';
+    const corpo = ((h.match(/<body[^>]*>([\s\S]*)<\/body>/) || [])[1] || '').replace(/<div class="np"[\s\S]*?<\/div>/, '');
+    const zoom = (attrs.match(/zoom:\s*([\d.]+)/) || [])[1];
+    estilos.push(css.replace(/@page\s*\{/g, '@page p' + i + '{').replace(/(^|[{};\s])body(?=[\s.{])/g, '$1.d' + i).replace(/\.pag\b/g, '.d' + i + ' .pag'));
+    corpos.push('<div class="d' + i + '" style="page:p' + i + (zoom ? ';zoom:' + zoom : '') + (i < htmls.length - 1 ? ';break-after:page' : '') + '">' + corpo + '</div>');
+  });
+  return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>' + esc(titulo) + '</title><style>*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}table{border-collapse:collapse;width:100%}@media print{.np{display:none}}' + estilos.join('\n') + '</style></head><body>'
+    + '<div class="np" style="text-align:right;padding:8px 16px"><button onclick="print()" style="padding:6px 16px;font-size:11pt;cursor:pointer">Imprimir tudo</button></div>' + corpos.join('') + '</body></html>';
+}
+async function sec_fecharMesGerar(mes) {
+  if (!/^\d{4}-\d{2}$/.test(mes || '')) { _mostrarToast('Escolha o mês.', 'erro'); return; }
+  const capt = [], entregar = window._entregarDoc;
+  window._entregarDoc = b => { capt.push(b); return true; };
+  try { sec_servImprimir(mes); sec_escImprimir(mes); sec_folhaGerar(mes, 'TODOS'); }
+  finally { window._entregarDoc = entregar; }
+  if (capt.length !== 3) { _mostrarToast('Não consegui montar todos os documentos do mês.', 'erro'); return; }
+  const htmls = await Promise.all(capt.map(b => b.text ? b.text() : new Response(b).text()));
+  const html = _secCombinarDocs(htmls, 'Fechamento ' + _secEscMesTxt(mes));
+  _secFecharModal();
+  _entregarDoc(new Blob([html], { type: 'text/html' }), 'Fechamento ' + mes + ' - escalas e folhas de ponto.html');
+  auditar({ modulo: 'Secretaria', action: 'sec_fechar_mes', alvo: _secEscMesTxt(mes), detalhe: 'escalas + folhas de ponto' });
+}
+
+Object.assign(_SEC_ACOES, { sec_fechar_mes: 'Fechou o mês (escalas + folhas de ponto)', sec_falta_registrar: 'Registrou falta de serviço', sec_falta_paga: 'Marcou falta como paga (reposta)', sec_falta_atestado: 'Anexou atestado (falta justificada)', sec_falta_excluir: 'Excluiu falta (lixeira)', sec_folha_gerar: 'Gerou folha de ponto' });
