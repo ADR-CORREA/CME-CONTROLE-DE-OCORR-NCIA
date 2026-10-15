@@ -10671,6 +10671,7 @@ function exportarSemComExcel(area) {
     'Unidade Prisional':    m.unidade || '',
     'Telefone':             m.contato && m.contato.telefone ? _sccFmtTel(m.contato.telefone) : '',
     'Contatos de referência': m.contato ? (m.contato.refs || []).filter(r => r.telefone).map(r => (r.nome || 'Contato') + ': ' + _sccFmtTel(r.telefone)).join(' · ') : '',
+    'Números na observação (AKILES)': m.contato && typeof _sccTelsDaObs === 'function' ? _sccTelsDaObs(m.contato).map(x => _sccFmtTel(x.tel) + (x.rotulo ? ' (' + x.rotulo + ')' : '') + (x.novo ? '' : ' [já cadastrado]')).join(' · ') : '',
     'Situação':             m.situacao === 'desvinculado' ? 'Desvinculado' : 'Ativo',
     'Qtd. Tratativas':      (m.tratativas||[]).length,
     'Última Tratativa':     m.tratativas?.length ? new Date(m.tratativas[m.tratativas.length-1].data).toLocaleString('pt-BR') : '',
@@ -29424,7 +29425,7 @@ function estat_exportarResultado() {
 <script src="secretaria-escserv.js?v=20261014q"></script>
 <script src="secretaria-faltas.js?v=20261014q"></script>
 <script src="secretaria-atencao.js?v=20261014o"></script>
-<script src="semcom-contatos.js?v=20261013i"></script>
+<script src="semcom-contatos.js?v=20261015a"></script>
 <script src="produtividade.js?v=20261013k"></script>
 <script src="plantoes-resumo.js?v=20261013o"></script>
 <script src="plantoes-detalhe.js?v=20261014a"></script>

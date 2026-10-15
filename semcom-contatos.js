@@ -62,7 +62,7 @@ function _sccPlano(linhas, dados) {
   linhas.slice(iHdr + 1).forEach(r => {
     const nome = cel(r, col.nome); if (!nome || r.length < 5) return;
     lidos++;
-    const contato = { telefone: _sccTel(cel(r, col.telefone)), obs: cel(r, col.obs).slice(0, 400),
+    const contato = { telefone: _sccTel(cel(r, col.telefone)), obs: _sccFixAcento(cel(r, col.obs)).slice(0, 400),
       refs: col.refs.map(k => ({ nome: cel(r, k.nome).slice(0, 80), telefone: _sccTel(cel(r, k.tel)) })).filter(x => x.nome || x.telefone) };
     const reg = _scChaveReg(cel(r, col.registro));
     if (reg && !porReg.has(reg)) porReg.set(reg, contato);
@@ -129,14 +129,54 @@ async function sc_salvarContatos() {
   try { renderizarSemCom('juridico'); renderizarSemCom('psicossocial'); } catch (e) {}
 }
 
+// ── Números escritos na OBSERVAÇÃO do AKILES ──────────────────────────────────
+// Quando o número muda, o operador às vezes escreve o novo na observação em vez de trocar o campo.
+// Lê os números do texto (com o que vem escrito ao lado como rótulo) e marca os DIFERENTES do cadastrado.
+const _SCC_CP1252 = { '€': 0x80, '‚': 0x82, 'ƒ': 0x83, '„': 0x84, '…': 0x85, '†': 0x86, '‡': 0x87, 'ˆ': 0x88, '‰': 0x89, 'Š': 0x8A, '‹': 0x8B, 'Œ': 0x8C, 'Ž': 0x8E,
+  '‘': 0x91, '’': 0x92, '“': 0x93, '”': 0x94, '•': 0x95, '–': 0x96, '—': 0x97, '˜': 0x98, '™': 0x99, 'š': 0x9A, '›': 0x9B, 'œ': 0x9C, 'ž': 0x9E, 'Ÿ': 0x9F };
+// texto que veio do AKILES com acento quebrado ("NÃºmero" → "Número"); se não der para consertar, devolve como está
+function _sccFixAcento(s) {
+  // conserta cada trecho quebrado separado (o mesmo texto pode ter acento certo e quebrado)
+  return String(s == null ? '' : s).replace(/(?:[ÃÂ][\u0080-¿Œ-™])+/g, trecho => {
+    const bytes = [];
+    for (const ch of trecho) { const c = ch.charCodeAt(0); if (c <= 0xFF) bytes.push(c); else if (_SCC_CP1252[ch] != null) bytes.push(_SCC_CP1252[ch]); else return trecho; }
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(new Uint8Array(bytes)); } catch (e) { return trecho; }
+  });
+}
+function _sccTelsDaObs(c) {
+  const obs = _sccFixAcento(c && c.obs); if (!obs) return [];
+  const conhecidos = [c.telefone].concat((c.refs || []).map(r => r.telefone)).filter(Boolean).map(t => t.slice(-8));
+  const RX = /(?<!\d)(?:\(?(\d{2})\)?[\s.]*)?(9?\d{4})\s*[-.\s]?\s*(\d{4})(?!\d)/g, achados = [];
+  const SEP = /(?:\(?\d{2}\)?[\s.]*)?9?\d{4}\s*[-.\s]?\s*\d{4}|[;|\n]| \/ /;   // outro número ou separador
+  const limpa = t => t.replace(/^[\s\-–—>:.,()]+/, '').replace(/[\s\-–—>:.,()]+$/, '').slice(0, 40);
+  let m, fimAnterior = 0;
+  while ((m = RX.exec(obs))) {
+    let d = (m[1] || '') + m[2] + m[3];
+    if (d.length === 9 && d[0] === '9') d = '96' + d;            // celular sem DDD: Amapá
+    const antes = obs.slice(fimAnterior, m.index).split(SEP).pop();
+    fimAnterior = RX.lastIndex;
+    if (d.length < 8 || d.length > 11 || achados.some(a => a.tel === d)) continue;
+    // o que vem escrito DEPOIS do número; se não houver, o que vem ANTES ("NOVO NÚMERO 13/10 - (96) …")
+    const depois = obs.slice(RX.lastIndex).split(SEP)[0];
+    // texto depois que termina em ":" é o rótulo do PRÓXIMO número ("… 3333. Outro número: (96) …")
+    const rotulo = (/:\s*$/.test(depois) ? '' : limpa(depois)) || limpa(antes);
+    achados.push({ tel: d, rotulo, novo: !conhecidos.includes(d.slice(-8)) });
+  }
+  return achados;
+}
+
 // ── Exibição ──────────────────────────────────────────────────────────────────
 // linha curta abaixo do nome, na tabela
 function _scLinhaContato(m) {
   const c = m && m.contato; if (!c) return '';
   const refs = (c.refs || []).filter(r => r.telefone);
+  const novos = _sccTelsDaObs(c).filter(x => x.novo);
   return '<div style="font-size:.78rem;margin-top:3px;font-weight:400;color:#475569">'
     + (c.telefone ? '<span style="white-space:nowrap">\u{1F4DE} ' + _sccLinkTel(c.telefone) + '</span>' :'<span style="color:#94a3b8">sem telefone próprio</span>')
     + (refs.length ? ' <span style="color:#64748b;cursor:help" title="' + esc(refs.map(r => (r.nome || 'Contato') + ': ' + _sccFmtTel(r.telefone)).join(' · ')) + '">· +' + refs.length + ' de referência</span>' : '')
+    + (novos.length ? '<div style="margin-top:2px"><span title="Número escrito na observação de contatos do AKILES, diferente do telefone cadastrado — pode ser o número atualizado" style="font-size:.68rem;font-weight:600;color:#b45309;background:#fffbeb;border-left:2px solid #d97706;border-radius:3px;padding:1px 5px">NA OBSERVAÇÃO</span> '
+      + _sccLinkTel(novos[0].tel) + (novos[0].rotulo ? ' <span style="color:#64748b">' + esc(novos[0].rotulo) + '</span>' : '')
+      + (novos.length > 1 ? ' <span style="color:#64748b">· +' + (novos.length - 1) + '</span>' : '') + '</div>' : '')
     + '</div>';
 }
 // bloco completo (modais de tratativa e de visualização)
@@ -146,6 +186,11 @@ function _scHtmlContatos(m) {
   const linha = (rot, tel) => '<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-top:1px solid #f1f5f9;font-size:.86rem"><span>' + rot + '</span><span style="white-space:nowrap">' + (tel ? _sccLinkTel(tel) : '<span style="color:#94a3b8">sem número</span>') + '</span></div>';
   return linha('<b>Monitorado</b>', c.telefone)
     + (c.refs || []).map(r => linha(esc(r.nome || 'Contato de referência'), r.telefone)).join('')
-    + (c.obs ? '<div style="font-size:.82rem;color:#334155;margin-top:6px;white-space:pre-wrap"><b>Obs.:</b> ' + esc(c.obs) + '</div>' : '')
+    + (() => {
+        const t = _sccTelsDaObs(c); if (!t.length) return '';
+        return '<div style="font-size:.78rem;font-weight:700;color:#b45309;margin-top:8px">Números escritos na observação do AKILES</div>'
+          + t.map(x => linha(esc(x.rotulo || 'sem identificação') + (x.novo ? ' <span style="font-size:.68rem;font-weight:600;color:#b45309;background:#fffbeb;border-left:2px solid #d97706;border-radius:3px;padding:1px 5px">diferente do cadastrado</span>' : ' <span style="font-size:.7rem;color:#94a3b8">(já cadastrado)</span>'), x.tel)).join('');
+      })()
+    + (c.obs ? '<div style="font-size:.82rem;color:#334155;margin-top:6px;white-space:pre-wrap"><b>Obs.:</b> ' + esc(_sccFixAcento(c.obs)) + '</div>' : '')
     + '<div style="font-size:.72rem;color:#94a3b8;margin-top:6px">Do cadastro do AKILES · importado em ' + new Date(c.atualizadoEm).toLocaleString('pt-BR') + (c.por ? ' por ' + esc(c.por) : '') + '</div>';
 }
