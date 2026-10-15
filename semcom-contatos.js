@@ -160,9 +160,26 @@ function _sccTelsDaObs(c) {
     const depois = obs.slice(RX.lastIndex).split(SEP)[0];
     // texto depois que termina em ":" é o rótulo do PRÓXIMO número ("… 3333. Outro número: (96) …")
     const rotulo = (/:\s*$/.test(depois) ? '' : limpa(depois)) || limpa(antes);
-    achados.push({ tel: d, rotulo, novo: !conhecidos.includes(d.slice(-8)) });
+    achados.push({ tel: d, rotulo, novo: !conhecidos.includes(d.slice(-8)), tipo: _sccTipoTel(rotulo) });
   }
   return achados;
+}
+// o que está escrito ao lado do número diz se ele serve para falar com o monitorado
+function _sccTipoTel(rotulo) {
+  const t = _sccNorm(rotulo);
+  if (/vitima/.test(t)) return 'vitima';
+  if (/erron|errad|incorret/.test(t)) return 'errado';
+  if (/retid|apreendid|ciosp/.test(t)) return 'retido';
+  if (/antig/.test(t)) return 'antigo';
+  if (/atualiz|\bnov[oa]\b|\batual\b/.test(t)) return 'atual';
+  return '';
+}
+const _SCC_TIPO_TEL = { vitima: ['número da VÍTIMA — não é do monitorado', '#b91c1c', '#fef2f2'], errado: ['marcado como errado', '#64748b', '#f1f5f9'],
+  retido: ['aparelho retido/apreendido', '#64748b', '#f1f5f9'], antigo: ['número antigo', '#64748b', '#f1f5f9'], atual: ['atualizado', '#15803d', '#f0fdf4'], '': ['diferente do cadastrado', '#b45309', '#fffbeb'] };
+const _SCC_TIPOS_INUTEIS = ['vitima', 'errado', 'retido', 'antigo'];
+function _sccSeloTipo(x) {
+  const [txt, cor, fundo] = x.novo ? _SCC_TIPO_TEL[x.tipo] || _SCC_TIPO_TEL[''] : ['já cadastrado', '#94a3b8', '#f8fafc'];
+  return ' <span style="font-size:.68rem;font-weight:600;color:' + cor + ';background:' + fundo + ';border-left:2px solid ' + cor + ';border-radius:3px;padding:1px 5px;white-space:nowrap">' + txt + '</span>';
 }
 
 // ── Exibição ──────────────────────────────────────────────────────────────────
@@ -170,13 +187,17 @@ function _sccTelsDaObs(c) {
 function _scLinhaContato(m) {
   const c = m && m.contato; if (!c) return '';
   const refs = (c.refs || []).filter(r => r.telefone);
-  const novos = _sccTelsDaObs(c).filter(x => x.novo);
+  const daObs = _sccTelsDaObs(c);
+  // na lista só entra número que pode ser do monitorado (antigo, errado, retido e da vítima ficam só no detalhe)
+  const novos = daObs.filter(x => x.novo && !_SCC_TIPOS_INUTEIS.includes(x.tipo)).sort((a, b) => (b.tipo === 'atual') - (a.tipo === 'atual'));
+  const temVitima = daObs.some(x => x.tipo === 'vitima');
   return '<div style="font-size:.78rem;margin-top:3px;font-weight:400;color:#475569">'
     + (c.telefone ? '<span style="white-space:nowrap">\u{1F4DE} ' + _sccLinkTel(c.telefone) + '</span>' :'<span style="color:#94a3b8">sem telefone próprio</span>')
     + (refs.length ? ' <span style="color:#64748b;cursor:help" title="' + esc(refs.map(r => (r.nome || 'Contato') + ': ' + _sccFmtTel(r.telefone)).join(' · ')) + '">· +' + refs.length + ' de referência</span>' : '')
     + (novos.length ? '<div style="margin-top:2px"><span title="Número escrito na observação de contatos do AKILES, diferente do telefone cadastrado — pode ser o número atualizado" style="font-size:.68rem;font-weight:600;color:#b45309;background:#fffbeb;border-left:2px solid #d97706;border-radius:3px;padding:1px 5px">NA OBSERVAÇÃO</span> '
       + _sccLinkTel(novos[0].tel) + (novos[0].rotulo ? ' <span style="color:#64748b">' + esc(novos[0].rotulo) + '</span>' : '')
       + (novos.length > 1 ? ' <span style="color:#64748b">· +' + (novos.length - 1) + '</span>' : '') + '</div>' : '')
+    + (temVitima ? '<div style="margin-top:2px"><span title="A observação de contatos tem o telefone da vítima — abra o detalhe antes de ligar" style="font-size:.68rem;font-weight:600;color:#b91c1c;background:#fef2f2;border-left:2px solid #b91c1c;border-radius:3px;padding:1px 5px">\u{26A0}\u{FE0F} OBSERVAÇÃO TEM Nº DA VÍTIMA</span></div>' : '')
     + '</div>';
 }
 // bloco completo (modais de tratativa e de visualização)
@@ -189,7 +210,7 @@ function _scHtmlContatos(m) {
     + (() => {
         const t = _sccTelsDaObs(c); if (!t.length) return '';
         return '<div style="font-size:.78rem;font-weight:700;color:#b45309;margin-top:8px">Números escritos na observação do AKILES</div>'
-          + t.map(x => linha(esc(x.rotulo || 'sem identificação') + (x.novo ? ' <span style="font-size:.68rem;font-weight:600;color:#b45309;background:#fffbeb;border-left:2px solid #d97706;border-radius:3px;padding:1px 5px">diferente do cadastrado</span>' : ' <span style="font-size:.7rem;color:#94a3b8">(já cadastrado)</span>'), x.tel)).join('');
+          + t.map(x => linha(esc(x.rotulo || 'sem identificação') + _sccSeloTipo(x), x.tel)).join('');
       })()
     + (c.obs ? '<div style="font-size:.82rem;color:#334155;margin-top:6px;white-space:pre-wrap"><b>Obs.:</b> ' + esc(_sccFixAcento(c.obs)) + '</div>' : '')
     + '<div style="font-size:.72rem;color:#94a3b8;margin-top:6px">Do cadastro do AKILES · importado em ' + new Date(c.atualizadoEm).toLocaleString('pt-BR') + (c.por ? ' por ' + esc(c.por) : '') + '</div>';
