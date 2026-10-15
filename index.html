@@ -2789,7 +2789,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
         <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px;flex-wrap:wrap">
           <button class="btn-secondary" onclick="com_limparOficio()">🗑️ Limpar</button>
           <button class="btn-secondary" onclick="com_copiarOficio()">📋 Copiar Texto</button>
-          <button class="btn-primary"   onclick="com_gerarOficio()">🖨️ Gerar PDF</button>
+          <button class="btn-primary"   onclick="com_gerarOficioSeguro()">🖨️ Gerar PDF</button>
           <button id="com-btn-pdf-anexos" onclick="com_gerarPDFComAnexos()"
             style="background:#059669;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">
             📑 PDF com Anexos
@@ -22928,48 +22928,84 @@ function com_registroDe(numero, ano) {
   if (!numero) return null;
   return com_getOficios().registros.find(r => r.numero === numero && r.ano === ano) || null;
 }
-async function com_registrarOficio(dados) {
-  // \u{26A0}\u{FE0F} ANTI-PERDA: relê a lista do servidor ANTES de gravar, para nunca
-  // sobrescrever os registros por causa de cache vazio/desatualizado (bug que
-  // zerou os ofícios em 11/06/2026, quando uma geração ocorreu com cache não
-  // carregado). Se não conseguir ler e não houver cache válido, NÃO grava.
-  if (window._db) {
-    let lido = false;
-    try {
-      const { data, error } = await _dbLerChave('cme_oficios');
-      if (!error) {
-        lido = true;
-        if (data && data.value && Array.isArray(data.value.registros)) _cache['oficios'] = data.value;
-        // data null = chave ainda não existe \u{2192} lista vazia legítima (segue)
+/* Registro do ofício na lista (15/10/2026): FILA + gravação AGUARDADA + CONFERÊNCIA.
+   Antes: lia o banco, mudava e mandava gravar sem esperar — se outro PC gravasse no
+   mesmo instante, um apagava o registro do outro ("gerou o documento e não foi lançado").
+   Agora cada registro espera o anterior, grava, relê o banco e confere que ficou lá;
+   se sumiu (outro PC gravou por cima), refaz até 4 vezes e, se não der, AVISA. */
+let _comFilaRegistro = Promise.resolve();
+function com_registrarOficio(dados) {
+  const p = _comFilaRegistro.then(() => _comRegistrarOficioAgora(dados));
+  _comFilaRegistro = p.catch(() => false);
+  return p;
+}
+function _comMesmoEvento(e, dados) { return e.numero === dados.numero && e.ano === dados.ano && (e.geradoEm || '') === (dados.geradoEm || '') && (e.geradoPor || '') === (dados.geradoPor || ''); }
+async function _comRegistrarOficioAgora(dados) {
+  for (let tentativa = 1; tentativa <= 4; tentativa++) {
+    // \u{26A0}\u{FE0F} ANTI-PERDA: relê a lista do servidor ANTES de gravar (nunca grava por cima com
+    // cache vazio/desatualizado — bug que zerou os ofícios em 11/06/2026).
+    let nLido = -1;
+    if (window._db) {
+      let lido = false;
+      try {
+        const { data, error } = await _dbLerChave('cme_oficios');
+        if (!error) {
+          lido = true;
+          if (data && data.value && Array.isArray(data.value.registros)) { _cache['oficios'] = data.value; nLido = data.value.registros.length; }
+        }
+      } catch (e) {}
+      if (!lido && !(_cache['oficios'] && Array.isArray(_cache['oficios'].registros))) {
+        _mostrarToast('\u{26A0}\u{FE0F} Não consegui sincronizar a lista de ofícios (rede). O ofício nº ' + dados.numero + ' NÃO foi lançado na lista — gere de novo em instantes.', 'erro');
+        return false;
       }
-    } catch (e) {}
-    if (!lido && !(_cache['oficios'] && Array.isArray(_cache['oficios'].registros))) {
-      _mostrarToast('\u{26A0}\u{FE0F} Não consegui sincronizar a lista de ofícios (rede). Para não apagar registros, NÃO gravei agora — tente gerar novamente em instantes.', 'erro');
-      return;
     }
+    const o = JSON.parse(JSON.stringify(com_getOficios()));
+    // LOG de produtividade (append-only): semeia do histórico na 1ª vez.
+    if (!Array.isArray(o.eventos)) {
+      o.eventos = o.registros.map(r => ({
+        numero: r.numero, ano: r.ano, geradoPor: r.geradoPor || '',
+        geradoEm: r.geradoEm || r.data || '', monitorado: r.monitorado || '',
+        processo: r.processo || '', modelo: r.modelo || '', assunto: r.assunto || ''
+      }));
+    }
+    // Numeração: upsert por (numero, ano) — 1 registro por número.
+    const i = o.registros.findIndex(r => r.numero === dados.numero && r.ano === dados.ano);
+    if (i >= 0) o.registros[i] = { ...o.registros[i], ...dados };
+    else o.registros.push(dados);
+    // Produtividade: o evento desta geração entra UMA vez (não duplica ao refazer).
+    if (!o.eventos.some(e => _comMesmoEvento(e, dados))) o.eventos.push({
+      numero: dados.numero, ano: dados.ano, geradoPor: dados.geradoPor || '',
+      geradoEm: dados.geradoEm || '', monitorado: dados.monitorado || '',
+      processo: dados.processo || '', modelo: dados.modelo || '', assunto: dados.assunto || ''
+    });
+    _comEnxugarAssinaturas(o);
+    if (!window._db) { salvarStore('oficios', o); return true; }
+    if (nLido >= 3 && o.registros.length < nLido) { // nunca encolhe a lista
+      _mostrarToast('\u{1F6E1}\u{FE0F} Proteção anti-perda: não gravei a lista de ofícios (ficaria menor que a do servidor). Recarregue a página (F5).', 'erro');
+      return false;
+    }
+    let erroGravar = null;
+    try { const { error } = await _dbGravar('cme_oficios', o); if (error) erroGravar = error; } catch (e) { erroGravar = e; }
+    if (!erroGravar) {
+      _cache['oficios'] = o;
+      // confere no banco: outro PC pode ter gravado por cima no mesmo instante
+      await new Promise(r => setTimeout(r, 350 + Math.random() * 400));
+      try {
+        const { data } = await _dbLerChave('cme_oficios');
+        const v = data && data.value;
+        if (v && Array.isArray(v.registros)) {
+          _cache['oficios'] = v;
+          if (v.registros.some(r => r.numero === dados.numero && r.ano === dados.ano && (r.geradoEm || '') === (dados.geradoEm || ''))) {
+            try { com_atualizarAvisoNumero(); } catch (e) {}
+            return true;
+          }
+        }
+      } catch (e) {}
+    }
+    await new Promise(r => setTimeout(r, 300 * tentativa + Math.random() * 300)); // refaz
   }
-  const o = com_getOficios();
-  // LOG de produtividade (append-only): semeia do histórico (registros) na 1ª vez
-  // — ANTES de mexer nos registros, pra não duplicar o evento desta geração.
-  if (!Array.isArray(o.eventos)) {
-    o.eventos = o.registros.map(r => ({
-      numero: r.numero, ano: r.ano, geradoPor: r.geradoPor || '',
-      geradoEm: r.geradoEm || r.data || '', monitorado: r.monitorado || '',
-      processo: r.processo || '', modelo: r.modelo || '', assunto: r.assunto || ''
-    }));
-  }
-  // Numeração: upsert por (numero, ano) — 1 registro por número (inalterado).
-  const i = o.registros.findIndex(r => r.numero === dados.numero && r.ano === dados.ano);
-  if (i >= 0) o.registros[i] = { ...o.registros[i], ...dados };
-  else o.registros.push(dados);
-  // Produtividade: o evento desta geração SEMPRE entra — conta mesmo se o número
-  // repetir (é isto que faz os duplicados contarem na produtividade).
-  o.eventos.push({
-    numero: dados.numero, ano: dados.ano, geradoPor: dados.geradoPor || '',
-    geradoEm: dados.geradoEm || '', monitorado: dados.monitorado || '',
-    processo: dados.processo || '', modelo: dados.modelo || '', assunto: dados.assunto || ''
-  });
-  com_salvarOficios(o);
+  _mostrarToast('\u{26A0}\u{FE0F} O ofício nº ' + dados.numero + ' foi gerado, mas NÃO consegui lançar na lista de ofícios. Gere de novo (pode usar o mesmo número) ou avise a gerência.', 'erro');
+  return false;
 }
 /* Chamado ao gerar o ofício (ambos os fluxos). Upsert por (numero, ano):
    reusar o mesmo número apenas atualiza o registro, não consome outro. */
@@ -23015,6 +23051,34 @@ function com_sugerirNumero(forcar) {
     com_atualizarPreview();
   }
 }
+/* Reserva o número na CENTRAL (Worker /oficio/reservar) ANTES de gerar (15/10/2026):
+   o "próximo número" de cada PC vinha do cache dele, então dois PCs geravam o mesmo número.
+   A central entrega cada número uma vez só. Número escolhido à mão: só avisa a central
+   (para ninguém mais receber esse número). Sem conexão: pergunta se gera mesmo assim. */
+async function _comGarantirNumero() {
+  const el = document.getElementById('com-of-numero'); if (!el) return true;
+  const ano = com_anoForm();
+  try { const { data, error } = await _dbLerChave('cme_oficios'); if (!error && data && data.value && Array.isArray(data.value.registros)) _cache['oficios'] = data.value; } catch (e) {}
+  const digitado = parseInt((el.value || '').replace(/\D/g, '')) || 0;
+  const manual = !!(_comNumeroManual && digitado);
+  const corpo = manual ? { ano, numero: digitado } : { ano, minimo: Math.max(com_proximoNumero(ano), digitado || 0) };
+  try {
+    if (!r2_state.url || !r2_state.token) r2_carregarConfig();
+    const r = await r2_api('POST', '/oficio/reservar', { 'Content-Type': 'application/json' }, JSON.stringify(corpo));
+    const n = parseInt(r && r.numero);
+    if (!n) throw new Error((r && r.error) || 'resposta inválida');
+    if (!manual && n !== digitado) {
+      el.value = String(n); _comNumeroManual = false;
+      try { com_atualizarAvisoNumero(); com_atualizarPreview(); } catch (e) {}
+      if (digitado) _mostrarToast('\u{2139}\u{FE0F} O nº ' + digitado + ' já tinha sido usado em outro computador — este ofício sai com o nº ' + n + '.', 'sucesso');
+    }
+    return true;
+  } catch (e) {
+    return confirm('Não consegui confirmar o número na central de números (' + (e.message || e) + ').\n\nGerar mesmo assim com o nº ' + el.value + '?\n(pode repetir se outra pessoa gerar ao mesmo tempo)');
+  }
+}
+async function com_gerarOficioSeguro() { if (await _comGarantirNumero()) com_gerarOficio(); }
+
 /* Avança o número do ofício no campo para o PRÓXIMO, logo APÓS gerar — senão o
    próximo ofício repetia o mesmo número (o avanço só acontecia no "Limpar").
    Otimista (numeroUsado+1) para não depender do round-trip do registro no
@@ -25385,6 +25449,7 @@ async function com_gerarPDFComAnexos() {
 
 /* ── Geração efetiva do PDF (chamado após seleção de páginas) ── */
 async function _comGerarPDFExec() {
+  if (!(await _comGarantirNumero())) return; // número reservado na central antes de gerar
   const texto = document.getElementById('com-of-texto').value.trim();
   const btn   = document.getElementById('com-btn-pdf-anexos');
   if (btn) { btn.disabled = true; btn.textContent = '\u{23F3} Gerando PDF...'; }
