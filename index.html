@@ -2836,7 +2836,7 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
             <!-- Nº Ofício + Data -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
               <div class="form-field">
-                <label>Nº do Ofício <span style="font-weight:400;color:#94a3b8">(clique para escolher um anterior)</span></label>
+                <label>Nº do Ofício <span style="font-weight:400;color:#94a3b8">(clique para ver os disponíveis)</span></label>
                 <div id="com-of-num-wrap" style="position:relative">
                   <div style="display:flex;gap:6px">
                     <input type="text" id="com-of-numero" autocomplete="off"
@@ -23213,32 +23213,40 @@ function com_abrirListaNumeros() {
   const usados = new Map(regs.map(r => [r.numero, r])); // numero \u{2192} registro
   const base   = COM_OFICIO_BASE[ano] || 1;
   const maxU   = usados.size ? Math.max(...usados.keys()) : base - 1;
-  const inicio = base;
-  const fim    = Math.max(maxU + 12, base + 17); // mostra usados + ~12 disponíveis à frente
   const atual  = parseInt((document.getElementById('com-of-numero')?.value || '').replace(/\D/g, ''));
+  // 15/10: os DISPONÍVEIS vêm primeiro (antes a lista começava no 1º número do ano e
+  // era preciso rolar por centenas de já enviados até achar um livre)
+  const LIVRES = 15;
 
-  let chips = '';
-  for (let n = inicio; n <= fim; n++) {
+  const chip = n => {
     const reg     = usados.get(n);
     const ehUsado = !!reg;
     const ehAtual = n === atual;
     const titulo  = ehUsado ? `Já utilizado — ${com_esc(reg.monitorado || '—')}` : 'Disponível';
-    const bg      = ehAtual ? '#eff6ff' : '#fff';
-    chips += `<div onclick="com_selecionarNumero(${n})" title="${titulo}"
+    const bg      = ehAtual ? '#eff6ff' : ehUsado ? '#fff' : '#f0fdf4';
+    return `<div onclick="com_selecionarNumero(${n})" title="${titulo}"
       style="position:relative;cursor:pointer;text-align:center;padding:8px 3px;border-radius:7px;font-size:.8rem;font-weight:700;
-             border:1px solid ${ehAtual ? '#1d4ed8' : '#e5e9f0'};background:${bg};color:${ehUsado ? '#991b1b' : '#334155'}"
+             border:1px solid ${ehAtual ? '#1d4ed8' : ehUsado ? '#e5e9f0' : '#bbf7d0'};background:${bg};color:${ehUsado ? '#991b1b' : '#166534'}"
       onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='${bg}'">
       ${n}${ehUsado ? '<span style="position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;background:#dc2626;box-shadow:0 0 0 1px #fff"></span>' : ''}
     </div>`;
-  }
+  };
+  let livres = '';
+  for (let n = maxU + 1; n <= maxU + LIVRES; n++) livres += chip(n);
+  let enviados = '';
+  for (let n = maxU; n >= base; n--) enviados += chip(n); // mais recente primeiro
+  const titulo = t => `<div style="padding:6px 11px 0;font-size:.72rem;font-weight:700;color:#475569">${t}</div>`;
   box.innerHTML = `
-    <div style="padding:7px 11px;font-size:.72rem;color:#64748b;border-bottom:1px solid #f1f5f9;background:#f8fafc;display:flex;gap:14px;align-items:center;position:sticky;top:0">
+    <div style="padding:7px 11px;font-size:.72rem;color:#64748b;border-bottom:1px solid #f1f5f9;background:#f8fafc;display:flex;gap:14px;align-items:center;position:sticky;top:0;z-index:1">
       <span><b>Ano ${ano}</b></span>
       <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block"></span> usado</span>
-      <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;border:1px solid #cbd5e1;display:inline-block"></span> disponível</span>
+      <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#bbf7d0;display:inline-block"></span> disponível</span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:8px">${chips}</div>`;
+    ${titulo('Disponíveis para usar')}
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:8px">${livres}</div>
+    ${enviados ? titulo('Já enviados — do mais recente ao mais antigo (clique para regerar)') + `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:8px">${enviados}</div>` : ''}`;
   box.style.display = 'block';
+  box.scrollTop = 0;
 }
 function com_fecharListaNumeros() { const b = document.getElementById('com-of-num-lista'); if (b) b.style.display = 'none'; }
 function com_selecionarNumero(n) {
