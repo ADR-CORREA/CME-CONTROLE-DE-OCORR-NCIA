@@ -106,9 +106,9 @@ function _secCartaoEscala() {
       const falta = precisa.filter(l => !tem(l));
       const status = reg === 'NAO' ? '<span style="color:#94a3b8">não tira</span>'
         : precisa.map(l => '<span style="color:' + (tem(l) ? '#15803d' : '#b45309') + '">' + l + (tem(l) ? ' \u{2714}' : ' falta') + '</span>').join(' · ');
-      return '<div draggable="true" ondragstart="sec_escArrastar(event,\'serv\',\'' + s.id + '\')" title="' + esc(s.nome) + ' — ' + esc(_SEC_APOIO_REGIME[reg] || 'sem regra') + (af ? ' · ' + esc(af.tipo) : '') + '" style="padding:6px 8px;border-radius:6px;cursor:grab;background:' + (falta.length && !af && reg !== 'NAO' ? '#fffbeb' : '#fff') + ';border:1px solid #e2e8f0' + (af || reg === 'NAO' ? ';opacity:.55' : '') + '">'
+      return '<div draggable="true" ondragstart="sec_escArrastar(event,\'serv\',\'' + s.id + '\')" title="' + esc(s.nome) + ' — ' + esc(_SEC_APOIO_REGIME[reg] || 'sem regra') + (af ? ' · ' + esc(af.tipo) : '') + '" style="padding:6px 8px;border-radius:6px;min-width:0;overflow:hidden;cursor:grab;background:' + (falta.length && !af && reg !== 'NAO' ? '#fffbeb' : '#fff') + ';border:1px solid #e2e8f0' + (af || reg === 'NAO' ? ';opacity:.55' : '') + '">'
         + '<div style="font-size:.84rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(_secEscCurto(s.nome)) + '</div>'
-        + '<div style="font-size:.7rem;font-weight:700;white-space:nowrap">' + (af ? '<span style="color:#64748b">' + esc(af.tipo.toLowerCase()) + ' · </span>' : '') + status + '</div></div>';
+        + '<div style="font-size:.7rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (af ? '<span style="color:#64748b">' + esc(af.tipo.toLowerCase()) + ' · </span>' : '') + status + '</div></div>';
     }).join('') + '</div></div>';
 
   const tabelaAfast = !afast.length ? '' : '<div style="margin-top:12px"><div style="font-weight:700;font-size:.88rem;margin-bottom:4px">Férias e licenças em ' + esc(_secEscMesTxt(mes)) + '</div>'
