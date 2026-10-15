@@ -6,8 +6,10 @@
    • Painel na sub-aba "Apoio de sábado" (grupo Escalas), editado NO PRÓPRIO QUADRO: os sábados de cada mês aparecem sozinhos (colunas);
      arraste o nome do expediente para o sábado (ou "+ adicionar"); clique na etiqueta para trocar CME/PEF;
      clique no nome (depois do sábado) para marcar compareceu/faltou; ✕ tira; arraste entre sábados para mudar.
-   • Regra (gerência, 14/10/2026): Bruna, Olidete, Francisco e Débora → 1 sábado no mês, na CME; Everton → não tira;
-     todos os demais do administrativo → 2 sábados no mês: 1 na CME + 1 na PEF (Penitenciária Feminina).
+   • Regra (gerência, 14/10 e 15/10/2026): cada um tira 1 sábado por mês, num local só.
+     Bruna, Olidete, Francisco, Débora e Ronaldo → sempre na CME; Everton → não tira;
+     todos os demais → RODÍZIO: um mês na PEF (Penitenciária Feminina), no outro na CME (alterna todo mês —
+     o local do mês sai do mês anterior: escala de sábado registrada ou, se não houver, o quadro "Escala de apoio").
      O campo "Apoio de sábado" do cadastro do servidor manda mais que essa regra padrão.
    • Montagem AUTOMÁTICA (sem botão, pedido de 14/10): ao abrir o painel, o sistema monta sozinho o mês atual (só os
      sábados que ainda vão acontecer) e o próximo, se estiverem vazios — aplica a regra, pula afastados e espalha pelos
@@ -36,9 +38,9 @@ function _secEscAfastadosMes(mes, d) {
 }
 function _secEscAfastadoEm(sid, dt, d) { return d.afastamentos.find(a => a.servidorId === sid && a.inicio <= dt && (a.fim || a.inicio) >= dt) || null; }
 // Regra padrão da gerência (vale quando o cadastro do servidor não diz nada em "Apoio de sábado")
-const _SEC_ESC_SO_CME = ['BRUNA', 'OLIDETE', 'FRANCISCO', 'DEBORA'];
+const _SEC_ESC_SO_CME = ['BRUNA', 'OLIDETE', 'FRANCISCO', 'DEBORA', 'RONALDO'];
 const _SEC_ESC_NAO_TIRA = ['EVERTON'];
-// CME = 1 sábado na CME · ROD = 1 na CME + 1 na PEF · NAO = não tira
+// CME = 1 sábado na CME · ROD = 1 sábado, alternando PEF/CME a cada mês · NAO = não tira
 function _secEscRegime(s) {
   if (!s) return '';
   if (s.apoioSabado) return s.apoioSabado; // exceção marcada no cadastro (o antigo apoioRegime seguia a regra velha e é ignorado)
@@ -47,14 +49,37 @@ function _secEscRegime(s) {
   if (_SEC_ESC_NAO_TIRA.includes(primeiro)) return 'NAO';
   return s.equipe === 'EXPEDIENTE' ? 'ROD' : '';
 }
-function _secEscPrecisa(s) { const r = _secEscRegime(s); return r === 'ROD' ? ['CME', 'PEF'] : r === 'CME' ? ['CME'] : []; }
+// local do servidor num mês JÁ registrado: escala de sábado; se não houver, o quadro "Escala de apoio" (nomes fixos) do mês
+function _secEscLocalRegistrado(s, mes, d) {
+  const reg = d.escalaSabado.find(x => x.servidorId === s.id && x.data.slice(0, 7) === mes && _SEC_ESC_LOCAIS.includes(x.local));
+  if (reg) return reg.local;
+  const q = (d.escalaServApoio || {})[mes]; if (!q || typeof q !== 'object') return '';
+  const alvo = _secEscNorm(_secEscCurto(s.nome)), cheio = _secEscNorm(s.nome);
+  for (const txt of Object.values(q)) for (const lin of String(txt || '').split('\n')) {
+    const m = lin.match(/^(.*?)\s*[–-]\s*(CME|PEF)\s*$/i); if (!m) continue;
+    const n = _secEscNorm(m[1]); if (n === alvo || n === cheio) return m[2].toUpperCase();
+  }
+  return '';
+}
+// onde o servidor tira o sábado no mês: CME fixo, ou o rodízio (o contrário do último mês registrado, mês a mês)
+function _secEscLocalDoMes(s, mes, d) {
+  const r = _secEscRegime(s);
+  if (r === 'CME') return 'CME';
+  if (r !== 'ROD') return '';
+  const doMes = _secEscLocalRegistrado(s, mes, d); if (doMes) return doMes;
+  for (let k = 1; k <= 6; k++) {
+    const loc = _secEscLocalRegistrado(s, _secEscMaisMes(mes, -k), d);
+    if (loc) return k % 2 ? (loc === 'PEF' ? 'CME' : 'PEF') : loc;
+  }
+  return 'CME';
+}
+function _secEscPrecisa(s, mes, d) { const l = _secEscLocalDoMes(s, mes || _secHoje().slice(0, 7), d || _secDados()); return l ? [l] : []; }
 // quem faz sábado: expediente ativo (e quem tiver "apoio de sábado" marcado no cadastro)
 function _secEscPessoal(d) { return d.servidores.filter(s => (s.situacao || 'ativo') === 'ativo' && (s.equipe === 'EXPEDIENTE' || s.apoioSabado)).sort((a, b) => a.nome.localeCompare(b.nome)); }
-// local sugerido: o que ainda FALTA para ele no mês (CME + PEF de quem faz os dois); senão CME
+// local sugerido ao escalar: o local dele no mês (CME fixo ou o do rodízio); senão CME
 function _secEscLocalPadrao(sid, d, dt) {
-  const s = _secServ(sid, d), mes = String(dt || '').slice(0, 7);
-  const tem = l => d.escalaSabado.some(x => x.servidorId === sid && x.data.slice(0, 7) === mes && x.local === l);
-  return _secEscRegime(s) === 'ROD' && tem('CME') && !tem('PEF') ? 'PEF' : 'CME';
+  const s = _secServ(sid, d);
+  return (s && _secEscLocalDoMes(s, String(dt || '').slice(0, 7), d)) || 'CME';
 }
 function _secEscAtualizar() {
   const el = document.getElementById('sec-esc-card'); if (el) el.outerHTML = _secCartaoEscala();
@@ -62,11 +87,12 @@ function _secEscAtualizar() {
 }
 
 // ── Visual das duas escalas (15/10/2026: "fundo branco e letras pequenas confundem") ──
-// Tema escuro do design system do CME (GitHub Dark), texto 14px, só o essencial à vista; o resto em seções recolhíveis.
+// Texto 14px, só o essencial à vista; o resto em seções recolhíveis. Cores CLARAS, iguais às do resto do sistema
+// (15/10: o escuro "não combina com o sistema geral"); CME = azul, PEF = vinho — cada local com a sua cor.
 function _secEscxCss() {
   if (document.getElementById('sec-escx-css')) return '';
   const st = document.createElement('style'); st.id = 'sec-escx-css';
-  st.textContent = '.escx{--bg:#0d1117;--sf:#161b22;--el:#21262d;--bd:#30363d;--tx:#e6edf3;--mu:#8b949e;--sb:#6e7681;--ac:#58a6ff;--ok:#3fb950;--wa:#d29922;--da:#f85149;--pu:#a371f7;'
+  st.textContent = '.escx{--bg:#ffffff;--sf:#f8fafc;--el:#ffffff;--bd:#e2e8f0;--tx:#0f172a;--mu:#475569;--sb:#94a3b8;--ac:#2563eb;--ok:#15803d;--wa:#b45309;--da:#b91c1c;--pu:#7c3aed;'
     + 'background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:16px;margin-top:12px;font-size:14px;line-height:1.5;'
     + 'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif}'
     + '.escx *{box-sizing:border-box}'
@@ -74,9 +100,9 @@ function _secEscxCss() {
     + '.escx-tit{font-size:20px;font-weight:600;line-height:1.25}'
     + '.escx-sub{font-size:13px;color:var(--mu);margin-top:3px}'
     + '.escx-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}'
-    + '.escx-btn{background:var(--el);color:#c9d1d9;border:1px solid var(--bd);padding:5px 14px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;line-height:1.5}'
+    + '.escx-btn{background:var(--el);color:var(--tx);border:1px solid #cbd5e1;padding:5px 14px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;line-height:1.5}'
     + '.escx-btn:hover{border-color:var(--ac);color:var(--tx)}'
-    + '.escx-btn.pri{background:#1f883d;color:#fff;border-color:rgba(240,246,252,.1)}.escx-btn.pri:hover{background:#2c974b}'
+    + '.escx-btn.pri{background:#1f883d;color:#fff;border-color:#1a7f37}.escx-btn.pri:hover{background:#1a7f37}'
     + '.escx-mes{font-size:16px;font-weight:600;min-width:160px;text-align:center;text-transform:capitalize}'
     + '.escx-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}'
     + '.escx-card{background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:12px;min-width:0}'
@@ -86,15 +112,16 @@ function _secEscxCss() {
     + '.escx-dia{font-size:24px;font-weight:600;line-height:1.1}.escx-dia small{font-size:14px;color:var(--mu);font-weight:400}'
     + '.escx-rot{font-size:12px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;font-weight:600}'
     + '.escx-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--el);border:1px solid var(--bd);border-radius:6px;margin-top:6px;cursor:grab;min-width:0}'
-    + '.escx-row:hover{border-color:#484f58}.escx-row.ok{box-shadow:inset 3px 0 0 var(--ok)}.escx-row.falta{box-shadow:inset 3px 0 0 var(--da)}.escx-row.apagado{opacity:.6}'
+    + '.escx-row:hover{border-color:#94a3b8}.escx-row.ok{box-shadow:inset 3px 0 0 var(--ok)}.escx-row.falta{box-shadow:inset 3px 0 0 var(--da)}.escx-row.apagado{opacity:.6}'
     + '.escx-nome{flex:1;min-width:0;font-size:14px;font-weight:600;line-height:1.3;overflow-wrap:anywhere}'
     + '.escx-row.col{flex-direction:column;align-items:flex-start;gap:4px}.escx-etqs{display:flex;gap:4px;flex-wrap:wrap}'
     + '.escx-det{display:block;font-size:12px;font-weight:400;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
-    + '.escx-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:3px;border-left:2px solid currentColor;white-space:nowrap;cursor:default}'
+    + '.escx-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:3px;border-left:2px solid currentColor;white-space:nowrap;cursor:default;max-width:100%;overflow:hidden;text-overflow:ellipsis}'
     + '.escx-badge::before{content:"";width:5px;height:5px;background:currentColor;flex:none}'
-    + '.escx-badge[onclick]{cursor:pointer}.escx-badge[onclick]:hover{filter:brightness(1.25)}'
-    + '.b-ac{background:rgba(88,166,255,.14);color:#58a6ff}.b-wa{background:rgba(210,153,34,.14);color:#d29922}.b-ok{background:rgba(63,185,80,.14);color:#3fb950}'
-    + '.b-da{background:rgba(248,81,73,.14);color:#f85149}.b-pu{background:rgba(163,113,247,.16);color:#a371f7}.b-mu{background:rgba(139,148,158,.14);color:#8b949e}'
+    + '.escx-badge[onclick]{cursor:pointer}.escx-badge[onclick]:hover{filter:brightness(.92)}'
+    + '.b-ac{background:#eff6ff;color:#1d4ed8}.b-wa{background:#fffbeb;color:#b45309}.b-ok{background:#f0fdf4;color:#15803d}'
+    + '.b-da{background:#fef2f2;color:#b91c1c}.b-pu{background:#f5f3ff;color:#6d28d9}.b-mu{background:#f1f5f9;color:#475569}'
+    + '.b-cme{background:#eff6ff;color:#1d4ed8}.b-pef{background:#fdf2f8;color:#9d174d}'
     + '.escx-x{color:var(--sb);cursor:pointer;font-size:14px;padding:0 2px;flex:none}.escx-x:hover{color:var(--da)}'
     + '.escx-add{margin-top:6px;padding:7px;border:1px dashed var(--bd);border-radius:6px;text-align:center;font-size:13px;color:var(--mu);cursor:pointer}'
     + '.escx-add:hover{border-color:var(--ac);color:var(--ac)}'
@@ -112,6 +139,7 @@ function _secEscxCss() {
   document.head.appendChild(st);
   return '';
 }
+const _secEscCorLocal = l => l === 'PEF' ? 'b-pef' : 'b-cme';
 const _SEC_ESCX_TIPO = t => /f[ée]rias/i.test(t) ? 'b-ac' : /sa[uú]de|m[ée]dic/i.test(t) ? 'b-wa' : /licen/i.test(t) ? 'b-pu' : 'b-mu';
 
 // ── Painel (editado no próprio quadro) ───────────────────────────────────────
@@ -125,7 +153,7 @@ function _secCartaoEscala() {
   const atual = hoje.slice(0, 7); [atual, _secEscMaisMes(atual, 1), mes].forEach(_secEscAutoAgendar);
   // o quadro fixo da escala de serviço é copiado na 1ª vez que o mês aparece — também por aqui, agora que as escalas têm sub-abas separadas
   if (typeof _secServApoioCongelar === 'function') _secServApoioCongelar(mes);
-  const badgeLocal = (x, clic) => '<span class="escx-badge ' + (x.local === 'PEF' ? 'b-wa' : 'b-ac') + '"' + (clic ? ' onclick="sec_escLocal(\'' + x.id + '\')" title="Clique para trocar CME / PEF"' : '') + '>' + esc(x.local) + '</span>';
+  const badgeLocal = (x, clic) => '<span class="escx-badge ' + _secEscCorLocal(x.local) + '"' + (clic ? ' onclick="sec_escLocal(\'' + x.id + '\')" title="Clique para trocar CME / PEF"' : '') + '>' + esc(x.local) + '</span>';
 
   const coluna = dt => {
     const lst = d.escalaSabado.filter(x => x.data === dt).sort((a, b) => a.local.localeCompare(b.local) || _secEscNome(a, d).localeCompare(_secEscNome(b, d)));
@@ -153,7 +181,7 @@ function _secCartaoEscala() {
 
   // quem do expediente ainda falta escalar no mês (o resto fica recolhido)
   const situacao = pessoal.map(s => {
-    const af = afast.find(a => a.servidorId === s.id), reg = _secEscRegime(s), precisa = _secEscPrecisa(s);
+    const af = afast.find(a => a.servidorId === s.id), reg = _secEscRegime(s), precisa = _secEscPrecisa(s, mes, d);
     const tem = l => doMes.some(x => x.servidorId === s.id && x.local === l);
     return { s, af, reg, precisa, falta: precisa.filter(l => !tem(l)) };
   });
@@ -165,22 +193,22 @@ function _secCartaoEscala() {
   const grade = itens => '<div class="escx-grid" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:0 10px">' + itens.join('') + '</div>';
   const blocoPend = pend.length
     ? '<div class="escx-sec">Faltam escalar <span>arraste o nome para um sábado</span></div>'
-      + grade(pend.map(x => pessoa(x, x.falta.map(l => '<span class="escx-badge ' + (l === 'PEF' ? 'b-wa' : 'b-ac') + '">falta ' + l + '</span>').join(''))))
+      + grade(pend.map(x => pessoa(x, x.falta.map(l => '<span class="escx-badge ' + _secEscCorLocal(l) + '">' + l + ' este mês</span>').join(''))))
     : '';
   const blocoProntos = prontos.length ? '<details><summary>Já escalados no mês <span class="n">(' + prontos.length + ')</span></summary><div class="dentro">'
-    + grade(prontos.map(x => pessoa(x, x.precisa.map(l => '<span class="escx-badge b-ok">' + l + '</span>').join('')))) + '</div></details>' : '';
+    + grade(prontos.map(x => pessoa(x, x.precisa.map(l => '<span class="escx-badge ' + _secEscCorLocal(l) + '">\u{2713} ' + l + '</span>').join('')))) + '</div></details>' : '';
   const blocoFora = fora.length ? '<details><summary>Não entram este mês <span class="n">(' + fora.length + ' — férias, licença ou não tira)</span></summary><div class="dentro">'
     + grade(fora.map(x => pessoa(x, '<span class="escx-badge ' + (x.af ? _SEC_ESCX_TIPO(x.af.tipo) : 'b-mu') + '">' + esc(x.af ? x.af.tipo : 'não tira') + '</span>'))) + '</div></details>' : '';
   const blocoAfast = !afast.length ? '' : '<details><summary>Férias e licenças em ' + esc(_secEscMesTxt(mes)) + ' <span class="n">(' + afast.length + ')</span></summary><div class="dentro">'
-    + grade(afast.map(a => '<div class="escx-row" style="cursor:default"><span class="escx-nome">' + esc(_secEscCurto(_secNomeServ(a.servidorId, d)))
+    + grade(afast.map(a => '<div class="escx-row col" style="cursor:default"><span class="escx-nome">' + esc(_secEscCurto(_secNomeServ(a.servidorId, d)))
       + '<span class="escx-det mono">' + _secBR(a.inicio).slice(0, 5) + ' → ' + _secBR(a.fim || a.inicio).slice(0, 5) + '</span></span><span class="escx-badge ' + _SEC_ESCX_TIPO(a.tipo) + '">' + esc(a.tipo) + '</span></div>')) + '</div></details>';
   const ajuda = '<details><summary>Como usar e regra do mês</summary><div class="dentro" style="font-size:13px;color:var(--mu)">'
-    + '<p style="margin:0 0 6px"><b style="color:var(--tx)">Regra:</b> 1 sábado na CME + 1 na PEF por mês · Bruna, Olidete, Francisco e Débora: só CME · Everton: não tira. O cadastro do servidor ("Apoio de sábado") manda mais que a regra.</p>'
+    + '<p style="margin:0 0 6px"><b style="color:var(--tx)">Regra:</b> 1 sábado por mês, num local só · rodízio: quem foi na PEF no mês passado vai na CME neste mês, e vice-versa · Bruna, Olidete, Francisco, Débora e Ronaldo: sempre CME · Everton: não tira. O cadastro do servidor ("Apoio de sábado") manda mais que a regra.</p>'
     + '<p style="margin:0">Arraste o nome para um sábado (ou "+ adicionar") · clique na etiqueta CME/PEF para trocar · depois do sábado, clique no nome para marcar compareceu ou faltou · \u{2715} tira · arraste entre sábados para mudar o dia · '
     + '<a href="#" onclick="sec_escDataExtra(\'' + mes + '\');return false">incluir um dia que não é sábado</a>.</p></div></details>';
 
   const faixa = mes < atual ? '' : '<div class="escx-faixa">' + (pend.length
-    ? '<span class="escx-badge b-wa">Pendente</span><span><b>' + pend.length + '</b> servidor(es) ainda sem todos os sábados do mês.</span>'
+    ? '<span class="escx-badge b-wa">Pendente</span><span><b>' + pend.length + '</b> servidor(es) ainda sem o sábado do mês.</span>'
     : vazio ? '<span class="escx-badge b-mu">Montando</span><span>Montando a escala de ' + esc(_secEscMesTxt(mes)) + ' pela regra…</span>'
     : '<span class="escx-badge b-ok">Completa</span><span>Todos do expediente já estão escalados neste mês.</span>') + '</div>';
 
@@ -256,7 +284,7 @@ function sec_escDataExtra(mes) {
 
 // ── Montagem automática pela regra (só sábados de hoje em diante) ─────────────
 function _secEscPlanoAuto(mes, d) {
-  const hoje = _secHoje(), sabs = _secEscSabados(mes).filter(s => s >= hoje), pessoal = _secEscPessoal(d).filter(s => _secEscPrecisa(s).length);
+  const hoje = _secHoje(), sabs = _secEscSabados(mes).filter(s => s >= hoje), pessoal = _secEscPessoal(d).filter(s => _secEscPrecisa(s, mes, d).length);
   if (!sabs.length || !pessoal.length) return [];
   const ultimo = sid => d.escalaSabado.filter(x => x.servidorId === sid && x.data < mes + '-01').reduce((m, x) => x.data > m ? x.data : m, '');
   // quem está há mais tempo sem sábado escolhe primeiro; empate: ordem alfabética
@@ -265,7 +293,7 @@ function _secEscPlanoAuto(mes, d) {
   const plano = [];
   // PEF primeiro (vaga mais disputada), depois CME; cada vaga vai para o sábado com menos gente daquele local
   ['PEF', 'CME'].forEach(local => fila.forEach((s, i) => {
-    if (!_secEscPrecisa(s).includes(local)) return;
+    if (!_secEscPrecisa(s, mes, d).includes(local)) return;
     const ordem = sabs.map((_, k) => sabs[(i + k) % sabs.length])
       .filter(dt => !cont[dt].pessoas.has(s.id) && !_secEscAfastadoEm(s.id, dt, d))
       .sort((a, b) => cont[a][local] - cont[b][local] || cont[a].tot - cont[b].tot);

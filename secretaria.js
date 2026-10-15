@@ -12,8 +12,8 @@ const _SEC_DIREITOS = [6, 12, 24];
 // Escala geral: posto do plantonista e turno do expediente
 const _SEC_POSTOS = { '1': 'Posto 1 — instalação, inspeção e zona', '2': 'Posto 2 — ocorrências, endereço, drive e livro' };
 const _SEC_TURNOS = { M: 'Manhã', T: 'Tarde' };
-// Apoio do administrativo aos sábados: uns fazem só na CME, outros alternam o mês entre CME e PEF
-const _SEC_APOIO_REGIME = { CME: 'Só na CME (1 sábado no mês)', ROD: '1 sábado na CME + 1 na PEF (todo mês)', NAO: 'Não tira apoio de sábado' };
+// Apoio do administrativo aos sábados (1 por mês): uns fazem só na CME, outros alternam o mês entre PEF e CME
+const _SEC_APOIO_REGIME = { CME: 'Só na CME (1 sábado no mês)', ROD: 'Rodízio: 1 sábado por mês, alternando PEF e CME a cada mês', NAO: 'Não tira apoio de sábado' };
 // Rodízio mensal dos postos (pedido de 14/10/2026): o posto gravado no cadastro é o do MÊS-BASE (config.postoBase,
 // padrão outubro/2026 — a escala geral importada); a cada mês seguinte troca sozinho 1 ↔ 2.
 const _SEC_POSTO_BASE = '2026-10';
