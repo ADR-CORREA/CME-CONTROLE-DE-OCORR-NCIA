@@ -76,6 +76,7 @@ function _secServGuardarAuto() {
 // ── Painel ────────────────────────────────────────────────────────────────────
 function _secCartaoServico() {
   const d = _secDados(), hoje = _secHoje(), mes = _secEscMesVis || hoje.slice(0, 7), passado = mes < _secServAtual();
+  _secServApoioCongelar(mes);
   const linhas = _secServLinhas(mes, d), ids = Object.keys(linhas);
   const dias = _secServDiasGuarnicao(mes), deHoje = mes === _secServAtual() ? _secPlantaoAgora().guarnicao : '';
   const corPosto = { '1': '#dc2626', '2': '#2563eb' }, corTurno = { M: '#b45309', T: '#7c3aed' };
@@ -135,7 +136,52 @@ function _secCartaoServico() {
     + '<div style="margin-top:14px;font-weight:700;font-size:.95rem">\u{1F3E2} Setor administrativo <span style="font-weight:400;font-size:.78rem;color:#64748b">— Manhã (M) · Tarde (T)</span></div>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-top:6px">'
     + Object.keys(setores).sort((a, b) => _secServOrdemSetor(a).localeCompare(_secServOrdemSetor(b))).map(setorCard).join('') + novoSetor
+    + '</div>' + _secServHtmlQuadroApoio(mes, d) + '</div>';
+}
+
+// ── Quadro "Escala de apoio" da escala de serviço: nomes FIXOS (pedido de 14/10/2026) ──
+// Na 1ª vez que o mês (atual ou futuro) aparece com a escala de apoio montada, o quadro é copiado dela e fica guardado em
+// cme_secretaria.escalaServApoio[mes]; mudar a escala de apoio depois NÃO muda este quadro (só editando aqui ou "copiar de novo").
+function _secServSabados(mes, d) { return _secEscDatas(mes, d).filter(dt => d.escalaSabado.some(x => x.data === dt) || new Date(dt + 'T12:00:00').getDay() === 6); }
+function _secServApoioCopia(mes, d) {
+  const r = {};
+  _secServSabados(mes, d).forEach(dt => { r[dt] = d.escalaSabado.filter(x => x.data === dt).sort((a, c) => a.local.localeCompare(c.local) || _secEscNome(a, d).localeCompare(_secEscNome(c, d))).map(x => _secServNomePapel(_secEscNome(x, d)) + ' – ' + x.local).join('\n'); });
+  return r;
+}
+// o quadro do mês: o guardado; se ainda não há, uma cópia da escala de apoio (só para mostrar)
+function _secServQuadroApoio(mes, d) { return Object.assign(_secServApoioCopia(mes, d), (d.escalaServApoio || {})[mes] || {}); }
+const _secServApoioTentado = new Set();
+function _secServApoioCongelar(mes) {
+  const d = _secDados();
+  if (mes < _secServAtual() || (d.escalaServApoio || {})[mes] || _secServApoioTentado.has(mes) || !d.escalaSabado.some(x => x.data.slice(0, 7) === mes)) return;
+  _secServApoioTentado.add(mes);
+  _secMutar(x => { if (x.escalaServApoio[mes]) return false; x.escalaServApoio = Object.assign({}, x.escalaServApoio, { [mes]: _secServApoioCopia(mes, x) }); })
+    .then(ok => { if (ok) _secEscAtualizar(); });
+}
+function _secServHtmlQuadroApoio(mes, d) {
+  const q = _secServQuadroApoio(mes, d), dts = Object.keys(q).sort(), fixo = !!(d.escalaServApoio || {})[mes];
+  return '<div style="margin-top:14px;border:1px solid #e2e8f0;border-radius:8px;padding:10px;background:#fafafa">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px"><div><div style="font-weight:700;font-size:.92rem">\u{1F4CB} Quadro "Escala de apoio" desta escala de serviço</div>'
+    + '<div style="font-size:.74rem;color:#64748b">Sai na impressão da escala de serviço com estes nomes fixos — mudar a escala de apoio de sábado <b>não</b> muda este quadro. Um nome por linha (ex.: BRUNA SANTOS – CME).' + (fixo ? '' : ' <b style="color:#b45309">Ainda não guardado — mostrando a escala de apoio atual.</b>') + '</div></div>'
+    + '<button class="btn-sm btn-outline" onclick="sec_servApoioRecopiar(\'' + mes + '\')">Copiar de novo da escala de apoio</button></div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px">'
+    + dts.map(dt => '<div><div style="font-size:.74rem;font-weight:700;margin-bottom:2px">DIA ' + _secBR(dt) + '</div>'
+      + '<textarea rows="5" onchange="sec_servApoioSalvar(\'' + mes + '\',\'' + dt + '\',this.value)" style="width:100%;font-size:.8rem;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;resize:vertical">' + esc(q[dt] || '') + '</textarea></div>').join('')
     + '</div></div>';
+}
+async function sec_servApoioSalvar(mes, dt, valor) {
+  const txt = String(valor || '').split('\n').map(l => l.trim()).filter(Boolean).join('\n').slice(0, 1000);
+  const ok = await _secMutar(d => {
+    const atual = Object.assign(_secServApoioCopia(mes, d), d.escalaServApoio[mes] || {});
+    d.escalaServApoio = Object.assign({}, d.escalaServApoio, { [mes]: Object.assign(atual, { [dt]: txt }) });
+  }, { action: 'sec_serv_apoio', alvo: _secBR(dt), detalhe: txt.replace(/\n/g, '; ').slice(0, 200) });
+  if (ok) _mostrarToast('Quadro de apoio da escala de serviço salvo.', 'sucesso');
+}
+async function sec_servApoioRecopiar(mes) {
+  if (!confirm('Substituir o quadro de apoio da escala de serviço de ' + _secEscMesTxt(mes) + ' pelos nomes que estão agora na escala de apoio de sábado?')) return;
+  const ok = await _secMutar(d => { d.escalaServApoio = Object.assign({}, d.escalaServApoio, { [mes]: _secServApoioCopia(mes, d) }); },
+    { action: 'sec_serv_apoio', alvo: _secEscMesTxt(mes), detalhe: 'copiado de novo da escala de apoio' });
+  if (ok) { _mostrarToast('Quadro atualizado.', 'sucesso'); _secEscAtualizar(); }
 }
 
 // ── Edição ────────────────────────────────────────────────────────────────────
@@ -212,8 +258,8 @@ function sec_servImprimir(mes) {
   for (let i = 0; i < ks.length; i += 2) tabS += '<tr>' + [ks[i], ks[i + 1]].map(k => k ? '<td style="' + b + ';background:#e7e7e7;font-weight:bold;text-align:center;width:22%">' + esc(k) + ':</td><td style="' + b + ';width:28%">' + celNomes(k) + '</td>' : '<td style="' + b + '"></td><td style="' + b + '"></td>').join('') + '</tr>';
   tabS += '</table>';
   // escala de apoio do administrativo (sábados)
-  const sabs = _secEscDatas(mes, d).filter(dt => d.escalaSabado.some(x => x.data === dt) || new Date(dt + 'T12:00:00').getDay() === 6);
-  const nomesSab = dt => d.escalaSabado.filter(x => x.data === dt).sort((a, c) => a.local.localeCompare(c.local)).map(x => esc(_secServNomePapel(_secEscNome(x, d))) + ' – ' + esc(x.local)).join('<br>');
+  const quadro = _secServQuadroApoio(mes, d), sabs = Object.keys(quadro).sort();
+  const nomesSab = dt => esc(quadro[dt] || '').replace(/\n/g, '<br>');
   const tabA = '<table style="width:100%;border-collapse:collapse;font-size:7.5pt"><tr><th colspan="' + sabs.length + '" style="' + b + ';background:#e7e7e7;font-size:8.5pt">ESCALA DE APOIO DO ADMINISTRATIVO<br>Horário: ' + esc(cfg.escalaHorario || _SEC_ESC_HORARIO) + '</th></tr>'
     + '<tr>' + sabs.map(dt => '<th style="' + b + '">DIA: ' + _secBR(dt) + '</th>').join('') + '</tr><tr>' + sabs.map(dt => '<td style="' + b + ';vertical-align:top">' + nomesSab(dt) + '</td>').join('') + '</tr></table>';
   // observações: férias, licenças… do mês
@@ -239,4 +285,4 @@ function sec_servImprimir(mes) {
   _entregarDoc(new Blob([html], { type: 'text/html' }), 'Escala de Servico ' + mes + '.html');
   auditar({ modulo: 'Secretaria', action: 'sec_serv_imprimir', alvo: MESES[mesNum - 1] + '/' + ano });
 }
-Object.assign(_SEC_ACOES, { sec_serv_mover: 'Mudou servidor de guarnição/setor na escala de serviço', sec_serv_posto: 'Trocou o posto na escala de serviço', sec_serv_turno: 'Trocou o turno na escala de serviço', sec_serv_imprimir: 'Imprimiu a escala de serviço' });
+Object.assign(_SEC_ACOES, { sec_serv_mover: 'Mudou servidor de guarnição/setor na escala de serviço', sec_serv_posto: 'Trocou o posto na escala de serviço', sec_serv_turno: 'Trocou o turno na escala de serviço', sec_serv_imprimir: 'Imprimiu a escala de serviço', sec_serv_apoio: 'Editou o quadro de apoio da escala de serviço' });

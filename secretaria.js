@@ -18,7 +18,7 @@ function _secRotuloEscala(s) { return s && s.posto && _SEC_POSTOS[s.posto] ? 'Po
 let _secAba = 'hoje', _secPerfilId = null, _secPerfilAba = 'ficha', _secModeloId = null;
 
 _STORES_PROTEGIDAS.secretaria = v => (v && Array.isArray(v.servidores))
-  ? v.servidores.length + (v.apoios || []).length + (v.folgas || []).length + (v.afastamentos || []).length + (v.compromissos || []).length + (v.documentos || []).length + (v.escalaSabado || []).length + Object.keys(v.escalaServico || {}).length : -1;
+  ? v.servidores.length + (v.apoios || []).length + (v.folgas || []).length + (v.afastamentos || []).length + (v.compromissos || []).length + (v.documentos || []).length + (v.escalaSabado || []).length + Object.keys(v.escalaServico || {}).length + (v.faltas || []).length + Object.keys(v.escalaServApoio || {}).length : -1;
 
 function _secPode() { return !!(usuarioAtual && _SEC_NIVEIS.includes(usuarioAtual.nivel)); }
 function _secNormal(d) {
@@ -27,6 +27,8 @@ function _secNormal(d) {
   return { servidores: arr('servidores'), apoios: arr('apoios'), folgas: arr('folgas'), lixeira: arr('lixeira'),
     afastamentos: arr('afastamentos'), compromissos: arr('compromissos'), documentos: arr('documentos'), escalaSabado: arr('escalaSabado'),
     escalaServico: (d.escalaServico && typeof d.escalaServico === 'object' && !Array.isArray(d.escalaServico)) ? d.escalaServico : {}, // { 'AAAA-MM': { linhas, guardadoEm } }
+    escalaServApoio: (d.escalaServApoio && typeof d.escalaServApoio === 'object' && !Array.isArray(d.escalaServApoio)) ? d.escalaServApoio : {}, // { 'AAAA-MM': { 'AAAA-MM-DD': 'texto' } } quadro fixo da escala de serviço
+    faltas: arr('faltas'),
     modelos: Array.isArray(d.modelos) ? d.modelos : null,                       // null = ainda usa os modelos padrão
     config: (d.config && typeof d.config === 'object') ? d.config : {} };
 }
@@ -105,7 +107,7 @@ function sec_inicializar() {
   const root = document.getElementById('sec-root');
   if (!root) return;
   if (!_secPode()) { root.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b">Acesso restrito à Secretaria e à Gerência.</div>'; return; }
-  const abas = [['hoje', '\u{1F3E0} Hoje'], ['agenda', '\u{1F4C5} Agenda'], ['despachos', '\u{1F4E8} Despachos PRODOC'], ['arquivo', '\u{1F5C4}\u{FE0F} Arquivo'], ['servidores', '\u{1F464} Servidores'], ['ferias', '\u{1F3D6}\u{FE0F} Férias e Licenças'], ['escalas', '\u{1F4C6} Escala de Serviço e Apoio'], ['apoios', '\u{23F1}\u{FE0F} Apoios e Dispensas'], ['folgas', '\u{1F91D} Folgas combinadas'], ['auditoria', '\u{1F50D} Auditoria']];
+  const abas = [['hoje', '\u{1F3E0} Hoje'], ['agenda', '\u{1F4C5} Agenda'], ['despachos', '\u{1F4E8} Despachos PRODOC'], ['arquivo', '\u{1F5C4}\u{FE0F} Arquivo'], ['servidores', '\u{1F464} Servidores'], ['ferias', '\u{1F3D6}\u{FE0F} Férias e Licenças'], ['escalas', '\u{1F4C6} Escala de Serviço e Apoio'], ['faltas', '\u{1F4DD} Faltas e Folha de Ponto'], ['apoios', '\u{23F1}\u{FE0F} Apoios e Dispensas'], ['folgas', '\u{1F91D} Folgas combinadas'], ['auditoria', '\u{1F50D} Auditoria']];
   root.innerHTML = '<div class="dash-header"><div><div class="dash-title">\u{1F5C2}\u{FE0F} Secretaria</div>'
     + '<div class="dash-update">Servidores, apoios e dispensas, folgas e documentos — acesso restrito à Secretaria e à Gerência</div></div></div>'
     + '<div class="sub-tabs">' + abas.map(([k, r]) => '<div class="sub-tab' + (k === _secAba ? ' active' : '') + '" id="sec-stab-' + k + '" onclick="sec_mudarAba(\'' + k + '\')">' + r + '</div>').join('') + '</div>'
@@ -120,7 +122,7 @@ function sec_mudarAba(aba) {
 function sec_render() {
   if (typeof _secRenderHoje === 'function') _secRenderHoje();
   if (_secPerfilId) return sec_renderPerfil();
-  ({ hoje: sec_renderHojeDash, agenda: sec_renderAgenda, despachos: sec_renderDespachos, arquivo: sec_renderArquivo, servidores: sec_renderServidores, ferias: sec_renderFerias, escalas: sec_renderEscalas, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
+  ({ hoje: sec_renderHojeDash, agenda: sec_renderAgenda, despachos: sec_renderDespachos, arquivo: sec_renderArquivo, servidores: sec_renderServidores, ferias: sec_renderFerias, escalas: sec_renderEscalas, faltas: sec_renderFaltas, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
 }
 
 // ── Servidores ────────────────────────────────────────────────────────────────
