@@ -211,7 +211,7 @@ function _secCartaoEquipe(titulo, sub, cor, servs, d, hoje, vazio) {
     + '<div style="font-size:.78rem;color:#64748b;margin-bottom:6px">' + sub + '</div>'
     + (servs.length ? '<div style="max-height:340px;overflow:auto">' + sits.sort((a, b) => b.st.fora - a.st.fora || a.s.nome.localeCompare(b.s.nome)).map(x => '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid #f1f5f9;font-size:.86rem' + (x.st.fora ? ';color:#94a3b8' : '') + '">'
       + '<span><a href="#" onclick="sec_abrirPerfil(\'' + x.s.id + '\');return false" style="color:inherit;text-decoration:' + (x.st.fora ? 'line-through' : 'none') + '">' + esc(x.s.nome) + '</a>'
-      + (!x.st.fora && _secRotuloEscala(x.s) ? ' <span title="' + esc(_SEC_POSTOS[x.s.posto] || '') + '" style="font-size:.68rem;font-weight:600;color:#475569;background:#f1f5f9;border-left:2px solid #94a3b8;border-radius:3px;padding:1px 5px;white-space:nowrap">' + esc(_secRotuloEscala(x.s)) + '</span>' : '') + '</span>'
+      + (!x.st.fora && _secRotuloEscala(x.s) ? ' <span title="' + esc(_SEC_POSTOS[_secPostoNoMes(x.s.posto)] || '') + '" style="font-size:.68rem;font-weight:600;color:#475569;background:#f1f5f9;border-left:2px solid #94a3b8;border-radius:3px;padding:1px 5px;white-space:nowrap">' + esc(_secRotuloEscala(x.s)) + '</span>' : '') + '</span>'
       + (x.st.txt ? '<span style="font-size:.72rem;font-weight:600;color:' + x.st.cor + ';white-space:nowrap">' + esc(x.st.txt) + '</span>' : '') + '</div>').join('') + '</div>'
       : '<div style="font-size:.85rem;color:#94a3b8;padding:6px 0">' + vazio + '</div>') + '</div>';
 }

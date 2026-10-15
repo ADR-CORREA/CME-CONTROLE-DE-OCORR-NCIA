@@ -14,7 +14,17 @@ const _SEC_POSTOS = { '1': 'Posto 1 — instalação, inspeção e zona', '2': '
 const _SEC_TURNOS = { M: 'Manhã', T: 'Tarde' };
 // Apoio do administrativo aos sábados: uns fazem só na CME, outros alternam o mês entre CME e PEF
 const _SEC_APOIO_REGIME = { CME: 'Só na CME (1 sábado no mês)', ROD: '1 sábado na CME + 1 na PEF (todo mês)', NAO: 'Não tira apoio de sábado' };
-function _secRotuloEscala(s) { return s && s.posto && _SEC_POSTOS[s.posto] ? 'Posto ' + s.posto : s && s.turno && _SEC_TURNOS[s.turno] ? _SEC_TURNOS[s.turno] : ''; }
+// Rodízio mensal dos postos (pedido de 14/10/2026): o posto gravado no cadastro é o do MÊS-BASE (config.postoBase,
+// padrão outubro/2026 — a escala geral importada); a cada mês seguinte troca sozinho 1 ↔ 2.
+const _SEC_POSTO_BASE = '2026-10';
+function _secMesesEntre(a, b) { return (+b.slice(0, 4) - +a.slice(0, 4)) * 12 + (+b.slice(5, 7) - +a.slice(5, 7)); }
+// posto no mês pedido a partir do posto do mês-base (e vice-versa: a troca é o próprio inverso)
+function _secPostoNoMes(posto, mes, d) {
+  if (posto !== '1' && posto !== '2') return posto || '';
+  const base = (((d || _secDados()).config) || {}).postoBase || _SEC_POSTO_BASE;
+  return Math.abs(_secMesesEntre(base, mes || _secHoje().slice(0, 7))) % 2 ? (posto === '1' ? '2' : '1') : posto;
+}
+function _secRotuloEscala(s) { const p = s && _secPostoNoMes(s.posto); return p && _SEC_POSTOS[p] ? 'Posto ' + p : s && s.turno && _SEC_TURNOS[s.turno] ? _SEC_TURNOS[s.turno] : ''; }
 let _secAba = 'hoje', _secPerfilId = null, _secPerfilAba = 'ficha', _secModeloId = null;
 
 _STORES_PROTEGIDAS.secretaria = v => (v && Array.isArray(v.servidores))
@@ -173,7 +183,7 @@ function sec_editarServidor(id) {
     + _secCampo('sec-s-nasc', 'Nascimento', s.nascimento, 'type="date"') + _secCampo('sec-s-cargo', 'Cargo', s.cargo, 'list="sec-cargos" placeholder="Ex.: Policial Penal, Educadora Social N/S"')
     + _secCampo('sec-s-formacao', 'Formação', s.formacao, 'placeholder="Ex.: Direito"') + _secCampo('sec-s-admissao', 'Admissão / lotação na CME', s.admissao, 'type="date"')
     + sel('sec-s-equipe', 'Equipe', _SEC_EQUIPES, s.equipe) + _secCampo('sec-s-setor', 'Setor', s.setor, 'placeholder="Ex.: Plantão, Jurídico, Secretaria"')
-    + selV('sec-s-posto', 'Posto (plantão)', _SEC_POSTOS, s.posto) + selV('sec-s-turno', 'Turno (expediente)', _SEC_TURNOS, s.turno)
+    + selV('sec-s-posto', 'Posto (plantão) — neste mês; troca sozinho todo mês', _SEC_POSTOS, _secPostoNoMes(s.posto)) + selV('sec-s-turno', 'Turno (expediente)', _SEC_TURNOS, s.turno)
     + selV('sec-s-apoio', 'Apoio de sábado (vazio = regra padrão)', _SEC_APOIO_REGIME, s.apoioSabado)
     + '</div></div><div class="form-section"><div class="form-section-title">Contato</div><div class="form-grid">'
     + _secCampo('sec-s-tel', 'Telefone', s.telefone, 'inputmode="tel"') + _secCampo('sec-s-email', 'E-mail', s.email, 'type="email"')
@@ -188,7 +198,7 @@ async function sec_salvarServidor(id) {
   const v = {
     nome: _secVal('sec-s-nome').toUpperCase(), matricula: _secVal('sec-s-matricula'), cpf: _secVal('sec-s-cpf').replace(/\D/g, ''), rg: _secVal('sec-s-rg'),
     nascimento: _secVal('sec-s-nasc'), cargo: _secVal('sec-s-cargo'), formacao: _secVal('sec-s-formacao'), admissao: _secVal('sec-s-admissao'),
-    equipe: _secVal('sec-s-equipe'), setor: _secVal('sec-s-setor'), posto: _secVal('sec-s-posto'), turno: _secVal('sec-s-turno'), apoioSabado: _secVal('sec-s-apoio'), telefone: _secVal('sec-s-tel'), email: _secVal('sec-s-email'),
+    equipe: _secVal('sec-s-equipe'), setor: _secVal('sec-s-setor'), posto: _secPostoNoMes(_secVal('sec-s-posto')), turno: _secVal('sec-s-turno'), apoioSabado: _secVal('sec-s-apoio'), telefone: _secVal('sec-s-tel'), email: _secVal('sec-s-email'),
     endereco: _secVal('sec-s-end'), emergencia: _secVal('sec-s-emerg'), situacao: _secVal('sec-s-sit') || 'ativo', obs: _secVal('sec-s-obs'),
   };
   if (v.nome.length < 5) { _mostrarToast('Informe o nome completo.', 'erro'); return; }
@@ -244,7 +254,7 @@ function _secHtmlQualificacao(s) {
   return '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn-primary" onclick="sec_editarServidor(\'' + s.id + '\')">Editar dados</button></div>'
     + '<table class="data-table"><tbody>' + linha('Nome', s.nome) + linha('Matrícula', s.matricula) + linha('CPF', _secCpfFmt(s.cpf)) + linha('RG', s.rg)
     + linha('Nascimento', _secBR(s.nascimento)) + linha('Cargo', s.cargo) + linha('Formação', s.formacao) + linha('Admissão / lotação', _secBR(s.admissao))
-    + (s.posto ? linha('Posto (plantão)', _SEC_POSTOS[s.posto] || s.posto) : '') + (s.turno ? linha('Turno (expediente)', _SEC_TURNOS[s.turno] || s.turno) : '')
+    + (s.posto ? linha('Posto (plantão) neste mês', (_SEC_POSTOS[_secPostoNoMes(s.posto)] || s.posto) + ' · troca 1↔2 todo mês') : '') + (s.turno ? linha('Turno (expediente)', _SEC_TURNOS[s.turno] || s.turno) : '')
     + (s.apoioSabado ? linha('Apoio de sábado', _SEC_APOIO_REGIME[s.apoioSabado] || s.apoioSabado) : '')
     + linha('Equipe', s.equipe) + linha('Setor', s.setor) + linha('Telefone', s.telefone) + linha('E-mail', s.email) + linha('Endereço', s.endereco)
     + linha('Contato de emergência', s.emergencia) + linha('Situação', s.situacao || 'ativo') + linha('Observações', s.obs)

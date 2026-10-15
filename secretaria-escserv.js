@@ -37,16 +37,26 @@ function _secServDiasGuarnicao(mes) {
   return dias;
 }
 // escala tirada do cadastro: { id: { nome, equipe, posto, setor, turno } }
-function _secServDoCadastro(d) {
-  const linhas = {};
+function _secServDoCadastro(d, mes) {
+  const linhas = {}, m = mes || _secServAtual();
   d.servidores.filter(s => (s.situacao || 'ativo') === 'ativo' && (_PL_EQUIPES_SEC.includes(s.equipe) || s.equipe === 'EXPEDIENTE'))
-    .forEach(s => { linhas[s.id] = { nome: s.nome, equipe: s.equipe, posto: s.posto || '', setor: s.setor || '', turno: s.turno || '' }; });
+    .forEach(s => { linhas[s.id] = { nome: s.nome, equipe: s.equipe, posto: _secPostoNoMes(s.posto, m, d), setor: s.setor || '', turno: s.turno || '' }; });
   return linhas;
 }
 // a escala do mês: mês passado = o que foi guardado; mês atual/futuro = o cadastro de agora
 function _secServLinhas(mes, d) {
   const g = (d.escalaServico || {})[mes];
-  return mes < _secServAtual() && g && g.linhas ? g.linhas : _secServDoCadastro(d);
+  return mes < _secServAtual() && g && g.linhas ? g.linhas : _secServDoCadastro(d, mes);
+}
+// Setores do administrativo FIXOS (pedido de 14/10/2026: "nenhum pode sumir se não tiver ninguém").
+// Lista em config.setoresAdm; enquanto não existir, vale a lista da escala geral de outubro/2026.
+const _SEC_SETORES_PADRAO = ['Gerência — Gerente', 'Gerência — Subgerente', 'Casa da Mulher Brasileira (CME)', 'Comunicação Processual', 'Jurídico', 'Logística',
+  'Protocolo / Recepção', 'Psicossocial — Assistente Social', 'Psicossocial — Psicólogo', 'Relatórios Estatísticos', 'Relatórios Judiciais', 'Secretaria'];
+// lista guardada + os setores em uso (pelos servidores do expediente e, se vier, pelas linhas de um mês)
+function _secServSetoresConhecidos(d, linhas) {
+  const base = Array.isArray((d.config || {}).setoresAdm) ? d.config.setoresAdm : _SEC_SETORES_PADRAO;
+  const uso = d.servidores.filter(s => s.equipe === 'EXPEDIENTE').map(_secServSetor).concat(Object.values(linhas || {}).filter(l => l.equipe === 'EXPEDIENTE').map(_secServSetor));
+  return [...new Set(base.concat(uso))].filter(k => k && k !== _SEC_SERV_SEM_SETOR);
 }
 function _secServSetor(l) { return l.setor && !['Expediente', 'Plantão'].includes(l.setor) ? l.setor : _SEC_SERV_SEM_SETOR; }
 function _secServOrdemSetor(k) { return /^ger[eê]ncia/i.test(k) ? '0' + k : k === _SEC_SERV_SEM_SETOR ? '2' : '1' + k; }
@@ -115,9 +125,11 @@ function _secCartaoServico() {
   };
 
   // ── Setor administrativo (expediente) ──
-  const setores = {}; ids.filter(id => linhas[id].equipe === 'EXPEDIENTE').forEach(id => { const k = _secServSetor(linhas[id]); (setores[k] = setores[k] || []).push(id); });
+  const setores = {}; _secServSetoresConhecidos(d, linhas).forEach(k => { setores[k] = []; });
+  ids.filter(id => linhas[id].equipe === 'EXPEDIENTE').forEach(id => { const k = _secServSetor(linhas[id]); (setores[k] = setores[k] || []).push(id); });
   const setorCard = (k, i) => '<div' + solta('S:' + k) + ' style="border:1px solid ' + CAIXA[i % CAIXA.length][1] + ';border-radius:8px;padding:8px;background:' + CAIXA[i % CAIXA.length][0] + '">'
     + '<div style="font-weight:700;font-size:.82rem;margin-bottom:6px">' + esc(k) + ' <span style="font-weight:400;color:#94a3b8">(' + setores[k].length + ')</span></div>'
+    + (!setores[k].length ? '<div style="font-size:.78rem;color:#94a3b8;padding:6px 0">Arraste um nome para cá.' + (k !== _SEC_SERV_SEM_SETOR ? ' <a href="#" onclick="sec_servRemoverSetor(\'' + esc(k).replace(/'/g, '') + '\');return false" style="color:#b91c1c">remover setor</a>' : '') + '</div>' : '')
     + '<div style="display:flex;flex-direction:column;gap:4px">' + setores[k].sort((a, b) => String(linhas[a].turno || 'Z').localeCompare(String(linhas[b].turno || 'Z')) || linhas[a].nome.localeCompare(linhas[b].nome))
       .map(id => chip(id, etqTurno(id))).join('') + '</div></div>';
   const novoSetor = '<div' + solta('S:+') + ' style="border:1px dashed #cbd5e1;border-radius:8px;padding:8px;display:flex;align-items:center;justify-content:center;text-align:center;color:#94a3b8;font-size:.8rem;min-height:70px">+ arraste um nome aqui para criar um setor novo</div>';
@@ -132,10 +144,10 @@ function _secCartaoServico() {
     + '<div style="display:flex;align-items:center;gap:10px"><div style="font-weight:700;text-transform:capitalize">' + esc(_secEscMesTxt(mes)) + '</div>'
     + '<button type="button" onclick="sec_servImprimir(\'' + mes + '\')" style="padding:5px 12px;border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:600;border:1px solid #0d9488;background:#0d9488;color:#fff">\u{1F5A8}\u{FE0F} Imprimir escala do mês</button></div></div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:stretch">' + _PL_EQUIPES_SEC.map(guarnicao).join('') + '</div>'
-    + '<div style="font-size:.74rem;color:#475569;margin-top:6px"><b style="color:#dc2626">Posto 1</b> — instalação, inspeção, criação de zona · <b style="color:#2563eb">Posto 2</b> — tratamento de ocorrência, mudança de endereço, alimentação do drive, livro</div>'
+    + '<div style="font-size:.74rem;color:#475569;margin-top:6px"><b style="color:#dc2626">Posto 1</b> — instalação, inspeção, criação de zona · <b style="color:#2563eb">Posto 2</b> — tratamento de ocorrência, mudança de endereço, alimentação do drive, livro · <b>\u{1F504} os postos trocam sozinhos todo mês (1 ↔ 2)</b></div>'
     + '<div style="margin-top:14px;font-weight:700;font-size:.95rem">\u{1F3E2} Setor administrativo <span style="font-weight:400;font-size:.78rem;color:#64748b">— Manhã (M) · Tarde (T)</span></div>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-top:6px">'
-    + Object.keys(setores).sort((a, b) => _secServOrdemSetor(a).localeCompare(_secServOrdemSetor(b))).map(setorCard).join('') + novoSetor
+    + Object.keys(setores).filter(k => k !== _SEC_SERV_SEM_SETOR || setores[k].length).sort((a, b) => _secServOrdemSetor(a).localeCompare(_secServOrdemSetor(b))).map(setorCard).join('') + novoSetor
     + '</div>' + _secServHtmlQuadroApoio(mes, d) + '</div>';
 }
 
@@ -189,6 +201,8 @@ async function sec_servApoioRecopiar(mes) {
 async function _secServAplicar(mes, sid, patch, audit) {
   const passado = mes < _secServAtual(), agora = new Date().toISOString(), por = usuarioAtual ? usuarioAtual.nome : '';
   const ok = await _secMutar(d => {
+    const antes = _secServSetoresConhecidos(d, _secServLinhas(mes, d));
+    d.config = Object.assign({}, d.config, { setoresAdm: [...new Set(antes.concat(patch.setor ? [patch.setor] : []))] });
     if (passado) {
       const g = d.escalaServico[mes] || { linhas: _secServLinhas(mes, d) };
       if (!g.linhas[sid]) return false;
@@ -218,10 +232,19 @@ async function sec_servSoltar(ev, mes, alvo) {
   if (l.equipe === 'EXPEDIENTE' && (l.setor || '') === setor) return;
   return _secServAplicar(mes, sid, { equipe: 'EXPEDIENTE', setor, posto: '' }, { action: 'sec_serv_mover', detalhe: (l.equipe === 'EXPEDIENTE' ? _secServSetor(l) : l.equipe) + ' → ' + (setor || _SEC_SERV_SEM_SETOR) + ' (' + _secEscMesTxt(mes) + ')' });
 }
+async function sec_servRemoverSetor(k) {
+  const d0 = _secDados();
+  if (d0.servidores.some(s => s.equipe === 'EXPEDIENTE' && _secServSetor(s) === k)) { _mostrarToast('Esse setor ainda tem servidor — mova os nomes antes.', 'erro'); return; }
+  if (!confirm('Remover o setor "' + k + '" da escala de serviço?')) return;
+  const ok = await _secMutar(d => { d.config = Object.assign({}, d.config, { setoresAdm: _secServSetoresConhecidos(d).filter(x => x !== k) }); },
+    { action: 'sec_serv_setor', alvo: k, detalhe: 'setor removido da escala de serviço' });
+  if (ok) _secEscAtualizar();
+}
 function sec_servPosto(mes, sid) {
   const l = _secServLinhas(mes, _secDados())[sid]; if (!l) return;
   const novo = l.posto === '1' ? '2' : '1';
-  return _secServAplicar(mes, sid, { posto: novo }, { action: 'sec_serv_posto', detalhe: 'Posto ' + (l.posto || '—') + ' → ' + novo });
+  // mês atual/futuro grava no cadastro o posto do mês-base (o rodízio mensal faz o resto); mês passado grava o do próprio mês
+  return _secServAplicar(mes, sid, { posto: mes < _secServAtual() ? novo : _secPostoNoMes(novo, mes) }, { action: 'sec_serv_posto', detalhe: 'Posto ' + (l.posto || '—') + ' → ' + novo });
 }
 function sec_servTurno(mes, sid) {
   const l = _secServLinhas(mes, _secDados())[sid]; if (!l) return;
@@ -251,8 +274,9 @@ function sec_servImprimir(mes) {
   if (col.some(c => c.fora.length)) tabG += '<tr><td style="' + b + ';text-align:center">' + String(nLin + 1).padStart(2, '0') + '</td>' + col.map(c => '<td style="' + b + ';text-align:center;font-weight:bold">' + c.fora.map(id => { const a = _secServAfastNoMes(id, mes, d); return '<i>' + esc(String(a.tipo).toUpperCase()) + '</i>: PP. ' + esc(_secServNomePapel(linhas[id].nome)); }).join('<br>') + '</td>').join('') + '</tr>';
   tabG += '</table>';
   // setor administrativo (2 pares setor/nomes por linha, como no papel)
-  const setores = {}; ids.filter(id => linhas[id].equipe === 'EXPEDIENTE').forEach(id => { const k = _secServSetor(linhas[id]); (setores[k] = setores[k] || []).push(id); });
-  const ks = Object.keys(setores).sort((a, c) => _secServOrdemSetor(a).localeCompare(_secServOrdemSetor(c)));
+  const setores = {}; _secServSetoresConhecidos(d, linhas).forEach(k => { setores[k] = []; });
+  ids.filter(id => linhas[id].equipe === 'EXPEDIENTE').forEach(id => { const k = _secServSetor(linhas[id]); (setores[k] = setores[k] || []).push(id); });
+  const ks = Object.keys(setores).filter(k => k !== _SEC_SERV_SEM_SETOR || setores[k].length).sort((a, c) => _secServOrdemSetor(a).localeCompare(_secServOrdemSetor(c)));
   const celNomes = k => setores[k].sort((a, c) => String(linhas[a].turno || 'Z').localeCompare(String(linhas[c].turno || 'Z')) || linhas[a].nome.localeCompare(linhas[c].nome)).map(id => '<span style="white-space:nowrap">PP. ' + esc(_secServNomePapel(linhas[id].nome)) + (linhas[id].turno ? ' (' + esc(linhas[id].turno) + ')' : '') + '</span>').join('<br>');
   let tabS = '<table style="width:100%;border-collapse:collapse;font-size:8pt"><tr><th colspan="4" style="' + b + ';background:#e7e7e7;font-size:9.5pt">SETOR ADMINISTRATIVO: <span style="font-weight:normal">Manhã (M) - Tarde (T)</span></th></tr>';
   for (let i = 0; i < ks.length; i += 2) tabS += '<tr>' + [ks[i], ks[i + 1]].map(k => k ? '<td style="' + b + ';background:#e7e7e7;font-weight:bold;text-align:center;width:22%">' + esc(k) + ':</td><td style="' + b + ';width:28%">' + celNomes(k) + '</td>' : '<td style="' + b + '"></td><td style="' + b + '"></td>').join('') + '</tr>';
@@ -285,4 +309,4 @@ function sec_servImprimir(mes) {
   _entregarDoc(new Blob([html], { type: 'text/html' }), 'Escala de Servico ' + mes + '.html');
   auditar({ modulo: 'Secretaria', action: 'sec_serv_imprimir', alvo: MESES[mesNum - 1] + '/' + ano });
 }
-Object.assign(_SEC_ACOES, { sec_serv_mover: 'Mudou servidor de guarnição/setor na escala de serviço', sec_serv_posto: 'Trocou o posto na escala de serviço', sec_serv_turno: 'Trocou o turno na escala de serviço', sec_serv_imprimir: 'Imprimiu a escala de serviço', sec_serv_apoio: 'Editou o quadro de apoio da escala de serviço' });
+Object.assign(_SEC_ACOES, { sec_serv_mover: 'Mudou servidor de guarnição/setor na escala de serviço', sec_serv_posto: 'Trocou o posto na escala de serviço', sec_serv_turno: 'Trocou o turno na escala de serviço', sec_serv_imprimir: 'Imprimiu a escala de serviço', sec_serv_apoio: 'Editou o quadro de apoio da escala de serviço', sec_serv_setor: 'Removeu setor da escala de serviço' });
