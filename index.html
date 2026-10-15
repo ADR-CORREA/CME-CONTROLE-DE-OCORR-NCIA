@@ -10746,7 +10746,7 @@ function _vta(label, value) {
   const v = (value === null || value === undefined || value === '') ? '—' : String(value);
   return `<div class="form-field full" style="margin:0">
     <label style="font-size:.8rem;color:#666">${label}</label>
-    <textarea class="auto-field" readonly rows="3" style="resize:none;background:#f8fafc;border-color:#e2e8f0">${v}</textarea>
+    <textarea class="auto-field" readonly rows="3" style="resize:none;background:#f8fafc;border-color:#e2e8f0">${esc(v)}</textarea>
   </div>`;
 }
 function _vsec(title, html) {
@@ -15661,18 +15661,18 @@ function renderizarEstoque() {
     const antesRec = est.recontagemEm && (m.ts || '') < est.recontagemEm;
     return `<tr${antesRec ? ' style="background:#fafafa;color:#8b949e" title="Anterior à recontagem — não entra no saldo atual"' : ''}>
       <td style="white-space:nowrap;font-size:.8rem">${new Date(m.ts).toLocaleString('pt-BR')}</td>
-      <td><span class="badge ${badgeMov[m.tipo]||''}">${m.tipo}</span></td>
-      <td>${m.categoria||''}</td>
-      <td>${m.item||''}</td>
-      <td>${m.tamanho||'—'}</td>
+      <td><span class="badge ${badgeMov[m.tipo]||''}">${esc(m.tipo)}</span></td>
+      <td>${esc(m.categoria||'')}</td>
+      <td>${esc(m.item||'')}</td>
+      <td>${esc(m.tamanho||'—')}</td>
       <td style="text-align:center">${m.quantidade}</td>
-      <td>${m.responsavel||''}</td>
-      <td>${m.motivo||'—'}</td>
-      <td>${m.monitorado||'—'}</td>
-      <td>${isSaida ? (m.plantao||'—') : '—'}</td>
-      <td>${isSaida ? (m.plantonista||'—') : '—'}</td>
+      <td>${esc(m.responsavel||'')}</td>
+      <td>${esc(m.motivo||'—')}</td>
+      <td>${esc(m.monitorado||'—')}</td>
+      <td>${isSaida ? esc(m.plantao||'—') : '—'}</td>
+      <td>${isSaida ? esc(m.plantonista||'—') : '—'}</td>
       <td>${isSaida ? dtEntrega : '—'}</td>
-      <td>${m.obs||'—'}</td>
+      <td>${esc(m.obs||'—')}</td>
       <td style="text-align:center;white-space:nowrap;gap:4px;display:table-cell">${acoes}</td>
     </tr>`;
   }).join('');
@@ -15703,7 +15703,7 @@ function verDetalheMovEstoque(id) {
 
   const html = `
     <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
-      <span style="background:${badgeColor};color:#fff;padding:4px 14px;border-radius:20px;font-weight:700;font-size:.9rem">${m.tipo}</span>
+      <span style="background:${badgeColor};color:#fff;padding:4px 14px;border-radius:20px;font-weight:700;font-size:.9rem">${esc(m.tipo)}</span>
       <span style="color:#888;font-size:.85rem">${dtFormatada}</span>
       <span style="margin-left:auto;font-size:.82rem;color:#aaa">ID: ${m.id}</span>
     </div>
@@ -15730,7 +15730,7 @@ function verDetalheMovEstoque(id) {
     ${m.obs ? _vsec('Observações', _vta('', m.obs)) : ''}
     ${serialHtml}
   `;
-  _abrirViewer(`Detalhe — ${m.tipo} de ${m.item || 'Item'}`, html, null);
+  _abrirViewer(`Detalhe — ${esc(m.tipo)} de ${m.item || 'Item'}`, html, null);
 }
 
 function removerSerialEstoque(serial, itemTipo) {
@@ -15862,10 +15862,10 @@ function consultarSerial(valor) {
             ${historicoUnidade.map(m=>`
               <div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #eef1ff;cursor:pointer"
                    onclick="verDetalheMovEstoque('${m.id}')" title="Ver detalhes">
-                <span class="badge ${badgeMov[m.tipo]||''}" style="font-size:.72rem;padding:1px 6px">${m.tipo}</span>
+                <span class="badge ${badgeMov[m.tipo]||''}" style="font-size:.72rem;padding:1px 6px">${esc(m.tipo)}</span>
                 <span>${new Date(m.ts).toLocaleString('pt-BR')}</span>
-                <span style="color:#777">${m.responsavel||''}</span>
-                ${m.plantao ? `<span style="color:#555">\u{1F3E2} ${m.plantao}</span>` : ''}
+                <span style="color:#777">${esc(m.responsavel||'')}</span>
+                ${m.plantao ? `<span style="color:#555">\u{1F3E2} ${esc(m.plantao)}</span>` : ''}
                 <span style="margin-left:auto;color:#1a4fa3;font-size:.8rem">\u{1F441} detalhe</span>
               </div>`).join('')}
           </div>` : ''}
@@ -15889,14 +15889,14 @@ function consultarSerial(valor) {
           const series = (m.seriais || []).join(', ') || m.numSerie || '—';
           return `<tr style="cursor:pointer" onclick="verDetalheMovEstoque('${m.id}')" title="Clique para ver detalhes">
             <td style="white-space:nowrap;font-size:.78rem">${new Date(m.ts).toLocaleString('pt-BR')}</td>
-            <td><span class="badge ${badgeMov[m.tipo]||''}">${m.tipo}</span></td>
-            <td style="font-size:.82rem">${m.item||''}</td>
-            <td style="font-size:.82rem">${m.estado||'—'}</td>
-            <td style="font-size:.82rem">${m.responsavel||'—'}</td>
-            <td style="font-size:.82rem">${m.monitorado||'—'}</td>
-            <td style="font-size:.82rem">${m.plantao||'—'}</td>
-            <td style="font-size:.82rem;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.motivo||'—'}</td>
-            <td style="font-family:monospace;font-size:.78rem;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${series}</td>
+            <td><span class="badge ${badgeMov[m.tipo]||''}">${esc(m.tipo)}</span></td>
+            <td style="font-size:.82rem">${esc(m.item||'')}</td>
+            <td style="font-size:.82rem">${esc(m.estado||'—')}</td>
+            <td style="font-size:.82rem">${esc(m.responsavel||'—')}</td>
+            <td style="font-size:.82rem">${esc(m.monitorado||'—')}</td>
+            <td style="font-size:.82rem">${esc(m.plantao||'—')}</td>
+            <td style="font-size:.82rem;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.motivo||'—')}</td>
+            <td style="font-family:monospace;font-size:.78rem;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(series)}</td>
             <td><button class="btn-sm" style="background:#e8f0ff;color:#1a4fa3" onclick="event.stopPropagation();verDetalheMovEstoque('${m.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></td>
           </tr>`;
         }).join('')}
@@ -15917,8 +15917,8 @@ function renderizarHistoricoConsulta(id, movs, container) {
       <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Responsável</th><th>Motivo</th></tr></thead>
       <tbody>${hist.map(m=>`<tr style="cursor:pointer" onclick="verDetalheMovEstoque('${m.id}')">
         <td style="white-space:nowrap;font-size:.8rem">${new Date(m.ts).toLocaleString('pt-BR')}</td>
-        <td><span class="badge ${badgeMov[m.tipo]||''}">${m.tipo}</span></td>
-        <td>${m.item||''}</td><td>${m.responsavel||''}</td><td>${m.motivo||'—'}</td>
+        <td><span class="badge ${badgeMov[m.tipo]||''}">${esc(m.tipo)}</span></td>
+        <td>${esc(m.item||'')}</td><td>${esc(m.responsavel||'')}</td><td>${esc(m.motivo||'—')}</td>
       </tr>`).join('')}</tbody>
     </table></div>`;
 }
@@ -16145,13 +16145,13 @@ function filtrarSugestoesSaida(input, sugId, itemTipo) {
   sug.style.display = 'block';
   sug.innerHTML = items.map(it => {
     const badges = [];
-    if (it.estado) badges.push(`<span style="font-size:.75rem;background:${it.estado==='Novo'?'#e8f5e9':'#fff3e0'};color:#333;padding:1px 5px;border-radius:3px">${it.estado}</span>`);
+    if (it.estado) badges.push(`<span style="font-size:.75rem;background:${it.estado==='Novo'?'#e8f5e9':'#fff3e0'};color:#333;padding:1px 5px;border-radius:3px">${esc(it.estado)}</span>`);
     if (it.temCarregador) badges.push('\u{1F50B}');
     if (it.temChip) badges.push('\u{1F4F6}');
     return `<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px"
-        onmousedown="preencherSerialSaida(event, '${it.id}', '${sugId}')"
+        onmousedown="preencherSerialSaida(event, '${_jsq(it.id)}', '${sugId}')"
         onmouseover="this.style.background='#f5f7ff'" onmouseout="this.style.background=''">
-      <code style="flex:1">${it.id}</code> ${badges.join(' ')}
+      <code style="flex:1">${esc(it.id)}</code> ${badges.join(' ')}
     </div>`;
   }).join('');
 }
@@ -19305,7 +19305,7 @@ async function r2_abrirFicha() {
       const bords = { critica:'#f87171', alta:'#fb923c', media:'#fcd34d' };
       document.getElementById('r2-ficha-alertas-lista').innerHTML = alertas.map(a =>
         `<div style="background:${cores[a.prioridade]||'#f5f5f5'};border-left:4px solid ${bords[a.prioridade]||'#ccc'};border-radius:0 6px 6px 0;padding:8px 12px;font-size:.83rem;color:#374151;margin-bottom:4px">
-          ${a.tipo === 'prazo' ? '\u{23F0}' : a.tipo === 'vencido' ? '\u{1F6A8}' : a.tipo === 'faltante' ? '\u{1F4CB}' : '\u{26A0}\u{FE0F}'} ${a.msg}
+          ${a.tipo === 'prazo' ? '\u{23F0}' : a.tipo === 'vencido' ? '\u{1F6A8}' : a.tipo === 'faltante' ? '\u{1F4CB}' : '\u{26A0}\u{FE0F}'} ${esc(a.msg)}
         </div>`).join('');
     }
 
@@ -19313,7 +19313,7 @@ async function r2_abrirFicha() {
     if (ficha.faltantes?.length) {
       document.getElementById('r2-ficha-faltantes').style.display = 'block';
       document.getElementById('r2-ficha-faltantes-lista').innerHTML =
-        ficha.faltantes.map(f => `<div style="font-size:.83rem;color:#9a3412;padding:3px 0">\u{26A0} ${f}</div>`).join('');
+        ficha.faltantes.map(f => `<div style="font-size:.83rem;color:#9a3412;padding:3px 0">\u{26A0} ${esc(f)}</div>`).join('');
     }
 
     // Timeline
@@ -19324,8 +19324,8 @@ async function r2_abrirFicha() {
           <div style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #f0f0f0">
             <div style="font-size:1rem;flex-shrink:0">${iconsAcao[e.action] || '\u{1F4CC}'}</div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:.82rem;font-weight:600;color:#374151">${(e.action||'').toUpperCase()} — <span style="font-weight:400;color:#555">${e.filename||''}</span></div>
-              <div style="font-size:.76rem;color:#888">${fmtDate(e.ts)} · ${e.usuario||'—'} · ${e.pasta||''}</div>
+              <div style="font-size:.82rem;font-weight:600;color:#374151">${(e.action||'').toUpperCase()} — <span style="font-weight:400;color:#555">${esc(e.filename||'')}</span></div>
+              <div style="font-size:.76rem;color:#888">${fmtDate(e.ts)} · ${esc(e.usuario||'—')} · ${esc(e.pasta||'')}</div>
             </div>
           </div>`).join('')
       : '<div style="color:#aaa;font-size:.82rem">Nenhuma ação registrada.</div>';
@@ -19394,15 +19394,15 @@ async function r2_abrirPainelRisco() {
     document.getElementById('r2-risco-ativos').innerHTML =
       (data.ultimosAtivos||[]).map(r =>
         `<div style="padding:4px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;color:#1F4E78"
-              onclick="r2_selecionarMonitorado('${r.monitorado.replace(/'/g,"&#39;")}')" title="Abrir monitorado">
-           \u{1F4C1} ${r.monitorado} <span style="color:#888;font-size:.75rem">(${fmtDate(r.ultimaAtividade)})</span>
+              onclick="r2_selecionarMonitorado('${_jsq(r.monitorado)}')" title="Abrir monitorado">
+           \u{1F4C1} ${esc(r.monitorado)} <span style="color:#888;font-size:.75rem">(${fmtDate(r.ultimaAtividade)})</span>
          </div>`).join('') || '<div style="color:#aaa">—</div>';
 
     document.getElementById('r2-risco-inativos').innerHTML =
       (data.semAtividadeRecente||[]).map(r =>
         `<div style="padding:4px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;color:#9a3412"
-              onclick="r2_selecionarMonitorado('${r.monitorado.replace(/'/g,"&#39;")}')" title="Abrir monitorado">
-           \u{1F4C1} ${r.monitorado} <span style="color:#888;font-size:.75rem">(${fmtDate(r.ultimaAtividade)})</span>
+              onclick="r2_selecionarMonitorado('${_jsq(r.monitorado)}')" title="Abrir monitorado">
+           \u{1F4C1} ${esc(r.monitorado)} <span style="color:#888;font-size:.75rem">(${fmtDate(r.ultimaAtividade)})</span>
          </div>`).join('') || '<div style="color:#aaa">—</div>';
 
   } catch(e) {
@@ -19783,7 +19783,7 @@ function _r2BtnAcao(k, bg, cor, onclick, titulo) {
     + `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">${_R2_SVG[k]}</svg></button>`;
 }
 function r2_botoesAcao(ek, nome, nivelAdmin) {
-  const n = String(nome).replace(/'/g, "&#39;");
+  const n = _jsq(nome); ek = _jsq(String(ek).replace(/&quot;/g, '"'));
   return _r2BtnAcao('ver',     '#f0fdf4', '#166534', `r2_visualizarArquivo('${ek}','${n}')`, 'Visualizar')
     +    _r2BtnAcao('baixar',  '#e8f4fd', '#1F4E78', `r2_baixarArquivo('${ek}','${n}')`,    'Baixar')
     +    _r2BtnAcao('editar',  '#fef9c3', '#713f12', `r2_abrirRename('${ek}','${n}')`,      'Renomear')
@@ -19902,9 +19902,9 @@ function r2_renderizarProcesso(arquivos) {
             const nomeLimpo = f.nomeDisplay || f.nome;
             const dt = f.enviado ? new Date(f.enviado).toLocaleString('pt-BR') : '—';
             return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid #f0f0f0;font-size:.85rem">
-              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${nomeLimpo}">${r2_iconeArquivo(nomeLimpo)} ${nomeLimpo}</span>
+              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(nomeLimpo)}">${r2_iconeArquivo(nomeLimpo)} ${esc(nomeLimpo)}</span>
               <span style="color:#888;white-space:nowrap;font-size:.78rem">${r2_formatarBytes(f.tamanho)}</span>
-              <span style="color:#999;white-space:nowrap;font-size:.78rem">${f.usuario||'—'}</span>
+              <span style="color:#999;white-space:nowrap;font-size:.78rem">${esc(f.usuario||'—')}</span>
               <span style="color:#aaa;white-space:nowrap;font-size:.75rem">${dt}</span>
               ${r2_botoesAcao(ek, nomeLimpo, nivelAdmin)}
             </div>`;
@@ -19925,9 +19925,9 @@ function r2_renderizarProcesso(arquivos) {
           const nomeShow = f.nomeDisplay || f.nome;
           const dt = f.enviado ? new Date(f.enviado).toLocaleString('pt-BR') : '—';
           return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid #f0f0f0;font-size:.85rem">
-            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r2_iconeArquivo(nomeShow)} ${nomeShow}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r2_iconeArquivo(nomeShow)} ${esc(nomeShow)}</span>
             <span style="color:#888;font-size:.78rem">${r2_formatarBytes(f.tamanho)}</span>
-            <span style="color:#999;font-size:.78rem">${f.usuario||'—'}</span>
+            <span style="color:#999;font-size:.78rem">${esc(f.usuario||'—')}</span>
             <span style="color:#aaa;font-size:.75rem">${dt}</span>
             ${r2_botoesAcao(ek, nomeShow, nivelAdmin)}
           </div>`;
@@ -19995,11 +19995,11 @@ function r2_linhaArquivo(f, nivelAdmin) {
   const data_env = f.enviado ? new Date(f.enviado).toLocaleString('pt-BR') : '—';
   const ek       = f.key.replace(/"/g, '&quot;');
   return `<tr style="border-top:1px solid #f0f0f0;transition:background .15s" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background=''">
-    <td style="padding:9px 14px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.nome}">
-      ${r2_iconeArquivo(f.nome)} ${f.nome}
+    <td style="padding:9px 14px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(f.nome)}">
+      ${r2_iconeArquivo(f.nome)} ${esc(f.nome)}
     </td>
     <td style="padding:9px 8px;text-align:right;color:#777;white-space:nowrap">${tamanho}</td>
-    <td style="padding:9px 8px;color:#555;white-space:nowrap">${f.usuario || '—'}</td>
+    <td style="padding:9px 8px;color:#555;white-space:nowrap">${esc(f.usuario || '—')}</td>
     <td style="padding:9px 8px;color:#777;white-space:nowrap;font-size:.81rem">${data_env}</td>
     <td style="padding:9px 8px;text-align:center;white-space:nowrap">
       ${r2_botoesAcao(ek, f.nome, nivelAdmin)}
@@ -20334,12 +20334,12 @@ async function r2_carregarAuditoria() {
       const dt = r.ts ? new Date(r.ts).toLocaleString('pt-BR') : '—';
       return `<tr style="border-top:1px solid #f0f0f0">
         <td style="padding:7px 12px;white-space:nowrap">
-          <span style="color:${acao_color[r.action]||'#555'};font-weight:600">${acao_label[r.action]||r.action}</span>
+          <span style="color:${acao_color[r.action]||'#555'};font-weight:600">${acao_label[r.action]||esc(r.action)}</span>
         </td>
-        <td style="padding:7px 12px">${r.monitorado||'—'}</td>
-        <td style="padding:7px 12px">${r.pasta||'—'}</td>
-        <td style="padding:7px 12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.filename||''}">${r.filename||'—'}</td>
-        <td style="padding:7px 12px;white-space:nowrap">${r.usuario||'—'}</td>
+        <td style="padding:7px 12px">${esc(r.monitorado||'—')}</td>
+        <td style="padding:7px 12px">${esc(r.pasta||'—')}</td>
+        <td style="padding:7px 12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.filename||'')}">${esc(r.filename||'—')}</td>
+        <td style="padding:7px 12px;white-space:nowrap">${esc(r.usuario||'—')}</td>
         <td style="padding:7px 12px;font-size:.8rem;color:#888;white-space:nowrap">${dt}</td>
       </tr>`;
     }).join('');
@@ -29269,8 +29269,8 @@ function cruz_calcular() {
   document.getElementById('cruz-sem-psi').innerHTML = semPsiLista.length
     ? semPsiLista.map(r => `
         <div style="padding:5px 0;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;gap:8px">
-          <span style="font-weight:500">${r.nome}</span>
-          <span style="color:#94a3b8;font-size:.75rem;white-space:nowrap">${r.tipo.substring(0,12)}</span>
+          <span style="font-weight:500">${esc(r.nome)}</span>
+          <span style="color:#94a3b8;font-size:.75rem;white-space:nowrap">${esc(r.tipo.substring(0,12))}</span>
         </div>`).join('')
     : '<span style="color:#16a34a">\u{2705} Todos têm pelo menos um atendimento</span>';
 
@@ -29283,7 +29283,7 @@ function cruz_calcular() {
   document.getElementById('cruz-alto-risco').innerHTML = altoRiscoLista.length
     ? altoRiscoLista.map(r => `
         <div style="padding:5px 0;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;gap:8px">
-          <span style="font-weight:500">${r.nome}</span>
+          <span style="font-weight:500">${esc(r.nome)}</span>
           <span style="color:#ea580c;font-size:.75rem;font-weight:600;white-space:nowrap">
             ${r.diasSemAtend !== null ? r.diasSemAtend + 'd atrás' : 'nunca'}
           </span>
@@ -29297,8 +29297,8 @@ function cruz_calcular() {
   document.getElementById('cruz-vitimas').innerHTML = vitimasLista.length
     ? vitimasLista.map(r => `
         <div style="padding:5px 0;border-bottom:1px solid #f1f5f9">
-          <span style="font-weight:500">${r.nome}</span>
-          <span style="color:#94a3b8;font-size:.75rem"> — ${r.municipio}</span>
+          <span style="font-weight:500">${esc(r.nome)}</span>
+          <span style="color:#94a3b8;font-size:.75rem"> — ${esc(r.municipio)}</span>
         </div>`).join('')
     : '<span style="color:#16a34a">\u{2705} Todas as vítimas têm atendimento</span>';
 
@@ -29309,7 +29309,7 @@ function cruz_calcular() {
   document.getElementById('cruz-descump').innerHTML = descumpLista.length
     ? descumpLista.map(r => `
         <div style="padding:5px 0;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;gap:8px">
-          <span style="font-weight:500">${r.nome}</span>
+          <span style="font-weight:500">${esc(r.nome)}</span>
           <span style="color:#4338ca;font-size:.75rem;white-space:nowrap">
             ${r.nAtend} atend. — último ${r.ultimoAtend||'?'}
           </span>
