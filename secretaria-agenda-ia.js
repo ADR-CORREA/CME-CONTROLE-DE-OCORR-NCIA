@@ -10,7 +10,7 @@
 const _SEC_AG_ACEITA = '.pdf,.jpg,.jpeg,.png,.webp,.docx,.txt';
 
 // texto de um arquivo (PDF, imagem, Word, txt) — vazio se não conseguir ler
-async function _secTextoDoArquivo(file) {
+async function _secTextoDoArquivo(file, onProgresso) {
   const ext = String(file.name.split('.').pop() || '').toLowerCase();
   if (ext === 'txt') return await file.text();
   if (ext === 'docx') {
@@ -22,15 +22,44 @@ async function _secTextoDoArquivo(file) {
     return await _comOcrCanvas(c);
   }
   if (ext !== 'pdf') return '';
+  // PDF: página por página, NA ORDEM. Página com texto → usa o texto; página escaneada (sem texto) → OCR.
+  // (antes: só as 2 maiores imagens do arquivo, fora de ordem, e o OCR podia travar para sempre)
   const pdfjs = await _secCarregarPdfJs(), buf = await file.arrayBuffer();
-  const pdf = await pdfjs.getDocument({ data: buf.slice(0) }).promise, partes = [];
-  for (let p = 1; p <= Math.min(pdf.numPages, 6); p++) partes.push((await (await pdf.getPage(p)).getTextContent()).items.map(i => i.str).join(' '));
-  const media = partes.reduce((s, t) => s + t.trim().length, 0) / Math.max(1, partes.length);
-  if (media >= 40) return partes.join('\n');
-  // PDF escaneado: OCR das imagens das páginas (até 2)
-  const jpegs = _comExtrairJpegsPdf(new Uint8Array(buf)), ocr = [];
-  for (let i = 0; i < Math.min(2, jpegs.length); i++) { const c = await _comJpegParaCanvas(jpegs[i], 1600); if (c) ocr.push(await _comOcrCanvas(c)); }
-  return ocr.join('\n\n') || partes.join('\n');
+  const pdf = await pdfjs.getDocument({ data: buf.slice(0) }).promise, total = Math.min(pdf.numPages, _SEC_IA_MAX_PAGS);
+  const jpegs = _secJpegsEmOrdem(new Uint8Array(buf)), partes = [];
+  for (let p = 1; p <= total; p++) {
+    const page = await pdf.getPage(p);
+    const txt = (await page.getTextContent()).items.map(i => i.str).join(' ').trim();
+    if (txt.replace(/\s/g, '').length >= 40) { partes.push(txt); continue; }
+    if (onProgresso) onProgresso('\u{1F50D} Lendo página ' + p + ' de ' + total + ' (escaneada)…');
+    let canvas = jpegs.length === pdf.numPages ? await _comJpegParaCanvas(jpegs[p - 1], 2000) : null;
+    if (!canvas) canvas = await _secRenderPagina(page);
+    const ocr = canvas ? await _comOcrCanvas(canvas) : '';
+    partes.push(ocr || txt);
+    if (partes.join('\n').length > 12000) break; // já há texto de sobra para a IA
+  }
+  return partes.map((t, i) => '[Página ' + (i + 1) + ']\n' + t).join('\n\n');
+}
+const _SEC_IA_MAX_PAGS = 8;
+// JPEGs embutidos (scan do celular/CamScanner) NA ORDEM do arquivo — cada página escaneada é uma imagem grande
+function _secJpegsEmOrdem(u) {
+  const out = [];
+  for (let i = 0; i < u.length - 3; i++) {
+    if (u[i] === 0xFF && u[i + 1] === 0xD8 && u[i + 2] === 0xFF) {
+      for (let j = i + 3; j < u.length - 1; j++) if (u[j] === 0xFF && u[j + 1] === 0xD9) { const seg = u.slice(i, j + 2); if (seg.length > 20000) out.push(seg); i = j + 1; break; }
+    }
+  }
+  return out;
+}
+// página do PDF desenhada em imagem (escaneado que não é JPEG), com limite de tempo para nunca travar
+async function _secRenderPagina(page) {
+  try {
+    const vp = page.getViewport({ scale: 2 }), c = document.createElement('canvas');
+    c.width = vp.width; c.height = vp.height;
+    const task = page.render({ canvasContext: c.getContext('2d'), viewport: vp });
+    await Promise.race([task.promise, new Promise((_, rej) => setTimeout(() => { try { task.cancel(); } catch (e) {} rej(new Error('render')); }, 15000))]);
+    return c;
+  } catch (e) { return null; }
 }
 
 // bloco do modal: anexar + status da IA (+ anexos que o compromisso já tem)
@@ -50,19 +79,29 @@ async function sec_agIaLer(input) {
   const grande = files.find(f => f.size > 15 * 1024 * 1024); if (grande) { _secAgIaStatus(esc(grande.name) + ': maior que 15 MB.', '#b91c1c'); return; }
   _secAgIaStatus('\u{23F3} Lendo o documento…');
   let texto = '';
-  try { for (const f of files) texto += '\n\n=== ' + f.name + ' ===\n' + await _secTextoDoArquivo(f); }
+  try { for (const f of files) texto += '\n\n=== ' + f.name + ' ===\n' + await _secTextoDoArquivo(f, m => _secAgIaStatus(m)); }
   catch (e) { console.warn('[Agenda] leitura do anexo:', e); }
   if (texto.replace(/===[^\n]*===/g, '').replace(/\s/g, '').length < 30) { _secAgIaStatus('Não consegui ler o texto do documento — preencha à mão. O arquivo será anexado mesmo assim.', '#b45309'); return; }
   _secAgIaStatus('\u{1F916} A IA está lendo e resumindo…');
   let r;
-  try { r = await r2_api('POST', '/sec/resumir', { 'Content-Type': 'application/json' }, JSON.stringify({ texto: texto.slice(0, 9000), nome: files.map(f => f.name).join(', ').slice(0, 120) })); }
+  try { r = await r2_api('POST', '/sec/resumir', { 'Content-Type': 'application/json' }, JSON.stringify(Object.assign({ texto: texto.slice(0, 14000), nome: files.map(f => f.name).join(', ').slice(0, 120) }, window.__secIaModelo ? { modelo: window.__secIaModelo } : {}))); }
   catch (e) { _secAgIaStatus('A IA não respondeu (' + esc(e.message || e) + '). Preencha à mão — o arquivo será anexado mesmo assim.', '#b91c1c'); return; }
   const tit = document.getElementById('sec-ag-titulo'), desc = document.getElementById('sec-ag-desc'), data = document.getElementById('sec-ag-data');
   const feitos = [];
   if (r.assunto && tit) { tit.value = r.assunto; feitos.push('assunto'); }
   if (r.detalhes && desc) { desc.value = desc.value.trim() ? desc.value.trim() + '\n\n' + r.detalhes : r.detalhes; feitos.push('detalhes'); }
   if (r.prazo && data && r.prazo >= _secHoje()) { data.value = r.prazo; feitos.push('data (prazo ' + _secBR(r.prazo) + ')'); }
-  _secAgIaStatus(feitos.length ? '\u{2705} A IA preencheu: ' + feitos.join(', ') + '. Confira antes de salvar.' : 'A IA não achou informação suficiente — preencha à mão.', feitos.length ? '#15803d' : '#b45309');
+  const resp = document.getElementById('sec-ag-resp');
+  if (r.responsavel && resp && !resp.value.trim()) { resp.value = r.responsavel; feitos.push('responsável'); }
+  // categoria: com prazo → "Prazo / Ofício"; senão "PRODOC / Documento" (se essas categorias existirem)
+  const cats = [...document.querySelectorAll('[data-grupo="sec-ag-cat"]')];
+  const cat = cats.find(b => (r.prazo || r.urgente ? /prazo/i : /prodoc|documento/i).test(b.dataset.valor || ''));
+  if (cat) _secAgEscolherCat(cat);
+  const avisos = (r.avisos || []).length ? '<div style="color:#b45309;margin-top:3px">\u{26A0}\u{FE0F} Conferir: ' + r.avisos.map(esc).join(' · ') + '</div>' : '';
+  const urg = r.urgente ? '<div style="color:#b91c1c;font-weight:700;margin-top:3px">\u{1F6A8} O documento fala em URGÊNCIA.</div>' : '';
+  const el = document.getElementById('sec-ag-ia');
+  if (el) el.innerHTML = '<span style="color:' + (feitos.length ? '#15803d' : '#b45309') + '">' + (feitos.length ? '\u{2705} A IA preencheu: ' + feitos.join(', ') + '. Confira antes de salvar.' : 'A IA não achou informação suficiente — preencha à mão.') + '</span>' + urg + avisos;
+  window.__secIaUltima = r; // (para conferência/testes)
 }
 
 // envia os arquivos escolhidos no modal (chamado pelo sec_agSalvar); devolve [{key,nome,tamanho}]
