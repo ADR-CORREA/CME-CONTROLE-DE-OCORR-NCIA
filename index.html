@@ -9753,7 +9753,8 @@ async function _akilesAutoAplicar() {
   const pk0 = _akilesPacote();
   if (_akAplicando || !pk0 || !pk0.geradoEm || !usuarioAtual) return;
   const oc0 = getAkilesOc();
-  if (oc0.ultimoPacote === pk0.geradoEm && oc0.ocorrenciasDoPacote === pk0.geradoEm && getSemCom().ultimoPacoteAkiles === pk0.geradoEm) { _scCompletarDppAk(getSemCom(), pk0); return; }
+  if (oc0.ultimoPacote === pk0.geradoEm && oc0.ocorrenciasDoPacote === pk0.geradoEm && getSemCom().ultimoPacoteAkiles === pk0.geradoEm
+      && (!Array.isArray(pk0.tentativasContato) || getSemCom().ligacoesDoPacote === pk0.geradoEm)) { _scCompletarDppAk(getSemCom(), pk0); return; }
   _akAplicando = true;
   try {
     // Todos os CMEs abertos recebem o pacote ao mesmo tempo (tempo real): cada um
@@ -9797,6 +9798,33 @@ function _scCompletarDppAk(dados, pk) {
   if (mudou) { salvarSemCom(dados); try { atualizarBadgeSemCom(); renderizarSemCom('juridico'); renderizarSemCom('psicossocial'); renderizarRelSemCom(); atualizarDashboard(); } catch (e) {} }
 }
 
+// Tentativas de contato registradas no AKILES (pacote do robô: tentativasContato) viram tratativas do
+// tipo "Ligação" — operador, texto e dia do registro. Não repete: a chave é o id do registro no AKILES.
+// Mexe no MESMO objeto do Sem Comunicação que o pacote usa (uma gravação só — salvarStore não espera,
+// duas gravações seguidas podem se apagar).
+function _scMesclarLigacoes(dados, pk) {
+  const lista = Array.isArray(pk && pk.tentativasContato) ? pk.tentativasContato : null;
+  if (!lista || dados.ligacoesDoPacote === pk.geradoEm) return 0;
+  const porReg = new Map();
+  (dados.monitorados || []).forEach(m => { if (_scEmAberto(m)) porReg.set(_scChaveReg(m.registro), m); });
+  let n = 0;
+  lista.forEach(x => {
+    const m = porReg.get(String(x.reg || '')); if (!m || !x.id) return;
+    m.tratativas = m.tratativas || [];
+    if (m.tratativas.some(tr => tr.akilesId === String(x.id))) return;
+    m.tratativas.push({ data: x.data, servidor: String(x.operador || 'Operador do AKILES').slice(0, 120), descricao: String(x.texto || '').slice(0, 1500),
+      tipo: 'Ligação', origem: 'AKILES', akilesId: String(x.id), tipoAkiles: String(x.tipoAk || ''), registradoPor: 'Robô AKILES' });
+    m.tratativas.sort((a, b) => new Date(a.data) - new Date(b.data));
+    n++;
+  });
+  dados.ligacoesDoPacote = pk.geradoEm;
+  return n;
+}
+function _scAvisoLigacoes(n) {
+  if (!n) return;
+  _mostrarToast('\u{1F4DE} ' + n + ' tentativa(s) de contato registradas no AKILES foram lançadas como Ligação nas tratativas do Sem Comunicação.', 'sucesso');
+}
+
 function _akilesAplicarPacote() {
   const pk = _akilesPacote();
   if (!pk || !pk.geradoEm) return;
@@ -9811,10 +9839,14 @@ function _akilesAplicarPacote() {
   }
   // sem comunicação
   const dados = getSemCom();
-  if (dados.ultimoPacoteAkiles === pk.geradoEm) { _scCompletarDppAk(dados, pk); return; }
+  if (dados.ultimoPacoteAkiles === pk.geradoEm) {
+    _scCompletarDppAk(dados, pk);
+    const nL = _scMesclarLigacoes(dados, pk); if (nL) { salvarSemCom(dados); _scAvisoLigacoes(nL); try { renderizarSemCom('juridico'); renderizarSemCom('psicossocial'); } catch (e) {} }
+    return;
+  }
   if (!Array.isArray(pk.semcom) || pk.semcom.length < 20) return;
   // Excel importado à mão DEPOIS do pacote é mais novo — não regride.
-  if (dados.ultimaImportacao && dados.ultimaImportacao > pk.geradoEm) { dados.ultimoPacoteAkiles = pk.geradoEm; salvarSemCom(dados); return; }
+  if (dados.ultimaImportacao && dados.ultimaImportacao > pk.geradoEm) { dados.ultimoPacoteAkiles = pk.geradoEm; _scAvisoLigacoes(_scMesclarLigacoes(dados, pk)); salvarSemCom(dados); return; }
   // Sanidade: relatório que encolheu mais da metade de uma vez é suspeito (veio
   // cortado do AKILES) — NÃO aplica; avisa e espera o próximo ou o Excel.
   const abertos = (dados.monitorados || []).filter(_scEmAberto).length;
@@ -9828,6 +9860,7 @@ function _akilesAplicarPacote() {
   // Cópia no BANCO antes de aplicar (recuperável de qualquer computador).
   salvarStore('semcomunicacao_backup_auto', { em: new Date().toISOString(), por: usuarioAtual?.nome || '', pacote: pk.geradoEm, dados: JSON.parse(JSON.stringify(dados)) });
   const res = _scAplicarLinhas(pk.semcom, { origem: 'AKILES automático', pacote: pk.geradoEm, aceitaSemNome: true });
+  if (res) { const d2 = getSemCom(), nL = _scMesclarLigacoes(d2, pk); if (nL) { salvarSemCom(d2); _scAvisoLigacoes(nL); } }
   if (res) {
     _mostrarToast(`\u{1F916} Sem Comunicação atualizado automaticamente do AKILES (${new Date(pk.geradoEm).toLocaleString('pt-BR')}): ${res.novos} novo(s), ${res.voltaram} voltaram a comunicar.`, 'sucesso');
     try { renderizarSemCom('juridico'); renderizarSemCom('psicossocial'); renderizarRelSemCom(); renderizarAkOc('rompimentos'); renderizarAkOc('botoes'); atualizarDashboard(); } catch (e) {}
@@ -10518,7 +10551,7 @@ function abrirModalTratativa(monId) {
   const trats = (m.tratativas||[]).slice().reverse();
   hist.innerHTML = trats.length
     ? trats.map(t => `<div style="border-left:3px solid #2563eb;padding:6px 10px;margin-bottom:6px;background:#f0f7ff;border-radius:0 6px 6px 0">
-        <div style="font-weight:600;color:#1d4ed8;font-size:.82rem">${new Date(t.data).toLocaleString('pt-BR')} — ${esc(t.servidor)}</div>
+        <div style="font-weight:600;color:#1d4ed8;font-size:.82rem">${new Date(t.data).toLocaleString('pt-BR')} — ${esc(t.servidor)}${t.tipo ? ` <span style="font-size:.7rem;font-weight:600;color:#0f766e;background:#f0fdfa;border-left:2px solid #0f766e;border-radius:3px;padding:1px 5px">\u{1F4DE} ${esc(t.tipo)}${t.origem ? ' · ' + esc(t.origem) : ''}</span>` : ''}</div>
         <div style="margin-top:3px;color:#374151;white-space:pre-wrap">${esc(t.descricao)}</div>
       </div>`).join('')
     : '<div style="color:#888;font-size:.85rem;padding:8px">Nenhuma tratativa registrada ainda.</div>';
@@ -10645,7 +10678,7 @@ function verMonitoradoSemCom(monId) {
   const trats = (m.tratativas||[]).slice().reverse();
   hist.innerHTML = trats.length
     ? trats.map(t => `<div style="border-left:3px solid #2563eb;padding:6px 10px;margin-bottom:6px;background:#f0f7ff;border-radius:0 6px 6px 0">
-        <div style="font-weight:600;color:#1d4ed8;font-size:.82rem">${new Date(t.data).toLocaleString('pt-BR')} — ${esc(t.servidor)}</div>
+        <div style="font-weight:600;color:#1d4ed8;font-size:.82rem">${new Date(t.data).toLocaleString('pt-BR')} — ${esc(t.servidor)}${t.tipo ? ` <span style="font-size:.7rem;font-weight:600;color:#0f766e;background:#f0fdfa;border-left:2px solid #0f766e;border-radius:3px;padding:1px 5px">\u{1F4DE} ${esc(t.tipo)}${t.origem ? ' · ' + esc(t.origem) : ''}</span>` : ''}</div>
         <div style="margin-top:3px;color:#374151;white-space:pre-wrap">${esc(t.descricao)}</div>
       </div>`).join('')
     : '<div style="color:#888;font-size:.85rem;padding:8px">Nenhuma tratativa registrada.</div>';
