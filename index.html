@@ -23095,6 +23095,11 @@ async function _comGarantirNumero() {
   try { const { data, error } = await _dbLerChave('cme_oficios'); if (!error && data && data.value && Array.isArray(data.value.registros)) _cache['oficios'] = data.value; } catch (e) {}
   const digitado = parseInt((el.value || '').replace(/\D/g, '')) || 0;
   const manual = !!(_comNumeroManual && digitado);
+  if (manual && com_ehBuraco(digitado, ano) && !confirm('O nº ' + digitado + ' ficou PULADO no meio da sequência (o último é o ' + (com_proximoNumero(ano) - 1) + ').\n\n'
+      + 'Ele pode já ter sido usado num ofício enviado que não entrou na lista — usar de novo REPETE o número.\n\n'
+      + 'OK = usar o ' + digitado + ' mesmo assim · Cancelar = voltar e usar o próximo (' + com_proximoNumero(ano) + ')')) {
+    com_sugerirNumero(true); return false;
+  }
   const corpo = manual ? { ano, numero: digitado } : { ano, minimo: Math.max(com_proximoNumero(ano), digitado || 0) };
   try {
     if (!r2_state.url || !r2_state.token) r2_carregarConfig();
@@ -23176,10 +23181,22 @@ function com_atualizarAvisoNumero() {
       + `. Gerar de novo vai <u>substituir</u> esse registro (não consome novo número).`;
     aviso.style.display = 'block';
     el.style.borderColor = '#dc2626';
+  } else if (com_ehBuraco(numero, ano)) {
+    aviso.innerHTML = `\u{26D4} <strong>Nº ${com_esc(numero)} ficou pulado na sequência — não use.</strong>`
+      + ` Pode já ter sido enviado sem entrar na lista. O próximo número é o <strong>${com_proximoNumero(ano)}</strong>.`;
+    aviso.style.display = 'block';
+    el.style.borderColor = '#dc2626';
   } else {
     aviso.style.display = 'none';
     el.style.borderColor = '#cbd5e1';
   }
+}
+/* Número "pulado": abaixo do último usado e sem registro. Decisão de 15/10: a numeração
+   segue só para frente — o buraco pode ser ofício enviado que não entrou na lista
+   (defeito corrigido em 14/10), então reaproveitar repete número. */
+function com_ehBuraco(numero, ano) {
+  const n = parseInt(String(numero).replace(/\D/g, ''));
+  return !!n && n < com_proximoNumero(ano) && !com_registroDe(n, ano);
 }
 function com_esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -23221,6 +23238,9 @@ function com_abrirListaNumeros() {
   const chip = n => {
     const reg     = usados.get(n);
     const ehUsado = !!reg;
+    if (!ehUsado && n <= maxU) // pulado no meio da sequência: não oferecer (decisão de 15/10)
+      return `<div title="Pulado na sequência — não use (pode já ter sido enviado sem entrar na lista)"
+        style="text-align:center;padding:8px 3px;border-radius:7px;font-size:.8rem;font-weight:700;border:1px dashed #cbd5e1;background:#f8fafc;color:#94a3b8;text-decoration:line-through;cursor:not-allowed">${n}</div>`;
     const ehAtual = n === atual;
     const titulo  = ehUsado ? `Já utilizado — ${com_esc(reg.monitorado || '—')}` : 'Disponível';
     const bg      = ehAtual ? '#eff6ff' : ehUsado ? '#fff' : '#f0fdf4';
@@ -23241,6 +23261,7 @@ function com_abrirListaNumeros() {
       <span><b>Ano ${ano}</b></span>
       <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block"></span> usado</span>
       <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#bbf7d0;display:inline-block"></span> disponível</span>
+      <span><span style="color:#94a3b8;text-decoration:line-through">123</span> pulado, não usar</span>
     </div>
     ${titulo('Disponíveis para usar')}
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:8px">${livres}</div>
