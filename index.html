@@ -22885,6 +22885,10 @@ function _comEnxugarAssinaturas(o) {
         const alvo = String(r.signatario).trim().toLowerCase();
         const u = users.find(x => String(x.nome || '').trim().toLowerCase() === alvo);
         if (u) login = u.usuario;
+        else {                                              // ex-servidor (sem login): acha pelo arquivo de ex-servidores
+          const ex = carregarStore('ex_usuarios', {}) || {};
+          login = Object.keys(ex).find(k => String((ex[k] || {}).nome || '').trim().toLowerCase() === alvo) || '';
+        }
       }
       if (!login) return;                                   // sem como recuperar → mantém a imagem
       const preservada = _getAssinaturaDe(login);
