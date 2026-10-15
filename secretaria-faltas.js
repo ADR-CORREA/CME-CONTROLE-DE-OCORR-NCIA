@@ -263,8 +263,8 @@ function sec_folhaGerar(mesP, alvoP) {
   const lista = (alvo === 'EXP' ? ativos.filter(s => s.equipe === 'EXPEDIENTE') : alvo === 'PLA' ? ativos.filter(s => _PL_EQUIPES_SEC.includes(s.equipe)) : alvo === 'TODOS' ? ativos : d.servidores.filter(s => s.id === alvo))
     .sort((a, b) => String(a.equipe || '').localeCompare(String(b.equipe || '')) || a.nome.localeCompare(b.nome));
   if (!lista.length) { _mostrarToast('Nenhum servidor para gerar a folha.', 'erro'); return; }
-  const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Folha de ponto - ' + mes + '</title>'
-    + '<style>@page{size:A4 portrait;margin:8mm 10mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:8.5pt}'
+  const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>Folha de ponto - ' + mes + '</title>'
+    + '<style>html,body{background:#fff}@page{size:A4 portrait;margin:8mm 10mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:8.5pt}'
     + 'table{border-collapse:collapse;width:100%}.pag{page-break-after:always}.pag:last-child{page-break-after:auto}@media screen{body{padding:10px 16px}.pag{margin-bottom:30px}}@media print{.np{display:none}}</style></head><body>'
     + '<div class="np" style="text-align:right;margin-bottom:6px"><button onclick="print()" style="padding:6px 16px;font-size:11pt;cursor:pointer">Imprimir</button></div>'
     + lista.map(s => _secFolhaPagina(s, mes, d)).join('') + '</body></html>';
@@ -314,7 +314,7 @@ function _secCombinarDocs(htmls, titulo) {
     estilos.push(css.replace(/@page\s*\{/g, '@page p' + i + '{').replace(/(^|[{};\s])body(?=[\s.{])/g, '$1.d' + i).replace(/\.pag\b/g, '.d' + i + ' .pag'));
     corpos.push('<div class="d' + i + '" style="page:p' + i + (zoom ? ';zoom:' + zoom : '') + (i < htmls.length - 1 ? ';break-after:page' : '') + '">' + corpo + '</div>');
   });
-  return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>' + esc(titulo) + '</title><style>*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}table{border-collapse:collapse;width:100%}@media print{.np{display:none}}' + estilos.join('\n') + '</style></head><body>'
+  return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>' + esc(titulo) + '</title><style>html,body{background:#fff}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}table{border-collapse:collapse;width:100%}@media print{.np{display:none}}' + estilos.join('\n') + '</style></head><body>'
     + '<div class="np" style="text-align:right;padding:8px 16px"><button onclick="print()" style="padding:6px 16px;font-size:11pt;cursor:pointer">Imprimir tudo</button></div>' + corpos.join('') + '</body></html>';
 }
 async function sec_fecharMesGerar(mes) {

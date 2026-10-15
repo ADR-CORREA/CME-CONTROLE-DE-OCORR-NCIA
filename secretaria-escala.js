@@ -275,8 +275,8 @@ function sec_escImprimir(mes) {
   const ferias = afast.filter(a => /^f[ée]rias/i.test(a.tipo)), outros = afast.filter(a => !/^f[ée]rias/i.test(a.tipo));
   const diasTxt = datas.map(dt => dt.slice(8)).join(', ') + '/' + mes.slice(5, 7) + '/' + ano + '– ' + horario;
   const n = datas.length;
-  const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Escala de Apoio - ' + mesAno + '</title>'
-    + '<style>@page{size:A4 landscape;margin:6mm 8mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:10pt}'
+  const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>Escala de Apoio - ' + mesAno + '</title>'
+    + '<style>html,body{background:#fff}@page{size:A4 landscape;margin:6mm 8mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:10pt}'
     + 'table{border-collapse:collapse;width:100%}td,th{' + bd + ';padding:2px 8px}@media screen{body{padding:10px 16px}}@media print{.np{display:none}}'
     + '</style></head><body' + (lin.length > 16 ? ' style="zoom:' + Math.max(0.55, 26 / (lin.length + 8)).toFixed(2) + '"' : '') + '>' // muitas linhas: reduz tudo para caber em 1 folha
     + '<div class="np" style="text-align:right;margin-bottom:6px"><button onclick="print()" style="padding:6px 16px;font-size:11pt;cursor:pointer">Imprimir</button></div>'

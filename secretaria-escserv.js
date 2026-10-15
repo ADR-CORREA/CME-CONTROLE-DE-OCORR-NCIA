@@ -292,8 +292,8 @@ function sec_servImprimir(mes) {
   const obs = Object.entries(porTipo).map(([t, l]) => '<b><u>' + esc(t.toUpperCase()) + '</u>:</b> ' + l.map(a => '<b>PP. ' + esc(_secNomeServ(a.servidorId, d).toUpperCase()) + '</b>' + (equipeDe(a.servidorId) ? ' (' + esc(equipeDe(a.servidorId)) + ')' : '') + ' – ' + _secBR(a.inicio) + ' a ' + _secBR(a.fim || a.inicio)).join('; ') + ';').join('<br>');
   // data: o dia em que o documento é gerado
   const dataTxt = _secDataEmissao();
-  const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Escala de Serviço - ' + MESES[mesNum - 1] + '/' + ano + '</title>'
-    + '<style>@page{size:A4 landscape;margin:8mm 10mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:9pt}@media screen{body{padding:12px 18px}}@media print{.np{display:none}}</style></head><body>'
+  const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>Escala de Serviço - ' + MESES[mesNum - 1] + '/' + ano + '</title>'
+    + '<style>html,body{background:#fff}@page{size:A4 landscape;margin:8mm 10mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:9pt}@media screen{body{padding:12px 18px}}@media print{.np{display:none}}</style></head><body>'
     + '<div class="np" style="text-align:right;margin-bottom:6px"><button onclick="print()" style="padding:6px 16px;font-size:11pt;cursor:pointer">Imprimir</button></div>'
     + '<div style="display:flex;align-items:center;gap:14px;margin:0 0 4px 30px">' + (iapen ? '<img src="' + iapen + '" style="height:86px;width:auto">' : '')
     + '<div style="flex:1;font-size:10pt;line-height:1.3">GOVERNO DO ESTADO DO AMAPÁ<br>Secretaria de Estado da Justiça e Segurança Pública<br>Instituto de Administração Penitenciária do Estado do Amapá<br>Central de Monitoramento Eletrônico – CME/IAPEN<br>Av.: Machado de Assis, nº. 372, Bairro: Central – Macapá/AP – CEP: 68.900-066.<br><span style="font-size:8.5pt">Email: <u style="color:#1f5fd6">cme.iapen.ap@gmail.com</u> – Fone: (96) 98415-2844 ou (96) 98409-9906.</span></div>'
