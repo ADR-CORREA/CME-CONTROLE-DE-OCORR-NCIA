@@ -20140,6 +20140,16 @@ async function _relImportarDoUpload(file) {
     return;
   }
   const monitoradoNome = d.monitorado || r2_state.monitorado || '';
+  // Leitura conferida (15/10/2026): a capa tem de ser do monitorado da pasta onde o arquivo foi enviado
+  // (senão gravava o relatório no histórico da pessoa errada sem ninguém ver)
+  if (r2_state.monitorado && d.monitorado && _relMesmaPessoa(d.monitorado, r2_state.monitorado) < 0.6) {
+    _mostrarToast(`\u{26A0}\u{FE0F} A capa deste relatório é de ${d.monitorado}, mas ele foi enviado na pasta de ${r2_state.monitorado}. NÃO foi arquivado no Relatório — confira se a pasta está certa.`, 'erro');
+    addLog(`Relatório NÃO arquivado: capa de ${d.monitorado} enviada na pasta de ${r2_state.monitorado} (${file.name})`);
+    return;
+  }
+  const avisosCapa = [];
+  if (d.processo && !_relCnjValido(d.processo)) avisosCapa.push('número do processo da capa (' + d.processo + ') não confere pelo dígito verificador');
+  if (d.violacoesDeclarado != null && d.violacoesDeclarado !== d.violacoesSoma) avisosCapa.push('total declarado na capa (' + d.violacoesDeclarado + ') diferente da soma dos tipos (' + d.violacoesSoma + ')');
   const agora = new Date().toISOString();
   const hoje  = agora.slice(0, 10);
   const store = getRelatorios();
@@ -20167,6 +20177,7 @@ async function _relImportarDoUpload(file) {
     violacoesDeclarado: d.violacoesDeclarado,
     origemArquivo: file.name,
     fonte: 'auto-relatorio',
+    avisosLeitura: avisosCapa,
     lidoEm: agora,
     comEnviadoEm: reg.comEnviadoEm || agora,           // já entra arquivado
     comEnviadoPor: reg.comEnviadoPor || (usuarioAtual?.nome || ''),
@@ -20174,11 +20185,26 @@ async function _relImportarDoUpload(file) {
 
   salvarStore('relatorios', store);
   const tiposTxt = d.violacoesPorTipo.map(v => `${v.tipo}: ${v.qtd}`).join(', ');
-  const aviso = (d.violacoesDeclarado != null && d.violacoesDeclarado !== d.violacoesSoma)
-    ? ` (total declarado na capa: ${d.violacoesDeclarado})` : '';
-  _mostrarToast(`\u{2705} Relatório lido: ${monitoradoNome} \u{2014} ${d.violacoesSoma} violação(ões): ${tiposTxt}${aviso} \u{2014} ${novo ? 'arquivado' : 'atualizado'}.`, 'sucesso');
+  _mostrarToast(avisosCapa.length
+    ? `\u{26A0}\u{FE0F} Relatório de ${monitoradoNome} ${novo ? 'arquivado' : 'atualizado'}, mas CONFIRA: ${avisosCapa.join('; ')}.`
+    : `\u{2705} Relatório lido: ${monitoradoNome} \u{2014} ${d.violacoesSoma} violação(ões): ${tiposTxt} \u{2014} ${novo ? 'arquivado' : 'atualizado'}.`, avisosCapa.length ? 'erro' : 'sucesso');
   addLog(`Relatório auto-lido: ${monitoradoNome} (${d.violacoesSoma} violações, período ${d.periodoInicio} a ${d.periodoFim})`);
   if (typeof renderizarRelArquivadas === 'function') renderizarRelArquivadas();
+}
+
+/* Mesma pessoa? 0–1: fração das palavras do nome menor que aparecem no outro (sem acento; ignora de/da/do). */
+function _relMesmaPessoa(a, b) {
+  const tk = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z ]/g, ' ').split(/\s+/).filter(t => t.length >= 3 && !['DOS', 'DAS'].includes(t));
+  const A = tk(a), B = tk(b); if (!A.length || !B.length) return 0;
+  const [menor, maior] = A.length <= B.length ? [A, B] : [B, A];
+  // tolera pasta com acento quebrado ("JOÃƒO" vira "JOA"): uma palavra contida na outra conta
+  const casa = (t, u) => t === u || (t.length >= 3 && u.length >= 3 && t.slice(0, 3) === u.slice(0, 3) && (t.includes(u) || u.includes(t)));
+  return menor.filter(t => maior.some(u => casa(t, u))).length / menor.length;
+}
+/* Processo no padrão CNJ com dígito verificador válido (módulo 97). */
+function _relCnjValido(p) {
+  const d = String(p || '').replace(/\D/g, ''); if (d.length !== 20) return false;
+  return 98 - Number(BigInt(d.slice(0, 7) + d.slice(9) + '00') % 97n) === +d.slice(7, 9);
 }
 
 /* Célula "Violações" da tabela Arquivadas. */
@@ -20186,7 +20212,8 @@ function _relCelViolacoes(r) {
   if (r.violacoesSoma == null && !(r.violacoesPorTipo||[]).length) return '<td style="color:#bbb">\u{2014}</td>';
   const tipos = (r.violacoesPorTipo||[]).map(v => esc(v.tipo) + ': ' + v.qtd).join(', ');
   const diverge = (r.violacoesDeclarado != null && r.violacoesSoma != null && r.violacoesDeclarado !== r.violacoesSoma)
-    ? ` <span title="Total declarado na capa (${r.violacoesDeclarado}) diverge da soma dos tipos (${r.violacoesSoma})" style="color:#d29922;cursor:help">\u{26A0}\u{FE0F}</span>` : '';
+    ? ` <span title="Total declarado na capa (${r.violacoesDeclarado}) diverge da soma dos tipos (${r.violacoesSoma})" style="color:#d29922;cursor:help">\u{26A0}\u{FE0F}</span>`
+    : (r.avisosLeitura || []).length ? ` <span title="Confira: ${esc(r.avisosLeitura.join('; '))}" style="color:#d29922;cursor:help">\u{26A0}\u{FE0F}</span>` : '';
   return `<td style="font-size:.8rem;max-width:240px"><strong>${r.violacoesSoma != null ? r.violacoesSoma : ''}</strong>${diverge}${tipos ? `<div style="color:#888;font-size:.74rem;white-space:normal">${tipos}</div>` : ''}</td>`;
 }
 
