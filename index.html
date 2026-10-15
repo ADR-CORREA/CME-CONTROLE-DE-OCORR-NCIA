@@ -24107,9 +24107,11 @@ async function com_processarArquivos(files) {
             // nativamente — evita o render do pdf.js, que TRAVA em alguns scans.
             // Só 1ª página por padrão (cabeçalho); 2ª só se a 1ª vier pouco texto.
             const jpegs = _comExtrairJpegsPdf(new Uint8Array(await file.arrayBuffer()));
+            // nota de qualidade de cada página lida (leitura conferida: foto ruim → aviso "confira")
+            const _nota = (pg, t) => { (anexo._notasOcr = anexo._notasOcr || []).push(['"' + anexo.nome + '", página ' + pg, _comOcrUltimaConfianca]); return t; };
             const _ocrViaJpeg = async (idx) => {
               const c = await _comJpegParaCanvas(jpegs[idx], 1600);
-              return c ? await _comOcrCanvas(c) : '';
+              return c ? _nota(idx + 1, await _comOcrCanvas(c)) : '';
             };
             // Caminho de RESERVA (scans não-JPEG): render do pdf.js com TIMEOUT
             // para nunca travar a interface.
@@ -24122,7 +24124,7 @@ async function com_processarArquivos(files) {
                 const task = page.render({ canvasContext: canvas.getContext('2d'), viewport });
                 const timeout = new Promise((_, rej) => setTimeout(() => { try { task.cancel(); } catch(e){} rej(new Error('render timeout')); }, 12000));
                 await Promise.race([task.promise, timeout]);
-                return await _comOcrCanvas(canvas);
+                return _nota(pg, await _comOcrCanvas(canvas));
               } catch(e) { console.warn('render OCR', e.message); return ''; }
             };
             const _ocrPag = (pg) => jpegs.length >= pg ? _ocrViaJpeg(pg - 1) : _ocrViaRender(pg);
@@ -24136,6 +24138,7 @@ async function com_processarArquivos(files) {
               catch(e) { console.warn('OCR pág 2', e.message); }
             }
             if (ocrParts.length) { anexo.texto = ocrParts.join('\n\n'); anexo._textoIA = ocrParts.slice(0, 2).join('\n\n'); }
+            if (pdfDoc.numPages > ocrParts.length) anexo._avisoParcial = '"' + anexo.nome + '" é escaneado: só ' + (ocrParts.length > 1 ? 'as páginas 1–2 foram lidas' : 'a página 1 foi lida') + ' (de ' + pdfDoc.numPages + ') — se o nome/vara estiverem mais adiante, confira';
           }
         }
 
@@ -24149,6 +24152,7 @@ async function com_processarArquivos(files) {
           const canvas = _comBitmapParaCanvas(bmp, 1600); // reduz p/ OCR rápido
           if (bmp.close) bmp.close();
           texto = await _comOcrCanvas(canvas);
+          anexo._notasOcr = [['"' + anexo.nome + '"', _comOcrUltimaConfianca]];
         } catch(e) { console.warn('[CME] OCR imagem falhou:', e.message); }
         anexo.texto = texto || '';
 
@@ -24294,6 +24298,7 @@ async function _bmonSelecionarMon(pref, nome) {
   const nomeEl  = document.getElementById(pref + '-docs-monitorado-nome');
   const listaEl = document.getElementById(pref + '-docs-lista');
   if (input) input.value = nome;
+  st.monitorado = nome; // vai para a IA como âncora do nome (e é conferido nos documentos)
   nomeEl.textContent = '\u{23F3} Carregando documentos...';
   painel.style.display = 'block';
   listaEl.innerHTML = '';
@@ -24391,16 +24396,23 @@ async function _bmonCarregarEExtrair(pref) {
   };
   setStatus('\u{23F3} Baixando documentos do sistema...');
 
-  const textos = [];
+  const textos = [], avisosLeitura = [];
   for (const chk of checks) {
     const key = chk.dataset.key, nome = chk.dataset.nome || key.split('/').pop();
     try {
       const resp = await fetch(`${r2_state.url}/download?key=${encodeURIComponent(key)}`,
         { headers: { 'Authorization': `Bearer ${_workerToken()}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' } });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      const blob = await resp.blob();
-      const txt = await _bmonExtrairTexto(new File([blob], nome, { type: blob.type }));
-      if (txt) textos.push('=== ' + nome + ' ===\n' + txt);
+      const blob = await resp.blob(), arq = new File([blob], nome, { type: blob.type });
+      // leitura conferida (15/10/2026): mesma leitura da Agenda — PDF página por página com OCR nas escaneadas
+      // (antes PDF escaneado/foto vinha VAZIO aqui) e nota de qualidade de cada página
+      let txt = '';
+      if (typeof _secTextoDoArquivo === 'function') {
+        _secIaPagsIlegiveis = [];
+        txt = await _secTextoDoArquivo(arq, m => setStatus(nome + ': ' + m));
+        _secIaPagsIlegiveis.forEach(p => avisosLeitura.push('"' + nome + '": ' + (typeof p === 'number' ? 'a página ' + p + ' não pôde ser lida' : p)));
+      } else txt = await _bmonExtrairTexto(arq);
+      if (txt && txt.replace(/\[Página \d+\]/g, '').trim()) textos.push('=== ' + nome + ' ===\n' + txt);
     } catch (e) { console.warn('[CME] Erro ao baixar', nome, e); }
   }
   if (!textos.length) { setStatus('\u{274C} Não foi possível extrair texto dos documentos.', false); return; }
@@ -24415,19 +24427,32 @@ async function _bmonCarregarEExtrair(pref) {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${_workerToken()}`, 'Content-Type': 'application/json',
         'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' },
-      body: JSON.stringify({ texto: textoGeral, comarcas, varas }),
+      body: JSON.stringify({ texto: textoGeral, comarcas, varas, monitorado: _bmonGetSt(pref).monitorado || '' }),
     });
     if (!resp.ok) throw new Error(await resp.text());
-    const { dados } = await resp.json();
+    const { dados, conferencia } = await resp.json();
 
     let n = 0;
     if      (pref === 'pla') n = _bmonPreencherPla(dados);
     else if (pref === 'mul') n = _bmonPreencherMul(dados);
     else if (pref === 'jur') n = await _bmonPreencherJur(dados);
 
-    setStatus('\u{2705} IA preencheu ' + n + ' campo(s)!');
-    setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 4000);
+    if (!n) { setStatus('\u{26A0}\u{FE0F} A IA não encontrou dados com segurança — preencha à mão.', false); return; }
+    // faixa de confiança (leitura conferida): duas IAs + conferência + notas do OCR
+    const conf = Object.assign({}, conferencia || {}, { primeira: dados });
+    _bmonGetSt(pref).conferencia = conf; _bmonGetSt(pref).avisosLeitura = avisosLeitura; _bmonGetSt(pref).n = n;
+    lc_mostrar(statusEl, lc_faixa(conf, { preencheu: [n + ' campo(s)'], avisosLeitura, acaoAlt: "_bmonUsarAlternativa('" + pref + "')" }));
   } catch (e) { setStatus('\u{274C} Erro na IA: ' + e.message, false); }
+}
+// "Usar a 2ª leitura" / "Voltar para a 1ª" no Buscar documentos do monitorado
+async function _bmonUsarAlternativa(pref) {
+  const st = _bmonGetSt(pref), conf = st.conferencia, alt = conf && conf.alternativa; if (!alt) return;
+  const d = Object.assign({}, conf.primeira, alt);
+  if (pref === 'pla') _bmonPreencherPla(d); else if (pref === 'mul') _bmonPreencherMul(d); else if (pref === 'jur') await _bmonPreencherJur(d);
+  const voltar = !conf._naSegunda;
+  st.conferencia = Object.assign({}, conf, { alternativa: { nome: conf.primeira.nome, comarca: conf.primeira.comarca, vara: conf.primeira.vara }, primeira: d, _naSegunda: voltar });
+  lc_mostrar(document.getElementById(pref + '-ia-status'), lc_faixa(st.conferencia, { preencheu: [st.n + ' campo(s)'], avisosLeitura: st.avisosLeitura,
+    acaoAlt: "_bmonUsarAlternativa('" + pref + "')", rotuloAlt: voltar ? 'Voltar para a 1ª leitura' : 'Usar a 2ª leitura' }));
 }
 
 function _bmonPreencherPla(d) {
@@ -24443,8 +24468,8 @@ function _bmonPreencherMul(d) {
   let n = 0;
   const set = (id, val) => { if (val) { const el = document.getElementById(id); if (el) { el.value = val; n++; } } };
   set('multi-processo', d.processo);
-  // Para multidisciplinar, o nome pode ser vítima ou réu — preenche vitima por padrão
-  set('multi-vitima', d.nome);
+  // a IA devolve o RÉU/monitorado (nunca a vítima) — antes ia para "multi-vitima" por engano (15/10/2026)
+  set('multi-reu', d.nome);
   if (n) gerarModeloMulti();
   return n;
 }
@@ -25405,7 +25430,8 @@ async function _comJpegParaCanvas(jpegBytes, maxW) {
 /* ── Extração com IA ─────────────────────────────────────────── */
 async function com_extrairComIA() {
   if (!_comAnexos.length) { _mostrarToast('\u{26A0}\u{FE0F} Selecione documentos antes de extrair.', 'erro'); return; }
-  if (_comAnexos.some(a => a.status === 'lendo')) { _mostrarToast('\u{23F3} Aguarde a leitura dos arquivos.', 'erro'); return; }
+  // 'ocr' também: antes dava para extrair com o OCR ainda lendo (a IA recebia o texto incompleto)
+  if (_comAnexos.some(a => a.status === 'lendo' || a.status === 'ocr')) { _mostrarToast('\u{23F3} Aguarde a leitura dos arquivos.', 'erro'); return; }
 
   const comTexto = _comAnexos.filter(a => a.texto.trim());
   if (!comTexto.length) { _mostrarToast('\u{26A0}\u{FE0F} Nenhum texto pôde ser extraído dos documentos.', 'erro'); return; }
@@ -25455,12 +25481,6 @@ async function com_extrairComIA() {
         .trim();
       return /^\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$/.test(limpo) ? limpo : false;
     };
-    const validarData = v => {
-      if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v.trim())) return false;
-      const dt = new Date(v); const ano = dt.getFullYear();
-      return !isNaN(dt.getTime()) && ano >= 2000 && ano <= 2035;
-    };
-
     // Nome do monitorado
     if (validarNome(d.nome)) {
       document.getElementById('com-of-nome').value = d.nome.trim().toUpperCase();
@@ -25473,12 +25493,7 @@ async function com_extrairComIA() {
       document.getElementById('com-of-processo').value = procValido;
       n++; preenchidos.push('Processo');
     } else { naoEncontrados.push('Processo'); }
-
-    // Data
-    if (validarData(d.data)) {
-      document.getElementById('com-of-data').value = d.data.trim();
-      n++; preenchidos.push('Data');
-    } else { naoEncontrados.push('Data'); }
+    // (a data do ofício é a de hoje — a IA nunca devolveu "data"; o antigo "Data: não encontrado" confundia)
 
     // Comarca + Vara — tenta sempre que houver comarca OU vara extraída
     if (d.comarca || d.vara) {
@@ -25492,15 +25507,16 @@ async function com_extrairComIA() {
     com_destravarCorpo(); // info extraída sempre entra no corpo
     com_atualizarPreview();
 
-    // Mensagem detalhada de resultado
-    const msg = preenchidos.length
-      ? `\u{2705} Preenchido: ${preenchidos.join(', ')}.${naoEncontrados.length ? ` Não encontrado: ${naoEncontrados.join(', ')}.` : ''}`
-      : `\u{26A0}\u{FE0F} Nenhum campo pôde ser extraído com segurança dos documentos.`;
-
-    if (status) {
-      status.style.background = preenchidos.length ? '#d1fae5' : '#fef9c3';
-      status.style.color      = preenchidos.length ? '#065f46' : '#92400e';
-      status.textContent = msg;
+    // Faixa de confiança (leitura conferida): duas IAs + conferência no Worker + notas do OCR das páginas lidas
+    const avisosLeitura = lc_avisosOcr(comTexto.flatMap(a => a._notasOcr || []));
+    const conf = Object.assign({}, json.conferencia || {}, { avisos: comTexto.map(a => a._avisoParcial).filter(Boolean).concat((json.conferencia || {}).avisos || []) });
+    conf.primeira = { nome: d.nome, comarca: d.comarca, vara: d.vara };
+    window._comUltimaConferencia = conf;
+    window._comUltimoPreenchido = { preenchidos, naoEncontrados, avisosLeitura };
+    if (!preenchidos.length) {
+      if (status) { status.style.background = '#fef9c3'; status.style.color = '#92400e'; status.textContent = '\u{26A0}\u{FE0F} Nenhum campo pôde ser extraído com segurança dos documentos.'; }
+    } else {
+      lc_mostrar(status, lc_faixa(conf, { preencheu: preenchidos, naoAchou: naoEncontrados, avisosLeitura, acaoAlt: 'com_usarLeituraAlternativa()' }));
     }
     _mostrarToast(preenchidos.length ? `\u{2705} IA preencheu: ${preenchidos.join(', ')}` : '\u{26A0}\u{FE0F} IA não encontrou dados com certeza suficiente.', preenchidos.length ? 'sucesso' : 'aviso');
 
@@ -25513,6 +25529,19 @@ async function com_extrairComIA() {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '\u{1F916} Extrair dados com IA'; }
   }
+}
+// "Usar a 2ª leitura" (e "Voltar para a 1ª"): troca nome/comarca/vara pela outra leitura da IA
+async function com_usarLeituraAlternativa() {
+  const conf = window._comUltimaConferencia, alt = conf && conf.alternativa; if (!alt) return;
+  if (alt.nome) document.getElementById('com-of-nome').value = String(alt.nome).toUpperCase();
+  if (alt.comarca || alt.vara) await _comDefinirComarcaVara(alt.comarca, alt.vara);
+  com_atualizarPreview();
+  const voltar = !conf._naSegunda;
+  window._comUltimaConferencia = Object.assign({}, conf, { alternativa: conf.primeira, primeira: alt, _naSegunda: voltar });
+  const u = window._comUltimoPreenchido || {};
+  lc_mostrar(document.getElementById('com-ia-status'), lc_faixa(window._comUltimaConferencia, { preencheu: u.preenchidos, naoAchou: u.naoEncontrados, avisosLeitura: u.avisosLeitura,
+    acaoAlt: 'com_usarLeituraAlternativa()', rotuloAlt: voltar ? 'Voltar para a 1ª leitura' : 'Usar a 2ª leitura' }));
+  _mostrarToast(voltar ? 'Campos trocados pela 2ª leitura — confira no documento.' : 'Voltou para a 1ª leitura.', 'sucesso');
 }
 
 /* ── Gerar PDF com Anexos ────────────────────────────────────── */
@@ -29556,6 +29585,7 @@ function estat_exportarResultado() {
 <script src="secretaria-ponto.js?v=20261014o"></script>
 <script src="secretaria-agenda.js?v=20261015s"></script>
 <script src="secretaria-agenda-ia.js?v=20261015f"></script>
+<script src="leitura-conferida.js?v=20261015a"></script>
 <script src="secretaria-arquivo.js?v=20261015s"></script>
 <script src="logo-policia-penal.js?v=20261014h"></script>
 <script src="secretaria-escala.js?v=20261015e"></script>
