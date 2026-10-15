@@ -81,7 +81,7 @@ function _secAgHtmlAnexo(x) {
   return '<div style="border:1px dashed #93c5fd;background:#f8fbff;border-radius:6px;padding:8px 10px;margin-bottom:10px">'
     + '<div style="font-weight:600;font-size:.86rem">\u{1F4CE} Anexar documento (opcional)</div>'
     + '<div style="font-size:.75rem;color:#64748b">Pedido do PRODOC, ofício, memorando… em PDF, foto ou Word. A IA lê e preenche o assunto e os detalhes — confira antes de salvar.</div>'
-    + (ja.length ? '<div style="font-size:.8rem;margin-top:4px">' + ja.map(a => '<a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + esc(a.nome).replace(/'/g, '') + '\');return false">\u{1F4CE} ' + esc(a.nome) + '</a>').join('<br>') + '</div>' : '')
+    + (ja.length ? '<div style="font-size:.8rem;margin-top:4px">' + ja.map(a => '<a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + _jsq(a.nome) + '\');return false">\u{1F4CE} ' + esc(a.nome) + '</a>').join('<br>') + '</div>' : '')
     + '<input type="file" id="sec-ag-files" multiple accept="' + _SEC_AG_ACEITA + '" onchange="sec_agIaLer(this)" style="margin-top:6px;width:100%">'
     + '<div id="sec-ag-ia" style="font-size:.8rem;margin-top:4px"></div></div>';
 }

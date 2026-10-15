@@ -63,7 +63,7 @@ function _secHtmlTabelaAfa(lista, comNome, d, vazio) {
   return '<div class="table-scroll"><table class="data-table"><thead><tr>' + (comNome ? '<th>Servidor</th><th>Equipe</th>' : '') + '<th>Tipo</th><th>Período</th><th>Dias</th><th>Portaria</th><th>Exercício</th><th>Anexos</th><th></th></tr></thead><tbody>'
     + (lista.length ? lista.map(a => {
       const s = _secServ(a.servidorId, d) || {}, cor = _secCorTipo(a.tipo), agora = _secSobrepoe(a, hoje, hoje);
-      const anexos = (a.anexos || []).map(x => '<a href="#" title="Abrir" onclick="sec_abrirDoc(\'' + encodeURIComponent(x.key) + '\',\'' + esc(x.nome).replace(/'/g, '') + '\');return false">\u{1F4CE} ' + esc(x.nome.length > 22 ? x.nome.slice(0, 20) + '…' : x.nome) + '</a>').join('<br>');
+      const anexos = (a.anexos || []).map(x => '<a href="#" title="Abrir" onclick="sec_abrirDoc(\'' + encodeURIComponent(x.key) + '\',\'' + _jsq(x.nome) + '\');return false">\u{1F4CE} ' + esc(x.nome.length > 22 ? x.nome.slice(0, 20) + '…' : x.nome) + '</a>').join('<br>');
       return '<tr' + (agora ? ' style="background:#f0fdfa"' : '') + '>' + (comNome ? '<td><a href="#" onclick="sec_abrirPerfil(\'' + a.servidorId + '\');return false"><strong>' + esc(s.nome || '(removido)') + '</strong></a></td><td>' + esc(s.equipe || '—') + '</td>' : '')
         + '<td><span style="display:inline-block;width:8px;height:8px;background:' + cor + ';margin-right:6px"></span>' + esc(a.tipo) + (agora ? ' <b style="color:#0d9488;font-size:.72rem">EM CURSO</b>' : '') + '</td>'
         + '<td style="font-family:var(--font-mono);white-space:nowrap">' + _secBR(a.inicio) + ' a ' + _secBR(a.fim) + '</td><td>' + _secDias(a.inicio, a.fim) + '</td>'

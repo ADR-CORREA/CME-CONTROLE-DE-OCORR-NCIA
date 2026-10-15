@@ -25,7 +25,7 @@ function _plsMediana(v) { if (!v.length) return null; const s = v.slice().sort((
 
 // soma tudo de cada servidor no período (só plantões completos)
 function _plsAgregar(d, nd) {
-  const lim = new Date(Date.now() - nd * 864e5).toISOString().slice(0, 10);
+  const lim = _isoLocal(new Date(Date.now() - nd * 864e5));
   const dias = Object.keys(d.turnos || {}).concat(Object.keys(d.expediente || {})).filter((x, i, a) => a.indexOf(x) === i).filter(dd => dd >= lim).sort();
   const ag = {};
   const novo = op => ag[op] = ag[op] || { op, plantoes: [], porEq: {}, n: 0, pop: 0, popOk: 0, vd: 0, vdP: 0, meds: [], conf: 0, nconf: 0, inst: 0, desinst: 0, sms: 0, registro: 0, sens: 0 };

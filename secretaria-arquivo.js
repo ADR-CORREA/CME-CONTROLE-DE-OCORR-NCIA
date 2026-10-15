@@ -61,7 +61,7 @@ function _secLinhaDoc(x, d) {
     + '<td style="font-family:var(--font-mono);font-size:.82rem;white-space:nowrap">' + esc(x.numero || '—') + '</td>'
     + '<td><div style="font-weight:600">' + esc(x.assunto) + '</div>' + (x.origem ? '<div style="font-size:.75rem;color:#64748b">' + esc(x.origem) + '</div>' : '') + '</td>'
     + '<td style="font-size:.8rem">' + ((x.servidorIds || []).map(id => _secServ(id, d) ? '<a href="#" onclick="sec_abrirPerfil(\'' + id + '\');return false">' + esc(_secNomeServ(id, d)) + '</a>' : '').filter(Boolean).join('<br>') || '<span style="color:#94a3b8">—</span>') + '</td>'
-    + '<td style="font-size:.8rem">' + (x.arquivos || []).map(a => '<a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + esc(a.nome).replace(/'/g, '') + '\');return false">\u{1F4CE} ' + esc(a.nome) + '</a>').join('<br>') + '</td>'
+    + '<td style="font-size:.8rem">' + (x.arquivos || []).map(a => '<a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + _jsq(a.nome) + '\');return false">\u{1F4CE} ' + esc(a.nome) + '</a>').join('<br>') + '</td>'
     + '<td style="white-space:nowrap"><button class="btn-sm btn-outline" onclick="sec_arqNovo(\'' + x.id + '\')">Editar</button> '
     + '<button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_arqExcluir(\'' + x.id + '\')">Excluir</button></td></tr>';
 }

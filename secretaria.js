@@ -541,7 +541,7 @@ async function sec_excluirFolga(id) {
 // ── Documentos (Worker /sec/*) ────────────────────────────────────────────────
 async function sec_renderDocs(el, pasta, referencia) {
   el.innerHTML = '<div class="table-toolbar" style="flex-wrap:wrap;gap:8px"><input id="sec-doc-desc" placeholder="Descrição (ex.: Portaria de férias 2026, RG, comprovante de residência)" style="flex:1;min-width:240px;padding:6px 10px">'
-    + '<label class="btn-primary" style="cursor:pointer">+ Anexar arquivo<input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.odt,.txt" style="display:none" onchange="sec_enviarDocs(this,\'' + pasta + '\',\'' + esc(referencia).replace(/'/g, '') + '\')"></label></div>'
+    + '<label class="btn-primary" style="cursor:pointer">+ Anexar arquivo<input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.odt,.txt" style="display:none" onchange="sec_enviarDocs(this,\'' + pasta + '\',\'' + _jsq(referencia) + '\')"></label></div>'
     + '<div id="sec-doc-lista" style="color:#64748b;padding:12px">Carregando…</div>';
   try {
     const r = await r2_api('GET', '/sec/list?pasta=' + encodeURIComponent(pasta));
@@ -549,10 +549,10 @@ async function sec_renderDocs(el, pasta, referencia) {
     const box = document.getElementById('sec-doc-lista'); if (!box) return;
     box.style.padding = '0';
     box.innerHTML = '<div class="table-scroll"><table class="data-table"><thead><tr><th>Arquivo</th><th>Descrição</th><th>Enviado</th><th>Por</th><th></th></tr></thead><tbody>'
-      + (arq.length ? arq.map(a => '<tr><td><a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + esc(a.nome).replace(/'/g, '') + '\');return false"><strong>' + esc(a.nome) + '</strong></a>'
+      + (arq.length ? arq.map(a => '<tr><td><a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + _jsq(a.nome) + '\');return false"><strong>' + esc(a.nome) + '</strong></a>'
         + ' <span style="color:#94a3b8;font-size:.75rem">' + Math.max(1, Math.round((a.tamanho || 0) / 1024)) + ' KB</span></td><td>' + esc(a.descricao || '') + '</td>'
         + '<td style="font-family:var(--font-mono);font-size:.8rem">' + (a.enviadoEm ? new Date(a.enviadoEm).toLocaleString('pt-BR') : '') + '</td><td style="font-size:.8rem">' + esc(a.enviadoPor || '') + '</td>'
-        + '<td><button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_apagarDoc(\'' + encodeURIComponent(a.key) + '\',\'' + pasta + '\',\'' + esc(referencia).replace(/'/g, '') + '\')">Apagar</button></td></tr>').join('')
+        + '<td><button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_apagarDoc(\'' + encodeURIComponent(a.key) + '\',\'' + pasta + '\',\'' + _jsq(referencia) + '\')">Apagar</button></td></tr>').join('')
         : '<tr><td colspan="5" style="text-align:center;padding:24px;color:#888">Nenhum documento anexado.</td></tr>') + '</tbody></table></div>';
   } catch (e) {
     const box = document.getElementById('sec-doc-lista');

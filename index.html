@@ -7457,7 +7457,7 @@ function calcStatusCaso(oc) {
   if (jur.desvinculado === "SIM") return "DESVINCULADO";
   if (jur.interrompido === "SIM") return "ENCERRADO";
   const diasViol = oc.dataAlerta ? Math.floor((new Date()-new Date(oc.dataAlerta))/86400000) : 0;
-  const diasProd = oc.prodocData ? Math.floor((new Date()-new Date(oc.prodocData))/86400000) : 0;
+  const diasProd = oc.prodocData ? Math.floor((new Date()-_dataLocal(oc.prodocData))/86400000) : 0;
   if (diasViol >= 180 || diasProd >= 60) return "AUTORIZADO";
   return "EM ACOMPANHAMENTO";
 }
@@ -7679,6 +7679,11 @@ function esc(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+// Texto dentro de '...' num atributo onclick="f('...')": escapa para JS e depois para HTML.
+// (esc() sozinho não basta: o navegador desfaz o &#39; e o apóstrofo de "D'ÁVILA" quebrava o clique.)
+function _jsq(str) {
+  return esc(String(str == null ? '' : str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, '\\n'));
 }
 
 /* ══ SEGURANÇA: Validação de senha forte ════════════════════════ */
@@ -8467,7 +8472,7 @@ function atualizarDashboard() {
     if (sc === "DESVINCULADO") jurDesv++;
     const jur = oc.juridico || {};
     const ativo = jur.desvinculado !== "SIM" && jur.interrompido !== "SIM";
-    const dp = oc.prodocData ? Math.floor((new Date()-new Date(oc.prodocData))/86400000) : 0;
+    const dp = oc.prodocData ? Math.floor((new Date()-_dataLocal(oc.prodocData))/86400000) : 0;
     if (dp >= 30 && dp < 60) jurProx++;
     if (ativo && dp >= 60)  jur60++;   // 60 dias após a comunicação (via 60 - PRODOC enviado)
   });
@@ -8585,7 +8590,7 @@ function _dSecCard(icon,nome,cor,rows){
 }
 function _dashSetores(ocs, jm){
   const box=document.getElementById('dash-sectors'); if(!box) return;
-  const todayK=new Date().toISOString().slice(0,10), monthK=todayK.slice(0,7);
+  const todayK=_isoLocal(), monthK=todayK.slice(0,7);
   const sc=_scListaArea(getSemCom(),'juridico'); // exclui DPP (competência do Psicossocial)
   const semComCrit=sc.filter(m=>_scEmAberto(m) && (Number(m.diasSemCom)||0)>=7).length;
   const jur180=sc.filter(m=>_scEmAberto(m) && _diasSemComAtual(m)>=180).length; // ≥180 dias sem comunicação (Akiles) — mesma base do KPI sc-kpi-180d
@@ -8632,7 +8637,7 @@ function _dashSetores(ocs, jm){
 
 function _dashAlertas(ocs, vd){
   const box=document.getElementById('dash-alertas'); if(!box) return;
-  const todayK=new Date().toISOString().slice(0,10);
+  const todayK=_isoLocal();
   const a=[];
   if(vd>0) a.push([`${vd} vencido${vd>1?'s':''}`,'#DC2626']);
   const est=getEstoque(); const itens=est.itens||{}, mins=(est.configuracoes||{}).estoqueMinimo||{};
@@ -8998,7 +9003,7 @@ function renderizarJuridico() {
   tbody.innerHTML = ocs.map(oc => {
     const jur = oc.juridico || {};
     const diasViol = oc.dataAlerta ? Math.floor((new Date()-new Date(oc.dataAlerta))/86400000) : "";
-    const diasProd = oc.prodocData ? Math.floor((new Date()-new Date(oc.prodocData))/86400000) : "";
+    const diasProd = oc.prodocData ? Math.floor((new Date()-_dataLocal(oc.prodocData))/86400000) : "";
     const v60  = calcVia60(diasProd, jur.interrompido);
     const v180 = calcVia180(diasViol, jur.interrompido);
     const aut  = calcAutorizado(diasViol, diasProd, jur.interrompido);
@@ -9440,7 +9445,7 @@ function salvarOFC() {
 
   const comSel = document.getElementById('ofc-com-select').value;
   const comData = document.getElementById('ofc-com-data').value;
-  const enviadoCOM = comSel === 'sim' ? (comData || new Date().toISOString().slice(0,10)) : 'Não';
+  const enviadoCOM = comSel === 'sim' ? (comData || _isoLocal()) : 'Não';
 
   const agora = new Date().toISOString();
   const dados = getOFC();
@@ -10601,7 +10606,7 @@ function abrirModalDesvinc(monId) {
   document.getElementById('desvinc-nome').value = m.nome;
   document.getElementById('desvinc-registro').value = m.registro;
   document.getElementById('desvinc-dias').value = _diasSemComAtual(m) + ' dias';
-  document.getElementById('desvinc-data').value = new Date().toISOString().slice(0,10);
+  document.getElementById('desvinc-data').value = _isoLocal();
   document.getElementById('desvinc-servidor').value = usuarioAtual?.nome || '';
   document.getElementById('desvinc-ato').value = '';
   document.getElementById('desvinc-sistema').value = 'Sistema AKILES Desktop';
@@ -10939,6 +10944,14 @@ ${bloco('Descrição',a.descricao)}${bloco('Análise Técnica',a.analise)}${bloc
 // ── Comunicação — reutiliza visualizarOcorrencia ────────────
 function verComunicacao(idx) { visualizarOcorrencia(idx); }
 
+// ── Datas no horário do Amapá (UTC−3) ──
+// toISOString() é UTC: depois das 21h já devolve o dia seguinte.
+function _isoLocal(d) { d = d || new Date(); const z = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); }
+// 'AAAA-MM-DD' (campo de data) vira meia-noite LOCAL — new Date('AAAA-MM-DD') é meia-noite UTC (21h do dia anterior aqui).
+function _dataLocal(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '')); return m ? new Date(+m[1], m[2] - 1, +m[3]) : new Date(s); }
+// Dia do plantão: vai das 08h às 08h — antes das 08h ainda é a equipe que entrou no dia anterior.
+function _diaPlantao(d) { d = new Date(d || Date.now()); if (d.getHours() < 8) d.setDate(d.getDate() - 1); return _isoLocal(d); }
+
 // Ciclo de plantões: referência 01/05/2026 = DELTA (índice 3)
 const PLANTOES = ['ALFA', 'BRAVO', 'CHARLIE', 'DELTA', 'ECHO'];
 function getPlantaoParaData(dataStr) {
@@ -11164,8 +11177,7 @@ function pl_ajustarEquipe(op, valor, eq, dia) {
 const PLANTAO_CORES = { ALFA:'#16a34a', BRAVO:'#2563eb', CHARLIE:'#d97706', DELTA:'#7c3aed', ECHO:'#dc2626' };
 function _dashRenderPlantaoHoje() {
   const hoje = new Date();
-  const iso  = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
-  const p    = getPlantaoParaData(iso);
+  const p    = getPlantaoParaData(_diaPlantao(hoje));
   const cor  = PLANTAO_CORES[p] || '#1d4ed8';
   const nomeEl = document.getElementById('dash-plantao-nome');
   const dataEl = document.getElementById('dash-plantao-data');
@@ -11291,7 +11303,7 @@ function atualizarPlantaoOcorrencia() {
   const dataEl = document.getElementById('oc-data');
   const plantaoEl = document.getElementById('oc-plantao');
   if (dataEl && plantaoEl && dataEl.value) {
-    plantaoEl.value = getPlantaoParaData(dataEl.value);
+    plantaoEl.value = getPlantaoParaData(_diaPlantao(dataEl.value));
   }
   recalcularStatus();
 }
@@ -11306,7 +11318,7 @@ function abrirModalNovaOcorrencia() {
   document.getElementById("oc-monitorado").value = "";
   document.getElementById("oc-medida").value = "";
   document.getElementById("oc-tipo").value = "";
-  const _plantaoAuto = getPlantaoParaData(new Date().toISOString());
+  const _plantaoAuto = getPlantaoParaData(_diaPlantao());
   document.getElementById("oc-plantao").value = _plantaoAuto;
   document.getElementById("oc-operador").value = usuarioAtual?.nome || "";
   document.getElementById("oc-descricao").value = "";
@@ -11489,7 +11501,7 @@ function abrirModalJuridico(idx) {
   if (!oc) return;
   const jur = oc.juridico || {};
   const diasViol = oc.dataAlerta ? Math.floor((new Date()-new Date(oc.dataAlerta))/86400000) : "";
-  const diasProd = oc.prodocData ? Math.floor((new Date()-new Date(oc.prodocData))/86400000) : "";
+  const diasProd = oc.prodocData ? Math.floor((new Date()-_dataLocal(oc.prodocData))/86400000) : "";
 
   document.getElementById("jur-oc-idx").value = idx;
   document.getElementById("jur-id").value = oc.id;
@@ -12499,7 +12511,7 @@ function admin_exportarAuditCSV() {
   const csv  = '﻿' + [cab.join(';'), ...linhas].join('\n');
   const a    = document.createElement('a');
   a.href     = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  a.download = `auditoria_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `auditoria_${_isoLocal()}.csv`;
   a.click();
 }
 
@@ -12513,7 +12525,7 @@ function exportarBackup() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "cme_backup_" + new Date().toISOString().slice(0,10) + ".json";
+  a.download = "cme_backup_" + _isoLocal() + ".json";
   a.click();
   addLog(`Backup exportado (${usuarioAtual.nome})`);
 }
@@ -12554,7 +12566,7 @@ function exportarCSV() {
   const blob = new Blob(["\uFEFF"+csv], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "cme_ocorrencias_" + new Date().toISOString().slice(0,10) + ".csv";
+  a.download = "cme_ocorrencias_" + _isoLocal() + ".csv";
   a.click();
 }
 
@@ -12565,7 +12577,7 @@ function exportarCSVJur() {
   const rows = ocs.map(o => {
     const jur = o.juridico || {};
     const dv = o.dataAlerta ? Math.floor((new Date()-new Date(o.dataAlerta))/86400000) : "";
-    const dp = o.prodocData ? Math.floor((new Date()-new Date(o.prodocData))/86400000) : "";
+    const dp = o.prodocData ? Math.floor((new Date()-_dataLocal(o.prodocData))/86400000) : "";
     return [o.id, o.monitorado, o.medida, o.tipo, formatDate(o.dataAlerta),
       o.prodocData, o.prodocNum, dv, dp,
       calcVia60(dp, jur.interrompido), calcVia180(dv, jur.interrompido),
@@ -12576,7 +12588,7 @@ function exportarCSVJur() {
   const blob = new Blob(["\uFEFF"+csv], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "cme_juridico_" + new Date().toISOString().slice(0,10) + ".csv";
+  a.download = "cme_juridico_" + _isoLocal() + ".csv";
   a.click();
 }
 
@@ -12636,7 +12648,7 @@ function importarExcel(input) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     try {
       const wb = XLSX.read(e.target.result, { type: "array", cellDates: true });
       const ws = wb.Sheets[wb.SheetNames[0]];
@@ -12692,7 +12704,7 @@ function importarExcel(input) {
         return alert(msg);
       }
 
-      const ocs = getOcorrencias();
+      const ocs = await _ocorrenciasFrescas();
       let importados = 0, ignorados = 0, erros = [];
 
       // Medidas válidas
@@ -12715,10 +12727,11 @@ function importarExcel(input) {
         // Data — aceita string, Date ou número serial do Excel
         let dataAlerta = "";
         const dataRaw = colMap["dataAlerta"] ? row[colMap["dataAlerta"]] : "";
+        const _dhLocal = d => _isoLocal(d) + 'T' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
         if (dataRaw instanceof Date) {
-          dataAlerta = dataRaw.toISOString().slice(0,16);
+          dataAlerta = _dhLocal(dataRaw);
         } else if (typeof dataRaw === "number") {
-          // número serial Excel \u{2192} Date
+          // número serial Excel \u{2192} data/hora (o serial não tem fuso: lido como UTC = a hora escrita)
           const d = new Date(Math.round((dataRaw - 25569) * 86400 * 1000));
           dataAlerta = d.toISOString().slice(0,16);
         } else if (dataRaw) {
@@ -12761,13 +12774,12 @@ function importarExcel(input) {
         };
 
         if (idxExist >= 0) {
-          // Atualizar existente (preserva jurídico e PRODOC)
-          novaOc.prodoc    = ocs[idxExist].prodoc    || "";
-          novaOc.prodocNum = ocs[idxExist].prodocNum || "";
-          novaOc.prodocData= ocs[idxExist].prodocData|| "";
-          novaOc.obs       = ocs[idxExist].obs       || "";
-          novaOc.juridico  = ocs[idxExist].juridico  || {};
-          ocs[idxExist] = novaOc;
+          // Atualizar existente: só os campos preenchidos na planilha; o resto
+          // (PRODOC, jurídico, etapa, encaminhamentos, histórico, arquivamento) fica.
+          const daPlanilha = {};
+          ['dataAlerta','monitorado','medida','tipo','plantao','operador','descricao','ciodes','contatos']
+            .forEach(k => { if (novaOc[k]) daPlanilha[k] = novaOc[k]; });
+          ocs[idxExist] = { ...ocs[idxExist], ...daPlanilha };
         } else {
           ocs.push(novaOc);
         }
@@ -12896,7 +12908,7 @@ function abrirModalRelatorio(id) {
   });
   document.getElementById('rel-tipo').value = '';
   // Defaults
-  const hoje = new Date().toISOString().slice(0,10);
+  const hoje = _isoLocal();
   document.getElementById('rel-data-recebimento').value = hoje;
   document.getElementById('rel-data-envio').value = hoje;
   document.getElementById('rel-servidor').value = usuarioAtual?.nome || '';
@@ -13644,7 +13656,7 @@ function renderizarRelArquivadas() {
     ${_relCelViolacoes(r)}
     <td style="white-space:nowrap">
       <button class="btn-sm btn-outline" onclick="desarquivarRelatorio('${r.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg>Desarquivar</button>
-      <button class="btn-sm btn-danger"  onclick="excluirRelatorio('${r.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>
+      <button class="btn-sm btn-danger"  onclick="excluirRelatorioArq('${r.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>
     </td>
   </tr>`).join('');
 }
@@ -13657,7 +13669,9 @@ function limparFiltrosRelArq() {
   renderizarRelArquivadas();
 }
 
-function excluirRelatorio(id) {
+// Arquivadas (nome próprio: com o mesmo nome da função da lista ativa, esta sobrescrevia aquela
+// e a exclusão na lista ativa não sumia da tela)
+function excluirRelatorioArq(id) {
   if (!confirm('Excluir este relatório permanentemente? Essa ação não pode ser desfeita.')) return;
   const dados = getRelatorios();
   dados.registros = (dados.registros||[]).filter(r => r.id !== id);
@@ -13883,7 +13897,7 @@ function renderizarGerencia() {
   const tbody = document.getElementById('tbody-gerencia');
   if (!tbody) return;
 
-  const hoje = new Date().toISOString().slice(0,10);
+  const hoje = _isoLocal();
   const doisDias = new Date(); doisDias.setDate(doisDias.getDate() + 2);
   const doisDiasStr = doisDias.toISOString().slice(0,10);
 
@@ -14076,7 +14090,7 @@ function renderizarTriagem() {
   filtrados.sort((a,b) => (b.criadoEm||b.data||'').localeCompare(a.criadoEm||a.data||''));
 
   // ── KPIs (use full lista, not filtered) ──
-  const hoje     = new Date().toISOString().slice(0,10);
+  const hoje     = _isoLocal();
   const kpi = id => document.getElementById(id);
   const count = tipo => lista.filter(a => a.tipo === tipo).length;
   if (kpi('tri-k-hoje'))     kpi('tri-k-hoje').textContent     = lista.filter(a => a.data === hoje).length;
@@ -14169,7 +14183,7 @@ function abrirModalTriagem(id) {
 
   // Default date = today
   const dataEl = document.getElementById('tri-data');
-  if (dataEl) dataEl.value = new Date().toISOString().slice(0,10);
+  if (dataEl) dataEl.value = _isoLocal();
 
   // Default responsável = nome do usuário logado
   const respEl = document.getElementById('tri-responsavel');
@@ -14561,7 +14575,7 @@ function renderizarPsi() {
   lista.sort((a,b)=>(b.criadoEm||b.dataHora||b.data||'').localeCompare(a.criadoEm||a.dataHora||a.data||''));
 
   // KPIs
-  const hoje   = new Date().toISOString().slice(0,10);
+  const hoje   = _isoLocal();
   const semana = new Date(Date.now()-7*24*60*60*1000).toISOString().slice(0,10);
   const kpi = id => document.getElementById(id);
   const k = (id, val) => { const el=kpi(id); if(el) el.textContent=val; };
@@ -15146,7 +15160,7 @@ function renderizarComunicacao() {
       <td>${esc(o._status)||''}</td>
       <td>${badgeProdoc}</td>
       <td>${esc(o.prodocNum)||'—'}</td>
-      <td>${o.prodocData ? new Date(o.prodocData).toLocaleDateString('pt-BR') : '—'}</td>
+      <td>${o.prodocData ? _dataLocal(o.prodocData).toLocaleDateString('pt-BR') : '—'}</td>
       <td>${esc(o.plantao)||''}</td>
       <td>${btnEdit}</td>
     </tr>`;
@@ -15357,7 +15371,9 @@ function _recalcularItensPorEstado(d) {
   const corte = d.recontagemEm || '';
   const movs = [...(d.movimentacoes || [])]
     .filter(m => !corte || (m.ts || '') >= corte)
-    .sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+    // ordem cronológica pelo ts — o campo "data" não existe nas movimentações, e a lista
+    // é gravada do mais novo p/ o mais velho (a Saída era contada antes da Entrada)
+    .sort((a, b) => (a.ts || a.data || '').localeCompare(b.ts || b.data || ''));
   movs.forEach(m => {
     const tipo = m.item || '';
     if (ITENS_COM_SERIAL.includes(tipo)) return; // tratado via registros abaixo
@@ -15935,11 +15951,11 @@ function abrirModalEstoque(tipo) {
   if (respEl) respEl.value = usuarioAtual?.nome || '';
   // Pré-preenche a data de entrega (saída) com hoje
   const dataEntregaEl = document.getElementById(pfx + '-data-entrega');
-  if (dataEntregaEl) dataEntregaEl.value = new Date().toISOString().slice(0,10);
+  if (dataEntregaEl) dataEntregaEl.value = _isoLocal();
   // Auto-preenche plantão para saída
   if (tipo === 'saida') {
     const plantaoEl = document.getElementById('sai-plantao');
-    if (plantaoEl) plantaoEl.value = getPlantaoParaData(new Date().toISOString());
+    if (plantaoEl) plantaoEl.value = getPlantaoParaData(_diaPlantao());
   }
   atualizarTiposEst(pfx);
   document.getElementById(ids[tipo]).classList.add('open');
@@ -16639,7 +16655,7 @@ function mp_exportarExcel(){
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r.confirmados.length?map(r.confirmados):vazio), 'CONFIRMADOS');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r.provaveis.length?map(r.provaveis):vazio), 'PROVAVEIS');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Object.entries(r.resumo).map(([k,v])=>({CHAVE:k,VALOR:v}))), 'RESUMO');
-  XLSX.writeFile(wb, 'cruzamento_mandados_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  XLSX.writeFile(wb, 'cruzamento_mandados_'+_isoLocal()+'.xlsx');
 }
 
 /* ═══════ MANDADOS — detalhes, pasta do dia, fichas do AKILES e perfil ═══════ */
@@ -16935,8 +16951,7 @@ function renderizarModelos() {
   // Preencher plantão do dia
   const pl = document.getElementById('mod-plantao');
   if (pl && !pl.value) {
-    const hoje = new Date(); hoje.setMinutes(hoje.getMinutes() - hoje.getTimezoneOffset());
-    pl.value = getPlantaoParaData(hoje.toISOString().slice(0,10));
+    pl.value = getPlantaoParaData(_diaPlantao());
   }
   // Preencher data/hora atual
   const dt = document.getElementById('mod-data');
@@ -16949,7 +16964,7 @@ function renderizarModelos() {
   if (multiTec) multiTec.value = usuarioAtual?.nome || '';
   // Data do documento = sempre hoje
   const multiData = document.getElementById('multi-data');
-  if (multiData) multiData.value = new Date().toISOString().slice(0, 10);
+  if (multiData) multiData.value = _isoLocal();
   // Carregar perfil salvo do técnico (cargo, CRESS, município)
   const perfil = carregarStore('multi_perfil_' + (usuarioAtual?.usuario || 'default'), null);
   if (perfil) {
@@ -28470,16 +28485,22 @@ async function r2_salvarEstat(tipo, dados, nome) {
    Salva 1 snapshot por dia de TODAS as stores em _estat/backup-stores/ no R2,
    mantendo histórico diário. Não recupera perdas anteriores, mas garante que,
    a partir de agora, sempre haja uma cópia recuperável fora do Supabase. */
+// Nunca entram no backup: usuários (o hash da senha é a credencial do banco),
+// ex-usuários, imagens de assinatura e cópias de segurança. O Worker também tira.
+const _BACKUP_CHAVES_FORA = /^(cme_)?(usuarios|ex_usuarios|assinaturas)$|_backup|_bk_/;
+const _BACKUP_NIVEIS = ['admin', 'gerencia'];
 function _cmeColetarStores() {
   const stores = {};
-  Object.keys(_cache || {}).forEach(k => { if (_cache[k] != null) stores[k] = _cache[k]; });
+  Object.keys(_cache || {}).forEach(k => { if (_cache[k] != null && !_BACKUP_CHAVES_FORA.test(k)) stores[k] = _cache[k]; });
   return stores;
 }
 
 async function cme_backupAutoR2(forcar) {
   try {
-    const hoje = new Date().toISOString().slice(0, 10);
+    const hoje = _isoLocal();
     if (!forcar && localStorage.getItem('cme_ultimo_backup_r2') === hoje) return false;
+    // Só gerência/admin (o Worker recusa os demais) — e são os que têm todas as stores carregadas.
+    if (!(usuarioAtual && _BACKUP_NIVEIS.includes(usuarioAtual.nivel))) return false;
     const stores = _cmeColetarStores();
     // Proteção: só faz backup se as stores principais já estiverem carregadas
     // (evita gravar um snapshot vazio/truncado por cache não-carregado).
@@ -29134,7 +29155,7 @@ function psi_exportarResultado() {
   })));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Psicossocial');
-  const dt = new Date().toISOString().slice(0,10);
+  const dt = _isoLocal();
   XLSX.writeFile(wb, `psicossocial_cme_${dt}.xlsx`);
 }
 
@@ -29410,7 +29431,7 @@ function cruz_exportarXLS() {
   })));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Críticos');
-  XLSX.writeFile(wb, `criticos_cruzamento_${new Date().toISOString().slice(0,10)}.xlsx`);
+  XLSX.writeFile(wb, `criticos_cruzamento_${_isoLocal()}.xlsx`);
 }
 
 /* ── Exportar resultado ─────────────────────────────────────────── */
@@ -29432,7 +29453,7 @@ function estat_exportarResultado() {
   })));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Resultado');
-  const dt = new Date().toISOString().slice(0,10);
+  const dt = _isoLocal();
   XLSX.writeFile(wb, `estatisticas_cme_${dt}.xlsx`);
 }
 </script>
@@ -29524,23 +29545,23 @@ function estat_exportarResultado() {
   </div>
 </div>
 
-<script src="secretaria.js?v=20261014p"></script>
-<script src="secretaria-ferias.js?v=20261014b"></script>
+<script src="secretaria.js?v=20261015s"></script>
+<script src="secretaria-ferias.js?v=20261015s"></script>
 <script src="secretaria-painel.js?v=20261014b"></script>
 <script src="secretaria-ponto.js?v=20261014o"></script>
-<script src="secretaria-agenda.js?v=20261014m"></script>
-<script src="secretaria-agenda-ia.js?v=20261015b"></script>
-<script src="secretaria-arquivo.js?v=20261014o"></script>
+<script src="secretaria-agenda.js?v=20261015s"></script>
+<script src="secretaria-agenda-ia.js?v=20261015s"></script>
+<script src="secretaria-arquivo.js?v=20261015s"></script>
 <script src="logo-policia-penal.js?v=20261014h"></script>
 <script src="secretaria-escala.js?v=20261014r"></script>
-<script src="secretaria-escserv.js?v=20261014q"></script>
-<script src="secretaria-faltas.js?v=20261014q"></script>
+<script src="secretaria-escserv.js?v=20261015s"></script>
+<script src="secretaria-faltas.js?v=20261015s"></script>
 <script src="secretaria-atencao.js?v=20261014o"></script>
 <script src="semcom-contatos.js?v=20261015b"></script>
 <script src="produtividade.js?v=20261013k"></script>
 <script src="plantoes-resumo.js?v=20261013o"></script>
 <script src="plantoes-detalhe.js?v=20261014a"></script>
-<script src="plantoes-servidores.js?v=20261014a"></script>
-<script src="vd-zonas.js?v=20261013r"></script>
+<script src="plantoes-servidores.js?v=20261015s"></script>
+<script src="vd-zonas.js?v=20261015s"></script>
 </body>
 </html>

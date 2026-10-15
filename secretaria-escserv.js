@@ -56,9 +56,10 @@ const _SEC_SETORES_PADRAO = ['Gerência — Gerente', 'Gerência — Subgerente'
 function _secServSetoresConhecidos(d, linhas) {
   const base = Array.isArray((d.config || {}).setoresAdm) ? d.config.setoresAdm : _SEC_SETORES_PADRAO;
   const uso = d.servidores.filter(s => s.equipe === 'EXPEDIENTE').map(_secServSetor).concat(Object.values(linhas || {}).filter(l => l.equipe === 'EXPEDIENTE').map(_secServSetor));
-  return [...new Set(base.concat(uso))].filter(k => k && k !== _SEC_SERV_SEM_SETOR);
+  return [...new Set(base.concat(uso))].filter(k => k && k !== _SEC_SERV_SEM_SETOR && !_SEC_SERV_NAO_SETOR.includes(k));
 }
-function _secServSetor(l) { return l.setor && !['Expediente', 'Plantão'].includes(l.setor) ? l.setor : _SEC_SERV_SEM_SETOR; }
+const _SEC_SERV_NAO_SETOR = ['Expediente', 'Plantão'];
+function _secServSetor(l) { return l.setor && !_SEC_SERV_NAO_SETOR.includes(l.setor) ? l.setor : _SEC_SERV_SEM_SETOR; }
 function _secServOrdemSetor(k) { return /^ger[eê]ncia/i.test(k) ? '0' + k : k === _SEC_SERV_SEM_SETOR ? '2' : '1' + k; }
 function _secServAfastNoMes(sid, mes, d) { const ini = mes + '-01', fim = _secServFimMes(mes); return d.afastamentos.find(a => a.servidorId === sid && a.inicio <= fim && (a.fim || a.inicio) >= ini) || null; }
 // afastado na maior parte do mês (20 dias ou mais) vai para a faixa de baixo, como "FÉRIAS: PP. Fulano" no papel
@@ -70,15 +71,20 @@ function _secServForaMes(a, mes) {
 
 // ── Guardar o mês atual no histórico (sozinho) ────────────────────────────────
 let _secServGuardando = false;
+function _secServJsonEstavel(v) {
+  if (Array.isArray(v)) return '[' + v.map(_secServJsonEstavel).join(',') + ']';
+  if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + _secServJsonEstavel(v[k])).join(',') + '}';
+  return JSON.stringify(v);
+}
 function _secServGuardarAuto() {
   const d = _secDados(), mes = _secServAtual();
   if (_secServGuardando || !d.servidores.length) return;
   const g = (d.escalaServico || {})[mes], atual = _secServDoCadastro(d);
-  if (g && JSON.stringify(g.linhas) === JSON.stringify(atual)) return; // nada mudou
+  if (g && _secServJsonEstavel(g.linhas) === _secServJsonEstavel(atual)) return; // nada mudou
   _secServGuardando = true;
   _secMutar(x => {
     const linhas = _secServDoCadastro(x), ant = x.escalaServico[mes];
-    if (ant && JSON.stringify(ant.linhas) === JSON.stringify(linhas)) return false;
+    if (ant && _secServJsonEstavel(ant.linhas) === _secServJsonEstavel(linhas)) return false;
     x.escalaServico = Object.assign({}, x.escalaServico, { [mes]: { linhas, guardadoEm: new Date().toISOString() } });
   }).finally(() => { _secServGuardando = false; });
 }
@@ -91,7 +97,7 @@ function _secCartaoServico() {
   const dias = _secServDiasGuarnicao(mes), deHoje = mes === _secServAtual() ? _secPlantaoAgora().guarnicao : '';
   const corPosto = { '1': '#dc2626', '2': '#2563eb' }, corTurno = { M: '#b45309', T: '#7c3aed' };
   const guardado = (d.escalaServico || {})[mes];
-  const solta = alvo => ' ondragover="event.preventDefault();this.style.outline=\'2px dashed #0d9488\'" ondragleave="this.style.outline=\'\'" ondrop="sec_servSoltar(event,\'' + mes + '\',\'' + alvo + '\')"';
+  const solta = alvo => ' ondragover="event.preventDefault();this.style.outline=\'2px dashed #0d9488\'" ondragleave="this.style.outline=\'\'" ondrop="sec_servSoltar(event,\'' + mes + '\',\'' + _jsq(alvo) + '\')"';
 
   // fundo suave por posto (plantão) ou turno (expediente) + barrinha à esquerda, para ler de relance sem chamar atenção
   const TOM = { P1: ['#fff', '#f1d4d4', '#dc2626'], P2: ['#fff', '#cfdcf5', '#2563eb'], M: ['#fff', '#ecdcb6', '#b45309'], T: ['#fff', '#ddd3f5', '#7c3aed'], X: ['#fff', '#e2e8f0', '#cbd5e1'] };
@@ -129,7 +135,7 @@ function _secCartaoServico() {
   ids.filter(id => linhas[id].equipe === 'EXPEDIENTE').forEach(id => { const k = _secServSetor(linhas[id]); (setores[k] = setores[k] || []).push(id); });
   const setorCard = (k, i) => '<div' + solta('S:' + k) + ' style="border:1px solid ' + CAIXA[i % CAIXA.length][1] + ';border-radius:8px;padding:8px;background:' + CAIXA[i % CAIXA.length][0] + '">'
     + '<div style="font-weight:700;font-size:.82rem;margin-bottom:6px">' + esc(k) + ' <span style="font-weight:400;color:#94a3b8">(' + setores[k].length + ')</span></div>'
-    + (!setores[k].length ? '<div style="font-size:.78rem;color:#94a3b8;padding:6px 0">Arraste um nome para cá.' + (k !== _SEC_SERV_SEM_SETOR ? ' <a href="#" onclick="sec_servRemoverSetor(\'' + esc(k).replace(/'/g, '') + '\');return false" style="color:#b91c1c">remover setor</a>' : '') + '</div>' : '')
+    + (!setores[k].length ? '<div style="font-size:.78rem;color:#94a3b8;padding:6px 0">Arraste um nome para cá.' + (k !== _SEC_SERV_SEM_SETOR ? ' <a href="#" onclick="sec_servRemoverSetor(\'' + _jsq(k) + '\');return false" style="color:#b91c1c">remover setor</a>' : '') + '</div>' : '')
     + '<div style="display:flex;flex-direction:column;gap:4px">' + setores[k].sort((a, b) => String(linhas[a].turno || 'Z').localeCompare(String(linhas[b].turno || 'Z')) || linhas[a].nome.localeCompare(linhas[b].nome))
       .map(id => chip(id, etqTurno(id))).join('') + '</div></div>';
   const novoSetor = '<div' + solta('S:+') + ' style="border:1px dashed #cbd5e1;border-radius:8px;padding:8px;display:flex;align-items:center;justify-content:center;text-align:center;color:#94a3b8;font-size:.8rem;min-height:70px">+ arraste um nome aqui para criar um setor novo</div>';
@@ -202,7 +208,7 @@ async function _secServAplicar(mes, sid, patch, audit) {
   const passado = mes < _secServAtual(), agora = new Date().toISOString(), por = usuarioAtual ? usuarioAtual.nome : '';
   const ok = await _secMutar(d => {
     const antes = _secServSetoresConhecidos(d, _secServLinhas(mes, d));
-    d.config = Object.assign({}, d.config, { setoresAdm: [...new Set(antes.concat(patch.setor ? [patch.setor] : []))] });
+    d.config = Object.assign({}, d.config, { setoresAdm: [...new Set(antes.concat(patch.setor && !_SEC_SERV_NAO_SETOR.includes(patch.setor) ? [patch.setor] : []))] });
     if (passado) {
       const g = d.escalaServico[mes] || { linhas: _secServLinhas(mes, d) };
       if (!g.linhas[sid]) return false;

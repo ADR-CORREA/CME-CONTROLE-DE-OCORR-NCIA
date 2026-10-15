@@ -37,7 +37,7 @@ function vdz_render() {
     + (novos ? ' <b style="color:#b91c1c">' + novos + ' entraram na lista hoje.</b>' : '')
     + (r.falhas ? '<div style="font-size:.78rem;color:#b45309;margin-top:4px">\u{26A0}\u{FE0F} ' + r.falhas + ' monitorado(s) não puderam ser conferidos nesta coleta.</div>' : '') + '</div>'
     + '<div style="font-weight:700;margin-bottom:4px">Por servidor que fez a instalação <span style="font-weight:400;font-size:.75rem;color:#64748b">— clique para filtrar</span></div>'
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">' + ranking.map(([k, n]) => '<button type="button" onclick="_vdzInst=' + (_vdzInst === k ? '\'\'' : '\'' + esc(k).replace(/'/g, '') + '\'') + ';vdz_render()" style="padding:4px 10px;border-radius:4px;cursor:pointer;font-size:.8rem;border:1px solid '
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">' + ranking.map(([k, n]) => '<button type="button" onclick="_vdzInst=' + (_vdzInst === k ? '\'\'' : '\'' + _jsq(k) + '\'') + ';vdz_render()" style="padding:4px 10px;border-radius:4px;cursor:pointer;font-size:.8rem;border:1px solid '
       + (_vdzInst === k ? '#dc2626;background:#fee2e2;font-weight:600;box-shadow:inset 2px 0 0 #dc2626' : '#cbd5e1;background:#fff') + '">' + esc(k) + ' <b style="color:#b91c1c">' + n + '</b></button>').join('') + '</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="vdz-busca" value="' + esc(_vdzBusca) + '" oninput="_vdzBusca=this.value;_vdzRenderTabela()" placeholder="Buscar por nome, registro, comarca ou servidor…" style="flex:1;min-width:240px;padding:7px 10px">'
     + '<select onchange="_vdzSit=this.value;_vdzRenderTabela()" style="padding:6px 8px"><option value="">Todas as situações</option><option value="nenhuma"' + (_vdzSit === 'nenhuma' ? ' selected' : '') + '>Sem nenhuma zona</option><option value="inclusao"' + (_vdzSit === 'inclusao' ? ' selected' : '') + '>Só zona de inclusão</option></select></div>'
@@ -70,7 +70,7 @@ function vdz_exportar() {
 
 // Quem saiu da lista nos últimos 30 dias (zona cadastrada × deixou de estar ativo)
 function _vdzHtmlSaidas(r) {
-  const lim = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+  const lim = _isoLocal(new Date(Date.now() - 30 * 864e5));
   const s = (r.saidas || []).filter(x => x.dia >= lim).sort((a, b) => b.dia.localeCompare(a.dia));
   const zona = s.filter(x => x.motivo === 'zona').length, inat = s.length - zona;
   const td = (v, st) => '<td style="padding:5px 6px;' + (st || '') + '">' + v + '</td>';

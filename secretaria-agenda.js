@@ -56,7 +56,7 @@ function sec_renderAgenda() {
     + '<button class="btn-secondary" onclick="sec_agNavegar(1)">\u{203A}</button><button class="btn-secondary" onclick="_secAgMes=null;_secAgDia=null;sec_renderAgenda()">Hoje</button></div>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn-secondary" onclick="sec_agCategorias()">Categorias e cores</button>'
     + '<button class="btn-primary" onclick="sec_agNovo(\'' + _secAgDia + '\')">+ Novo compromisso</button></div></div>'
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-size:.78rem">' + cats.map(k => '<span onclick="sec_agFiltro(\'' + esc(k.nome).replace(/'/g, '') + '\')" title="Clique para mostrar/esconder" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:3px;border:1px solid #e2e8f0;'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-size:.78rem">' + cats.map(k => '<span onclick="sec_agFiltro(\'' + _jsq(k.nome) + '\')" title="Clique para mostrar/esconder" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:3px;border:1px solid #e2e8f0;'
       + (_secAgOcultas.has(k.nome) ? 'opacity:.4;text-decoration:line-through' : '') + '"><span style="width:10px;height:10px;background:' + k.cor + '"></span>' + esc(k.nome) + '</span>').join('') + '</div>'
     + '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start"><div style="flex:3 1 560px;min-width:0">'
     + '<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:4px">' + _SEC_DIAS_SEM.map(s => '<div style="text-align:center;font-size:.72rem;font-weight:700;color:#64748b">' + s + '</div>').join('') + '</div>'
@@ -80,7 +80,7 @@ function _secLinhaCompromisso(x, d, diaRef) {
     + '<div style="font-size:.74rem;color:#64748b">' + esc(x.categoria) + (x.responsavel ? ' · ' + esc(x.responsavel) : '') + (x.data !== diaRef ? ' · marcado para ' + _secBR(x.data) : '') + '</div>'
     + (atraso ? '<div style="font-size:.74rem;font-weight:700;color:#e11d48">\u{21BB} Atrasado desde ' + _secBRc(x.data) + ' (' + atraso + ' dia' + (atraso > 1 ? 's' : '') + ')</div>' : '')
     + (x.descricao ? '<div style="font-size:.82rem;color:#334155;margin-top:2px;white-space:pre-wrap">' + esc(x.descricao) + '</div>' : '')
-    + ((x.arquivos || []).length ? '<div style="font-size:.8rem;margin-top:3px">' + x.arquivos.map(a => '<a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + esc(a.nome).replace(/'/g, '') + '\');return false">\u{1F4CE} ' + esc(a.nome) + '</a>').join(' · ') + '</div>' : '')
+    + ((x.arquivos || []).length ? '<div style="font-size:.8rem;margin-top:3px">' + x.arquivos.map(a => '<a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + _jsq(a.nome) + '\');return false">\u{1F4CE} ' + esc(a.nome) + '</a>').join(' · ') + '</div>' : '')
     + (x.concluido ? '<div style="font-size:.72rem;color:#16a34a">Concluído por ' + esc(x.concluidoPor || '') + ' em ' + new Date(x.concluidoEm).toLocaleString('pt-BR') + '</div>' : '')
     + '</div><div style="display:flex;flex-direction:column;gap:3px"><button class="btn-sm btn-outline" onclick="sec_agNovo(\'\',\'' + x.id + '\')">Editar</button>'
     + '<button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_agExcluir(\'' + x.id + '\')">Excluir</button></div></div>';

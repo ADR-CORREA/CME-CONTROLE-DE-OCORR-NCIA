@@ -60,7 +60,7 @@ function sec_renderFaltas() {
 function _secFalLinha(f, d) {
   const s = _secServ(f.servidorId, d), arqs = (f.atestado && f.atestado.arquivos) || [];
   const detalhe = f.status === 'paga' ? 'Reposta em <b style="font-family:var(--font-mono)">' + _secBR(f.reposicao && f.reposicao.data) + '</b>' + (f.reposicao && f.reposicao.obs ? '<div style="font-size:.75rem;color:#64748b">' + esc(f.reposicao.obs) + '</div>' : '')
-    : f.status === 'justificada' ? arqs.map(a => '<a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + esc(a.nome).replace(/'/g, '') + '\');return false">\u{1F4CE} ' + esc(a.nome) + '</a>').join('<br>') + (f.atestado.obs ? '<div style="font-size:.75rem;color:#64748b">' + esc(f.atestado.obs) + '</div>' : '')
+    : f.status === 'justificada' ? arqs.map(a => '<a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + _jsq(a.nome) + '\');return false">\u{1F4CE} ' + esc(a.nome) + '</a>').join('<br>') + (f.atestado.obs ? '<div style="font-size:.75rem;color:#64748b">' + esc(f.atestado.obs) + '</div>' : '')
     : (f.obs ? '<span style="font-size:.8rem;color:#475569">' + esc(f.obs) + '</span>' : '<span style="color:#94a3b8">—</span>');
   const acoes = f.status === 'pendente'
     ? '<button class="btn-sm btn-outline" onclick="sec_falPagar(\'' + f.id + '\')">Pagou (repôs)</button> <button class="btn-sm btn-outline" style="color:#15803d" onclick="sec_falAtestado(\'' + f.id + '\')">\u{1F4CE} Atestado</button> '
