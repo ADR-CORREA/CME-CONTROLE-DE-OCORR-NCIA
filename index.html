@@ -4110,20 +4110,15 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         </div>
 
         <div class="est-section-title" id="psc-count-label">Registros</div>
-        <div class="table-scroll">
-          <table class="data-table">
+        <div class="idv-tabela-box">
+          <table class="data-table idv-tabela">
             <thead><tr>
-              <th>Nº</th>
-              <th>Nome</th>
-              <th>Registro</th>
-              <th>Última Comunicação</th>
-              <th>Tempo Sem Com.</th>
-              <th>Dias</th>
-              <th>Intervalo</th>
-              <th>Unidade</th>
+              <th>Monitorado</th>
+              <th>Dias sem comunicar</th>
+              <th>Última comunicação</th>
               <th>Situação</th>
               <th>Tratativas</th>
-              <th>Ações</th>
+              <th style="text-align:right">Ações</th>
             </tr></thead>
             <tbody id="tbody-pscom"></tbody>
           </table>
@@ -5255,162 +5250,90 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
             <!-- Sub-painel: Sem Comunicação -->
       <div class="sub-panel active" id="jur-panel-semcom">
 
-        <!-- Toolbar -->
-        <div class="table-toolbar" style="flex-wrap:wrap;gap:8px">
-          <div style="font-weight:600;color:var(--az1);font-size:1rem">📵 Monitorados Sem Comunicação — AKILES</div>
-          <div class="table-actions" style="flex-wrap:wrap;gap:6px">
-            <span id="semcom-ultima-importacao" style="font-size:.82rem;color:#888;align-self:center"></span>
-            <label class="btn-secondary" style="cursor:pointer;margin:0">
-              📂 Importar Excel AKILES
-              <input type="file" id="semcom-file-input" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="importarExcelSemCom(this)">
-            </label>
-            <label class="btn-secondary" style="cursor:pointer;margin:0" title="Relatório &quot;Cadastro completo dos monitorados&quot; do AKILES — guarda o telefone e os contatos de referência de quem está sem comunicação">
-              📇 Importar contatos (cadastro)
-              <input type="file" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="sc_importarContatos(this)">
-            </label>
-            <button class="btn-secondary" onclick="renderizarSemCom()">🔄 Atualizar</button>
-            <button class="btn-secondary" onclick="exportarSemComExcel()">📥 Exportar Excel</button>
+        <!-- Identidade visual (16/10/2026): cabeçalho, indicadores, filtros e tabela do guia (identidade.css) -->
+        <div class="idv-cab">
+          <div><h1>Monitorados sem comunicação</h1>
+            <div class="idv-sub"><span id="sc-kpi-total">0</span> em aberto · <span id="semcom-ultima-importacao">dados do AKILES</span></div></div>
+          <div class="idv-acoes">
+            <button type="button" class="idv-btn" onclick="exportarSemComExcel()">Exportar Excel</button>
+            <button type="button" class="idv-btn" onclick="idv_menu(event,_scMenuMais())">Mais &#9662;</button>
           </div>
         </div>
+        <input type="file" id="semcom-file-input" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="importarExcelSemCom(this)">
+        <input type="file" id="semcom-contatos-input" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="sc_importarContatos(this)">
 
-        <!-- Sub-abas internas: Ativos / Desvinculados -->
-        <div class="sub-tabs" style="margin:10px 0 0 0;border-bottom:1px solid #e2e8f0">
-          <div class="sub-tab active" id="sc-stab-ativos" onclick="mudarSubAbaSemCom('ativos')" style="font-size:.88rem">📡 Ativos</div>
-          <div class="sub-tab" id="sc-stab-desvinculados" onclick="mudarSubAbaSemCom('desvinculados')" style="font-size:.88rem">
-            ✅ Desvinculados
-            <span id="sc-desvinc-badge" class="notif-badge" style="display:none;background:#16a34a">0</span>
+        <!-- Sub-abas internas: Ativos / Desvinculados / Arquivados -->
+        <div class="sub-tabs" style="margin:0;border-bottom:1px solid var(--idv-borda)">
+          <div class="sub-tab active" id="sc-stab-ativos" onclick="mudarSubAbaSemCom('ativos')" style="font-size:14px">Ativos</div>
+          <div class="sub-tab" id="sc-stab-desvinculados" onclick="mudarSubAbaSemCom('desvinculados')" style="font-size:14px">
+            Desvinculados
+            <span id="sc-desvinc-badge" class="notif-badge" style="display:none;background:#1a7f37">0</span>
           </div>
-          <div class="sub-tab" id="sc-stab-arquivados" onclick="mudarSubAbaSemCom('arquivados','juridico')" style="font-size:.88rem" title="Quem voltou a comunicar — resolvidos">
-            🗄️ Arquivados <span id="sc-arq-qtd" style="color:#94a3b8;font-weight:400"></span>
+          <div class="sub-tab" id="sc-stab-arquivados" onclick="mudarSubAbaSemCom('arquivados','juridico')" style="font-size:14px" title="Quem voltou a comunicar — resolvidos">
+            Arquivados <span id="sc-arq-qtd" style="color:var(--idv-sec);font-weight:400"></span>
           </div>
         </div>
 
         <!-- ── Painel: Ativos ── -->
         <div class="sub-panel active" id="sc-panel-ativos" style="padding:0">
 
-        <!-- KPIs -->
-        <div class="kpi-grid" style="margin:12px 0 8px 0;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
-          <div class="kpi-card" style="background:#f0f9ff;border-left:4px solid #0284c7">
-            <div class="kpi-icon">📋</div>
-            <div class="kpi-value" id="sc-kpi-total">0</div>
-            <div class="kpi-label">Total</div>
-          </div>
-          <div class="kpi-card" style="background:#f5f3ff;border-left:4px solid #7c3aed;cursor:pointer" title="Agressores com medida protetiva — prioridade: relatório ao juiz p/ mandado de prisão" onclick="_scFiltrarMedida('mpu')">
-            <div class="kpi-icon">🚨</div>
-            <div class="kpi-value" id="sc-kpi-mpu" style="color:#6d28d9">0</div>
-            <div class="kpi-label">MPU (agressores)</div>
-          </div>
-          <div class="kpi-card" style="background:#f5f3ff;border-left:4px solid #dc2626;cursor:pointer" title="MPU sem comunicar há 3 dias ou mais — enviar relatório ao juiz" onclick="_scFiltrarMedida('mpu', 3)">
-            <div class="kpi-icon">⚖️</div>
-            <div class="kpi-value" id="sc-kpi-mpu3" style="color:#dc2626">0</div>
-            <div class="kpi-label">MPU 3+ dias → relatório p/ MP</div>
-          </div>
-          <div class="kpi-card" style="background:#f8fafc;border-left:4px solid #64748b;cursor:pointer" title="Tornozeleiras que não são de medida protetiva" onclick="_scFiltrarMedida('demais')">
-            <div class="kpi-icon">📟</div>
-            <div class="kpi-value" id="sc-kpi-demais">0</div>
-            <div class="kpi-label">Demais tornozeleiras</div>
-          </div>
-          <div class="kpi-card" style="background:#fefce8;border-left:4px solid #ca8a04">
-            <div class="kpi-icon">⏱️</div>
-            <div class="kpi-value" id="sc-kpi-4h">0</div>
-            <div class="kpi-label">+4 horas</div>
-          </div>
-          <div class="kpi-card" style="background:#fff7ed;border-left:4px solid #ea580c">
-            <div class="kpi-icon">📅</div>
-            <div class="kpi-value" id="sc-kpi-1d">0</div>
-            <div class="kpi-label">+1 dia</div>
-          </div>
-          <div class="kpi-card" style="background:#fef2f2;border-left:4px solid #dc2626">
-            <div class="kpi-icon">📆</div>
-            <div class="kpi-value" id="sc-kpi-7d">0</div>
-            <div class="kpi-label">+7 dias</div>
-          </div>
-          <div class="kpi-card" style="background:#fdf4ff;border-left:4px solid #9333ea">
-            <div class="kpi-icon">🗓️</div>
-            <div class="kpi-value" id="sc-kpi-30d">0</div>
-            <div class="kpi-label">+30 dias</div>
-          </div>
-          <div class="kpi-card" style="background:#1a1a2e;border-left:4px solid #e11d48">
-            <div class="kpi-icon">⚠️</div>
-            <div class="kpi-value" id="sc-kpi-180d" style="color:#f87171">0</div>
-            <div class="kpi-label" style="color:#fca5a5">≥180 dias — DESVINCULAR</div>
-          </div>
-          <div class="kpi-card" style="background:#f0fdf4;border-left:4px solid #16a34a">
-            <div class="kpi-icon">✅</div>
-            <div class="kpi-value" id="sc-kpi-desvinc">0</div>
-            <div class="kpi-label">Desvinculados</div>
-          </div>
+        <h2 class="idv-secao">Há quanto tempo sem comunicar</h2>
+        <div class="idv-kpis">
+          <button type="button" class="idv-kpi cr" onclick="_scFiltrarMedida('', 180)" title="Mostrar só quem está há 180 dias ou mais"><span class="idv-num" id="sc-kpi-180d">0</span><span class="idv-rot">180 dias ou mais</span><span class="idv-leg">avaliar desvinculação</span></button>
+          <div class="idv-kpi at"><span class="idv-num" id="sc-kpi-30d">0</span><span class="idv-rot">30 a 179 dias</span><span class="idv-leg">cobrar contato</span></div>
+          <div class="idv-kpi at"><span class="idv-num" id="sc-kpi-7d">0</span><span class="idv-rot">7 a 29 dias</span><span class="idv-leg">acompanhar</span></div>
+          <div class="idv-kpi"><span class="idv-num" id="sc-kpi-1d">0</span><span class="idv-rot">1 a 6 dias</span><span class="idv-leg">recentes</span></div>
+          <div class="idv-kpi"><span class="idv-num" id="sc-kpi-4h">0</span><span class="idv-rot">Menos de 1 dia</span><span class="idv-leg">mais de 4 horas</span></div>
+        </div>
+        <h2 class="idv-secao">Por medida</h2>
+        <div class="idv-kpis">
+          <button type="button" class="idv-kpi de" onclick="_scFiltrarMedida('mpu')" title="Agressores com medida protetiva — prioridade: relatório ao juiz p/ mandado de prisão"><span class="idv-num" id="sc-kpi-mpu">0</span><span class="idv-rot">MPU (agressores)</span><span class="idv-leg">medida protetiva</span></button>
+          <button type="button" class="idv-kpi cr" onclick="_scFiltrarMedida('mpu', 3)" title="MPU sem comunicar há 3 dias ou mais — enviar relatório ao juiz"><span class="idv-num" id="sc-kpi-mpu3">0</span><span class="idv-rot">MPU há 3+ dias</span><span class="idv-leg">relatório p/ MP</span></button>
+          <button type="button" class="idv-kpi" onclick="_scFiltrarMedida('demais')" title="Tornozeleiras que não são de medida protetiva"><span class="idv-num" id="sc-kpi-demais">0</span><span class="idv-rot">Demais tornozeleiras</span><span class="idv-leg">sem medida protetiva</span></button>
         </div>
 
         <!-- Filtros -->
-        <div class="tri-filtros">
-          <div class="tri-filtros-title">🔍 Filtros</div>
-          <div class="tri-filtros-grid">
-            <div class="form-field" style="margin:0">
-              <label>Nome</label>
-              <input type="text" id="sc-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemCom()">
-            </div>
-            <div class="form-field" style="margin:0">
-              <label>Registro</label>
-              <input type="text" id="sc-f-registro" placeholder="Nº registro..." oninput="renderizarSemCom()">
-            </div>
-            <div class="form-field" style="margin:0">
-              <label>Intervalo</label>
-              <select id="sc-f-intervalo" onchange="renderizarSemCom()">
-                <option value="">Todos</option>
-                <option>1. at&eacute; 30 min</option>
-                <option>2. at&eacute; 1 hora</option>
-                <option>3. at&eacute; 3 horas</option>
-                <option>4. at&eacute; 4 horas</option>
-                <option>5. mais de 4h</option>
-              </select>
-            </div>
-            <div class="form-field" style="margin:0">
-              <label>Medida</label>
-              <select id="sc-f-medida" onchange="renderizarSemCom()">
-                <option value="">Todas</option>
-                <option value="mpu">MPU (agressores)</option>
-                <option value="demais">Demais</option>
-              </select>
-            </div>
-            <div class="form-field" style="margin:0">
-              <label>Situação</label>
-              <select id="sc-f-situacao" onchange="renderizarSemCom()">
-                <option value="">Todas</option>
-                <option value="ativo">Ativo</option>
-                <option value="tratativa">Com tratativa</option>
-                <option value="desvinculado">Desvinculado</option>
-              </select>
-            </div>
-            <div class="form-field" style="margin:0">
-              <label>Mín. dias sem com.</label>
-              <input type="number" id="sc-f-dias-min" placeholder="ex: 180" min="0" oninput="renderizarSemCom()" style="width:100%">
-            </div>
-            <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
-              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemCom()">✕ Limpar</button>
-            </div>
-          </div>
+        <div class="idv-barra" style="margin-top:16px;justify-content:flex-start">
+          <label class="idv-busca"><span aria-hidden="true">🔍</span><input type="text" id="sc-f-nome" placeholder="Nome do monitorado" aria-label="Nome do monitorado" oninput="renderizarSemCom()"></label>
+          <input type="text" class="idv-select" id="sc-f-registro" placeholder="Nº registro" aria-label="Número do registro" oninput="renderizarSemCom()" style="width:130px">
+          <select class="idv-select" id="sc-f-medida" aria-label="Medida" onchange="renderizarSemCom()">
+            <option value="">Todas as medidas</option>
+            <option value="mpu">MPU (agressores)</option>
+            <option value="demais">Demais</option>
+          </select>
+          <select class="idv-select" id="sc-f-situacao" aria-label="Situação" onchange="renderizarSemCom()">
+            <option value="">Todas as situações</option>
+            <option value="ativo">Ativo</option>
+            <option value="tratativa">Com tratativa</option>
+            <option value="desvinculado">Desvinculado</option>
+          </select>
+          <select class="idv-select" id="sc-f-intervalo" aria-label="Intervalo" onchange="renderizarSemCom()">
+            <option value="">Todos os intervalos</option>
+            <option>1. at&eacute; 30 min</option>
+            <option>2. at&eacute; 1 hora</option>
+            <option>3. at&eacute; 3 horas</option>
+            <option>4. at&eacute; 4 horas</option>
+            <option>5. mais de 4h</option>
+          </select>
+          <input type="number" class="idv-select" id="sc-f-dias-min" placeholder="Mín. dias" aria-label="Mínimo de dias sem comunicar" min="0" oninput="renderizarSemCom()" style="width:110px">
+          <button type="button" class="idv-btn" onclick="limparFiltrosSemCom()">Limpar</button>
         </div>
 
-        <div class="est-section-title" id="sc-count-label">Registros</div>
-        <div class="table-scroll">
-          <table class="data-table">
+        <h2 class="idv-secao" id="sc-count-label">Registros</h2>
+        <div class="idv-tabela-box">
+          <table class="data-table idv-tabela">
             <thead><tr>
-              <th>Nº</th>
-              <th>Nome</th>
-              <th>Registro</th>
-              <th>Última Comunicação</th>
-              <th>Tempo Sem Com.</th>
-              <th>Dias</th>
-              <th>Intervalo</th>
-              <th>Unidade</th>
+              <th>Monitorado</th>
+              <th>Dias sem comunicar</th>
+              <th>Última comunicação</th>
               <th>Situação</th>
               <th>Tratativas</th>
-              <th>Ações</th>
+              <th style="text-align:right">Ações</th>
             </tr></thead>
             <tbody id="tbody-semcom"></tbody>
           </table>
         </div>
+        <div class="idv-mini" style="margin-top:8px">Faixa à esquerda e dias na mesma cor: vermelho = 180 dias ou mais (ou MPU há 3+ dias) · amarelo = 7 dias ou mais. "⋯" junta Ver ficha, Mover e Desvincular.</div>
         </div><!-- /sc-panel-ativos -->
 
         <!-- ── Painel: Desvinculados ── -->
@@ -9584,15 +9507,6 @@ function _diasSemComAtual(m) {
   return m.diasSemCom || 0; // fallback se não houver data
 }
 
-function _corDias(dias, desvinculado) {
-  if (desvinculado) return 'background:#dcfce7';
-  if (dias >= 180)  return 'background:#fee2e2;font-weight:bold;color:#dc2626';
-  if (dias >= 30)   return 'background:#fdf4ff';
-  if (dias >= 7)    return 'background:#fef2f2';
-  if (dias >= 1)    return 'background:#fff7ed';
-  return '';
-}
-
 // ── Núcleo da importação (Excel do AKILES e pacote automático do robô) ────────
 // linhas: [{ nome, registro, ultimaComunicacao, tempoSemCom, intervalo, unidade, grupo? }]
 // Atualiza só os campos vindos do AKILES — preserva tratativas, desvinculação e
@@ -10443,45 +10357,62 @@ function renderizarSemCom(area) {
   const tbody = document.getElementById(cfg.tbody);
   if (!tbody) return;
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:#888">Nenhum registro encontrado. Importe o Excel do AKILES.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="idv-vazio">Nenhum registro encontrado. Importe o Excel do AKILES.</td></tr>';
     return;
   }
 
+  // linhas no padrão da identidade visual (16/10/2026): faixa à esquerda e dias na mesma cor, etiqueta de situação,
+  // "Registrar contato" + menu "⋯" (Ver ficha, Mover, Desvincular)
   const desv = m => m.situacao === 'desvinculado';
-  tbody.innerHTML = lista.map((m, i) => {
+  tbody.innerHTML = lista.map(m => {
     const dias = _diasSemComAtual(m);
-    const rowStyle = _corDias(dias, desv(m));
-    const badges180 = dias >= 180 && !desv(m) ? '<span style="background:#dc2626;color:#fff;border-radius:4px;padding:1px 5px;font-size:.75rem;margin-left:4px">\u{26A0}\u{FE0F} 180d</span>' : '';
+    const cls = _scClasseDias(m, dias);
     const tratQt = (m.tratativas||[]).length;
-    const sitLabel = desv(m)
-      ? '<span style="color:#16a34a;font-weight:bold">\u{2705} Desvinculado</span>'
-      : tratQt > 0
-        ? '<span style="color:#2563eb">\u{1F4DD} Com tratativa</span>'
-        : '<span style="color:#6b7280">Ativo</span>';
-    const btnDesvinc = !desv(m) ? `<button class="btn-sm" style="background:#dc2626;color:#fff;border:none;border-radius:4px;padding:2px 7px;cursor:pointer;font-size:.8rem" onclick="abrirModalDesvinc('${m.id}')">\u{26A1} Desvincular</button>` : '';
-    // Reclassificação manual: alguns DPP não vêm marcados no Excel
-    const _destino  = area === 'psicossocial' ? 'juridico' : 'psicossocial';
-    const _moverTxt = area === 'psicossocial' ? 'Mover p/ Jurídico' : 'Mover p/ DPP';
-    const btnMover = `<button class="btn-sm btn-outline" style="color:#8957e5;border-color:#c4a5f0;font-size:.78rem" title="Reclassificar entre Jurídico e Psicossocial (DPP)" onclick="_scMoverArea('${m.id}','${_destino}')">${_moverTxt}</button>`;
-    return `<tr style="${rowStyle}">
-      <td>${i+1}</td>
-      <td><strong>${esc(m.nome)}</strong>${_scSeloVD(m)}${badges180}${typeof _scLinhaContato === 'function' ? _scLinhaContato(m) : ''}</td>
-      <td style="font-family:var(--font-mono)">${esc(m.registro)}</td>
-      <td style="font-size:.82rem">${esc((m.ultimaComunicacao||'').slice(0,16).replace('T',' '))}</td>
-      <td style="font-size:.82rem">${esc(m.tempoSemCom)||'—'}</td>
-      <td style="font-weight:bold;color:${dias>=180?'#dc2626':dias>=7?'#ea580c':'#374151'}">${dias}</td>
-      <td style="font-size:.8rem">${esc(m.intervalo)||'—'}</td>
-      <td style="font-size:.8rem">${esc(m.unidade)||'—'}</td>
-      <td>${sitLabel}</td>
-      <td style="text-align:center">${tratQt > 0 ? `<span style="background:#dbeafe;color:#1d4ed8;border-radius:10px;padding:1px 8px;font-size:.82rem">${tratQt}</span>` : '—'}</td>
-      <td style="white-space:nowrap;display:flex;gap:4px;flex-wrap:wrap;align-items:center">
-        <button class="btn-sm btn-outline" onclick="verMonitoradoSemCom('${m.id}')" title="Visualizar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
-        <button class="btn-sm btn-outline" style="color:#2563eb;border-color:#2563eb" onclick="abrirModalTratativa('${m.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg></button>
-        ${btnDesvinc}
-        ${btnMover}
+    const sit = desv(m) ? '<span class="idv-etq ok">Desvinculado</span>'
+      : tratQt > 0 ? '<span class="idv-etq ok">Com tratativa</span>' : '<span class="idv-etq at">Sem contato</span>';
+    const ult = m.ultimaTratativa || (tratQt ? m.tratativas[tratQt - 1] : null);
+    const unid = [m.registro ? 'Reg. ' + m.registro : '', m.unidade || ''].filter(Boolean).join(' · ');
+    const idj = _jsq(m.id);
+    return `<tr class="${cls === 'cr' ? 'row-vencido' : cls === 'at' ? 'row-atencao' : ''}">
+      <td><div class="idv-nome">${esc(m.nome)}${_scSeloVD(m)}</div>${unid ? `<div class="idv-mini idv-mono">${esc(unid)}</div>` : ''}${typeof _scLinhaContato === 'function' ? _scLinhaContato(m) : ''}</td>
+      <td><span class="idv-mono" style="font-size:15px;font-weight:600;color:${cls === 'cr' ? 'var(--idv-cr)' : cls === 'at' ? 'var(--idv-at)' : 'var(--idv-sec)'}">${dias} d</span>${m.tempoSemCom ? `<div class="idv-mini">${esc(m.tempoSemCom)}</div>` : ''}</td>
+      <td><span class="idv-mono" style="font-size:13px;white-space:nowrap">${esc(_scDataBR(m.ultimaComunicacao))}</span>${m.intervalo ? `<div class="idv-mini">${esc(m.intervalo)}</div>` : ''}</td>
+      <td>${sit}</td>
+      <td>${tratQt ? `<span class="idv-mono" style="font-weight:600">${tratQt}</span>${ult && ult.data ? `<div class="idv-mini">última ${esc(new Date(ult.data).toLocaleDateString('pt-BR'))}</div>` : ''}` : '<span class="idv-mini">nenhuma</span>'}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button type="button" class="idv-btn mini" onclick="abrirModalTratativa('${idj}')">Registrar contato</button>
+        <button type="button" class="idv-btn mini icone" aria-label="Mais ações" title="Mais ações" onclick="idv_menu(event,_scMenuLinha('${idj}','${area}'))">&#8943;</button>
       </td>
     </tr>`;
   }).join('');
+}
+
+// cor da linha (faixa à esquerda) e dos dias: vermelho = 180+ dias ou MPU há 3+ dias; amarelo = 7+ dias
+function _scClasseDias(m, dias) {
+  if (m.situacao === 'desvinculado') return '';
+  if (dias >= 180 || (_scMPU(m) && dias >= 3)) return 'cr';
+  return dias >= 7 ? 'at' : '';
+}
+// "2026-10-13T11:58" → "13/10/2026 11:58" (o AKILES às vezes já manda em dd/mm/aaaa — aí fica como veio)
+function _scDataBR(v) {
+  const s = String(v || '');
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+  return m ? m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5] : (s.slice(0, 16) || '—');
+}
+// menu "⋯" da linha: o id vem do próprio sistema (importação), escapado com _jsq
+function _scMenuLinha(id, area) {
+  const m = (getSemCom().monitorados || []).find(x => x.id === id); if (!m) return [];
+  const idj = _jsq(id), destino = area === 'psicossocial' ? 'juridico' : 'psicossocial';
+  const itens = [['Ver ficha e histórico', "verMonitoradoSemCom('" + idj + "')"],
+    [area === 'psicossocial' ? 'Mover para o Jurídico' : 'Mover para DPP (Psicossocial)', "_scMoverArea('" + idj + "','" + destino + "')"]];
+  if (m.situacao !== 'desvinculado') itens.push('hr', ['Desvincular', "abrirModalDesvinc('" + idj + "')", true]);
+  return itens;
+}
+// menu "Mais ▾" do cabeçalho
+function _scMenuMais() {
+  return [['Atualizar', 'renderizarSemCom()'],
+    ['Importar Excel do AKILES', "document.getElementById('semcom-file-input').click()"],
+    ['Importar contatos (cadastro)', "document.getElementById('semcom-contatos-input').click()"]];
 }
 
 function limparFiltrosSemCom(area) {
