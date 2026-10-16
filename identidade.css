@@ -1,0 +1,118 @@
+/* ═══════════════════════════ IDENTIDADE VISUAL DO CME — peças comuns ═══════════════════════════
+   Guia aprovado em 16/10/2026 (quadro de design "Identidade visual CME — propostas").
+   Toda tela redesenhada usa SÓ estas peças: mesmas cores, mesmos tamanhos, mesmo jeito de mostrar situação.
+   Prefixo idv-. Tema claro; o modo escuro atual (filtro de inversão) continua valendo por cima.
+   Primeiras telas: Ocorrências e Críticos. */
+
+:root {
+  --idv-fundo: #f6f8fa;
+  --idv-cartao: #ffffff;
+  --idv-zebra: #f3f5f8;
+  --idv-cab: #24292f;          /* cabeçalho de tabela e de bloco */
+  --idv-texto: #1f2328;
+  --idv-sec: #59636e;          /* texto secundário: rótulos, legendas */
+  --idv-borda: #d1d9e0;
+  --idv-linha: #dfe3e8;
+  --idv-ok: #1a7f37;  --idv-ok-f: #dafbe1;     /* em dia, concluído */
+  --idv-at: #9a6700;  --idv-at-f: #fff8c5;     /* atenção, vencendo */
+  --idv-cr: #cf222e;  --idv-cr-f: #ffebe9;     /* vencido, crítico */
+  --idv-in: #0969da;  --idv-in-f: #ddf4ff;     /* ação, informação, comunicado */
+  --idv-de: #8250df;  --idv-de-f: #fbefff;     /* destaque: protetiva, próximo */
+  --idv-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+/* ── cabeçalho da tela ── */
+.idv-cab { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin: 4px 0 14px; }
+.idv-cab h1 { margin: 0; font-size: 24px; font-weight: 600; line-height: 1.25; color: var(--idv-texto); }
+.idv-cab .idv-sub { font-size: 14px; color: var(--idv-sec); margin-top: 2px; }
+.idv-acoes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* ── botões ── */
+.idv-btn { height: 38px; padding: 0 16px; border-radius: 6px; border: 1px solid var(--idv-borda); background: var(--idv-cartao); color: var(--idv-texto);
+  font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-family: inherit; }
+.idv-btn:hover { border-color: var(--idv-in); }
+.idv-btn:focus-visible, .idv-chip:focus-visible, .idv-menu button:focus-visible { outline: 2px solid var(--idv-in); outline-offset: 2px; }
+.idv-btn.criar { background: var(--idv-in); border-color: var(--idv-in); color: #fff; }
+.idv-btn.criar:hover { background: #0550ae; }
+.idv-btn.concluir { background: #1f883d; border-color: rgba(31,35,40,.15); color: #fff; }
+.idv-btn.perigo { color: var(--idv-cr); border-color: var(--idv-cr); }
+.idv-btn.mini { height: 32px; padding: 0 12px; font-size: 13px; }
+.idv-btn.icone { width: 36px; padding: 0; justify-content: center; font-size: 16px; letter-spacing: 1px; }
+
+/* ── filtros por situação (botões com contagem) ── */
+.idv-chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.idv-chip { height: 36px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--idv-borda); background: var(--idv-cartao); color: var(--idv-texto);
+  font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: inherit; }
+.idv-chip .idv-ponto { width: 8px; height: 8px; flex: none; }
+.idv-chip .idv-n { font-family: var(--idv-mono); font-weight: 600; }
+.idv-chip.ativo { background: var(--idv-cab); border-color: var(--idv-cab); color: #fff; }
+
+/* ── indicadores (um estilo só para o sistema) ── */
+.idv-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.idv-kpi { border: 1px solid var(--idv-borda); border-top: 4px solid var(--idv-sec); border-radius: 8px; background: var(--idv-cartao); padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; }
+.idv-kpi .idv-num { font-size: 30px; font-weight: 600; line-height: 1.1; }
+.idv-kpi .idv-rot { font-size: 14px; font-weight: 600; color: var(--idv-texto); }
+.idv-kpi .idv-leg { font-size: 12px; color: var(--idv-sec); }
+.idv-kpi.cr { border-top-color: var(--idv-cr); } .idv-kpi.cr .idv-num { color: var(--idv-cr); }
+.idv-kpi.at { border-top-color: var(--idv-at); } .idv-kpi.at .idv-num { color: var(--idv-at); }
+.idv-kpi.ok { border-top-color: var(--idv-ok); } .idv-kpi.ok .idv-num { color: var(--idv-ok); }
+.idv-kpi.in { border-top-color: var(--idv-in); } .idv-kpi.in .idv-num { color: var(--idv-in); }
+.idv-kpi.de { border-top-color: var(--idv-de); } .idv-kpi.de .idv-num { color: var(--idv-de); }
+
+/* ── etiqueta de situação (quadrada, barra à esquerda — nunca pílula) ── */
+.idv-etq { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 3px; border-left: 3px solid currentColor; white-space: nowrap; }
+.idv-etq::before { content: ""; width: 6px; height: 6px; background: currentColor; flex: none; }
+.idv-etq.cr { color: var(--idv-cr); background: var(--idv-cr-f); }
+.idv-etq.at { color: var(--idv-at); background: var(--idv-at-f); }
+.idv-etq.ok { color: var(--idv-ok); background: var(--idv-ok-f); }
+.idv-etq.in { color: var(--idv-in); background: var(--idv-in-f); }
+.idv-etq.de { color: var(--idv-de); background: var(--idv-de-f); }
+.idv-etq.ne { color: var(--idv-sec); background: #eaeef2; }
+.idv-det { font-size: 12px; font-weight: 600; margin-top: 3px; }
+.idv-det.cr { color: var(--idv-cr); } .idv-det.at { color: var(--idv-at); } .idv-det.ok { color: var(--idv-ok); } .idv-det.in { color: var(--idv-in); } .idv-det.ne { color: var(--idv-sec); }
+
+/* ── tabela padrão: cabeçalho escuro, linhas alternadas, situação na faixa à esquerda (a linha NÃO é pintada) ── */
+.idv-tabela-box { border: 1px solid var(--idv-borda); border-radius: 8px; overflow-x: auto; background: var(--idv-cartao); }
+table.idv-tabela { width: 100%; border-collapse: collapse; font-size: 14px; color: var(--idv-texto); }
+table.idv-tabela thead tr { background: var(--idv-cab) !important; }
+table.idv-tabela th { background: var(--idv-cab) !important; color: #fff !important; text-align: left; padding: 11px 14px; font-size: 12px; font-weight: 600;
+  letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; border: 0; }
+table.idv-tabela td { padding: 10px 14px; border-bottom: 1px solid var(--idv-linha); vertical-align: middle; font-size: 14px; color: var(--idv-texto); }
+table.idv-tabela tbody tr,
+table.idv-tabela tbody tr.row-vencido, table.idv-tabela tbody tr.row-vencendo, table.idv-tabela tbody tr.row-atencao,
+table.idv-tabela tbody tr.row-ok, table.idv-tabela tbody tr.row-protetiva, table.idv-tabela tbody tr.row-comunicado { background: var(--idv-cartao); opacity: 1; }
+table.idv-tabela tbody tr:nth-child(even) { background: var(--idv-zebra); }
+table.idv-tabela tbody tr:hover { background: #eaf2fd; }
+table.idv-tabela tbody tr.row-vencido { box-shadow: inset 4px 0 0 var(--idv-cr); }
+table.idv-tabela tbody tr.row-vencendo, table.idv-tabela tbody tr.row-atencao { box-shadow: inset 4px 0 0 var(--idv-at); }
+table.idv-tabela tbody tr.row-comunicado, table.idv-tabela tbody tr.row-ok { box-shadow: inset 4px 0 0 var(--idv-ok); }
+table.idv-tabela tbody tr.row-protetiva { box-shadow: inset 4px 0 0 var(--idv-de); }
+.idv-nome { font-size: 15px; font-weight: 600; color: var(--idv-texto); line-height: 1.3; }
+.idv-mini { font-size: 12px; color: var(--idv-sec); margin-top: 1px; }
+.idv-mono { font-family: var(--idv-mono); }
+.idv-vazio { text-align: center; padding: 36px 16px !important; color: var(--idv-sec) !important; font-size: 15px !important; }
+.idv-ok-ic { color: var(--idv-ok); font-weight: 600; }
+
+/* ── paginação ── */
+.idv-pag { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 2px 0; font-size: 14px; color: var(--idv-sec); }
+.idv-pag .pagination-btns button { height: 34px; min-width: 34px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--idv-borda); background: var(--idv-cartao);
+  color: var(--idv-texto); font-weight: 600; font-size: 14px; cursor: pointer; margin-left: 4px; }
+.idv-pag .pagination-btns button.active { background: var(--idv-in); border-color: var(--idv-in); color: #fff; }
+.idv-pag .pagination-btns button:disabled { opacity: .45; cursor: default; }
+
+/* ── menu "⋯" / "Mais ▾" (flutuante, não é cortado pela rolagem da tabela) ── */
+.idv-menu { position: fixed; z-index: 9999; min-width: 220px; background: var(--idv-cartao); border: 1px solid var(--idv-borda); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(31,35,40,.18); padding: 6px; display: flex; flex-direction: column; }
+.idv-menu button { text-align: left; background: transparent; border: 0; border-radius: 6px; padding: 9px 12px; font-size: 14px; font-weight: 600;
+  color: var(--idv-texto); cursor: pointer; font-family: inherit; }
+.idv-menu button:hover { background: var(--idv-zebra); }
+.idv-menu button.perigo { color: var(--idv-cr); }
+.idv-menu hr { border: 0; border-top: 1px solid var(--idv-linha); margin: 4px 0; }
+
+/* ── a tela usa a largura do monitor nas telas redesenhadas ── */
+.idv-tela { max-width: 1680px; margin: 0 auto; }
+.idv-barra { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.idv-busca { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--idv-borda); background: var(--idv-cartao); min-width: 260px; }
+.idv-busca input { border: 0; outline: 0; background: transparent; font-size: 14px; flex: 1; color: var(--idv-texto); min-width: 0; }
+.idv-select { height: 38px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--idv-borda); background: var(--idv-cartao); color: var(--idv-texto); font-size: 14px; font-family: inherit; }
