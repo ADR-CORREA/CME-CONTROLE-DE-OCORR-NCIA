@@ -1150,12 +1150,14 @@ window._CME_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAABvXklEQVR4
 <script src="./vendor/supabase.min.js" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2';s.crossOrigin='anonymous';document.head.appendChild(s);"></script>
 <style id="cme-tema-dark">
 /* Tema escuro — camada reversivel: remover este <style> + <script id="cme-tema-js"> + o botao #btn-tema restaura tudo. */
-html[data-theme="dark"]{ background:#0d1117; filter: invert(1) hue-rotate(180deg); }
+/* 16/10/2026: escuro mais suave — o branco virava preto puro ("muito escuro"); contrast+brightness levam o fundo a um
+   cinza-grafite (~#252525) e mantêm o texto claro. Imagens e mapas recebem o filtro INVERSO (ordem invertida) para voltarem ao normal. */
+html[data-theme="dark"]{ background:#0d1117; filter: invert(1) hue-rotate(180deg) contrast(.78) brightness(1.3); }
 html[data-theme="dark"] img,
 html[data-theme="dark"] video,
 html[data-theme="dark"] iframe,
 html[data-theme="dark"] .leaflet-container,
-html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotate(180deg); }
+html[data-theme="dark"] [style*="background-image"]{ filter: brightness(.769) contrast(1.282) hue-rotate(180deg) invert(1); }
 </style>
 <script id="cme-tema-js">
 (function(){
