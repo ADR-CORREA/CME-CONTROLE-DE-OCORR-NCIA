@@ -158,3 +158,62 @@ button.idv-kpi:hover { border-color: var(--idv-in); box-shadow: 0 1px 0 rgba(31,
 #panel-dashboard .dleg b { color: var(--idv-texto); font-weight: 600; font-family: var(--idv-mono); }
 #panel-dashboard .ddot { border-radius: 0; width: 10px; height: 10px; }
 #panel-dashboard .dsec-head + .dsec-row { border-top: none; }
+
+/* ═══════════ CAMADA COMUM (16/10/2026, "pode fazer todas") ═══════════
+   As peças antigas que TODAS as telas usam (tabela, botões, campos, abas internas, cartões de número, janelas,
+   etiquetas) passam a seguir o guia. Telas já redesenhadas usam as peças idv-* acima; o que vier com estilo
+   escrito direto no elemento (style="") continua mandando. */
+/* tabelas */
+.data-table { font-size: 14px; color: var(--idv-texto); }
+/* cabeçalho escuro só onde o th não traz cor própria (style="color:…"/"background…") — senão ficaria ilegível */
+.data-table th:not([style*="color"]):not([style*="background"]) { background: var(--idv-cab); color: #fff; border-bottom: 0; }
+.data-table th { font-size: 12px; font-weight: 600; letter-spacing: .05em; padding: 11px 14px; }
+.data-table td { padding: 10px 14px; border-bottom: 1px solid var(--idv-linha); }
+.data-table tbody tr:nth-child(even) { background: var(--idv-zebra); }
+.data-table tbody tr:hover { background: #eaf2fd; }
+.data-table:not(.idv-tabela) tbody tr.row-vencido, .data-table:not(.idv-tabela) tbody tr.row-vencendo, .data-table:not(.idv-tabela) tbody tr.row-atencao,
+.data-table:not(.idv-tabela) tbody tr.row-ok, .data-table:not(.idv-tabela) tbody tr.row-protetiva, .data-table:not(.idv-tabela) tbody tr.row-comunicado { background: var(--idv-cartao); opacity: 1; }
+.data-table:not(.idv-tabela) tbody tr.row-vencido { box-shadow: inset 4px 0 0 var(--idv-cr); }
+.data-table:not(.idv-tabela) tbody tr.row-vencendo, .data-table:not(.idv-tabela) tbody tr.row-atencao { box-shadow: inset 4px 0 0 var(--idv-at); }
+.data-table:not(.idv-tabela) tbody tr.row-ok, .data-table:not(.idv-tabela) tbody tr.row-comunicado { box-shadow: inset 4px 0 0 var(--idv-ok); }
+.data-table:not(.idv-tabela) tbody tr.row-protetiva { box-shadow: inset 4px 0 0 var(--idv-de); }
+.table-scroll { border: 1px solid var(--idv-borda); border-radius: 8px; background: var(--idv-cartao); }
+.table-wrapper { border: 1px solid var(--idv-borda); border-radius: 8px; box-shadow: none; }
+/* botões */
+.btn-primary, .btn-refresh { background: var(--idv-in); color: #fff; border: 1px solid var(--idv-in); border-radius: 6px; padding: 7px 16px; font-size: 14px; font-weight: 600; }
+.btn-primary:hover, .btn-refresh:hover { background: #0550ae; }
+.btn-secondary, .btn-edit { background: var(--idv-cartao); color: var(--idv-texto); border: 1px solid var(--idv-borda); border-radius: 6px; padding: 6px 14px; font-size: 14px; font-weight: 600; }
+.btn-secondary:hover, .btn-edit:hover { background: var(--idv-cartao); border-color: var(--idv-in); }
+.btn-danger { background: var(--idv-cartao); color: var(--idv-cr); border: 1px solid var(--idv-cr); border-radius: 6px; font-size: 14px; font-weight: 600; }
+.btn-danger:hover { background: var(--idv-cr); color: #fff; }
+.btn-sm { padding: 4px 10px !important; font-size: 13px !important; border-radius: 6px !important; }
+.btn-primary:focus-visible, .btn-secondary:focus-visible, .btn-danger:focus-visible, .btn-edit:focus-visible { outline: 2px solid var(--idv-in); outline-offset: 2px; }
+/* títulos de seção */
+.section-title, .est-section-title, .tri-filtros-title { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--idv-sec); border-bottom: 0; padding-bottom: 0; }
+/* filtros e campos */
+.tri-filtros { background: var(--idv-cartao); border: 1px solid var(--idv-borda); border-radius: 8px; box-shadow: none; }
+.form-field label { font-size: 12px; font-weight: 600; color: var(--idv-sec); letter-spacing: .04em; }
+.form-field input, .form-field select, .form-field textarea { background: var(--idv-cartao); border: 1px solid var(--idv-borda); border-radius: 6px; font-size: 14px; color: var(--idv-texto); }
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus { border-color: var(--idv-in); box-shadow: 0 0 0 3px rgba(9,105,218,.15); background: var(--idv-cartao); }
+/* abas internas: sublinhado, sem caixinha */
+.sub-tabs { border-bottom: 1px solid var(--idv-borda); gap: 0; }
+.sub-tab { border: 0; border-bottom: 2px solid transparent; border-radius: 0; margin-bottom: -1px; padding: 9px 16px; font-size: 14px; font-weight: 600; color: var(--idv-sec); background: transparent; }
+.sub-tab:hover { color: var(--idv-texto); background: transparent; }
+.sub-tab.active { color: var(--idv-texto); background: transparent; border: 0; border-bottom: 2px solid var(--idv-in); margin-bottom: -1px; }
+/* cartões de número antigos: cartão branco, faixa colorida (a cor de cada um continua), sem emoji */
+.kpi-card { background: var(--idv-cartao) !important; border: 1px solid var(--idv-borda); border-radius: 8px; box-shadow: none; padding: 12px 16px; }
+.kpi-card:hover { transform: none; box-shadow: none; }
+.kpi-icon { display: none; }
+.kpi-num, .kpi-value { font-size: 30px; font-weight: 600; font-family: inherit; line-height: 1.1; }
+.kpi-label { font-size: 13px; font-weight: 600; color: var(--idv-texto); text-transform: none; letter-spacing: 0; }
+/* etiquetas: canto reto com barra à esquerda (nunca pílula) */
+.badge { border-radius: 3px; border-left: 2px solid currentColor; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 3px 8px; }
+/* janelas */
+.modal-box { border-radius: 8px; border: 1px solid var(--idv-borda); }
+.modal-header { background: var(--idv-cab); border-radius: 8px 8px 0 0; padding: 14px 20px; }
+.modal-header h3 { font-size: 16px; font-weight: 600; }
+.modal-footer { border-top: 1px solid var(--idv-linha); }
+/* títulos de página antigos (dash-header/dash-title/dash-update) no tamanho do guia */
+.dash-header { margin-bottom: 16px; }
+.dash-title { font-size: 24px; font-weight: 600; line-height: 1.25; color: var(--idv-texto); }
+.dash-update { font-family: inherit; font-size: 14px; color: var(--idv-sec); margin-top: 2px; }
