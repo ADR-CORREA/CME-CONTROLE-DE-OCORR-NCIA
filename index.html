@@ -5654,7 +5654,10 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
           <div style="font-size:.8rem;color:#64748b;margin-bottom:12px">De onde vêm os monitorados a comparar:</div>
           <div style="display:flex;flex-direction:column;gap:8px;font-size:.85rem">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-              <input type="radio" name="mp-fonte-mon" value="sistema" checked onchange="mp_fonteMonitorados('sistema')"> Usar monitorados do sistema (CME)
+              <input type="radio" name="mp-fonte-mon" value="akiles" checked onchange="mp_fonteMonitorados('akiles')"> <span><b>Buscar no AKILES</b> (o robô traz o cadastro completo na hora de cruzar)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="radio" name="mp-fonte-mon" value="sistema" onchange="mp_fonteMonitorados('sistema')"> Usar monitorados do sistema (CME — só quem passou pela Sem Comunicação)
             </label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
               <input type="radio" name="mp-fonte-mon" value="arquivo" onchange="mp_fonteMonitorados('arquivo')"> Enviar arquivo (.xlsx/.xls/.csv)
@@ -16365,7 +16368,8 @@ function renderizarLinks() {
 // planilha (XLS/XLSX/CSV). Só gerência e admin têm acesso (TABS_POR_NIVEL).
 let _mpMandados = null;        // { nomes:[], arquivo:'' }
 let _mpMonitoradosArq = null;  // { nomes:[], arquivo:'' }
-let _mpFonteMon = 'sistema';   // 'sistema' | 'arquivo'
+let _mpFonteMon = 'akiles';    // 'akiles' (robô busca o cadastro completo ao cruzar) | 'sistema' | 'arquivo'
+let _mpListaAkiles = null;     // última lista trazida pelo robô { lidoEm, total, nomes }
 let _mpResultado = null;       // { confirmados, provaveis, resumo }
 
 const _MP_STOPWORDS = new Set(["PROCESSO","PROCEDIMENTO","COMARCA","VARA","JUIZ","JUIZA","MAGISTRADO","MANDADO","PRISAO","CNJ","SEEU","TJAP","IAPEN","IEPEN","CME","ENDERECO","NASCIMENTO","DATA","CPF","RG","MAE","PAI","NATURALIDADE","UF","ESTADO","BRASIL","PODER","JUDICIARIO","MINISTERIO","PUBLICO","DEFENSORIA","ADVOGADO","ART","LEI","DECRETO","RELATORIO","PAGINA","NOME","FILIACAO","GENITORA","GENITOR","SEXO","IDADE","ALCUNHA","VULGO"]);
@@ -16506,7 +16510,11 @@ function mp_fonteMonitorados(tipo){
 
 function _mpAtualizarStatusMon(){
   const el=document.getElementById('mp-monitorados-status'); if(!el) return;
-  if(_mpFonteMon==='sistema'){
+  if(_mpFonteMon==='akiles'){
+    el.innerHTML = _mpListaAkiles
+      ? 'Lista do AKILES: <b>'+_mpListaAkiles.nomes.length+'</b> monitorado(s), lida às '+new Date(_mpListaAkiles.lidoEm).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'. Ao cruzar de novo, o robô lê outra vez.'
+      : 'Não precisa de planilha: ao clicar em <b>Cruzar</b>, o robô busca no AKILES o cadastro completo dos monitorados (leva alguns segundos).';
+  }else if(_mpFonteMon==='sistema'){
     el.innerHTML='Usando <b>'+_mpNomesMonitoradosSistema().length+'</b> monitorado(s) do sistema (Sem Comunicação/CME).';
   }else{
     el.innerHTML = _mpMonitoradosArq
@@ -16544,9 +16552,30 @@ function mp_cancelarCruzamento(){
   const c=document.getElementById('mp-cancelar-btn'); if(c){ c.disabled=true; c.textContent='Cancelando…'; }
 }
 
-function mp_cruzar(){
+async function mp_cruzar(){
   if(!_mpMandados || !_mpMandados.nomes.length){ _mostrarToast('Carregue a planilha de mandados primeiro.','erro'); return; }
-  const nomesMon = _mpFonteMon==='sistema' ? _mpNomesMonitoradosSistema() : (_mpMonitoradosArq ? _mpMonitoradosArq.nomes : []);
+  if(_mpFonteMon==='akiles'){
+    const btn=document.getElementById('mp-btn-cruzar'), txt=btn?btn.textContent:'';
+    const st=document.getElementById('mp-status'), avisar=(t,cor)=>{ if(st){ st.innerHTML=t; st.style.color=cor||'#075985'; } };
+    if(btn){ btn.disabled=true; btn.textContent='Buscando monitorados no AKILES…'; }
+    avisar('\u{1F916} Pedindo ao robô o cadastro completo dos monitorados no AKILES…');
+    try{
+      const r=await _mpRoboPedido(['L_MONITORADOS'],(f,t,naFila)=>avisar(naFila?'\u{23F3} Aguardando o robô pegar o pedido da lista de monitorados…':'\u{1F916} Lendo o cadastro de monitorados no AKILES…'));
+      const l=r['L_MONITORADOS'];
+      if(!l || !Array.isArray(l.monitorados)) throw new Error('o robô não devolveu a lista');
+      const vistos=new Set(), nomes=[];
+      for(const m of l.monitorados){ const n=_mpLimparNome(m&&m.nome); if(n && !vistos.has(n)){ vistos.add(n); nomes.push(n); } }
+      _mpListaAkiles={ lidoEm:l.lidoEm||new Date().toISOString(), total:l.total, nomes };
+      _mpAtualizarStatusMon();
+      avisar('\u{2705} '+nomes.length+' monitorado(s) lidos do AKILES. Cruzando…','#166534');
+    }catch(e){
+      avisar('\u{274C} Não consegui buscar os monitorados no AKILES: '+_mpEsc(e.message||String(e))+'. Se o robô estiver desligado, escolha "Enviar arquivo" ou "monitorados do sistema".','#b91c1c');
+      if(btn){ btn.disabled=false; btn.textContent=txt; }
+      return;
+    }
+    if(btn){ btn.disabled=false; btn.textContent=txt; }
+  }
+  const nomesMon = _mpFonteMon==='akiles' ? _mpListaAkiles.nomes : _mpFonteMon==='sistema' ? _mpNomesMonitoradosSistema() : (_mpMonitoradosArq ? _mpMonitoradosArq.nomes : []);
   if(!nomesMon.length){ _mostrarToast(_mpFonteMon==='sistema' ? 'Não há monitorados no sistema (importe na aba Sem Comunicação) ou envie um arquivo.' : 'Carregue a planilha de monitorados.','erro'); return; }
   _mpCruzarExec(nomesMon);
 }
@@ -16610,7 +16639,7 @@ async function _mpCruzarExec(nomesMon){
   confirmados.concat(provaveis).forEach(x=>{ x.mandados=det.get(x.mandado)||[]; });
   _mpResultado={ confirmados, provaveis, resumo:{
     data_execucao: new Date().toLocaleString('pt-BR'),
-    fonte_monitorados: _mpFonteMon==='sistema' ? 'Sistema (CME)' : (_mpMonitoradosArq?_mpMonitoradosArq.arquivo:''),
+    fonte_monitorados: _mpFonteMon==='akiles' ? 'AKILES (robô, '+((_mpListaAkiles&&_mpListaAkiles.nomes.length)||0)+' monitorados)' : _mpFonteMon==='sistema' ? 'Sistema (CME)' : (_mpMonitoradosArq?_mpMonitoradosArq.arquivo:''),
     arquivo_mandados: _mpMandados.arquivo,
     nomes_monitorados: nomesMon.length,
     nomes_mandados: _mpMandados.nomes.length,
@@ -16735,8 +16764,14 @@ function _mpSeloIdentidade(cf){
 
 // Pede as fichas ao robô pela MESMA fila dos mapas ("F_" + nome). Só leitura no AKILES.
 async function _mpFichasRobo(nomes, onProg){
-  const base=_mpBase(), H={'Authorization':'Bearer '+_workerToken()};
   const ids=nomes.map(n=>'F_'+_mpB64url(n));
+  const fichas=await _mpRoboPedido(ids, onProg);
+  const porNome={}; nomes.forEach((n,i)=>{ if(fichas[ids[i]]) porNome[n]=fichas[ids[i]]; });
+  return porNome;
+}
+// Pedido ao robô pela fila da nuvem (mesma dos mapas). Devolve { id: JSON que o robô respondeu }.
+async function _mpRoboPedido(ids, onProg){
+  const base=_mpBase(), H={'Authorization':'Bearer '+_workerToken()};
   const r=await fetch(base+'/robo/job',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({ids})});
   const d=await r.json().catch(()=>({})); if(!r.ok||!d.jobId) throw new Error(d.error||'erro ao enviar o pedido ao robô');
   const jobId=d.jobId, fichas={}; let naFila=0, semProg=0, ult=-1;
@@ -16754,8 +16789,7 @@ async function _mpFichasRobo(nomes, onProg){
       if((j.progresso||0)!==ult){ ult=j.progresso||0; semProg=0; } else if(++semProg>=120) throw new Error('o robô parou de responder');
     }
   } finally { try{ await fetch(base+'/robo/job?id='+encodeURIComponent(jobId),{method:'DELETE',headers:H}); }catch(e){} }
-  const porNome={}; nomes.forEach((n,i)=>{ if(fichas[ids[i]]) porNome[n]=fichas[ids[i]]; });
-  return porNome;
+  return fichas;
 }
 
 function _mpFichasStatus(html, cor){
