@@ -5700,6 +5700,13 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
         <div id="mp-sec-provaveis"></div>
       </div>
 
+      <!-- Radar: rastreamento em tempo real no app Satélite (radar-mandado.js) -->
+      <div id="rds-secao" style="display:none;background:#fff;border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow);margin-top:18px;border-left:4px solid #dc2626">
+        <div style="font-weight:700;color:var(--az1);font-size:.95rem">📡 Radar — rastreamento em tempo real</div>
+        <div style="font-size:.78rem;color:#64748b;margin:4px 0 10px">Quem estiver aqui aparece no app da Operação Satélite com foto, posição da tornozeleira a cada 1 minuto, rastro das últimas 6 horas e o endereço onde está agora. Use <b>Rastrear</b> na ficha de quem tem mandado, ou digite o código de qualquer monitorado. Só a gerência coloca e tira.</div>
+        <div id="rds-corpo"></div>
+      </div>
+
       <!-- Pastas do dia (dossiê de cada cruzamento) -->
       <div style="background:#fff;border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow);margin-top:18px">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
@@ -16483,6 +16490,7 @@ function _mpNomesMonitoradosSistema(){
 
 function mp_inicializar(){
   _mpCarregarPastas();
+  if(typeof rds_inicializar==='function') rds_inicializar();
   _mpResultado=null;
   const res=document.getElementById('mp-resultados'); if(res) res.style.display='none';
   const exp=document.getElementById('mp-btn-export'); if(exp) exp.style.display='none';
@@ -16862,12 +16870,14 @@ async function mp_abrirPasta(data){
           +'<span style="background:'+(x.classe==='CONFIRMADO'?'#fef2f2;color:#b91c1c':'#fffbeb;color:#92400e')+';padding:1px 6px;border-radius:3px;font-size:.66rem;font-weight:700">'+(x.classe==='CONFIRMADO'?'CONFIRMADO':'PROVÁVEL '+x.score+'%')+'</span>'
           +(x.novo?'<span style="background:#dc2626;color:#fff;padding:1px 6px;border-radius:3px;font-size:.66rem;font-weight:700">NOVO</span>':'')+'</div>'
         +_mpSeloIdentidade(x.conferencia)
+        +(typeof _rdsBotaoCartao==='function'?_rdsBotaoCartao(x._i):'')
         +'<div style="color:#64748b;margin-top:4px">'+(f.encontrado?'Reg. '+_mpEsc(f.registro)+' · '+(f.violacoes||[]).length+' violação(ões)':'<span style="color:#b45309">sem ficha no AKILES</span>')+'</div>'
         +(dataMP?'<div style="margin-top:3px;color:#0f172a"><b>MP expedido:</b> <span style="font-family:var(--font-mono)">'+_mpEsc(dataMP)+'</span>'+((x.mandados||[]).length>1?' <span style="color:#64748b">('+x.mandados.length+' mandados)</span>':'')+'</div>':'')
         +'<div style="color:#0f172a"><b>Últ. comunicação:</b> '+(uc&&uc.em?'<span style="font-family:var(--font-mono)">'+new Date(uc.em).toLocaleString('pt-BR')+'</span> <span style="color:'+(diasUc>=1?'#b91c1c':'#15803d')+'">('+(diasUc<1?'hoje':'há '+diasUc+' dia(s)')+')</span>':'<span style="color:#64748b">sem dado</span>')+'</div>'
         +'</div></div>';
     }).join('')+'</div>';
   el.querySelectorAll('img[data-mpfoto]').forEach(async im=>{ const u=await _mpFoto(d.data, im.getAttribute('data-mpfoto')); if(u) im.src=u; });
+  if(typeof _rdsMarcarCartoes==='function' && typeof _rdsLista!=='undefined' && _rdsLista) _rdsMarcarCartoes();
 }
 async function mp_rebuscarFichas(){
   const d=_mpPastaAtual; if(!d) return;
@@ -29670,10 +29680,11 @@ function estat_exportarResultado() {
 <script src="secretaria-atencao.js?v=20261014o"></script>
 <script src="semcom-contatos.js?v=20261015b"></script>
 <script src="produtividade.js?v=20261013k"></script>
-<script src="plantoes-resumo.js?v=20261013o"></script>
-<script src="plantoes-detalhe.js?v=20261014a"></script>
-<script src="plantoes-servidores.js?v=20261015s"></script>
+<script src="plantoes-resumo.js?v=20261016a"></script>
+<script src="plantoes-detalhe.js?v=20261016a"></script>
+<script src="plantoes-servidores.js?v=20261016a"></script>
 <script src="vd-zonas.js?v=20261015s"></script>
+<script src="radar-mandado.js?v=20261016a"></script>
 <script src="rv-justificativas.js?v=20261016b"></script>
 </body>
 </html>
