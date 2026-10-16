@@ -116,3 +116,45 @@ table.idv-tabela tbody tr.row-protetiva { box-shadow: inset 4px 0 0 var(--idv-de
 .idv-busca { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--idv-borda); background: var(--idv-cartao); min-width: 260px; }
 .idv-busca input { border: 0; outline: 0; background: transparent; font-size: 14px; flex: 1; color: var(--idv-texto); min-width: 0; }
 .idv-select { height: 38px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--idv-borda); background: var(--idv-cartao); color: var(--idv-texto); font-size: 14px; font-family: inherit; }
+
+/* ── Painel (16/10/2026) ── */
+.idv-secao { margin: 24px 0 10px; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--idv-sec); }
+.idv-ola { margin: 0 0 4px; font-size: 15px; color: var(--idv-texto); }
+.idv-grande { display: block; font-size: 26px; font-weight: 600; line-height: 1.1; color: var(--idv-texto); }
+.idv-link { background: none; border: 0; padding: 0; color: var(--idv-in); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.idv-link:hover { text-decoration: underline; }
+/* indicador clicável (leva à aba já filtrada) */
+button.idv-kpi { font-family: inherit; text-align: left; cursor: pointer; color: inherit; }
+button.idv-kpi:hover { border-color: var(--idv-in); box-shadow: 0 1px 0 rgba(31,35,40,.08); }
+/* blocos de resumo com faixa de título (plantão, estoque) */
+.idv-blocos { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.idv-bloco { border: 1px solid var(--idv-borda); border-radius: 8px; overflow: hidden; background: var(--idv-cartao); }
+.idv-bloco-cab { background: var(--idv-cab); color: #fff; padding: 9px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.idv-bloco-cab .idv-mono { text-transform: none; letter-spacing: 0; font-size: 13px; }
+.idv-bloco.destaque { border: 2px solid var(--idv-ok); }
+.idv-bloco.destaque .idv-bloco-cab { background: var(--idv-ok); }
+.idv-bloco-corpo { padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; }
+.idv-bloco-corpo.lado { flex-direction: row; gap: 32px; flex-wrap: wrap; }
+.idv-bloco-corpo .idv-mini { font-size: 13px; }
+/* faixa de aviso (uma só, frase corrida) */
+.idv-faixa { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 6px; font-size: 15px; color: var(--idv-texto);
+  border: 1px solid var(--idv-sec); background: #eaeef2; margin: 0 0 4px; flex-wrap: wrap; }
+.idv-faixa-ic { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; flex: none; border-radius: 3px;
+  background: var(--idv-sec); color: #fff; font-weight: 600; }
+.idv-faixa.cr { border-color: var(--idv-cr); background: var(--idv-cr-f); } .idv-faixa.cr .idv-faixa-ic { background: var(--idv-cr); }
+.idv-faixa.at { border-color: var(--idv-at); background: var(--idv-at-f); } .idv-faixa.at .idv-faixa-ic { background: var(--idv-at); }
+.idv-faixa.ok { border-color: var(--idv-ok); background: var(--idv-ok-f); } .idv-faixa.ok .idv-faixa-ic { background: var(--idv-ok); }
+/* gráficos e setores do Painel: mesmo cartão com faixa de título escura */
+#panel-dashboard .dash-charts { gap: 12px; }
+#panel-dashboard .dchart-card, #panel-dashboard .dsec-card { border: 1px solid var(--idv-borda); border-radius: 8px; box-shadow: none; padding: 0 16px 14px; overflow: hidden; }
+#panel-dashboard .dchart-title, #panel-dashboard .dsec-head { background: var(--idv-cab); color: #fff; margin: 0 -16px 14px; padding: 9px 16px;
+  font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+#panel-dashboard .dash-sectors { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+#panel-dashboard .dsec-row { font-size: 14px; color: var(--idv-sec); border-top-color: var(--idv-linha); }
+#panel-dashboard .dsec-row b { color: var(--idv-texto); font-weight: 600; font-family: var(--idv-mono); }
+#panel-dashboard .dsec-row b.dsec-alert { color: var(--idv-cr); }
+#panel-dashboard .dchart-legend { font-size: 13px; color: var(--idv-sec); }
+#panel-dashboard .dleg b { color: var(--idv-texto); font-weight: 600; font-family: var(--idv-mono); }
+#panel-dashboard .ddot { border-radius: 0; width: 10px; height: 10px; }
+#panel-dashboard .dsec-head + .dsec-row { border-top: none; }
