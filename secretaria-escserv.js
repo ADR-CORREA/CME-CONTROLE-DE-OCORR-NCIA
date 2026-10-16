@@ -7,8 +7,8 @@
    • Atualiza sozinha: o mês atual e os seguintes saem do CADASTRO dos servidores (equipe, posto, setor, turno) e os
      dias de plantão são calculados. O mês atual é guardado em cme_secretaria.escalaServico[mes] (refeito sempre que
      muda), então quando o mês acaba ele fica no histórico do jeito que foi — mudar o cadastro depois não mexe nele.
-   • Edição no próprio quadro: arrastar o nome para outra guarnição ou setor, clicar no "Posto" ou no "(M)/(T)" para
-     trocar, clicar no nome para abrir o cadastro. No mês atual/futuro a mudança vai para o CADASTRO; num mês que já
+   • Edição no próprio quadro: arrastar o nome para outra guarnição, setor ou coluna de turno, "⇄" troca o posto ou o
+     turno, clicar no nome para abrir o cadastro. No mês atual/futuro a mudança vai para o CADASTRO; num mês que já
      passou, muda só o registro daquele mês.
    • Imprimir: formato do papel (A4 deitado) com o cabeçalho do IAPEN/CME, a escala de apoio, as observações de férias
      e licenças e a assinatura do gerente.
@@ -96,8 +96,9 @@ function _secServGuardarAuto() {
 }
 
 // ── Painel ────────────────────────────────────────────────────────────────────
-// 15/10/2026: tema escuro, nomes em 14px, posto/turno como etiqueta legível ("POSTO 1", "MANHÃ"); guarnição de plantão hoje
-// em destaque; setores vazios compactos; o quadro fixo de impressão e a ajuda ficam recolhidos.
+// 16/10/2026 (identidade visual, proposta aprovada no quadro de design): guarnições com faixa de título escura
+// (verde = de plantão hoje), nomes agrupados por posto; setor administrativo numa tabela Setor | Manhã | Tarde | Sem turno.
+// Edição igual: arrastar o nome (para a coluna Manhã/Tarde já muda o turno), "⇄" troca posto/turno, clique no nome abre o cadastro.
 function _secCartaoServico() {
   if (typeof _secEscxCss === 'function') _secEscxCss();
   const d = _secDados(), hoje = _secHoje(), mes = _secEscMesVis || hoje.slice(0, 7), passado = mes < _secServAtual();
@@ -105,64 +106,74 @@ function _secCartaoServico() {
   const linhas = _secServLinhas(mes, d), ids = Object.keys(linhas);
   const dias = _secServDiasGuarnicao(mes), deHoje = mes === _secServAtual() ? _secPlantaoAgora().guarnicao : '';
   const guardado = (d.escalaServico || {})[mes];
-  const solta = alvo => ' ondragover="event.preventDefault();this.style.borderColor=\'var(--ac)\'" ondragleave="this.style.borderColor=\'\'" ondrop="sec_servSoltar(event,\'' + mes + '\',\'' + _jsq(alvo) + '\')"';
+  const solta = alvo => ' ondragover="event.preventDefault();this.classList.add(\'escx-drop\')" ondragleave="this.classList.remove(\'escx-drop\')" ondrop="sec_servSoltar(event,\'' + mes + '\',\'' + _jsq(alvo) + '\')"';
+  const arrasta = sid => ' draggable="true" ondragstart="event.dataTransfer.setData(\'text/plain\',\'escserv:' + sid + '\')" onclick="sec_editarServidor(\'' + sid + '\')" title="' + esc(linhas[sid].nome) + ' — arraste para mudar de guarnição/setor · clique para abrir o cadastro"';
+  const det = af => af ? '<span class="escx-det">' + esc(af.tipo.toLowerCase()) + ' <span class="mono">' + _secBRc(af.inicio) + '–' + _secBRc(af.fim || af.inicio) + '</span></span>' : '';
+  const porNome = (a, b) => linhas[a].nome.localeCompare(linhas[b].nome);
 
-  const linha = (sid, etiqueta, apagado) => {
-    const l = linhas[sid], af = _secServAfastNoMes(sid, mes, d);
-    return '<div class="escx-row' + (apagado ? ' apagado' : '') + '" draggable="true" ondragstart="event.dataTransfer.setData(\'text/plain\',\'escserv:' + sid + '\')" onclick="sec_editarServidor(\'' + sid + '\')" title="' + esc(l.nome) + ' — arraste para mudar de guarnição/setor · clique para abrir o cadastro">'
-      + '<span class="escx-nome">' + esc(_secEscCurto(l.nome))
-      + (af ? '<span class="escx-det">' + esc(af.tipo.toLowerCase()) + ' <span class="mono">' + _secBRc(af.inicio) + '–' + _secBRc(af.fim || af.inicio) + '</span></span>' : '') + '</span>'
-      + (etiqueta || '') + '</div>';
-  };
-  const etqPosto = sid => { const p = linhas[sid].posto; return '<span class="escx-badge ' + (p === '1' ? 'b-da' : p === '2' ? 'b-ac' : 'b-mu') + '" onclick="event.stopPropagation();sec_servPosto(\'' + mes + '\',\'' + sid + '\')" title="Clique para trocar o posto">' + (p ? 'Posto ' + esc(p) : 'sem posto') + '</span>'; };
-  const etqTurno = sid => { const t = linhas[sid].turno; return '<span class="escx-badge ' + (t === 'M' ? 'b-wa' : t === 'T' ? 'b-pu' : 'b-mu') + '" onclick="event.stopPropagation();sec_servTurno(\'' + mes + '\',\'' + sid + '\')" title="Clique para trocar o turno">' + (t === 'M' ? 'Manhã' : t === 'T' ? 'Tarde' : 'sem turno') + '</span>'; };
-
-  // ── Plantão 24x96 ──
+  // ── Plantão 24x96: um cartão por guarnição, nomes agrupados por posto ──
+  const trocaPosto = sid => { const p = linhas[sid].posto; return '<button type="button" class="escx-ic" onclick="event.stopPropagation();sec_servPosto(\'' + mes + '\',\'' + sid + '\')" title="Posto ' + (p || '—') + ' — clique para passar para o posto ' + (p === '1' ? '2' : '1') + '">\u{21C4}</button>'; };
+  const pessoa = (sid, i, apagado) => '<div class="escx-p' + (i % 2 ? ' z' : '') + (apagado ? ' apagado' : '') + '"' + arrasta(sid) + '>'
+    + '<span class="escx-nome">' + esc(_secEscCurto(linhas[sid].nome)) + det(_secServAfastNoMes(sid, mes, d)) + '</span>' + trocaPosto(sid) + '</div>';
   const guarnicao = g => {
     const membros = ids.filter(id => linhas[id].equipe === g);
     const fora = membros.filter(id => _secServForaMes(_secServAfastNoMes(id, mes, d), mes));
-    const lista = membros.filter(id => !fora.includes(id)).sort((a, b) => String(linhas[a].posto || '9').localeCompare(String(linhas[b].posto || '9')) || linhas[a].nome.localeCompare(linhas[b].nome));
+    const lista = membros.filter(id => !fora.includes(id));
     const atual = g === deHoje;
-    return '<div class="escx-card' + (atual ? ' plantao' : '') + '"' + solta('G:' + g) + '>'
-      + '<div class="escx-cab"><div style="font-size:16px;font-weight:600">' + g + '</div>' + (atual ? '<span class="escx-badge b-ok">De plantão hoje</span>' : '') + '</div>'
-      + '<div class="mono" style="font-size:13px;color:var(--mu);margin-bottom:4px" title="Dias de plantão no mês">Dias ' + (dias[g] || []).join(' · ') + '</div>'
-      + (lista.length ? lista.map(id => linha(id, etqPosto(id))).join('') : '<div class="vazio">Arraste um nome para cá.</div>')
-      + (fora.length ? '<div class="escx-rot" style="margin-top:10px">Fora no mês</div>' + fora.map(id => linha(id, etqPosto(id), true)).join('') : '')
-      + '</div>';
+    const grupos = [['1', 'p1', 'Posto 1'], ['2', 'p2', 'Posto 2'], ['', 'p0', 'Sem posto']].map(([n, c, rot]) => {
+      const ps = lista.filter(id => n ? linhas[id].posto === n : !['1', '2'].includes(linhas[id].posto)).sort(porNome);
+      return ps.length ? '<div class="escx-g-grupo ' + c + '">' + (n ? '<span class="escx-num ' + c + '">' + n + '</span>' : '') + rot + '</div>' + ps.map((id, i) => pessoa(id, i)).join('') : '';
+    }).join('');
+    return '<section class="escx-g' + (atual ? ' hoje' : '') + '" data-guarnicao="' + g + '"' + solta('G:' + g) + '>'
+      + '<div class="escx-g-cab"><span class="escx-g-nome">' + g + '</span>' + (atual ? '<span class="escx-g-selo">De plantão hoje</span>' : '') + '</div>'
+      + '<div class="escx-g-dias mono" title="Dias de plantão no mês">Dias ' + (dias[g] || []).join(' · ') + '</div>'
+      + (grupos || '<div class="vazio" style="padding:8px 14px">Arraste um nome para cá.</div>')
+      + (fora.length ? '<div class="escx-g-fora">Fora no mês</div>' + fora.sort(porNome).map((id, i) => pessoa(id, i, true)).join('') : '')
+      + '</section>';
   };
 
-  // ── Setor administrativo (expediente) ──
+  // ── Setor administrativo (expediente): tabela Setor | Manhã | Tarde | Sem turno ──
   const setores = {}; _secServSetoresConhecidos(d, linhas).forEach(k => { setores[k] = []; });
   ids.filter(id => linhas[id].equipe === 'EXPEDIENTE').forEach(id => { const k = _secServSetor(linhas[id]); (setores[k] = setores[k] || []).push(id); });
   const ordem = Object.keys(setores).filter(k => k !== _SEC_SERV_SEM_SETOR || setores[k].length).sort((a, b) => _secServOrdemSetor(a).localeCompare(_secServOrdemSetor(b)));
-  const setorCard = k => '<div class="escx-card"' + solta('S:' + k) + '>'
-    + '<div class="escx-cab"><div style="font-size:14px;font-weight:600">' + esc(k) + '</div><span style="font-size:12px;color:var(--mu)">' + setores[k].length + '</span></div>'
-    + setores[k].sort((a, b) => String(linhas[a].turno || 'Z').localeCompare(String(linhas[b].turno || 'Z')) || linhas[a].nome.localeCompare(linhas[b].nome)).map(id => linha(id, etqTurno(id))).join('') + '</div>';
-  const cheios = ordem.filter(k => setores[k].length), vazios = ordem.filter(k => !setores[k].length);
-  const blocoVazios = '<div class="escx-grid" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr));margin-top:10px">'
-    + vazios.map(k => '<div class="escx-card" style="padding:8px 12px;border-style:dashed"' + solta('S:' + k) + '><div style="font-size:13px;font-weight:600;color:var(--mu)">' + esc(k) + '</div>'
-      + '<div style="font-size:12px;color:var(--sb)">Vazio — arraste um nome · <a href="#" onclick="sec_servRemoverSetor(\'' + _jsq(k) + '\');return false" style="color:var(--da)">remover</a></div></div>').join('')
-    + '<div class="escx-card" style="padding:8px 12px;border-style:dashed;color:var(--mu);font-size:13px;display:flex;align-items:center;justify-content:center;text-align:center"' + solta('S:+') + '>+ arraste um nome aqui para criar um setor</div></div>';
+  const turnoDe = id => ['M', 'T'].includes(linhas[id].turno) ? linhas[id].turno : '';
+  const celPessoa = id => {
+    const af = _secServAfastNoMes(id, mes, d), t = turnoDe(id);
+    return '<div class="escx-cel-p' + (af ? ' apagado' : '') + '"' + arrasta(id) + '><span class="escx-nome">' + esc(_secEscCurto(linhas[id].nome))
+      + (af ? '<span class="escx-det">' + esc(af.tipo.toLowerCase()) + ' até <span class="mono">' + _secBRc(af.fim || af.inicio) + '</span></span>' : '') + '</span>'
+      + '<button type="button" class="escx-ic" onclick="event.stopPropagation();sec_servTurno(\'' + mes + '\',\'' + id + '\')" title="Passar para o turno da ' + (t === 'M' ? 'tarde' : 'manhã') + '">\u{21C4}</button></div>';
+  };
+  const linhaSetor = k => {
+    const ps = setores[k].sort(porNome);
+    const col = t => { const doTurno = ps.filter(id => turnoDe(id) === t); return '<td' + solta('S:' + k + '|' + t) + '>' + (doTurno.length ? doTurno.map(celPessoa).join('') : '<span class="escx-vazio">—</span>') + '</td>'; };
+    return '<tr data-setor="' + esc(k) + '"><th scope="row"' + solta('S:' + k) + '>' + esc(k)
+      + (ps.length ? '' : ' <a href="#" class="escx-rem" onclick="sec_servRemoverSetor(\'' + _jsq(k) + '\');return false" title="Tirar este setor vazio da escala">remover</a>') + '</th>'
+      + col('M') + col('T') + col('') + '</tr>';
+  };
+  const tabelaAdm = '<div class="escx-tab-box"><table class="escx-tab"><thead><tr><th scope="col" style="width:30%">Setor</th>'
+    + '<th scope="col" style="width:27%"><span class="escx-turno m"></span>Manhã</th><th scope="col" style="width:27%"><span class="escx-turno t"></span>Tarde</th><th scope="col">Sem turno</th></tr></thead><tbody>'
+    + ordem.map(linhaSetor).join('')
+    + '<tr><td colspan="4" class="escx-novo"' + solta('S:+') + '>+ arraste um nome aqui para criar um setor</td></tr></tbody></table></div>';
 
   const aviso = passado
-    ? '<div class="escx-faixa"><span class="escx-badge b-wa">Mês encerrado</span><span>' + (guardado ? 'Escala guardada como estava em ' + _secBR(guardado.guardadoEm) + '. Mudanças aqui valem só para este mês.' : 'Não havia registro guardado; mostrando o cadastro atual.') + '</span></div>'
+    ? '<div class="escx-faixa at"><span class="escx-faixa-ic">!</span><span><b>Mês encerrado.</b> ' + (guardado ? 'Escala guardada como estava em ' + _secBR(guardado.guardadoEm) + '. Mudanças aqui valem só para este mês.' : 'Não havia registro guardado; mostrando o cadastro atual.') + '</span></div>'
     : '';
-  const ajuda = '<details><summary>Como usar e o que é cada posto</summary><div class="dentro" style="font-size:13px;color:var(--mu)">'
-    + '<p style="margin:0 0 6px"><span class="escx-badge b-da">Posto 1</span> instalação, inspeção, criação de zona &nbsp; <span class="escx-badge b-ac">Posto 2</span> tratamento de ocorrência, mudança de endereço, alimentação do drive, livro. Os postos trocam sozinhos todo mês (1 \u{2194} 2).</p>'
-    + '<p style="margin:0">A escala atualiza sozinha pelo cadastro · arraste o nome para mudar de guarnição ou setor · clique na etiqueta do posto ou do turno para trocar · clique no nome para abrir o cadastro.</p></div></details>';
+  const legenda = '<div class="escx-legenda"><span><span class="escx-num p1">1</span> <b>Posto 1</b> — instalação, inspeção, criação de zona</span>'
+    + '<span><span class="escx-num p2">2</span> <b>Posto 2</b> — ocorrências, mudança de endereço, drive, livro</span>'
+    + '<span style="color:var(--mu)">Os postos trocam sozinhos todo mês (1 \u{2194} 2)</span></div>';
   return '<div id="sec-serv-card" class="escx">'
     + '<div class="escx-top"><div><div class="escx-tit">Escala de serviço (24x96)</div><div class="escx-sub">Plantão da CME e setor administrativo</div></div>'
-    + '<div class="escx-nav"><button type="button" class="escx-btn" onclick="_secEscMesVis=_secEscMaisMes(\'' + mes + '\',-1);_secEscAtualizar()" title="Mês anterior">\u{2039}</button>'
+    + '<div class="escx-nav"><button type="button" class="escx-btn" onclick="_secEscMesVis=_secEscMaisMes(\'' + mes + '\',-1);_secEscAtualizar()" title="Mês anterior" aria-label="Mês anterior">\u{2039}</button>'
     + '<div class="escx-mes">' + esc(_secEscMesTxt(mes)) + '</div>'
-    + '<button type="button" class="escx-btn" onclick="_secEscMesVis=_secEscMaisMes(\'' + mes + '\',1);_secEscAtualizar()" title="Próximo mês">\u{203A}</button>'
-    + '<button type="button" class="escx-btn pri" onclick="sec_servImprimir(\'' + mes + '\')">\u{1F5A8}\u{FE0F} Imprimir escala do mês</button></div></div>'
-    + aviso
+    + '<button type="button" class="escx-btn" onclick="_secEscMesVis=_secEscMaisMes(\'' + mes + '\',1);_secEscAtualizar()" title="Próximo mês" aria-label="Próximo mês">\u{203A}</button>'
+    + '<button type="button" class="escx-btn pri" onclick="sec_servImprimir(\'' + mes + '\')">Imprimir escala do mês</button></div></div>'
+    + aviso + legenda
     + '<div class="escx-sec" style="margin-top:0">Plantão — guarnições</div>'
-    + '<div class="escx-grid">' + _PL_EQUIPES_SEC.map(guarnicao).join('') + '</div>'
+    + '<div class="escx-grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px">' + _PL_EQUIPES_SEC.map(guarnicao).join('') + '</div>'
     + '<div class="escx-sec">Setor administrativo</div>'
-    + '<div class="escx-grid" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr))">' + cheios.map(setorCard).join('') + '</div>'
-    + blocoVazios
-    + _secServHtmlQuadroApoio(mes, d) + ajuda + '</div>';
+    + tabelaAdm
+    + '<div class="escx-nota">Nome em cinza = afastado no mês (férias ou licença). Arraste o nome para mudar de setor, turno ou guarnição; \u{21C4} troca o posto ou o turno; clique no nome para abrir o cadastro.</div>'
+    + _secServHtmlQuadroApoio(mes, d) + '</div>';
 }
 
 // ── Quadro "Escala de apoio" da escala de serviço: nomes FIXOS (pedido de 14/10/2026) ──
@@ -233,18 +244,22 @@ async function _secServAplicar(mes, sid, patch, audit) {
   return ok;
 }
 async function sec_servSoltar(ev, mes, alvo) {
-  ev.preventDefault(); if (ev.currentTarget) ev.currentTarget.style.outline = '';
+  ev.preventDefault(); if (ev.currentTarget) { ev.currentTarget.style.outline = ''; if (ev.currentTarget.classList) ev.currentTarget.classList.remove('escx-drop'); }
   const txt = ev.dataTransfer.getData('text/plain') || '', sid = txt.startsWith('escserv:') ? txt.slice(8) : '';
   const l = _secServLinhas(mes, _secDados())[sid]; if (!l) return;
   if (alvo.startsWith('G:')) {
     const g = alvo.slice(2); if (l.equipe === g) return;
     return _secServAplicar(mes, sid, { equipe: g, setor: 'Plantão', turno: '' }, { action: 'sec_serv_mover', detalhe: (l.equipe === 'EXPEDIENTE' ? _secServSetor(l) : l.equipe) + ' → ' + g + ' (' + _secEscMesTxt(mes) + ')' });
   }
-  let setor = alvo.slice(2);
+  let setor = alvo.slice(2), turno;
+  const barra = setor.lastIndexOf('|'); // "S:setor|M" = soltou na coluna de um turno (16/10/2026: tabela do setor administrativo)
+  if (barra >= 0) { turno = setor.slice(barra + 1); setor = setor.slice(0, barra); }
   if (setor === '+') { setor = String(prompt('Nome do setor novo (ex.: Jurídico, Secretaria):') || '').trim(); if (!setor) return; }
   if (setor === _SEC_SERV_SEM_SETOR) setor = '';
-  if (l.equipe === 'EXPEDIENTE' && (l.setor || '') === setor) return;
-  return _secServAplicar(mes, sid, { equipe: 'EXPEDIENTE', setor, posto: '' }, { action: 'sec_serv_mover', detalhe: (l.equipe === 'EXPEDIENTE' ? _secServSetor(l) : l.equipe) + ' → ' + (setor || _SEC_SERV_SEM_SETOR) + ' (' + _secEscMesTxt(mes) + ')' });
+  if (l.equipe === 'EXPEDIENTE' && (l.setor || '') === setor && (turno === undefined || (l.turno || '') === turno)) return;
+  const patch = { equipe: 'EXPEDIENTE', setor, posto: '' }; if (turno !== undefined) patch.turno = turno;
+  const turnoTxt = turno === undefined ? '' : ' · ' + (turno === 'M' ? 'manhã' : turno === 'T' ? 'tarde' : 'sem turno');
+  return _secServAplicar(mes, sid, patch, { action: 'sec_serv_mover', detalhe: (l.equipe === 'EXPEDIENTE' ? _secServSetor(l) : l.equipe) + ' → ' + (setor || _SEC_SERV_SEM_SETOR) + turnoTxt + ' (' + _secEscMesTxt(mes) + ')' });
 }
 async function sec_servRemoverSetor(k) {
   const d0 = _secDados();

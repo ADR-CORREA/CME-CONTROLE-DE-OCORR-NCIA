@@ -92,12 +92,13 @@ function _secEscAtualizar() {
 function _secEscxCss() {
   if (document.getElementById('sec-escx-css')) return '';
   const st = document.createElement('style'); st.id = 'sec-escx-css';
-  st.textContent = '.escx{--bg:#ffffff;--sf:#f8fafc;--el:#ffffff;--bd:#e2e8f0;--tx:#0f172a;--mu:#475569;--sb:#94a3b8;--ac:#2563eb;--ok:#15803d;--wa:#b45309;--da:#b91c1c;--pu:#7c3aed;'
+  // 16/10/2026: cores do guia de identidade visual (identidade.css)
+  st.textContent = '.escx{--bg:#ffffff;--sf:#f6f8fa;--el:#ffffff;--bd:#d1d9e0;--tx:#1f2328;--mu:#59636e;--sb:#8c959f;--ac:#0969da;--ok:#1a7f37;--wa:#9a6700;--da:#cf222e;--pu:#8250df;--cab:#24292f;--zb:#f3f5f8;--ln:#dfe3e8;'
     + 'background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:16px;margin-top:12px;font-size:14px;line-height:1.5;'
     + 'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif}'
     + '.escx *{box-sizing:border-box}'
     + '.escx-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}'
-    + '.escx-tit{font-size:20px;font-weight:600;line-height:1.25}'
+    + '.escx-tit{font-size:24px;font-weight:600;line-height:1.25}'
     + '.escx-sub{font-size:13px;color:var(--mu);margin-top:3px}'
     + '.escx-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}'
     + '.escx-btn{background:var(--el);color:var(--tx);border:1px solid #cbd5e1;padding:5px 14px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;line-height:1.5}'
@@ -135,7 +136,59 @@ function _secEscxCss() {
     + '.escx select,.escx textarea{background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;font-size:14px;font-family:inherit}'
     + '.escx .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}'
     + '.escx .vazio{font-size:13px;color:var(--sb);padding:6px 2px}'
-    + '.escx a{color:var(--ac)}';
+    + '.escx a{color:var(--ac)}'
+    // ── peças da identidade visual (16/10/2026): faixa de aviso, legenda, guarnição, tabelas ──
+    + '.escx-faixa{font-size:15px}.escx-faixa.ok{background:#dafbe1;border-color:#4ac26b}.escx-faixa.at{background:#fff8c5;border-color:#d4a72c}'
+    + '.escx-faixa-ic{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;flex:none;border-radius:3px;background:var(--mu);color:#fff;font-weight:600}'
+    + '.escx-faixa.ok .escx-faixa-ic{background:var(--ok)}.escx-faixa.at .escx-faixa-ic{background:var(--wa)}'
+    + '.escx-legenda{display:flex;align-items:center;gap:8px 20px;flex-wrap:wrap;padding:10px 14px;border-radius:6px;border:1px solid var(--bd);font-size:13px;margin-bottom:16px}'
+    + '.escx-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:4px;color:#fff;font-weight:600;font-size:12px;flex:none;vertical-align:-4px}'
+    + '.escx-num.p1{background:var(--da)}.escx-num.p2{background:var(--ac)}'
+    + '.escx-g{border:1px solid var(--bd);border-radius:8px;overflow:hidden;background:var(--bg);display:flex;flex-direction:column;min-width:0}'
+    + '.escx-g.hoje{border:2px solid var(--ok)}'
+    + '.escx-g-cab{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;background:var(--cab);color:#fff}'
+    + '.escx-g.hoje .escx-g-cab{background:var(--ok)}'
+    + '.escx-g-nome{font-size:18px;font-weight:600;letter-spacing:.04em}'
+    + '.escx-g-selo{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:3px;background:#fff;color:var(--ok);white-space:nowrap}'
+    + '.escx-g-dias{padding:7px 14px;background:#eaeef2;border-bottom:1px solid var(--bd);font-size:13px;font-weight:600}'
+    + '.escx-g-grupo{display:flex;align-items:center;gap:8px;padding:8px 14px 4px;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}'
+    + '.escx-g-grupo.p1{color:var(--da)}.escx-g-grupo.p2{color:var(--ac)}.escx-g-grupo.p0{color:var(--mu)}'
+    + '.escx-p{display:flex;align-items:center;gap:6px;padding:8px 10px 8px 14px;border-top:1px solid var(--ln);cursor:grab;min-width:0}'
+    + '.escx-p.z{background:var(--zb)}.escx-p:hover,.escx-cel-p:hover,.escx-ap-p:hover{background:#eaf2fd}'
+    + '.escx-p .escx-nome,.escx-cel-p .escx-nome,.escx-ap-p .escx-nome{font-size:15px}'
+    + '.escx-p.apagado .escx-nome,.escx-cel-p.apagado .escx-nome,.escx-ap-p.passou .escx-nome{color:var(--mu)}'
+    + '.escx-g-fora{margin-top:auto;padding:8px 14px 4px;border-top:1px dashed var(--bd);font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--mu)}'
+    + '.escx-ic{background:none;border:0;color:var(--mu);cursor:pointer;font-size:14px;line-height:1;padding:4px;flex:none;font-family:inherit;border-radius:4px}'
+    + '.escx-ic:hover{color:var(--ac);background:#ddf4ff}'
+    + '.escx-tab-box{border:1px solid var(--bd);border-radius:8px;overflow-x:auto;background:var(--bg)}'
+    + '.escx-tab{width:100%;border-collapse:collapse;min-width:760px}'
+    + '.escx-tab thead th{background:var(--cab);color:#fff;text-align:left;padding:10px 14px;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;vertical-align:top}'
+    + '.escx-tab tbody tr{border-top:1px solid var(--ln)}.escx-tab tbody tr:nth-child(even){background:var(--zb)}'
+    + '.escx-tab tbody th{text-align:left;vertical-align:top;padding:10px 14px;font-size:14px;font-weight:600}'
+    + '.escx-tab td{vertical-align:top;padding:6px 8px}'
+    + '.escx-cel-p{display:flex;align-items:center;gap:4px;padding:3px 6px;border-radius:4px;cursor:grab;min-width:0}'
+    + '.escx-cel-p .escx-nome{flex:0 1 auto}.escx-vazio{color:var(--sb);padding:3px 6px;display:inline-block}'
+    + '.escx-rem{font-size:12px;font-weight:400;color:var(--da)}'
+    + '.escx-novo{text-align:center;color:var(--mu);font-size:13px;padding:10px!important;border-top:1px dashed var(--bd)}'
+    + '.escx-turno{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px;vertical-align:-1px}.escx-turno.m{background:#d4a72c}.escx-turno.t{background:#a475f9}'
+    + '.escx-nota{font-size:13px;color:var(--mu);margin-top:8px}'
+    + '.escx-drop{outline:2px dashed var(--ac);outline-offset:-2px}'
+    + '.escx-ap{table-layout:fixed}.escx-ap tbody tr,.escx-ap tbody tr:nth-child(even){background:none;border-top:2px solid var(--bd)}'
+    + '.escx-ap thead th.dia{border-left:1px solid rgba(255,255,255,.15);text-transform:none;letter-spacing:0}'
+    + '.escx-ap thead th.passou{background:#57606a}.escx-ap thead th.on{background:var(--pu)}'
+    + '.escx-ap-dia{display:flex;justify-content:space-between;align-items:baseline;gap:8px}'
+    + '.escx-ap-dia b{font-size:22px;font-weight:600;line-height:1.1}.escx-ap-dia b small{font-size:14px;font-weight:400;opacity:.8}'
+    + '.escx-ap-selo{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:rgba(255,255,255,.18);color:#fff;white-space:nowrap}'
+    + '.escx-ap thead th.on .escx-ap-selo{background:#fff;color:var(--pu)}'
+    + '.escx-ap-qtd{font-size:12px;font-weight:400;opacity:.85}'
+    + '.escx-ap td{padding:0;border-left:1px solid var(--ln)}.escx-ap td.passou{background:var(--sf)}.escx-ap td.on{background:#f5f0ff}'
+    + '.escx-ap-p{display:flex;align-items:center;gap:4px;padding:8px 8px 8px 12px;border-bottom:1px solid var(--ln);cursor:grab;min-width:0}.escx-ap-p.z{background:var(--zb)}'
+    + '.escx-ap-ok{color:var(--ok);font-weight:600}.escx-ap-falta{color:var(--da);font-weight:600}'
+    + '.escx-ap-add{padding:8px 12px;font-size:13px;color:var(--mu);cursor:pointer}.escx-ap-add:hover{color:var(--ac)}'
+    + '.escx-ap-picker{margin:6px;padding:8px;border:1px dashed var(--pu);border-radius:6px;background:var(--bg)}'
+    + '.escx-local{display:inline-block;font-size:13px;font-weight:600;letter-spacing:.05em;padding:3px 10px;border-radius:3px;color:#fff}'
+    + '.escx-local.cme{background:#0969da}.escx-local.pef{background:#bc4c00}'
+    + '.escx-local-desc{font-size:12px;font-weight:400;color:var(--mu);margin-top:4px}';
   document.head.appendChild(st);
   return '';
 }
@@ -155,29 +208,45 @@ function _secCartaoEscala() {
   if (typeof _secServApoioCongelar === 'function') _secServApoioCongelar(mes);
   const badgeLocal = (x, clic) => '<span class="escx-badge ' + _secEscCorLocal(x.local) + '"' + (clic ? ' onclick="sec_escLocal(\'' + x.id + '\')" title="Clique para trocar CME / PEF"' : '') + '>' + esc(x.local) + '</span>';
 
-  const coluna = dt => {
-    const lst = d.escalaSabado.filter(x => x.data === dt).sort((a, b) => a.local.localeCompare(b.local) || _secEscNome(a, d).localeCompare(_secEscNome(b, d)));
-    const passou = dt <= hoje, ehHoje = dt === hoje, ehProx = dt === prox && !ehHoje, dia = new Date(dt + 'T12:00:00');
-    const linha = x => {
-      const pres = x.status === 'presente', falta = x.status === 'falta';
-      return '<div class="escx-row' + (pres ? ' ok' : falta ? ' falta' : '') + '" draggable="true" ondragstart="sec_escArrastar(event,\'item\',\'' + x.id + '\')">'
-        + '<span class="escx-nome"' + (passou ? ' onclick="sec_escPresenca(\'' + x.id + '\')" title="Clique: compareceu / faltou" style="cursor:pointer"' : '') + '>'
-        + esc(_secEscCurto(_secEscNome(x, d))) + (pres ? '<span class="escx-det" style="color:var(--ok)">\u{2713} compareceu</span>' : falta ? '<span class="escx-det" style="color:var(--da)">\u{2717} faltou</span>' : '') + '</span>'
-        + badgeLocal(x, true) + '<span class="escx-x" onclick="sec_escRemover(\'' + x.id + '\')" title="Tirar da escala">\u{2715}</span></div>';
-    };
-    const picker = _secEscPicker === dt ? '<div style="margin-top:8px;padding:8px;border:1px dashed var(--pu);border-radius:6px">'
-      + '<select id="sec-esc-sel" style="width:100%;padding:6px;margin-bottom:6px"><option value="">Escolha o servidor…</option>'
-      + pessoal.map(s => { const af = _secEscAfastadoEm(s.id, dt, d), n = qtd(s.id); return '<option value="' + s.id + '">' + esc(_secEscCurto(s.nome)) + (af ? ' — ' + esc(af.tipo.toLowerCase()) : n ? ' — já tem ' + n + ' sábado' : '') + '</option>'; }).join('')
-      + '<option value="__outro">Outra pessoa (digitar o nome)…</option></select>'
-      + '<div style="display:flex;gap:6px">' + _SEC_ESC_LOCAIS.map(l => '<button type="button" class="escx-btn" style="flex:1;padding:4px" onclick="sec_escConfirmarPicker(\'' + dt + '\',\'' + l + '\')">+ ' + l + '</button>').join('')
-      + '<button type="button" class="escx-btn" style="padding:4px 10px" onclick="_secEscPicker=null;_secEscAtualizar()">\u{2715}</button></div></div>'
-      : '<div class="escx-add" onclick="_secEscPicker=\'' + dt + '\';_secEscAtualizar()">+ adicionar</div>';
-    const selo = ehHoje ? '<span class="escx-badge b-pu">Hoje</span>' : ehProx ? '<span class="escx-badge b-pu">Próximo</span>' : passou ? '<span class="escx-badge b-mu">Realizado</span>' : '';
-    return '<div class="escx-card' + (ehHoje || ehProx ? ' on' : passou ? ' feito' : '') + '" ondragover="event.preventDefault();this.style.borderColor=\'var(--ac)\'" ondragleave="this.style.borderColor=\'\'" ondrop="sec_escSoltar(event,\'' + dt + '\')">'
-      + '<div class="escx-cab"><div><div class="escx-rot">' + dia.toLocaleDateString('pt-BR', { weekday: 'long' }) + '</div>'
-      + '<div class="escx-dia">' + String(dia.getDate()).padStart(2, '0') + '<small>/' + String(dia.getMonth() + 1).padStart(2, '0') + '</small></div></div>' + selo + '</div>'
-      + (lst.length ? lst.map(linha).join('') : '<div class="vazio">Ninguém escalado.</div>') + picker + '</div>';
+  // 16/10/2026 (identidade visual, proposta aprovada no quadro de design): tabela com os LOCAIS nas linhas e os sábados nas
+  // colunas. Arrastar para outra célula muda o dia e/ou o local; "⇄" troca CME/PEF; depois do sábado, clique no nome = compareceu/faltou.
+  const locais = [...new Set(_SEC_ESC_LOCAIS.concat(doMes.map(x => x.local)))];
+  const situ = dt => ({ passou: dt <= hoje, ehHoje: dt === hoje, ehProx: dt === prox && dt !== hoje });
+  const cabDia = dt => {
+    const s = situ(dt), dia = new Date(dt + 'T12:00:00'), n = d.escalaSabado.filter(x => x.data === dt).length;
+    const cls = s.ehHoje || s.ehProx ? 'on' : s.passou ? 'passou' : '';
+    const selo = s.ehHoje ? 'Hoje' : s.ehProx ? 'Próximo' : s.passou ? 'Realizado' : 'A fazer';
+    return '<th scope="col" class="dia ' + cls + '"><div class="escx-ap-dia"><b>' + String(dia.getDate()).padStart(2, '0') + '<small>/' + String(dia.getMonth() + 1).padStart(2, '0') + '</small></b>'
+      + '<span class="escx-ap-selo">' + selo + '</span></div><div class="escx-ap-qtd">' + dia.toLocaleDateString('pt-BR', { weekday: 'long' }) + ' · ' + n + (n === 1 ? ' pessoa' : ' pessoas') + '</div></th>';
   };
+  const celula = (dt, local) => {
+    const s = situ(dt), on = s.ehHoje || s.ehProx;
+    const lst = d.escalaSabado.filter(x => x.data === dt && x.local === local).sort((a, b) => _secEscNome(a, d).localeCompare(_secEscNome(b, d)));
+    const outro = local === 'PEF' ? 'CME' : 'PEF';
+    const linha = (x, i) => {
+      const pres = x.status === 'presente', falta = x.status === 'falta';
+      return '<div class="escx-ap-p' + (i % 2 && !on ? ' z' : '') + (s.passou ? ' passou' : '') + '" draggable="true" ondragstart="sec_escArrastar(event,\'item\',\'' + x.id + '\')">'
+        + '<span class="escx-nome"' + (s.passou ? ' onclick="sec_escPresenca(\'' + x.id + '\')" title="Clique: compareceu / faltou" style="cursor:pointer"' : '') + '>' + esc(_secEscCurto(_secEscNome(x, d))) + '</span>'
+        + (pres ? '<span class="escx-ap-ok" title="compareceu">\u{2713}</span>' : falta ? '<span class="escx-ap-falta" title="faltou">\u{2717}</span>' : '')
+        + '<button type="button" class="escx-ic" onclick="sec_escLocal(\'' + x.id + '\')" title="Passar para ' + outro + '">\u{21C4}</button>'
+        + '<button type="button" class="escx-ic" onclick="sec_escRemover(\'' + x.id + '\')" title="Tirar da escala">\u{2715}</button></div>';
+    };
+    const chave = dt + '|' + local;
+    const picker = _secEscPicker === chave ? '<div class="escx-ap-picker">'
+      + '<select id="sec-esc-sel" style="width:100%;padding:6px;margin-bottom:6px"><option value="">Escolha o servidor…</option>'
+      + pessoal.map(p => { const af = _secEscAfastadoEm(p.id, dt, d), n = qtd(p.id); return '<option value="' + p.id + '">' + esc(_secEscCurto(p.nome)) + (af ? ' — ' + esc(af.tipo.toLowerCase()) : n ? ' — já tem ' + n + ' sábado' : '') + '</option>'; }).join('')
+      + '<option value="__outro">Outra pessoa (digitar o nome)…</option></select>'
+      + '<div style="display:flex;gap:6px"><button type="button" class="escx-btn" style="flex:1;padding:4px" onclick="sec_escConfirmarPicker(\'' + dt + '\',\'' + _jsq(local) + '\')">+ ' + esc(local) + '</button>'
+      + '<button type="button" class="escx-btn" style="padding:4px 10px" onclick="_secEscPicker=null;_secEscAtualizar()" aria-label="Fechar">\u{2715}</button></div></div>'
+      : '<div class="escx-ap-add" onclick="_secEscPicker=\'' + _jsq(chave) + '\';_secEscAtualizar()">+ adicionar</div>';
+    return '<td class="' + (on ? 'on' : s.passou ? 'passou' : '') + '" ondragover="event.preventDefault();this.classList.add(\'escx-drop\')" ondragleave="this.classList.remove(\'escx-drop\')" ondrop="sec_escSoltar(event,\'' + dt + '\',\'' + _jsq(local) + '\')">'
+      + lst.map(linha).join('') + picker + '</td>';
+  };
+  const descLocal = { CME: 'Central', PEF: 'Penitenciária Feminina' };
+  const tabela = '<div class="escx-tab-box"><table class="escx-tab escx-ap" style="min-width:' + (110 + datas.length * 175) + 'px"><thead><tr><th scope="col" style="width:110px">Local</th>' + datas.map(cabDia).join('') + '</tr></thead><tbody>'
+    + locais.map(l => '<tr data-local="' + esc(l) + '"><th scope="row"><span class="escx-local ' + (l === 'PEF' ? 'pef' : 'cme') + '">' + esc(l) + '</span><div class="escx-local-desc">' + esc(descLocal[l] || '') + '</div></th>'
+      + datas.map(dt => celula(dt, l)).join('') + '</tr>').join('')
+    + '</tbody></table></div>';
 
   // quem do expediente ainda falta escalar no mês (o resto fica recolhido)
   const situacao = pessoal.map(s => {
@@ -204,13 +273,16 @@ function _secCartaoEscala() {
       + '<span class="escx-det mono">' + _secBR(a.inicio).slice(0, 5) + ' → ' + _secBR(a.fim || a.inicio).slice(0, 5) + '</span></span><span class="escx-badge ' + _SEC_ESCX_TIPO(a.tipo) + '">' + esc(a.tipo) + '</span></div>')) + '</div></details>';
   const ajuda = '<details><summary>Como usar e regra do mês</summary><div class="dentro" style="font-size:13px;color:var(--mu)">'
     + '<p style="margin:0 0 6px"><b style="color:var(--tx)">Regra:</b> 1 sábado por mês, num local só · rodízio: quem foi na PEF no mês passado vai na CME neste mês, e vice-versa · Bruna, Olidete, Francisco, Débora e Ronaldo: sempre CME · Everton: não tira. O cadastro do servidor ("Apoio de sábado") manda mais que a regra.</p>'
-    + '<p style="margin:0">Arraste o nome para um sábado (ou "+ adicionar") · clique na etiqueta CME/PEF para trocar · depois do sábado, clique no nome para marcar compareceu ou faltou · \u{2715} tira · arraste entre sábados para mudar o dia · '
+    + '<p style="margin:0">Arraste o nome para um sábado (ou "+ adicionar") · arraste para a linha do outro local ou use \u{21C4} para trocar CME/PEF · depois do sábado, clique no nome para marcar compareceu ou faltou · \u{2715} tira · arraste entre sábados para mudar o dia · '
     + '<a href="#" onclick="sec_escDataExtra(\'' + mes + '\');return false">incluir um dia que não é sábado</a>.</p></div></details>';
 
-  const faixa = mes < atual ? '' : '<div class="escx-faixa">' + (pend.length
-    ? '<span class="escx-badge b-wa">Pendente</span><span><b>' + pend.length + '</b> servidor(es) ainda sem o sábado do mês.</span>'
-    : vazio ? '<span class="escx-badge b-mu">Montando</span><span>Montando a escala de ' + esc(_secEscMesTxt(mes)) + ' pela regra…</span>'
-    : '<span class="escx-badge b-ok">Completa</span><span>Todos do expediente já estão escalados neste mês.</span>') + '</div>';
+  // faixa única (identidade visual): amarela = falta gente, verde = completa (com o próximo sábado), neutra = montando
+  const nProx = prox ? d.escalaSabado.filter(x => x.data === prox).length : 0;
+  const txtProx = prox && prox.slice(0, 7) === mes ? ' Próximo sábado: <b>' + _secBR(prox).slice(0, 5) + '</b>, ' + nProx + (nProx === 1 ? ' pessoa.' : ' pessoas.') : '';
+  const faixa = mes < atual ? '' : pend.length
+    ? '<div class="escx-faixa at"><span class="escx-faixa-ic">!</span><span><b>' + pend.length + ' servidor(es)</b> ainda sem o sábado do mês — arraste o nome (lista abaixo da tabela) para um sábado.</span></div>'
+    : vazio ? '<div class="escx-faixa"><span class="escx-faixa-ic">\u{2026}</span><span>Montando a escala de ' + esc(_secEscMesTxt(mes)) + ' pela regra…</span></div>'
+    : '<div class="escx-faixa ok"><span class="escx-faixa-ic">\u{2713}</span><span><b>Escala completa</b> — todos do expediente já estão escalados em ' + esc(_secEscMesTxt(mes)) + '.' + txtProx + '</span></div>';
 
   return '<div id="sec-esc-card" class="escx">'
     + '<div class="escx-top"><div><div class="escx-tit">Apoio de sábado</div>'
@@ -218,9 +290,9 @@ function _secCartaoEscala() {
     + '<div class="escx-nav"><button type="button" class="escx-btn" onclick="_secEscMesVis=_secEscMaisMes(\'' + mes + '\',-1);_secEscPicker=null;_secEscAtualizar()" title="Mês anterior">\u{2039}</button>'
     + '<div class="escx-mes">' + esc(_secEscMesTxt(mes)) + '</div>'
     + '<button type="button" class="escx-btn" onclick="_secEscMesVis=_secEscMaisMes(\'' + mes + '\',1);_secEscPicker=null;_secEscAtualizar()" title="Próximo mês">\u{203A}</button>'
-    + '<button type="button" class="escx-btn" onclick="sec_escImprimir(\'' + mes + '\')">\u{1F5A8}\u{FE0F} Imprimir</button></div></div>'
-    + (vazio && mes < atual ? '<div class="escx-faixa"><span class="escx-badge b-mu">Sem registro</span><span>Sem escala registrada em ' + esc(_secEscMesTxt(mes)) + '.</span></div>' : faixa)
-    + '<div class="escx-grid">' + datas.map(coluna).join('') + '</div>'
+    + '<button type="button" class="escx-btn" onclick="sec_escImprimir(\'' + mes + '\')">Imprimir</button></div></div>'
+    + (vazio && mes < atual ? '<div class="escx-faixa"><span class="escx-faixa-ic">\u{2013}</span><span>Sem escala registrada em ' + esc(_secEscMesTxt(mes)) + '.</span></div>' : faixa)
+    + tabela
     + blocoPend + blocoProntos + blocoFora + blocoAfast + ajuda + '</div>';
 }
 
@@ -243,15 +315,22 @@ async function sec_escConfirmarPicker(dt, local) {
   if (await _secEscAdd(dt, sid, nome, local)) { _secEscPicker = null; _secEscAtualizar(); }
 }
 function sec_escArrastar(ev, tipo, id) { ev.dataTransfer.setData('text/plain', tipo + ':' + id); ev.dataTransfer.effectAllowed = 'move'; }
-async function sec_escSoltar(ev, dt) {
-  ev.preventDefault(); ev.currentTarget.style.background = '';
+// local (16/10/2026, tabela local × sábado): soltar na linha do outro local também troca CME/PEF
+async function sec_escSoltar(ev, dt, local) {
+  ev.preventDefault(); ev.currentTarget.style.background = ''; if (ev.currentTarget.classList) ev.currentTarget.classList.remove('escx-drop');
   const [tipo, id] = String(ev.dataTransfer.getData('text/plain') || '').split(':');
-  if (tipo === 'serv') { if (await _secEscAdd(dt, id, '', '')) _secEscAtualizar(); return; }
+  if (tipo === 'serv') { if (await _secEscAdd(dt, id, '', local || '')) _secEscAtualizar(); return; }
   if (tipo !== 'item') return;
-  const d0 = _secDados(), x = d0.escalaSabado.find(e => e.id === id); if (!x || x.data === dt) return;
-  if (x.servidorId && d0.escalaSabado.some(e => e.data === dt && e.servidorId === x.servidorId)) { _mostrarToast('Essa pessoa já está nesse dia.', 'erro'); return; }
-  const ok = await _secMutar(d => { const e = d.escalaSabado.find(z => z.id === id); if (!e) return false; e.data = dt; e.status = ''; e.editadoPor = usuarioAtual ? usuarioAtual.nome : ''; e.editadoEm = new Date().toISOString(); },
-    { action: 'sec_esc_mover', alvo: _secEscNome(x, d0), detalhe: _secBR(x.data) + ' → ' + _secBR(dt) });
+  const d0 = _secDados(), x = d0.escalaSabado.find(e => e.id === id); if (!x) return;
+  const mudaDia = x.data !== dt, mudaLocal = !!local && x.local !== local;
+  if (!mudaDia && !mudaLocal) return;
+  if (mudaDia && x.servidorId && d0.escalaSabado.some(e => e.data === dt && e.servidorId === x.servidorId)) { _mostrarToast('Essa pessoa já está nesse dia.', 'erro'); return; }
+  const ok = await _secMutar(d => {
+    const e = d.escalaSabado.find(z => z.id === id); if (!e) return false;
+    if (mudaDia) { e.data = dt; e.status = ''; }
+    if (mudaLocal) e.local = local;
+    e.editadoPor = usuarioAtual ? usuarioAtual.nome : ''; e.editadoEm = new Date().toISOString();
+  }, { action: 'sec_esc_mover', alvo: _secEscNome(x, d0), detalhe: (mudaDia ? _secBR(x.data) + ' → ' + _secBR(dt) : _secBR(dt)) + (mudaLocal ? ' · ' + x.local + ' → ' + local : '') });
   if (ok) _secEscAtualizar();
 }
 async function sec_escAlterar(id, mudar, acao) {
