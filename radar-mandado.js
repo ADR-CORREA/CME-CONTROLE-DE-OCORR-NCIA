@@ -60,6 +60,8 @@ function _rdsRender() {
       : '<div style="font-size:.85rem;color:#64748b">Ninguém no radar. Use "Rastrear" na ficha de quem tem mandado ou digite o código acima.</div>')
     + _rdsHtmlAcesso(L);
   el.querySelectorAll('[data-rds-remover]').forEach(b => b.addEventListener('click', () => rds_remover(b.getAttribute('data-rds-remover'))));
+  // copiar o link sem montar o texto dentro de onclick (senha escolhida pode ter aspas e símbolos)
+  el.querySelectorAll('[data-rds-copiar]').forEach(b => b.addEventListener('click', () => { if (navigator.clipboard) navigator.clipboard.writeText(_rdsLinkNovo); _mostrarToast('Link copiado.', 'sucesso'); }));
 }
 
 // Código de acesso do app (um só). O CME não guarda o código: só mostra o link logo depois de trocar.
@@ -67,8 +69,10 @@ function _rdsHtmlAcesso(L) {
   return '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:.8rem;color:#475569">'
     + '<b>Acesso no celular:</b> ' + (L.codigo_definido ? 'senha gerada em ' + new Date(L.codigo_trocado_em).toLocaleString('pt-BR') + '. ' : '<span style="color:#b91c1c">ainda sem senha — gere uma para abrir o radar no celular.</span> ')
     + ' <button type="button" onclick="rds_trocarCodigo()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:4px 10px;font-size:.78rem;cursor:pointer">' + (L.codigo_definido ? 'Gerar nova senha' : 'Gerar senha') + '</button>'
-    + '<div style="font-size:.72rem;color:#94a3b8;margin-top:3px">A senha é gerada pelo servidor (20 letras e números) e aparece só uma vez, aqui. Gerar outra desconecta todos os celulares com o radar aberto.</div>'
-    + (_rdsLinkNovo ? '<div style="margin-top:6px;padding:8px 10px;background:#f0fdf4;border-left:3px solid #16a34a;border-radius:4px">\u{1F511} Senha: <b style="font-family:var(--font-mono);letter-spacing:.06em">' + _mpEsc(_rdsCodigoNovo) + '</b> · \u{1F517} link (envie só para quem vai rastrear): <a href="' + _mpEsc(_rdsLinkNovo) + '" target="_blank" rel="noopener" style="font-family:var(--font-mono)">' + _mpEsc(_rdsLinkNovo) + '</a> <button type="button" onclick="navigator.clipboard&&navigator.clipboard.writeText(\'' + _mpEsc(_rdsLinkNovo) + '\');_mostrarToast(\'Link copiado.\',\'sucesso\')" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:2px 8px;font-size:.75rem;cursor:pointer">Copiar</button></div>' : '')
+    + ' <span style="color:#94a3b8">ou</span> <input id="rds-senha-propria" type="password" autocomplete="new-password" maxlength="40" placeholder="escolha a senha" style="padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px;width:170px">'
+    + ' <button type="button" onclick="rds_cadastrarSenha()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:4px 10px;font-size:.78rem;cursor:pointer">Cadastrar senha</button>'
+    + '<div style="font-size:.72rem;color:#94a3b8;margin-top:3px">Gere uma senha forte (20 letras e números, aparece só uma vez, aqui) ou cadastre a sua: de 8 a 40 caracteres, sem espaço, com letra e número. Trocar a senha desconecta todos os celulares com o radar aberto.</div>'
+    + (_rdsLinkNovo ? '<div style="margin-top:6px;padding:8px 10px;background:#f0fdf4;border-left:3px solid #16a34a;border-radius:4px">' + (_rdsCodigoNovo ? '\u{1F511} Senha: <b style="font-family:var(--font-mono);letter-spacing:.06em">' + _mpEsc(_rdsCodigoNovo) + '</b> · ' : '\u{1F511} Senha cadastrada. · ') + '\u{1F517} link (envie só para quem vai rastrear; ele já leva a senha): <a href="' + _mpEsc(_rdsLinkNovo).replace(/"/g, '&quot;') + '" target="_blank" rel="noopener" style="font-family:var(--font-mono)">' + _mpEsc(_rdsLinkNovo) + '</a> <button type="button" data-rds-copiar="1" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:2px 8px;font-size:.75rem;cursor:pointer">Copiar</button></div>' : '')
     + '</div>';
 }
 
@@ -116,6 +120,22 @@ async function rds_remover(reg) {
   if (!confirm('Tirar ' + ((a && a.nome) || reg) + ' do radar?\n\nSome do app na hora, e a ficha e o rastro dele no radar são apagados.')) return;
   try { await _mpApi('/radar/remover', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_akiles: reg }) }); _mostrarToast('Removido do radar.', 'sucesso'); }
   catch (e) { _mostrarToast('Não consegui remover: ' + (e.message || e), 'erro'); }
+  await rds_carregar();
+}
+// Senha escolhida pela gerência (16/10/2026, pedido do Adriano). O servidor confere as mesmas regras e guarda só o hash.
+async function rds_cadastrarSenha() {
+  const i = document.getElementById('rds-senha-propria'), cod = String(i && i.value || '');
+  if (cod.length < 8 || cod.length > 40 || /\s/.test(cod) || !/[A-Za-z]/.test(cod) || !/\d/.test(cod)) {
+    _mostrarToast('A senha precisa ter de 8 a 40 caracteres, sem espaço, com pelo menos uma letra e um número.', 'erro'); return;
+  }
+  if (_rdsLista && _rdsLista.codigo_definido && !confirm('Trocar a senha do radar pela que você digitou? A antiga deixa de valer e todos os celulares com o radar aberto serão desconectados.')) return;
+  try {
+    await _mpApi('/radar/codigo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo: cod }) });
+    _rdsCodigoNovo = ''; // a senha escolhida não é mostrada de volta
+    _rdsLinkNovo = _RDS_APP + '/radar#' + encodeURIComponent(cod);
+    if (i) i.value = '';
+    _mostrarToast('Senha do radar cadastrada. Use a mesma no celular (maiúsculas e minúsculas tanto faz).', 'sucesso');
+  } catch (e) { _mostrarToast('Não consegui cadastrar a senha: ' + (e.message || e), 'erro'); }
   await rds_carregar();
 }
 async function rds_trocarCodigo() {
