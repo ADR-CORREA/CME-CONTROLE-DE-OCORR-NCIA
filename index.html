@@ -1952,7 +1952,11 @@ html[data-theme="dark"] [style*="background-image"]{ filter: invert(1) hue-rotat
           <div style="font-weight:700;color:#5b21b6;margin-bottom:2px">🔎 Buscar direto no banco (Metabase) — sem baixar planilha</div>
           <div style="font-size:.78rem;color:#6b7280;margin-bottom:10px">Preencha ao menos <b>nome</b>, CPF, mãe ou pai (aceita parte do nome). Tipo e vara são opcionais e também aceitam parte do texto. Os mapas das violações de zona saem pelo robô.</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 10px" onkeydown="if(event.key==='Enter'){event.preventDefault();rv_buscarBanco();}">
-            <div class="form-field" style="margin:0;grid-column:span 2"><label>Monitorado</label><input type="text" id="rv-b-nome" placeholder="Nome ou parte do nome" autocomplete="off"></div>
+            <div class="form-field" style="margin:0;grid-column:span 2"><label>Monitorado <span style="font-weight:400;color:#6b7280;text-transform:none;letter-spacing:0">— um por campo; "+" adiciona outro (cada um sai num relatório)</span></label>
+              <div id="rv-b-nomes" style="display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;gap:6px"><input type="text" id="rv-b-nome" class="rv-b-nome" placeholder="Nome ou parte do nome" autocomplete="off" style="flex:1;min-width:0">
+                  <button type="button" onclick="rv_addNomeBusca()" title="Adicionar outro monitorado" style="flex:none;width:38px;border:1px solid #7c3aed;background:#7c3aed;color:#fff;border-radius:6px;font-size:1.1rem;font-weight:700;cursor:pointer">+</button></div>
+              </div></div>
             <div class="form-field" style="margin:0"><label>CPF</label><input type="text" id="rv-b-cpf" placeholder="só números" inputmode="numeric" autocomplete="off"></div>
             <div class="form-field" style="margin:0"><label>Mãe</label><input type="text" id="rv-b-mae" autocomplete="off"></div>
             <div class="form-field" style="margin:0"><label>Pai</label><input type="text" id="rv-b-pai" autocomplete="off"></div>
@@ -20674,8 +20678,23 @@ function _rvBuscaPeriodoPadrao(){
   if(a && !a.value) a.value=_rvIsoData(new Date(Date.now()-30*864e5));
   if(b && !b.value) b.value=_rvIsoData(new Date());
 }
+// Campo extra de monitorado (o "+" do Monitorado): cada nome é buscado e sai num relatório próprio.
+function rv_addNomeBusca(valor){
+  const box=document.getElementById('rv-b-nomes'); if(!box) return;
+  const lin=document.createElement('div'); lin.style.cssText='display:flex;gap:6px';
+  lin.innerHTML='<input type="text" class="rv-b-nome" placeholder="Outro monitorado" autocomplete="off" style="flex:1;min-width:0">'
+    +'<button type="button" title="Tirar este monitorado" style="flex:none;width:38px;border:1px solid #cbd5e1;background:#fff;color:#64748b;border-radius:6px;font-size:1rem;cursor:pointer">\u{2715}</button>';
+  lin.querySelector('button').onclick=()=>lin.remove();
+  if(valor) lin.querySelector('input').value=valor;
+  box.appendChild(lin); lin.querySelector('input').focus();
+}
+function _rvNomesBusca(){
+  return [...document.querySelectorAll('#rv-b-nomes .rv-b-nome')].map(i=>String(i.value||'').replace(/\s+/g,' ').trim()).filter(Boolean)
+    .filter((n,i,a)=>a.findIndex(x=>x.toUpperCase()===n.toUpperCase())===i);
+}
 function rv_limparBusca(){
   Object.values(_RV_BUSCA_CAMPOS).concat(['rv-b-ini','rv-b-fim']).forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.querySelectorAll('#rv-b-nomes > div').forEach((d,i)=>{ if(i>0) d.remove(); });
   _rvBuscaPeriodoPadrao();
 }
 function rv_buscarBanco(){
@@ -20683,7 +20702,11 @@ function rv_buscarBanco(){
   const f={};
   Object.entries(_RV_BUSCA_CAMPOS).forEach(([k,id])=>{ const v=String(document.getElementById(id)?.value||'').replace(/\s+/g,' ').trim(); if(v) f[k]=v; });
   if(f.cpf) f.cpf=f.cpf.replace(/\D/g,'');
-  if(!['monitorado','cpf','mae','pai'].some(k=>(f[k]||'').length>=3)){ _mostrarToast('Informe o nome (ou CPF, mãe ou pai) com pelo menos 3 caracteres.','erro'); return; }
+  // vários monitorados (campos do "+"): cada nome vira uma busca; o resto dos filtros vale para todos
+  const nomes=_rvNomesBusca();
+  if(nomes.some(n=>n.length<3)){ _mostrarToast('Cada nome de monitorado precisa de pelo menos 3 caracteres.','erro'); return; }
+  delete f.monitorado; if(nomes.length===1) f.monitorado=nomes[0]; else if(nomes.length>1) f.monitorados=nomes;
+  if(!f.monitorados && !['monitorado','cpf','mae','pai'].some(k=>(f[k]||'').length>=3)){ _mostrarToast('Informe o nome (ou CPF, mãe ou pai) com pelo menos 3 caracteres.','erro'); return; }
   const ini=document.getElementById('rv-b-ini').value, fim=document.getElementById('rv-b-fim').value;
   if(!ini||!fim||ini>fim){ _mostrarToast('Confira o período.','erro'); return; }
   rv_gerarAutomatico(f, ini, fim, { gerarWord:false });
@@ -20695,16 +20718,28 @@ setTimeout(_rvBuscaPeriodoPadrao, 0);
 async function rv_gerarAutomatico(nomeOuFiltros, ini, fim, opts){
   opts=opts||{};
   const filtros=typeof nomeOuFiltros==='object' ? nomeOuFiltros : { monitorado:nomeOuFiltros };
-  const nome=filtros.monitorado||(filtros.cpf?'CPF '+filtros.cpf:'')||(filtros.mae?'filho(a) de '+filtros.mae:'')||(filtros.pai?'filho(a) de '+filtros.pai:'');
+  const lista=Array.isArray(filtros.monitorados)?filtros.monitorados:null;
+  const nome=lista?lista.length+' monitorados ('+lista.join(', ')+')':(filtros.monitorado||(filtros.cpf?'CPF '+filtros.cpf:'')||(filtros.mae?'filho(a) de '+filtros.mae:'')||(filtros.pai?'filho(a) de '+filtros.pai:''));
   if(!(typeof _r2Pronto==='function' && _r2Pronto())){ _mostrarToast('Sem conexão com o servidor do CME — tente de novo em instantes.','erro'); return; }
   _mostrarToast('\u{1F50E} Buscando no Metabase as violações de '+nome+'…');
-  let rows;
+  let rows; const semResultado=[];
   try{
-    const qs=Object.entries(filtros).filter(([,v])=>v).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
-    const r=await fetch(r2_state.url.replace(/\/$/,'')+'/metabase/ocorrencias?'+qs+'&ini='+ini+'&fim='+fim,{headers:{'Authorization':'Bearer '+_workerToken()}});
-    const d=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(d.error||('erro '+r.status));
-    rows=d.rows||[];
+    const buscar=async f=>{
+      const qs=Object.entries(f).filter(([k,v])=>v&&k!=='monitorados').map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
+      const r=await fetch(r2_state.url.replace(/\/$/,'')+'/metabase/ocorrencias?'+qs+'&ini='+ini+'&fim='+fim,{headers:{'Authorization':'Bearer '+_workerToken()}});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||('erro '+r.status));
+      return d.rows||[];
+    };
+    if(lista){
+      rows=[]; const vistos=new Set();
+      for(const n of lista){
+        const rs=await buscar(Object.assign({},filtros,{monitorado:n}));
+        if(!rs.length) semResultado.push(n);
+        rs.forEach(x=>{ const k=String(x.id_ocorrencia||'')+'|'+String(x.monitorado||''); if(!vistos.has(k)){ vistos.add(k); rows.push(x); } });
+      }
+      if(semResultado.length) _mostrarToast('Sem violação no período: '+semResultado.join(', ')+'.','erro');
+    } else rows=await buscar(filtros);
   }catch(e){ _mostrarToast('Não consegui buscar no Metabase: '+(e.message||e),'erro'); return; }
   const fmtBR=iso=>iso.split('-').reverse().join('/');
   if(!rows.length){ _mostrarToast('Nenhuma violação de '+nome+' entre '+fmtBR(ini)+' e '+fmtBR(fim)+' no Metabase.','erro'); return; }
