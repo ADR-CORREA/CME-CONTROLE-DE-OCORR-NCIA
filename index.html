@@ -10987,7 +10987,7 @@ function _plDia(d, dia) {
            rec, recebidas, tratadas, pctTratadas: recebidas ? Math.round(tratadas / recebidas * 100) : null, emAnalise: st['Em análise'] || 0, abertas: st['Aberto'] || 0,
            automaticas: t.automaticas, humanas: t.humanas, pop: t.pop || null, pctPop: t.pop && t.pop.avaliadas ? Math.round(t.pop.noPrazo / t.pop.avaliadas * 100) : null,
            repasse: t.repasse, graves: t.graves || null, porHora: t.porHora || null, buracos: t.buracos || null, instTestadas: t.instTestadas || 0, instAtencao: t.instAtencao || [],
-           vd: t.vd || null, servidores: t.servidores || {}, ocServ: t.ocorrenciasPorServidor || null, restDeixadas: t.restDeixadas || null };
+           vd: t.vd || null, servidores: t.servidores || {}, ocServ: t.ocorrenciasPorServidor || null, restDeixadas: t.restDeixadas || null, restLimite: t.restLimite || null };
 }
 function _plDiasDe(d, equipe) { return Object.keys(d.turnos || {}).concat(Object.keys(d.expediente || {})).filter((x, i, a) => a.indexOf(x) === i).filter(dia => getPlantaoParaData(dia) === equipe).sort().reverse(); }
 function pl_renderizar() {
@@ -11008,7 +11008,7 @@ function pl_renderizar() {
       av.innerHTML = '<div onclick="pl_detalhe(\'' + ult.equipe + '\', \'' + ult.dia + '\', true)" style="cursor:pointer;border:1px solid #fca5a5;border-left:4px solid #7c3aed;background:#faf5ff;border-radius:6px;padding:9px 12px;font-size:.82rem">'
         + '<b style="color:#6d28d9">\u26A0 Violência doméstica — plantão ' + ult.equipe + ' de ' + _plDataBR(ult.dia) + ':</b> '
         + '<b style="color:#b91c1c">' + ult.vd.pendencias.length + ' de ' + ult.vd.violacoes + '</b> casos ficaram com pendência'
-        + ' <span style="color:#64748b">(' + ult.vd.semAcao + ' sem ação · ' + ult.vd.foraPrazo + ' fora do prazo · ' + ult.vd.semRegistro + ' sem registro no perfil)</span>. <u>Clique para ver quais</u></div>';
+        + ' <span style="color:#64748b">(' + (ult.vd.semDecisao != null ? ult.vd.semDecisao + ' sem decisão · ' + ult.vd.foraPrazo + ' decidida(s) fora do prazo' : ult.vd.semAcao + ' sem ação · ' + ult.vd.foraPrazo + ' fora do prazo') + ' · ' + ult.vd.semRegistro + ' sem registro no perfil)</span>. <u>Clique para ver quais</u></div>';
     } else { av.style.display = 'none'; av.innerHTML = ''; }
   }
   const linha = (rot, val, cor) => '<div style="display:flex;justify-content:space-between;gap:6px"><span style="color:#64748b">' + rot + '</span><b style="font-family:var(--font-mono);' + (cor ? 'color:' + cor : '') + '">' + val + '</b></div>';
@@ -11048,7 +11048,12 @@ function pl_renderizar() {
              repasse: xs.length ? xs.reduce((s2, x) => s2 + (x.repasse || 0), 0) / xs.length : null,
              buracoMin: xs.reduce((s2, x) => s2 + ((x.buracos && x.buracos.totalMin) || 0), 0),
              vdViol: xs.reduce((s2, x) => s2 + ((x.vd && x.vd.violacoes) || 0), 0), vdPend: xs.reduce((s2, x) => s2 + ((x.vd && x.vd.pendencias.length) || 0), 0),
-             restN: xs.reduce((s2, x) => s2 + ((x.restDeixadas && x.restDeixadas.n) || 0), 0), restMed: xs.filter(x => x.restDeixadas).length };
+             restN: xs.reduce((s2, x) => s2 + ((x.restDeixadas && x.restDeixadas.n) || 0), 0), restMed: xs.filter(x => x.restDeixadas).length,
+             // foco em VD (16/10/2026): decisão (confirmada/não confirmada) no prazo do POP, sem decisão e restabelecidas às 04h
+             ...(() => { const ms = xs.filter(x => x.vd && x.vd.medeDecisao), rl = xs.filter(x => x.restLimite);
+               return { vdDias: ms.length, vdMedViol: ms.reduce((s2, x) => s2 + x.vd.violacoes, 0), vdDecOk: ms.reduce((s2, x) => s2 + (x.vd.decNoPrazo || 0), 0),
+                        vdSem: ms.reduce((s2, x) => s2 + (x.vd.semDecisao || 0), 0), vdDecMeds: ms.map(x => x.vd.decMedMin).filter(v => v != null),
+                        restLimN: rl.reduce((s2, x) => s2 + x.restLimite.n, 0), restLimDias: rl.length, restLimSo08: rl.filter(x => x.restLimite.so08).length }; })() };
   });
   const max = Math.max(1, ...lin.map(l => l.conf + l.nao));
   comp.innerHTML = '<div style="font-size:.8rem;font-weight:700;color:#0f2742;margin-bottom:6px">Comparativo — média por plantão (' + nd + ' dias)</div>'
@@ -11090,17 +11095,18 @@ function pl_detalhe(eq, diaEscolhido, focoVD) {
     + (() => {
         // ── Violência doméstica: pendências do plantão ──
         const v = x.vd; if (!v) return '';
-        const ROT = { SISTEMA: ['arquivada só pelo sistema', '#b91c1c'], SEM_ACAO: ['sem ação de operador', '#b91c1c'], FORA_PRAZO: ['fora do prazo do POP', '#c2410c'], SEM_REGISTRO: ['confirmada sem registro no perfil', '#a16207'] };
-        const peso = p2 => (p2.fl.includes('SISTEMA') || p2.fl.includes('SEM_ACAO') ? 0 : p2.fl.includes('FORA_PRAZO') ? 1 : 2);
+        const ROT = { SEM_DECISAO: ['sem decisão (ninguém confirmou nem negou)', '#b91c1c'], DECISAO_FORA_PRAZO: ['decidida fora do prazo do POP', '#c2410c'], SEM_REGISTRO: ['confirmada sem registro no perfil', '#a16207'],
+                      SISTEMA: ['arquivada só pelo sistema', '#b91c1c'], SEM_ACAO: ['sem ação de operador', '#b91c1c'], FORA_PRAZO: ['fora do prazo do POP', '#c2410c'] }; // as 3 últimas: dados antigos do robô
+        const peso = p2 => (p2.fl.some(f2 => /SEM_DECISAO|SISTEMA|SEM_ACAO/.test(f2)) ? 0 : p2.fl.some(f2 => /FORA_PRAZO/.test(f2)) ? 1 : 2);
         const lst = v.pendencias.slice().sort((a2, b2) => peso(a2) - peso(b2) || (a2.d < b2.d ? -1 : 1));
         return '<div id="pl-vd-sec" style="border:1px solid #ddd6fe;border-left:4px solid #7c3aed;border-radius:6px;padding:8px 10px;margin-bottom:12px">'
           + '<div style="font-weight:700;font-size:.85rem;color:#6d28d9;margin-bottom:4px">\u26A0 Violência doméstica — ' + v.violacoes + ' violação(ões), ' + v.confirmadas + ' confirmada(s), ' + lst.length + ' com pendência</div>'
-          + '<div style="font-size:.72rem;color:#64748b;margin-bottom:6px">Pendência = nenhuma ação de operador · 1ª ação depois do prazo do POP (VD: 1h exclusão/botão/proximidade, 12h inclusão, 24h pulseira/bateria) · violação CONFIRMADA sem registro no perfil do monitorado no AKILES até o fim do plantão (08h).</div>'
-          + (lst.length ? '<div style="max-height:320px;overflow-y:auto"><table style="width:100%;border-collapse:collapse;font-size:.75rem"><thead><tr>' + ['Hora', 'Ocorrência', 'Monitorado', 'Tipo', 'Atendeu', '1ª ação', 'Pendência'].map(th).join('') + '</tr></thead><tbody>'
+          + '<div style="font-size:.72rem;color:#64748b;margin-bottom:6px">Pendência = ninguém confirmou nem negou a violação · decisão (confirmada/não confirmada) depois do prazo do POP (VD: 1h exclusão/botão/proximidade, 12h inclusão, 24h pulseira/bateria) · violação CONFIRMADA sem registro no perfil do monitorado no AKILES até o fim do plantão (08h).</div>'
+          + (lst.length ? '<div style="max-height:320px;overflow-y:auto"><table style="width:100%;border-collapse:collapse;font-size:.75rem"><thead><tr>' + ['Hora', 'Ocorrência', 'Monitorado', 'Tipo', 'Decidiu', 'Demorou', 'Pendência'].map(th).join('') + '</tr></thead><tbody>'
               + lst.map(p2 => '<tr style="border-top:1px solid #f1f5f9">' + td(new Date(p2.d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }), 1) + td(esc(p2.id), 1)
                 + td('<b>' + esc(p2.nome || '—') + '</b>' + (p2.reg ? '<div style="color:#64748b;font-family:var(--font-mono)">reg. ' + esc(p2.reg) + '</div>' : '')) + td(esc(p2.t) + (p2.conf ? ' <span style="color:#15803d;font-weight:700">\u2714 conf.</span>' : ''))
                 + td(p2.op ? esc(nome(p2.op)) : '<span style="color:#b91c1c">ninguém</span>') + td(p2.min != null ? p2.min + ' min <span style="color:#94a3b8">(prazo ' + (p2.sla * 60) + ')</span>' : '—', 1)
-                + td(p2.fl.map(f2 => '<span style="display:inline-block;margin:1px 2px;padding:1px 6px;border-radius:3px;background:' + ROT[f2][1] + '1a;color:' + ROT[f2][1] + ';font-weight:700;font-size:.68rem">' + ROT[f2][0] + '</span>').join('')) + '</tr>').join('') + '</tbody></table></div>'
+                + td(p2.fl.map(f2 => { const r2 = ROT[f2] || [f2, '#b91c1c']; return '<span style="display:inline-block;margin:1px 2px;padding:1px 6px;border-radius:3px;background:' + r2[1] + '1a;color:' + r2[1] + ';font-weight:700;font-size:.68rem">' + esc(r2[0]) + '</span>'; }).join('')) + '</tr>').join('') + '</tbody></table></div>'
             : '<div style="color:#15803d;font-size:.78rem">Nenhuma pendência — todas atendidas no prazo e registradas.</div>')
           + '</div>';
       })()
@@ -11138,12 +11144,12 @@ function pl_detalhe(eq, diaEscolhido, focoVD) {
     + '<div style="font-size:.7rem;color:#94a3b8;margin-top:10px">Fonte: auditoria do AKILES (só leitura). Quem está como "Expediente / supervisão" não entra nos números do plantão.</div>';
   // Relato das 24 h em cima (plantoes-detalhe.js); os números técnicos abrem num clique
   const corpo = typeof _pldRelato === 'function'
-    ? _pldRelato(d, x, eq, dia, dias) + '<details id="pl-det-num"' + (focoVD ? ' open' : '') + ' style="margin-top:14px;border-top:1px solid #e2e8f0;padding-top:10px"><summary style="cursor:pointer;font-weight:600;color:#1d4ed8">\u{1F4CA} Ver todos os números do plantão</summary><div style="margin-top:10px">' + html + '</div></details>'
+    ? _pldRelato(d, x, eq, dia, dias) + '<details id="pl-det-num" style="margin-top:14px;border-top:1px solid #e2e8f0;padding-top:10px"><summary style="cursor:pointer;font-weight:600;color:#1d4ed8">\u{1F4CA} Outros números do plantão</summary><div style="margin-top:10px">' + (typeof _pldOutros === 'function' ? _pldOutros(d, x) : '') + html + '</div></details>'
     : html;
   let ov = document.getElementById('pl-modal');
   if (!ov) { ov = document.createElement('div'); ov.id = 'pl-modal'; ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow:auto'; ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); }); document.body.appendChild(ov); }
   ov.innerHTML = '<div style="background:#fff;border-radius:8px;max-width:980px;width:100%;padding:16px 20px;box-shadow:0 10px 40px rgba(0,0,0,.3)"><div style="display:flex;justify-content:flex-end"><button type="button" onclick="document.getElementById(\'pl-modal\').remove()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:4px 12px;cursor:pointer">Fechar \u2715</button></div>' + corpo + '</div>';
-  if (focoVD) { const sec = document.getElementById('pl-vd-sec'); if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: 'start' }); }
+  if (focoVD) { const sec = document.getElementById('pld-vd') || document.getElementById('pl-vd-sec'); if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: 'start' }); }
 }
 // Ocorrências de UM servidor no plantão: quanto tempo levou cada uma (1ª ação dele)
 function pl_servidor(eq, dia, op) {

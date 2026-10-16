@@ -28,7 +28,7 @@ function _plsAgregar(d, nd) {
   const lim = _isoLocal(new Date(Date.now() - nd * 864e5));
   const dias = Object.keys(d.turnos || {}).concat(Object.keys(d.expediente || {})).filter((x, i, a) => a.indexOf(x) === i).filter(dd => dd >= lim).sort();
   const ag = {};
-  const novo = op => ag[op] = ag[op] || { op, plantoes: [], porEq: {}, n: 0, pop: 0, popOk: 0, vd: 0, vdP: 0, meds: [], conf: 0, nconf: 0, inst: 0, desinst: 0, sms: 0, registro: 0, sens: 0 };
+  const novo = op => ag[op] = ag[op] || { op, plantoes: [], porEq: {}, n: 0, pop: 0, popOk: 0, vd: 0, vdP: 0, vdDec: 0, vdDecOk: 0, vdDecMeds: [], meds: [], conf: 0, nconf: 0, inst: 0, desinst: 0, sms: 0, registro: 0, sens: 0 };
   dias.forEach(dd => {
     const x = _plDia(d, dd); if (x.parcial) return;
     const pend = {}; ((x.vd && x.vd.pendencias) || []).forEach(p => { if (p.op) pend[p.op] = (pend[p.op] || 0) + 1; });
@@ -37,10 +37,11 @@ function _plsAgregar(d, nd) {
       const sv = (x.servidores || {})[op] || {}, o = (x.porOp || {})[op] || {};
       const algo = sv.n || Object.values(o).some(n => n); if (!algo) return;
       const a = novo(op);
-      a.plantoes.push({ dia: dd, eq: x.equipe, n: sv.n || 0, pct: sv.pop ? Math.round(sv.popOk / sv.pop * 100) : null, med: sv.med, vd: sv.vd || 0, vdP: pend[op] || 0,
+      a.plantoes.push({ dia: dd, eq: x.equipe, n: sv.n || 0, pct: sv.pop ? Math.round(sv.popOk / sv.pop * 100) : null, med: sv.med, vd: sv.vd || 0, vdP: pend[op] || 0, vdDec: sv.vdDec || 0, vdDecOk: sv.vdDecOk || 0,
         inst: (o.instalacao || 0) + (o.desinstalacao || 0), conf: (o.confirmadas || 0) + (o.naoConfirmadas || 0), sens: x.sens.filter(s => s.op === op).length });
       a.porEq[x.equipe] = (a.porEq[x.equipe] || 0) + 1;
       a.n += sv.n || 0; a.pop += sv.pop || 0; a.popOk += sv.popOk || 0; a.vd += sv.vd || 0; a.vdP += pend[op] || 0; if (sv.med != null) a.meds.push(sv.med);
+      a.vdDec += sv.vdDec || 0; a.vdDecOk += sv.vdDecOk || 0; if (sv.vdDecMed != null) a.vdDecMeds.push(sv.vdDecMed);
       a.conf += o.confirmadas || 0; a.nconf += o.naoConfirmadas || 0; a.inst += o.instalacao || 0; a.desinst += o.desinstalacao || 0; a.sms += (o.sms || 0) + (o.alerta || 0); a.registro += o.registro || 0;
       a.sens += x.sens.filter(s => s.op === op).length;
     });
@@ -53,7 +54,7 @@ function _plsAgregar(d, nd) {
     const funcao = a.n === 0 && a.inst + a.desinst ? 'Instalação' : (a.inst + a.desinst) > a.n ? 'Instalação e monitoramento' : 'Monitoramento';
     const proprios = a.plantoes.filter(p => !equipe || equipe === 'EXPEDIENTE' || p.eq === equipe).length;
     return Object.assign(a, { nome: sec ? sec.nome : nomeAk, secId: sec ? sec.id : null, equipe, equipeRobo: eqMais ? eqMais[0] : '', funcao,
-      nPl: proprios || a.plantoes.length, nOutros: a.plantoes.length - proprios, pct: a.pop ? Math.round(a.popOk / a.pop * 100) : null, med: _plsMediana(a.meds) });
+      nPl: proprios || a.plantoes.length, nOutros: a.plantoes.length - proprios, pct: a.pop ? Math.round(a.popOk / a.pop * 100) : null, med: _plsMediana(a.meds), vdDecMed: _plsMediana(a.vdDecMeds) });
   });
 }
 function _plsMediaEquipe(lista, eq) {
@@ -97,7 +98,8 @@ function _plsRender(d, nd) {
         + td('<b>' + l.n + '</b> <span style="color:#64748b;font-size:.75rem">(' + (Math.round(porPl * 10) / 10).toString().replace('.', ',') + ' por plantão)</span>' + _plsComp(porPl, m.nPorPl, 'maior', v => (Math.round(v * 10) / 10).toString().replace('.', ',')))
         + td(l.pct != null ? '<b style="color:' + _plrCorBarra(l.pct / 100) + '">' + l.pct + '%</b>' + _plsComp(l.pct, m.pct, 'pct', v => v + '%') : '—')
         + td(l.med != null ? _plrMin(l.med) + _plsComp(l.med, m.med, 'menor', _plrMin) : '—')
-        + td(l.vd ? l.vd + ' atendida(s)' + (l.vdP ? '<div style="font-size:.72rem;color:#b91c1c">' + l.vdP + ' com pendência</div>' : '') : '—')
+        + td(l.vdDec ? '<b>' + l.vdDec + '</b> decidida(s) · <b style="color:' + _plrCorBarra(l.vdDecOk / l.vdDec) + '">' + Math.round(l.vdDecOk / l.vdDec * 100) + '% no prazo</b>' + (l.vdDecMed != null ? '<div style="font-size:.72rem;color:#64748b">tempo típico até decidir: ' + _plrMin(l.vdDecMed) + '</div>' : '') : l.vd ? l.vd + ' atendida(s)' : '—')
+        + (l.vdP ? '<div style="font-size:.72rem;color:#b91c1c">' + l.vdP + ' com pendência</div>' : '')
         + td(l.conf + l.nconf ? l.conf + ' \u{2714} · ' + l.nconf + ' \u{2718}' : '—', 'font-family:var(--font-mono)')
         + td(l.inst + l.desinst ? l.inst + ' / ' + l.desinst : '—', 'font-family:var(--font-mono)')
         + td(l.sens || '—', 'font-family:var(--font-mono)') + '</tr>'; }).join('')
@@ -117,7 +119,8 @@ function pl_fichaServidor(op) {
       + (l.nOutros ? ', e agiu em mais <b>' + l.nOutros + '</b> plantão(ões) de outra equipe (apoio)' : '') + '. Função principal: ' + l.funcao.toLowerCase() + '.',
     'Foi o primeiro a agir em <b>' + l.n + '</b> ocorrências (' + num(porPl) + ' por plantão' + (m.nPorPl != null ? '; média da equipe: ' + num(m.nPorPl) : '') + ').',
     l.pct != null ? 'Respondeu <b>dentro do prazo do POP em ' + l.pct + '%</b> das vezes' + (m.pct != null ? ' (equipe: ' + m.pct + '%)' : '') + (l.med != null ? '; tempo típico de ' + _plrMin(l.med) + (m.med != null ? ' (equipe: ' + _plrMin(m.med) + ')' : '') : '') + '.' : 'Não deu a 1ª resposta em ocorrências com prazo no período.',
-    l.vd ? 'Atendeu <b>' + l.vd + '</b> caso(s) de violência doméstica' + (l.vdP ? ', <b style="color:#b91c1c">' + l.vdP + ' com pendência</b> (fora do prazo ou sem registro no perfil)' : ', todos em dia') + '.' : '',
+    l.vdDec ? 'Decidiu (confirmou ou não confirmou) <b>' + l.vdDec + '</b> violação(ões) de violência doméstica, <b>' + Math.round(l.vdDecOk / l.vdDec * 100) + '% dentro do prazo do POP</b>' + (l.vdDecMed != null ? ' (tempo típico: ' + _plrMin(l.vdDecMed) + ')' : '') + (l.vdP ? '; <b style="color:#b91c1c">' + l.vdP + ' com pendência</b>' : '') + '.'
+      : l.vd ? 'Atendeu <b>' + l.vd + '</b> caso(s) de violência doméstica' + (l.vdP ? ', <b style="color:#b91c1c">' + l.vdP + ' com pendência</b>' : ', todos em dia') + '.' : '',
     (l.conf + l.nconf ? 'Avaliou ' + (l.conf + l.nconf) + ' violação(ões): ' + l.conf + ' confirmada(s) e ' + l.nconf + ' não confirmada(s). ' : '') + (l.inst + l.desinst ? 'Fez ' + l.inst + ' instalação(ões) e ' + l.desinst + ' desinstalação(ões). ' : '') + (l.registro ? 'Salvou ' + l.registro + ' registro(s) no perfil de monitorados. ' : '') + (l.sms ? l.sms + ' SMS/alertas enviados.' : ''),
     l.sens ? 'Fez <b>' + l.sens + '</b> ação(ões) sensível(is) (reabertura, zona, cadastro, desvínculo) — veja em cada plantão.' : '',
   ].filter(Boolean);
@@ -132,7 +135,7 @@ function pl_fichaServidor(op) {
       + td('<a href="#" onclick="pl_servidor(\'' + p.eq + '\', \'' + p.dia + '\', \'' + op + '\');return false" style="color:#1d4ed8;font-family:var(--font-mono)">' + _plDataBR(p.dia) + '</a>')
       + td('<span style="color:' + (PLANTAO_CORES[p.eq] || '#64748b') + ';font-weight:600">' + esc(p.eq) + '</span>') + td(p.n, 'font-family:var(--font-mono)')
       + td(p.pct != null ? '<b style="color:' + _plrCorBarra(p.pct / 100) + '">' + p.pct + '%</b>' : '—') + td(p.med != null ? _plrMin(p.med) : '—')
-      + td(p.vd ? p.vd + (p.vdP ? ' <span style="color:#b91c1c">(' + p.vdP + ' pend.)</span>' : '') : '—') + td(p.conf || '—', 'font-family:var(--font-mono)') + td(p.inst || '—', 'font-family:var(--font-mono)') + td(p.sens || '—', 'font-family:var(--font-mono)') + '</tr>').join('')
+      + td(p.vdDec ? p.vdDec + ' decid. · ' + Math.round(p.vdDecOk / p.vdDec * 100) + '% no prazo' + (p.vdP ? ' <span style="color:#b91c1c">(' + p.vdP + ' pend.)</span>' : '') : p.vd ? p.vd + (p.vdP ? ' <span style="color:#b91c1c">(' + p.vdP + ' pend.)</span>' : '') : '—') + td(p.conf || '—', 'font-family:var(--font-mono)') + td(p.inst || '—', 'font-family:var(--font-mono)') + td(p.sens || '—', 'font-family:var(--font-mono)') + '</tr>').join('')
     + '</tbody></table></div><div style="font-size:.72rem;color:#94a3b8;margin-top:8px">Fonte: auditoria do AKILES (só leitura). Sem nota: os números servem para conversar com o servidor, comparando com a própria equipe.</div>';
   let ov = document.getElementById('pl-modal');
   if (!ov) { ov = document.createElement('div'); ov.id = 'pl-modal'; ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow:auto'; ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); }); document.body.appendChild(ov); }
