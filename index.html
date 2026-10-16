@@ -1158,6 +1158,8 @@ html[data-theme="dark"] video,
 html[data-theme="dark"] iframe,
 html[data-theme="dark"] .leaflet-container,
 html[data-theme="dark"] [style*="background-image"]{ filter: brightness(.769) contrast(1.282) hue-rotate(180deg) invert(1); }
+/* a logo do topo tem filter (sombra) inline, que anulava a regra acima e a deixava invertida no escuro */
+html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.4)) brightness(.769) contrast(1.282) hue-rotate(180deg) invert(1) !important; }
 </style>
 <script id="cme-tema-js">
 (function(){
@@ -16529,6 +16531,7 @@ async function mp_cruzar(){
 // algoritmo de antes, só roda em lotes.
 async function _mpCruzarExec(nomesMon){
   const MIN=90;
+  _mpSituacao=null;
   const btn=document.getElementById('mp-btn-cruzar'); const txtOrig=btn?btn.textContent:'';
   const barra=document.getElementById('mp-progresso');
   const setBarra=(feitos,total,label)=>{
@@ -16619,6 +16622,21 @@ function _mpRender(){
   document.getElementById('mp-sec-provaveis').innerHTML = _mpTabela('\u{26A0}\u{FE0F} PROVÁVEIS — nomes semelhantes (revisar manualmente)','#d97706', r.provaveis, false);
 }
 
+// Situação AGORA no AKILES (robô): comunicando / sem comunicação / bateria descarregada / pulseira rompida + última localização
+let _mpSituacao = null; // { nome: situacaoAkiles } — null = ainda não buscado; {} = buscando
+const _MP_SIT = { comunicando:['COMUNICANDO','#15803d','#f0fdf4'], sem_comunicacao:['SEM COMUNICAÇÃO','#a16207','#fefce8'], descarregada:['BATERIA DESCARREGADA','#c2410c','#fff7ed'], rompida:['PULSEIRA ROMPIDA','#b91c1c','#fef2f2'] };
+function _mpHaQuanto(iso){ if(!iso) return ''; const h=(Date.now()-new Date(iso))/36e5; return h<1?'há '+Math.max(1,Math.round(h*60))+' min':h<48?'há '+Math.round(h)+' h':'há '+Math.round(h/24)+' dias'; }
+function _mpSeloSituacao(sa, completo){
+  if(!sa) return '<span style="font-size:.72rem;color:#94a3b8">sem dado do AKILES</span>';
+  const t=_MP_SIT[sa.situacao]||['?','#475569','#f8fafc'];
+  let h='<span style="display:inline-block;background:'+t[2]+';color:'+t[1]+';border-left:3px solid '+t[1]+';padding:2px 7px;border-radius:3px;font-size:.7rem;font-weight:700">'+t[0]+'</span>';
+  if(completo!==false){
+    h+='<div style="font-size:.72rem;color:#475569;margin-top:2px">'+(sa.ultimaComunicacao?'últ. comunicação '+new Date(sa.ultimaComunicacao).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})+' ('+_mpHaQuanto(sa.ultimaComunicacao)+')':'nunca comunicou')
+      +(sa.bateria!=null?' · bateria '+sa.bateria+'%'+(sa.carregando?' (carregando)':''):'')
+      +(sa.lat!=null&&sa.lon!=null?' · <a href="https://www.google.com/maps?q='+encodeURIComponent((+sa.lat).toFixed(6)+','+(+sa.lon).toFixed(6))+'" target="_blank" rel="noopener">\u{1F4CD} última localização</a>':'')+'</div>';
+  }
+  return h;
+}
 function _mpTabela(titulo,cor,lista,exato){
   let h='<div style="font-weight:700;color:'+cor+';font-size:.95rem;margin-bottom:8px">'+titulo+' ('+lista.length+')</div>';
   if(!lista.length) return h+'<div style="font-size:.85rem;color:#64748b;background:#f8fafc;border-radius:8px;padding:14px">Nenhum registro.</div>';
@@ -16626,11 +16644,13 @@ function _mpTabela(titulo,cor,lista,exato){
     +'<th style="padding:8px 10px;border-bottom:1px solid #e2e8f0">Monitorado</th>'
     +'<th style="padding:8px 10px;border-bottom:1px solid #e2e8f0">Mandado (nome encontrado)</th>'
     +(exato?'':'<th style="padding:8px 10px;border-bottom:1px solid #e2e8f0">Semelhança</th>')
+    +(_mpSituacao?'<th style="padding:8px 10px;border-bottom:1px solid #e2e8f0">Situação no AKILES agora</th>':'')
     +'</tr></thead><tbody>';
   for(const x of lista){
     h+='<tr><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;font-weight:600">'+_mpEsc(x.monitorado)+'</td>'
       +'<td style="padding:7px 10px;border-bottom:1px solid #f1f5f9">'+_mpEsc(_mpNomeExib(x.mandado))+(x.tipo==='CURINGA'?' <span title="Nome com letra corrompida na planilha do BNMP — conferido letra a letra" style="font-size:.7rem;color:#92400e">(letra ilegível no BNMP)</span>':'')+'</td>'
-      +(exato?'':'<td style="padding:7px 10px;border-bottom:1px solid #f1f5f9"><b>'+x.score+'%</b></td>')+'</tr>';
+      +(exato?'':'<td style="padding:7px 10px;border-bottom:1px solid #f1f5f9"><b>'+x.score+'%</b></td>')
+      +(_mpSituacao?'<td style="padding:7px 10px;border-bottom:1px solid #f1f5f9">'+(x.monitorado in _mpSituacao?_mpSeloSituacao(_mpSituacao[x.monitorado]):'<span style="font-size:.72rem;color:#64748b">\u{23F3} buscando no AKILES…</span>')+'</td>':'')+'</tr>';
   }
   return h+'</tbody></table></div>';
 }
@@ -16639,7 +16659,8 @@ function mp_exportarExcel(){
   if(!_mpResultado){ _mostrarToast('Faça o cruzamento primeiro.','erro'); return; }
   const r=_mpResultado;
   const vazio=[{MONITORADO:'',MANDADO:'',MATCH:'',SCORE:''}];
-  const map=l=>l.map(x=>({MONITORADO:x.monitorado,MANDADO:x.mandado,MATCH:x.tipo,SCORE:x.score}));
+  const sitTxt=n=>{ const sa=_mpSituacao&&_mpSituacao[n]; return sa?((_MP_SIT[sa.situacao]||[''])[0]+(sa.ultimaComunicacao?' — últ. comunicação '+new Date(sa.ultimaComunicacao).toLocaleString('pt-BR'):'')+(sa.bateria!=null?' — bateria '+sa.bateria+'%':'')):''; };
+  const map=l=>l.map(x=>({MONITORADO:x.monitorado,MANDADO:x.mandado,MATCH:x.tipo,SCORE:x.score,SITUACAO_AKILES:sitTxt(x.monitorado)}));
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r.confirmados.length?map(r.confirmados):vazio), 'CONFIRMADOS');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r.provaveis.length?map(r.provaveis):vazio), 'PROVAVEIS');
@@ -16674,7 +16695,9 @@ function _mpDetalhesMandados(wb){
 function _mpNomeExib(n){ return String(n||'').replace(/#/g,'\u00B7'); }
 function _mpB64url(s){ return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function _mpHojeISO(){ const d=new Date(), z=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()); }
-function _mpDataBR(iso){ const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m?m[3]+'/'+m[2]+'/'+m[1]:String(iso||''); }
+// cada cruzamento é uma pasta própria (data + hora): nada é substituído e dá para consultar quando foi gerado
+function _mpAgoraPasta(){ const d=new Date(), z=n=>String(n).padStart(2,'0'); return _mpHojeISO()+'_'+z(d.getHours())+z(d.getMinutes())+z(d.getSeconds()); }
+function _mpDataBR(iso){ const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})(?:_(\d{2})(\d{2})\d{2})?/); return m?m[3]+'/'+m[2]+'/'+m[1]+(m[4]?' às '+m[4]+':'+m[5]:''):String(iso||''); }
 function _mpBase(){ return r2_state.url.replace(/\/$/,''); }
 async function _mpApi(caminho, opts){
   const o=Object.assign({},opts||{}); o.headers=Object.assign({'Authorization':'Bearer '+_workerToken()}, o.headers||{});
@@ -16765,18 +16788,29 @@ async function _mpPosCruzamento(){
   }
   if(anterior && novos.length){ _mostrarToast('\u{1F195} '+novos.length+' mandado(s) NOVO(S) desde a última pesquisa!','erro'); try{ _rvBeep(); }catch(e){} }
 
-  // 2) fichas no AKILES (pelo robô)
+  // 2) fichas no AKILES (pelo robô). Quem já tem perfil numa pesquisa anterior: reaproveita o perfil e busca SÓ a
+  //    situação de agora (comunicando? bateria? rompida? última localização). Quem é novo: ficha completa.
   const nomes=[...new Set(itens.map(x=>x.monitorado))];
+  const perfis=await _mpPerfisAnteriores(nomes);
   let fichas={}, erroFichas='';
+  _mpSituacao={}; _mpRender();
   if(nomes.length){
-    _mpFichasStatus('\u{1F916} Buscando no AKILES a ficha de '+nomes.length+' monitorado(s) (foto, qualificação, processos, violações e última comunicação)…','azul');
+    const nNovos=nomes.filter(n=>!perfis[n]).length;
+    _mpFichasStatus('\u{1F916} Buscando no AKILES: '+nNovos+' perfil(is) novo(s) e a situação de agora de '+(nomes.length-nNovos)+' que já tinham perfil…','azul');
     try{
-      fichas=await _mpFichasRobo(nomes,(f,t,naFila)=>_mpFichasStatus(naFila?'\u{23F3} Aguardando o robô pegar o pedido das fichas…':'\u{1F916} Fichas recebidas: <b>'+f+'/'+t+'</b>…','azul'));
+      const ids=nomes.map(n=>(perfis[n]?'S_':'F_')+_mpB64url(n));
+      const res=await _mpRoboPedido(ids,(f,t,naFila)=>_mpFichasStatus(naFila?'\u{23F3} Aguardando o robô pegar o pedido…':'\u{1F916} Recebidos do AKILES: <b>'+f+'/'+t+'</b>…','azul'));
+      nomes.forEach((n,i)=>{ const r0=res[ids[i]]; if(!r0) return;
+        fichas[n]=perfis[n] ? Object.assign({},perfis[n].ficha,{ situacaoAkiles:r0.situacaoAkiles||null, situacaoCadastro:r0.situacaoCadastro||perfis[n].ficha.situacaoCadastro, perfilDe:perfis[n].data, situacaoLidaEm:r0.coletadoEm }) : r0;
+        _mpSituacao[n]=(fichas[n]&&fichas[n].situacaoAkiles)||null; });
     }catch(e){ erroFichas=e.message||String(e); }
+    nomes.forEach(n=>{ if(!(n in _mpSituacao)) _mpSituacao[n]=null; });
+    _mpRender();
   }
-  // 3) monta e salva a pasta do dia
-  const data=_mpHojeISO(), fotos={};
+  // 3) monta e salva a pasta deste cruzamento (data + hora)
+  const data=_mpAgoraPasta(), fotos={};
   const chaveDe=(x,f)=>(f&&f.registro?'R'+String(f.registro).replace(/\D/g,''):'N'+_mpNormalizar(x.monitorado).replace(/[^A-Z0-9]/g,'_')).slice(0,70);
+  for(const n of nomes){ const pf=perfis[n]; if(pf&&pf.fotoChave&&fichas[n]&&!fichas[n].foto){ const u=await _mpFotoDataUrl(pf.data,pf.fotoChave); if(u) fichas[n].foto=u; } }
   const itensDossie=itens.map(x=>{
     const f=fichas[x.monitorado]||null, chave=chaveDe(x,f);
     if(f&&f.foto) fotos[chave]=f.foto;
@@ -16797,7 +16831,32 @@ async function _mpPosCruzamento(){
       : '\u{2705} Pasta de <b>'+_mpDataBR(data)+'</b> salva com '+itensDossie.length+' monitorado(s)'+(semFicha?' ('+semFicha+' sem ficha no AKILES)':'')+'. Abra abaixo em <b>Pastas de cruzamento</b>.'), erroFichas?'amarelo':'verde');
     await _mpCarregarPastas();
     mp_abrirPasta(data);
-  }catch(e){ _mpFichasStatus('\u{274C} Não consegui salvar a pasta do dia: '+_mpEsc(e.message||String(e)),'vermelho'); }
+  }catch(e){ _mpFichasStatus('\u{274C} Não consegui salvar a pasta do cruzamento: '+_mpEsc(e.message||String(e)),'vermelho'); }
+  // 4) Radar (link da rua): confirmados com identidade conferida entram sozinhos (radar-mandado.js)
+  if(typeof rds_adicionarVarios==='function'){
+    const paraRadar=itensDossie.filter(x=>x.classe==='CONFIRMADO' && x.ficha && x.ficha.registro && _mpIdentidadeConferida(x.conferencia));
+    if(paraRadar.length) rds_adicionarVarios(paraRadar.map(x=>({ reg:x.ficha.registro, nome:x.ficha.nome||x.monitorado, mandado:_mpMandadoRecente(x.mandados) })));
+  }
+}
+// mãe e/ou nascimento conferem e NADA difere (homônimo e "conferir à mão" ficam de fora do radar automático)
+function _mpIdentidadeConferida(cf){ return !!cf && cf.mae!=='difere' && cf.nasc!=='difere' && (cf.mae==='confere'||cf.nasc==='confere'); }
+function _mpMandadoRecente(ms){ const dt=s=>{ const m=String(s||'').match(/(\d{2})\/(\d{2})\/(\d{4})/); return m?m[3]+m[2]+m[1]:''; }; const m=(ms||[]).slice().sort((a,b)=>dt(b.data).localeCompare(dt(a.data)))[0]; return m?{ numero:m.numero||'', data:m.data||'', orgao:m.orgao||'' }:{ numero:'', data:'', orgao:'' }; }
+// perfis já salvos nas últimas pesquisas (o mais recente de cada pessoa), para não baixar a ficha inteira de novo
+async function _mpPerfisAnteriores(nomes){
+  const out={}, falta=new Set(nomes);
+  try{
+    const l=await _mpApi('/mandados/lista');
+    for(const p of (l.pastas||[]).slice(0,10)){
+      if(!falta.size) break;
+      let d; try{ d=await _mpApi('/mandados/ler?data='+encodeURIComponent(p.data)); }catch(e){ continue; }
+      for(const x of (d.itens||[])){ if(falta.has(x.monitorado) && x.ficha && x.ficha.encontrado){ out[x.monitorado]={ ficha:x.ficha, fotoChave:x.fotoChave||'', data:d.data||p.data }; falta.delete(x.monitorado); } }
+    }
+  }catch(e){ console.warn('[CME] mandados: perfis anteriores', e.message); }
+  return out;
+}
+async function _mpFotoDataUrl(data, chave){
+  try{ const r=await fetch(_mpBase()+'/mandados/foto?data='+encodeURIComponent(data)+'&chave='+encodeURIComponent(chave),{headers:{'Authorization':'Bearer '+_workerToken()}}); if(!r.ok) return '';
+    const b=await r.blob(); return await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=()=>res(''); fr.readAsDataURL(b); }); }catch(e){ return ''; }
 }
 
 // ── Pastas ──
@@ -16849,6 +16908,7 @@ async function mp_abrirPasta(data){
         +(typeof _rdsBotaoCartao==='function'?_rdsBotaoCartao(x._i):'')
         +'<div style="color:#64748b;margin-top:4px">'+(f.encontrado?'Reg. '+_mpEsc(f.registro)+' · '+(f.violacoes||[]).length+' violação(ões)':'<span style="color:#b45309">sem ficha no AKILES</span>')+'</div>'
         +(dataMP?'<div style="margin-top:3px;color:#0f172a"><b>MP expedido:</b> <span style="font-family:var(--font-mono)">'+_mpEsc(dataMP)+'</span>'+((x.mandados||[]).length>1?' <span style="color:#64748b">('+x.mandados.length+' mandados)</span>':'')+'</div>':'')
+        +(f.situacaoAkiles?'<div style="margin-top:4px">'+_mpSeloSituacao(f.situacaoAkiles,false)+'</div>':'')
         +'<div style="color:#0f172a"><b>Últ. comunicação:</b> '+(uc&&uc.em?'<span style="font-family:var(--font-mono)">'+new Date(uc.em).toLocaleString('pt-BR')+'</span> <span style="color:'+(diasUc>=1?'#b91c1c':'#15803d')+'">('+(diasUc<1?'hoje':'há '+diasUc+' dia(s)')+')</span>':'<span style="color:#64748b">sem dado</span>')+'</div>'
         +'</div></div>';
     }).join('')+'</div>';
@@ -16893,6 +16953,8 @@ async function mp_perfil(i){
       +'<table style="font-size:.8rem;border-collapse:collapse">'+_mpLinha('Registro AKILES',f.registro)+_mpLinha('Situação no AKILES',f.situacaoCadastro)+_mpLinha('Grupo',f.grupo)+_mpLinha('Nome no mandado',_mpNomeExib(x.mandadoNome))+'</table>'
       +(!f.encontrado?'<div style="color:#b45309;font-size:.8rem;margin-top:6px">Ficha do AKILES indisponível'+(f.erro?': '+_mpEsc(f.erro):'')+'.</div>':'')
     +'</div></div>'
+    +(f.situacaoAkiles?sec('\u{1F6F0}\u{FE0F} Situação no AKILES (lida em '+new Date(f.situacaoAkiles.lidoEm||f.situacaoLidaEm||f.coletadoEm).toLocaleString('pt-BR')+')')+_mpSeloSituacao(f.situacaoAkiles)
+        +((f.situacaoAkiles.alertas||[]).length?'<div style="font-size:.78rem;color:#475569;margin-top:4px">Alertas abertos: '+f.situacaoAkiles.alertas.map(a=>_mpEsc(a.tipo)+(a.desde?' (desde '+_mpEsc(String(a.desde).slice(0,16))+')':'')).join(' · ')+'</div>':''):'')
     +sec('\u{1F4CD} Última comunicação com o sistema')
     +(uc&&uc.em?'<div style="font-size:.82rem">'+new Date(uc.em).toLocaleString('pt-BR')+' <b>('+(horasUc<1?'agora há pouco':horasUc<48?'há '+horasUc+' h':'há '+Math.round(horasUc/24)+' dias')+')</b>'
         +(uc.lat&&uc.lon?' — <a href="https://www.google.com/maps?q='+encodeURIComponent(uc.lat+','+uc.lon)+'" target="_blank" rel="noopener">ver no mapa ('+_mpEsc((+uc.lat).toFixed(5)+', '+(+uc.lon).toFixed(5))+')</a>':'')
@@ -29661,7 +29723,7 @@ function estat_exportarResultado() {
 <script src="plantoes-detalhe.js?v=20261016a"></script>
 <script src="plantoes-servidores.js?v=20261016a"></script>
 <script src="vd-zonas.js?v=20261015s"></script>
-<script src="radar-mandado.js?v=20261016a"></script>
+<script src="radar-mandado.js?v=20261016b"></script>
 <script src="rv-justificativas.js?v=20261016b"></script>
 </body>
 </html>

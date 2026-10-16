@@ -37,6 +37,8 @@ function _rdsRender() {
   const L = _rdsLista, alvos = L.alvos || [];
   const linha = a => {
     const viaMandado = a.origem === 'mandado';
+    let al = null; try { al = a.tz_alertas ? JSON.parse(a.tz_alertas) : null; } catch (e) { al = null; }
+    const alertasAk = (al && al.rompida ? '<div style="font-size:.72rem;font-weight:700;color:#b91c1c">PULSEIRA ROMPIDA</div>' : '') + (al && al.descarregada ? '<div style="font-size:.72rem;font-weight:700;color:#c2410c">BATERIA DESCARREGADA</div>' : '');
     const ficha = a.ficha_erro ? '<span style="color:#b91c1c">' + _mpEsc(a.ficha_erro) + '</span>'
       : !a.ficha_em ? '<span style="color:#b45309">\u{23F3} aguardando o robô buscar a ficha no AKILES</span>' : '';
     const sinal = a.tz_ts ? (Date.now() - a.tz_ts < 20 * 60000 ? '<b style="color:#15803d">ao vivo</b> ' : '<b style="color:#b45309">sem comunicar</b> ') + _rdsHa(a.tz_ts) : '<span style="color:#64748b">sem posição ainda</span>';
@@ -44,7 +46,7 @@ function _rdsRender() {
       + '<td style="padding:6px"><b>' + _mpEsc(a.nome || '(nome a buscar)') + '</b><div style="font-family:var(--font-mono);font-size:.75rem;color:#64748b">reg. ' + _mpEsc(a.id_akiles) + '</div>' + (ficha ? '<div style="font-size:.74rem">' + ficha + '</div>' : '') + '</td>'
       + '<td style="padding:6px"><span style="display:inline-block;font-size:.66rem;font-weight:700;padding:2px 7px;border-radius:3px;border-left:2px solid ' + (viaMandado ? '#dc2626;background:#fef2f2;color:#b91c1c">MANDADO' : '#2563eb;background:#eff6ff;color:#1d4ed8">INDIVIDUAL') + '</span>'
         + (viaMandado && a.mandado_numero ? '<div style="font-size:.72rem;color:#475569;margin-top:2px">nº ' + _mpEsc(a.mandado_numero) + (a.mandado_orgao ? ' · ' + _mpEsc(a.mandado_orgao) : '') + '</div>' : '') + '</td>'
-      + '<td style="padding:6px;font-size:.8rem">' + sinal + (a.end_atual ? '<div style="color:#334155">\u{1F4CD} ' + _mpEsc(a.end_atual) + '</div>' : '') + '</td>'
+      + '<td style="padding:6px;font-size:.8rem">' + sinal + alertasAk + (a.end_atual ? '<div style="color:#334155">\u{1F4CD} ' + _mpEsc(a.end_atual) + '</div>' : '') + '</td>'
       + '<td style="padding:6px;font-size:.72rem;color:#64748b">' + _mpEsc(a.adicionado_por || '') + '<div>' + (a.adicionado_em ? new Date(a.adicionado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '') + '</div></td>'
       + '<td style="padding:6px;text-align:right"><button type="button" data-rds-remover="' + _mpEsc(a.id_akiles) + '" style="background:#fff;border:1px solid #fca5a5;color:#b91c1c;border-radius:6px;padding:4px 10px;font-size:.78rem;cursor:pointer">Remover</button></td></tr>';
   };
@@ -79,6 +81,20 @@ async function rds_adicionar(reg, mandado, nome) {
     await rds_carregar();
     return true;
   } catch (e) { _mostrarToast('Não consegui colocar no radar: ' + (e.message || e), 'erro'); return false; }
+}
+// Depois do cruzamento: confirmados com identidade conferida entram sozinhos no radar (um aviso só no fim)
+async function rds_adicionarVarios(lista) {
+  if (!_rdsPode() || !lista || !lista.length) return;
+  let novos = 0, jaEstavam = 0, falhas = 0, cheio = false;
+  for (const x of lista) {
+    const c = _rdsCodigo(x.reg); if (!c) { falhas++; continue; }
+    try {
+      const r = await _mpApi('/radar/adicionar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_akiles: c, mandado: x.mandado || { numero: '', data: '', orgao: '' } }) });
+      if (r.ja_estava) jaEstavam++; else novos++;
+    } catch (e) { if (/já tem \d+ monitorados/.test(e.message || '')) { cheio = true; break; } falhas++; }
+  }
+  _mostrarToast('\u{1F4E1} Radar: ' + novos + ' confirmado(s) entraram' + (jaEstavam ? ', ' + jaEstavam + ' já estavam' : '') + (cheio ? ' — o radar ficou CHEIO, remova alguém' : '') + (falhas ? ' (' + falhas + ' com erro)' : '') + '.', cheio || falhas ? 'erro' : 'sucesso');
+  await rds_carregar();
 }
 function rds_adicionarDoCampo() {
   const i = document.getElementById('rds-codigo'); if (!i) return;
