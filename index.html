@@ -21267,8 +21267,9 @@ function rv_gerarTodos(modo) {
   rv_gerarSelecionados(modo);
 }
 
-function rv_gerarSelecionados(modo = 'html') {
-  const selecionados = _rv_grupos.filter((_, i) =>
+// gruposConferidos: vem do cruzamento com as justificativas (rv-justificativas.js), já sem as violações retiradas.
+function rv_gerarSelecionados(modo = 'html', gruposConferidos) {
+  const selecionados = gruposConferidos || _rv_grupos.filter((_, i) =>
     document.getElementById(`rv-chk-${i}`)?.checked
   );
   if (!selecionados.length) { _mostrarToast('Selecione ao menos um monitorado.', 'erro'); return; }
@@ -21281,6 +21282,13 @@ function rv_gerarSelecionados(modo = 'html') {
   let infoGer = isNaN(idxGer) ? null : us[idxGer] || null;
 
   if (!infoAss) { _mostrarToast('Selecione o servidor assinante.', 'erro'); return; }
+  // Antes de gerar: violação com justificativa no CME não vai ao Judiciário sem decisão do servidor.
+  if (!gruposConferidos) {
+    if (typeof rvj_antesDeGerar === 'function') { rvj_antesDeGerar(modo, selecionados); return; }
+    // o módulo não carregou (rede/cache): nunca gerar calado sem o cruzamento
+    if (!confirm('O cruzamento com as justificativas do CME não carregou (recarregue a página com Ctrl+F5).\n\nGerar o relatório mesmo assim, SEM conferir as justificativas da pasta?')) return;
+    addLog('Relatório de violações gerado SEM o cruzamento de justificativas (módulo não carregou) (' + (usuarioAtual?.nome || '') + ')', { action: 'rv-justificativa', modulo: 'Relatório' });
+  }
 
   // Co-assinatura automática do gerente (se nenhum foi escolhido manualmente)
   if (!infoGer) infoGer = _rvCoassinar(infoAss, us);
@@ -29625,5 +29633,6 @@ function estat_exportarResultado() {
 <script src="plantoes-detalhe.js?v=20261014a"></script>
 <script src="plantoes-servidores.js?v=20261015s"></script>
 <script src="vd-zonas.js?v=20261015s"></script>
+<script src="rv-justificativas.js?v=20261016a"></script>
 </body>
 </html>
