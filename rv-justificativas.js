@@ -273,8 +273,11 @@ async function _rvjEvidencias(grupo, orcamento, progresso) {
   const periodos = grupo.map(rvj_periodoViolacao).filter(Boolean);
   const ini = periodos.length ? periodos.map(p => p.diaIni).sort()[0] : null, fim = periodos.length ? periodos.map(p => p.diaFim).sort().pop() : null;
   const semData = [];
+  const vistos = new Set(); // a pasta pode ter o mesmo arquivo enviado várias vezes (visto na prática: 5 cópias)
   pasta.arquivos.forEach(a => {
     if (!a.nome || a.nome === '.keep') return; // marcador de pasta criada
+    const chave = _rvjNorm(a.pasta) + '|' + _rvjNorm(a.nome);
+    if (vistos.has(chave)) return; vistos.add(chave);
     const tipoDoc = rvj_classificarDoc(a.nome, a.pasta); if (!tipoDoc) return;
     const base = { origem: 'pasta', key: a.key, nome: a.nome, pasta: a.pasta, tipoDoc, entrega: _rvjIsoDeTs(a.enviado),
       fraco: /PROCESSO/.test(_rvjNorm(a.pasta)) ? 'é peça da pasta Processo (pode ser só a data da intimação/ata)' : '' };
@@ -445,14 +448,18 @@ function _rvjAtualizar() {
 function _rvjConfirmar(modo, res, itens) {
   const ds = _rvjLerDecisoes();
   if (ds.some(d => !d.acao || (d.acao === 'manter' && !d.motivo))) { _mostrarToast('Decida todas as violações antes de gerar.', 'erro'); return; }
-  const retirar = new Set(), quem = usuarioAtual?.nome || '';
+  const retirar = new Set(), quem = usuarioAtual?.nome || '', frases = [];
   ds.forEach(d => {
     const it = itens[d.k], id = String(it.v.idOc || '');
     if (d.acao === 'retirar') retirar.add(it.v);
     if (id) _rvj_decisoes[id] = { acao: d.acao, motivo: d.motivo };
-    addLog('Relatório de violações: ' + (d.acao === 'retirar' ? 'RETIROU' : 'MANTEVE') + ' a violação ' + (id || it.v.ocorreu) + ' de ' + it.nome + ' — ' + (d.nivel === 'compativel' ? 'justificativa compatível' : 'possível justificativa') + ': ' + it.achados[0].ev.nome + (d.acao === 'manter' ? ' — motivo: ' + d.motivo : '') + ' (' + quem + ')',
-      { action: 'rv-justificativa', modulo: 'Relatório', alvo: 'Violação ' + (id || it.v.ocorreu), monitorado: it.nome });
+    const frase = (d.acao === 'retirar' ? 'RETIROU' : 'MANTEVE') + ' a violação ' + (id || it.v.ocorreu) + ' de ' + it.nome + ' — ' + (d.nivel === 'compativel' ? 'justificativa compatível' : 'possível justificativa') + ': ' + it.achados[0].ev.nome + (d.acao === 'manter' ? ' — motivo: ' + d.motivo : '');
+    frases.push(frase);
+    // cada decisão vai separada para a auditoria (D1)
+    if (typeof auditar === 'function') auditar({ action: 'rv-justificativa', modulo: 'Relatório', alvo: 'Violação ' + (id || it.v.ocorreu), monitorado: it.nome, detalhe: frase });
   });
+  // UMA linha só no registro de atividades: duas gravações seguidas do addLog se apagam (lê → acrescenta → grava)
+  if (frases.length && typeof addLog === 'function') addLog('Relatório de violações (cruzamento de justificativas): ' + frases.join(' | ') + ' (' + quem + ')', { action: 'rv-justificativa-resumo', modulo: 'Relatório' });
   const grupos = res.map(r => r.grupo.filter(v => !retirar.has(v)));
   const vazios = res.filter((r, i) => !grupos[i].length).map(r => r.grupo[0].nome);
   document.getElementById('rvj-modal').remove();
