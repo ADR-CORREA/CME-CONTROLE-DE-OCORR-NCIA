@@ -1184,7 +1184,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 })();
 </script>
 <!-- Identidade visual única do CME (16/10/2026): peças comuns das telas redesenhadas -->
-<link rel="stylesheet" href="identidade.css?v=20261016b">
+<link rel="stylesheet" href="identidade.css?v=20261016a">
 </head>
 <body>
 
@@ -1317,31 +1317,41 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
     <!-- ─── DASHBOARD ─── -->
     <div class="tab-panel active" id="panel-dashboard">
-      <!-- Identidade visual (16/10/2026): Painel no padrão do guia (identidade.css) -->
-      <div class="idv-cab">
-        <div><h1>Painel de hoje</h1><div class="idv-sub" id="dash-update">Atualizado agora</div></div>
-        <div class="idv-acoes">
-          <button type="button" class="idv-btn" onclick="exportarDashboardExcel()">Exportar Excel</button>
-          <button type="button" class="idv-btn criar" onclick="atualizarTudo()">Atualizar</button>
+      <div class="dash-header">
+        <div>
+          <div class="dash-title">Dashboard Operacional</div>
+          <div class="dash-update" id="dash-update">Atualizado agora</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-secondary" onclick="exportarDashboardExcel()">📥 Exportar Excel</button>
+          <button class="btn-refresh" onclick="atualizarTudo()">↻ Atualizar</button>
         </div>
       </div>
 
       <!-- Calendário de compromissos (Gerência) — de cara no Dashboard (admin/gerência) -->
       <div id="dash-calendario" style="margin-bottom:16px"></div>
 
-      <div class="idv-blocos">
-        <!-- Guarnição de serviço hoje (escala automática dos plantões) -->
-        <div class="idv-bloco destaque" id="dash-plantao-hoje">
-          <div class="idv-bloco-cab"><span>De plantão hoje</span><span class="idv-mono">08h → 08h</span></div>
-          <div class="idv-bloco-corpo"><span class="idv-grande" id="dash-plantao-nome">—</span><span class="idv-mini" id="dash-plantao-data"></span></div>
+      <!-- Guarnição de serviço hoje (escala automática dos plantões) -->
+      <div id="dash-plantao-hoje" style="display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,#eff6ff,#f8fafc);border:1px solid #bfdbfe;border-left:5px solid #1d4ed8;border-radius:12px;padding:14px 18px;margin-bottom:16px">
+        <span style="font-size:1.7rem;line-height:1">🛡️</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.74rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Guarnição de serviço hoje</div>
+          <div style="font-size:1.4rem;font-weight:800;color:#1F4E78;line-height:1.2">Plantão: <span id="dash-plantao-nome">—</span></div>
+          <div style="font-size:.76rem;color:#94a3b8" id="dash-plantao-data"></div>
         </div>
-        <!-- Estoque disponível (Módulos de tornozeleira + DPP) — visível a todos os perfis -->
-        <div class="idv-bloco" id="dash-estoque-disp">
-          <div class="idv-bloco-cab"><span>Estoque disponível</span></div>
-          <div class="idv-bloco-corpo lado">
-            <div><span class="idv-grande idv-mono" id="dash-est-mod">—</span><span class="idv-mini">módulos de tornozeleira</span></div>
-            <div><span class="idv-grande idv-mono" id="dash-est-dpp">—</span><span class="idv-mini">dispositivos DPP</span></div>
-          </div>
+        <span id="dash-plantao-chip" style="font-size:.8rem;font-weight:800;color:#fff;background:#1d4ed8;border-radius:20px;padding:5px 14px;white-space:nowrap">—</span>
+      </div>
+
+      <!-- Estoque disponível (Módulos de tornozeleira + DPP) — visível a todos os perfis -->
+      <div id="dash-estoque-disp" style="display:flex;align-items:center;gap:26px;flex-wrap:wrap;background:linear-gradient(90deg,#f0fdf4,#f8fafc);border:1px solid #bbf7d0;border-left:5px solid #16a34a;border-radius:12px;padding:14px 18px;margin-bottom:16px">
+        <div style="font-size:.74rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;min-width:128px">📦 Estoque disponível</div>
+        <div style="display:flex;align-items:center;gap:11px">
+          <span style="color:#16a34a;display:inline-flex"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49M7.76 16.24a6 6 0 0 1 0-8.49M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/></svg></span>
+          <div><div style="font-size:1.55rem;font-weight:800;color:#1F4E78;line-height:1;font-family:var(--font-mono)" id="dash-est-mod">—</div><div style="font-size:.72rem;color:#94a3b8">Módulos de tornozeleira</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:11px">
+          <span style="color:#16a34a;display:inline-flex"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6"/><circle cx="12" cy="16.5" r="1"/></svg></span>
+          <div><div style="font-size:1.55rem;font-weight:800;color:#1F4E78;line-height:1;font-family:var(--font-mono)" id="dash-est-dpp">—</div><div style="font-size:.72rem;color:#94a3b8">Dispositivos DPP</div></div>
         </div>
       </div>
 
@@ -1350,31 +1360,46 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       <!-- Painel OPERACIONAL (gerência/admin) -->
       <div id="dash-operacional">
-      <div class="idv-faixa" id="dash-alertas" style="display:none"></div>
+      <div class="dash-alertas" id="dash-alertas" style="display:none"></div>
 
-      <h2 class="idv-secao">Prazo das ocorrências ativas</h2>
-      <div class="idv-kpis">
-        <button type="button" class="idv-kpi ok" onclick="_dashIrOc('ok')"><span class="idv-num" id="kpi-ok">0</span><span class="idv-rot">No prazo</span><span class="idv-leg">dentro do POP</span></button>
-        <button type="button" class="idv-kpi at" onclick="_dashIrOc('at')"><span class="idv-num" id="kpi-atencao">0</span><span class="idv-rot">Atenção</span><span class="idv-leg">metade do prazo</span></button>
-        <button type="button" class="idv-kpi at" onclick="_dashIrOc('at')"><span class="idv-num" id="kpi-vencendo">0</span><span class="idv-rot">Vencendo</span><span class="idv-leg">mais de 80% do prazo</span></button>
-        <button type="button" class="idv-kpi cr" onclick="_dashIrOc('cr')"><span class="idv-num" id="kpi-vencido">0</span><span class="idv-rot">Vencidas</span><span class="idv-leg">prazo do POP estourado</span></button>
-        <button type="button" class="idv-kpi in" onclick="_dashIrOc('in')"><span class="idv-num" id="kpi-comunicado">0</span><span class="idv-rot">Comunicadas</span><span class="idv-leg">PRODOC enviado</span></button>
-        <div class="idv-kpi de"><span class="idv-num" id="kpi-protetiva">0</span><span class="idv-rot">Protetivas ativas</span><span class="idv-leg">ainda sem PRODOC</span></div>
+      <div class="section-title">Status de Prazo — Ocorrências Ativas</div>
+      <div class="kpi-grid">
+        <div class="kpi-card verde">
+          <div class="kpi-icon">🟢</div>
+          <div class="kpi-num" id="kpi-ok">0</div>
+          <div class="kpi-label">No Prazo</div>
+        </div>
+        <div class="kpi-card amarelo">
+          <div class="kpi-icon">🟡</div>
+          <div class="kpi-num" id="kpi-atencao">0</div>
+          <div class="kpi-label">Atenção</div>
+        </div>
+        <div class="kpi-card laranja">
+          <div class="kpi-icon">🟠</div>
+          <div class="kpi-num" id="kpi-vencendo">0</div>
+          <div class="kpi-label">Vencendo</div>
+        </div>
+        <div class="kpi-card vermelho">
+          <div class="kpi-icon">🔴</div>
+          <div class="kpi-num" id="kpi-vencido">0</div>
+          <div class="kpi-label">Vencido</div>
+        </div>
+        <div class="kpi-card verde" style="border-left-color:#2E7D32">
+          <div class="kpi-icon">✅</div>
+          <div class="kpi-num" id="kpi-comunicado">0</div>
+          <div class="kpi-label">Comunicado</div>
+        </div>
+        <div class="kpi-card roxo">
+          <div class="kpi-icon">🟣</div>
+          <div class="kpi-num" id="kpi-protetiva">0</div>
+          <div class="kpi-label">Protetivas Ativas</div>
+        </div>
       </div>
 
-      <h2 class="idv-secao">Ação agora — vencidas há mais tempo</h2>
-      <div class="idv-tabela-box">
-        <table class="data-table idv-tabela">
-          <thead><tr><th>Monitorado</th><th>Violação</th><th>Venceu há</th><th>Plantão</th><th style="text-align:right">Ação</th></tr></thead>
-          <tbody id="dash-acao"></tbody>
-        </table>
-      </div>
-      <div id="dash-acao-mais" style="margin-top:8px"></div>
-
-      <h2 class="idv-secao">Visão gráfica</h2>
+      <div class="section-title" style="margin-top:24px">Visão Gráfica</div>
       <div class="dash-charts" id="dash-charts"></div>
 
-      <h2 class="idv-secao">Visão dos setores</h2>
+      <div class="section-title" style="margin-top:24px">Visão dos Setores</div>
       <div class="dash-sectors" id="dash-sectors"></div>
       </div><!-- /dash-operacional -->
     </div>
@@ -8418,36 +8443,6 @@ function atualizarDashboard() {
   try { _dashGraficos(ocs, {ok:ok,at:at,ve:ve,vd:vd,com:com}); } catch(e){ console.warn('dash graficos', e); }
   try { _dashSetores(ocs, {jurAcomp:jurAcomp,jurProx:jurProx,jurAut:jurAut,jurDesv:jurDesv,jur60:jur60}); } catch(e){ console.warn('dash setores', e); }
   try { _dashAlertas(ocs, vd); } catch(e){ console.warn('dash alertas', e); }
-  try { _dashAcaoAgora(ocs); } catch(e){ console.warn('dash ação agora', e); }
-}
-
-// indicador do Painel → abre Ocorrências já filtrada pela situação (cr/at/ok/in, os mesmos botões da aba)
-function _dashIrOc(sit) {
-  mudarAba('ocorrencias');
-  filtrarOcorrenciasSit(sit);
-}
-
-/* "Ação agora": as 5 ocorrências vencidas há mais tempo (estouro do prazo do POP), com "Abrir" direto. */
-const _DASH_ACAO_QTD = 5;
-function _dashAcaoAgora(ocs) {
-  const tb = document.getElementById('dash-acao'); if (!tb) return;
-  const agora = Date.now();
-  const venc = ocs.filter(o => !o.arquivadaPorComunicacao && calcStatus(o.dataAlerta, o.tipo, o.medida, o.prodoc, o.restabelecidaEm) === "\u{1F534} VENCIDO")
-    .map(o => { const sla = getSLA(o.tipo, o.medida); return { o, estouro: (agora - new Date(o.dataAlerta)) / 3600000 - (sla ? sla.h : 0) }; })
-    .sort((a, b) => b.estouro - a.estouro);
-  tb.innerHTML = venc.length ? venc.slice(0, _DASH_ACAO_QTD).map(({ o }) => {
-    const ha = String(calcPrazoRestante(o.dataAlerta, o.tipo, o.medida)).replace(/^VENCIDO há\s*/i, '');
-    return `<tr class="row-vencido">
-      <td><div class="idv-nome">${esc(o.monitorado) || '—'}</div><div class="idv-mini idv-mono">ID ${esc(o.id)}</div></td>
-      <td>${esc(o.tipo) || '—'}</td>
-      <td class="idv-mono" style="font-weight:600;color:var(--idv-cr);white-space:nowrap">${esc(ha)}</td>
-      <td>${esc(o.plantao) || '—'}</td>
-      <td style="text-align:right"><button type="button" class="idv-btn mini" onclick="visualizarOcorrencia(${findIdx(o.id)})">Abrir</button></td>
-    </tr>`;
-  }).join('') : '<tr><td colspan="5" class="idv-vazio">Nenhuma ocorrência vencida</td></tr>';
-  const mais = document.getElementById('dash-acao-mais');
-  if (mais) mais.innerHTML = venc.length > _DASH_ACAO_QTD
-    ? `<button type="button" class="idv-link" onclick="_dashIrOc('cr')">Ver as ${venc.length} vencidas em Ocorrências \u{2192}</button>` : '';
 }
 
 /* ═══════ DASHBOARD — helpers de gráficos SVG (sem dependência) ═══════ */
@@ -8462,9 +8457,9 @@ function _svgDonut(segs, centerNum, centerLab){
     off+=len; return el;
   }).join('');
   return `<svg viewBox="0 0 140 140" class="dchart-svg" style="width:138px;height:138px;flex-shrink:0">
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#eaeef2" stroke-width="${sw}"></circle>${arcs}
-    <text x="${cx}" y="${cy-1}" text-anchor="middle" font-size="28" font-weight="800" fill="#1f2328">${centerNum!=null?centerNum:total}</text>
-    <text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="9.5" fill="#59636e" letter-spacing=".5">${(centerLab||'').toUpperCase()}</text></svg>`;
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#EEF2F7" stroke-width="${sw}"></circle>${arcs}
+    <text x="${cx}" y="${cy-1}" text-anchor="middle" font-size="28" font-weight="800" fill="#0F172A">${centerNum!=null?centerNum:total}</text>
+    <text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="9.5" fill="#64748B" letter-spacing=".5">${(centerLab||'').toUpperCase()}</text></svg>`;
 }
 function _dLegend(segs){
   return `<div class="dchart-legend">${segs.map(s=>`<div class="dleg"><span class="ddot" style="background:${s.color}"></span>${s.label}<b>${_dNum(s.value)}</b></div>`).join('')}</div>`;
@@ -8475,11 +8470,11 @@ function _svgBarsV(data){
   const slot=W/n, bw=Math.min(46, slot*0.5);
   const bars=data.map((d,i)=>{
     const h=(d.value/max)*(H-52), cx=i*slot+slot/2, x=cx-bw/2, y=H-26-h;
-    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="4" fill="${d.color||'#0969da'}"></rect>
-      <text x="${cx.toFixed(1)}" y="${(y-6).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="#1f2328">${d.value}</text>
-      <text x="${cx.toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="9" fill="#59636e">${d.label}</text>`;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="4" fill="${d.color||'#2563EB'}"></rect>
+      <text x="${cx.toFixed(1)}" y="${(y-6).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">${d.value}</text>
+      <text x="${cx.toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="9" fill="#64748B">${d.label}</text>`;
   }).join('');
-  return `<svg viewBox="0 0 ${W} ${H}" class="dchart-svg" style="width:100%;height:auto"><line x1="0" y1="${H-26}" x2="${W}" y2="${H-26}" stroke="#d1d9e0"></line>${bars}</svg>`;
+  return `<svg viewBox="0 0 ${W} ${H}" class="dchart-svg" style="width:100%;height:auto"><line x1="0" y1="${H-26}" x2="${W}" y2="${H-26}" stroke="#E2E8F0"></line>${bars}</svg>`;
 }
 function _svgBarsH(data){
   const W=300, lblW=118, rowH=27, max=Math.max(1, ...data.map(d=>d.value));
@@ -8487,9 +8482,9 @@ function _svgBarsH(data){
   const rows=data.map((d,i)=>{
     const y=i*rowH+4, bw=(d.value/max)*(W-lblW-34);
     const lbl=d.label.length>18?d.label.slice(0,17)+'…':d.label;
-    return `<text x="0" y="${y+15}" font-size="10.5" fill="#59636e">${lbl}</text>
-      <rect x="${lblW}" y="${y+4}" width="${Math.max(2,bw).toFixed(1)}" height="15" rx="3" fill="${d.color||'#0969da'}"></rect>
-      <text x="${(lblW+Math.max(2,bw)+6).toFixed(1)}" y="${y+16}" font-size="11" font-weight="700" fill="#1f2328">${d.value}</text>`;
+    return `<text x="0" y="${y+15}" font-size="10.5" fill="#475569">${lbl}</text>
+      <rect x="${lblW}" y="${y+4}" width="${Math.max(2,bw).toFixed(1)}" height="15" rx="3" fill="${d.color||'#2563EB'}"></rect>
+      <text x="${(lblW+Math.max(2,bw)+6).toFixed(1)}" y="${y+16}" font-size="11" font-weight="700" fill="#334155">${d.value}</text>`;
   }).join('');
   return `<svg viewBox="0 0 ${W} ${H}" class="dchart-svg" style="width:100%;height:auto">${rows}</svg>`;
 }
@@ -8500,12 +8495,12 @@ function _svgArea(points){
   const ys=v=>H-22-(v/max)*(H-40);
   const line=points.map((p,i)=>`${i?'L':'M'}${xs(i).toFixed(1)} ${ys(p.value).toFixed(1)}`).join(' ');
   const area=`${line} L${xs(n-1).toFixed(1)} ${H-22} L${xs(0).toFixed(1)} ${H-22} Z`;
-  let labs=''; [0,Math.floor(n/2),n-1].forEach(i=>{ labs+=`<text x="${xs(i).toFixed(1)}" y="${H-5}" text-anchor="middle" font-size="9" fill="#59636e">${points[i].label}</text>`; });
-  const dots=points.map((p,i)=> p.value>0?`<circle cx="${xs(i).toFixed(1)}" cy="${ys(p.value).toFixed(1)}" r="2.4" fill="#0969da"></circle>`:'').join('');
+  let labs=''; [0,Math.floor(n/2),n-1].forEach(i=>{ labs+=`<text x="${xs(i).toFixed(1)}" y="${H-5}" text-anchor="middle" font-size="9" fill="#94A3B8">${points[i].label}</text>`; });
+  const dots=points.map((p,i)=> p.value>0?`<circle cx="${xs(i).toFixed(1)}" cy="${ys(p.value).toFixed(1)}" r="2.4" fill="#2563EB"></circle>`:'').join('');
   return `<svg viewBox="0 0 ${W} ${H}" class="dchart-svg" style="width:100%;height:auto">
-    <defs><linearGradient id="dgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0969da" stop-opacity=".22"></stop><stop offset="1" stop-color="#0969da" stop-opacity="0"></stop></linearGradient></defs>
+    <defs><linearGradient id="dgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2563EB" stop-opacity=".22"></stop><stop offset="1" stop-color="#2563EB" stop-opacity="0"></stop></linearGradient></defs>
     <path d="${area}" fill="url(#dgrad)"></path>
-    <path d="${line}" fill="none" stroke="#0969da" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>${dots}${labs}</svg>`;
+    <path d="${line}" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>${dots}${labs}</svg>`;
 }
 function _dChartCard(title, inner, mod){
   const wide=mod==='wide'?' dchart-wide':'', donut=mod==='donut'?' dchart-donut':'';
@@ -8515,21 +8510,22 @@ function _dChartCard(title, inner, mod){
 function _dashGraficos(ocs, st){
   const box=document.getElementById('dash-charts'); if(!box) return;
   const statusSegs=[
-    {label:'No Prazo',value:st.ok,color:'#1a7f37'},
-    {label:'Atenção',value:st.at,color:'#d4a72c'},
-    {label:'Vencendo',value:st.ve,color:'#9a6700'},
-    {label:'Vencido',value:st.vd,color:'#cf222e'},
-    {label:'Comunicado',value:st.com,color:'#0969da'},
+    {label:'No Prazo',value:st.ok,color:'#16A34A'},
+    {label:'Atenção',value:st.at,color:'#F59E0B'},
+    {label:'Vencendo',value:st.ve,color:'#F97316'},
+    {label:'Vencido',value:st.vd,color:'#DC2626'},
+    {label:'Comunicado',value:st.com,color:'#059669'},
   ];
   const PL=['ALFA','BRAVO','CHARLIE','DELTA','ECHO'];
-  const plData=PL.map(p=>({label:p,value:ocs.filter(o=>String(o.plantao||'').toUpperCase()===p).length,color:'#0969da'}));
+  const plData=PL.map(p=>({label:p,value:ocs.filter(o=>String(o.plantao||'').toUpperCase()===p).length,color:'#2563EB'}));
   const medSegs=[
-    {label:'Protetiva',value:ocs.filter(o=>o.medida==='Protetiva').length,color:'#8250df'},
-    {label:'Cautelar',value:ocs.filter(o=>o.medida==='Cautelar').length,color:'#0969da'},
+    {label:'Protetiva',value:ocs.filter(o=>o.medida==='Protetiva').length,color:'#A855F7'},
+    {label:'Cautelar',value:ocs.filter(o=>o.medida==='Cautelar').length,color:'#0891B2'},
   ];
   const tipoMap={}; ocs.forEach(o=>{const t=(o.tipo||'—'); tipoMap[t]=(tipoMap[t]||0)+1;});
+  const tc=['#1D4ED8','#2563EB','#3B82F6','#7C3AED','#0891B2','#64748B'];
   const tipoArr=Object.keys(tipoMap).map(k=>({label:k,value:tipoMap[k]})).sort((a,b)=>b.value-a.value).slice(0,6);
-  tipoArr.forEach(d=>d.color='#0969da'); // série única: uma cor só (identidade visual)
+  tipoArr.forEach((d,i)=>d.color=tc[i]||'#64748B');
   const days=[]; const t0=new Date(); t0.setHours(0,0,0,0);
   for(let i=29;i>=0;i--){const d=new Date(t0); d.setDate(d.getDate()-i); const k=d.toISOString().slice(0,10); days.push({key:k,label:String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'),value:0});}
   const byK={}; days.forEach((d,i)=>byK[d.key]=i);
@@ -8539,12 +8535,12 @@ function _dashGraficos(ocs, st){
      _dChartCard('Status das Ocorrências', _svgDonut(statusSegs, ocs.length, 'ativas')+_dLegend(statusSegs), 'donut')
     +_dChartCard('Ocorrências por Plantão', _svgBarsV(plData))
     +_dChartCard('Protetiva × Cautelar', _svgDonut(medSegs, ocs.length, 'total')+_dLegend(medSegs), 'donut')
-    +_dChartCard('Por Tipo de Violação', tipoArr.length?_svgBarsH(tipoArr):'<div class="idv-vazio">Sem dados</div>')
+    +_dChartCard('Por Tipo de Violação', tipoArr.length?_svgBarsH(tipoArr):'<div style="color:#94a3b8;font-size:.85rem;padding:20px">Sem dados</div>')
     +_dChartCard('Ocorrências — últimos 30 dias', _svgArea(days), 'wide');
 }
 
 function _dSecCard(icon,nome,cor,rows){
-  return `<div class="dsec-card"><div class="dsec-head">${nome}</div>${rows.map(r=>`<div class="dsec-row"><span>${r[0]}</span><b class="${r[2]?'dsec-alert':''}">${typeof r[1]==='string'?r[1]:_dNum(r[1])}</b></div>`).join('')}</div>`;
+  return `<div class="dsec-card" style="--sc:${cor}"><div class="dsec-head"><span class="dsec-ic">${icon}</span>${nome}</div>${rows.map(r=>`<div class="dsec-row"><span>${r[0]}</span><b class="${r[2]?'dsec-alert':''}">${typeof r[1]==='string'?r[1]:_dNum(r[1])}</b></div>`).join('')}</div>`;
 }
 function _dashSetores(ocs, jm){
   const box=document.getElementById('dash-sectors'); if(!box) return;
@@ -8597,7 +8593,7 @@ function _dashAlertas(ocs, vd){
   const box=document.getElementById('dash-alertas'); if(!box) return;
   const todayK=_isoLocal();
   const a=[];
-  if(vd>0) a.push([`${vd} ocorrência${vd>1?'s':''} vencida${vd>1?'s':''}`,'#DC2626']);
+  if(vd>0) a.push([`${vd} vencido${vd>1?'s':''}`,'#DC2626']);
   const est=getEstoque(); const itens=est.itens||{}, mins=(est.configuracoes||{}).estoqueMinimo||{};
   let zer=0,baixo=0; Object.keys(itens).forEach(k=>{const q=Number(itens[k])||0; if(q===0)zer++; else if(mins[k]!=null&&q<mins[k])baixo++;});
   if(zer>0) a.push([`${zer} item(ns) zerado(s)`,'#DC2626']);
@@ -8609,12 +8605,10 @@ function _dashAlertas(ocs, vd){
   const gerVenc=((getGerencia().demandas)||[]).filter(g=>g.status!=='concluida' && g.prazo && String(g.prazo).slice(0,10)<todayK).length;
   if(gerVenc>0) a.push([`${gerVenc} demanda(s) vencida(s)`,'#DC2626']);
 
-  // faixa única do guia (16/10/2026): vermelha se houver algo crítico, amarela se só "abaixo do mínimo", verde se tudo em dia
   box.style.display='flex';
-  if(!a.length){ box.className='idv-faixa ok'; box.innerHTML='<span class="idv-faixa-ic">\u{2713}</span><span><b>Tudo em dia</b> — nenhum alerta crítico</span>'; return; }
-  const critico=a.some(x=>x[1]==='#DC2626');
-  box.className='idv-faixa '+(critico?'cr':'at');
-  box.innerHTML='<span class="idv-faixa-ic">!</span><span><b>Precisa de providência:</b> '+a.map(x=>x[0]).join(' · ')+'</span>';
+  if(!a.length){ box.className='dash-alertas ok'; box.innerHTML='<span class="dalert-title">Tudo em dia — nenhum alerta crítico</span>'; return; }
+  box.className='dash-alertas';
+  box.innerHTML='<span class="dalert-title">Centro de Alertas</span>'+a.map(x=>`<span class="dalert-pill" style="--ac:${x[1]}"><b>${x[0]}</b></span>`).join('');
 }
 
 /* ─── CRÍTICOS ───────────────────────────────────────── */
@@ -11148,11 +11142,15 @@ const PLANTAO_CORES = { ALFA:'#16a34a', BRAVO:'#2563eb', CHARLIE:'#d97706', DELT
 function _dashRenderPlantaoHoje() {
   const hoje = new Date();
   const p    = getPlantaoParaData(_diaPlantao(hoje));
-  const prox = getPlantaoParaData(_diaPlantao(new Date(hoje.getTime() + 864e5))); // quem assume na próxima troca das 08h
+  const cor  = PLANTAO_CORES[p] || '#1d4ed8';
   const nomeEl = document.getElementById('dash-plantao-nome');
   const dataEl = document.getElementById('dash-plantao-data');
+  const chipEl = document.getElementById('dash-plantao-chip');
+  const boxEl  = document.getElementById('dash-plantao-hoje');
   if (nomeEl) nomeEl.textContent = p;
-  if (dataEl) dataEl.textContent = hoje.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' }) + ' · próxima troca: ' + prox + ', às 08h';
+  if (dataEl) dataEl.textContent = hoje.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+  if (chipEl) { chipEl.textContent = p; chipEl.style.background = cor; }
+  if (boxEl)  boxEl.style.borderLeftColor = cor;
 }
 
 /* ═══════ DASHBOARD PESSOAL (por servidor) — gerência/admin veem o operacional ═══════ */
@@ -11218,32 +11216,38 @@ function _dashRenderPessoal() {
   const pend = _dashPendenciasPessoal(nivel);
   const atalhos = _DASH_ATALHOS[nivel] || [];
 
-  // peças do guia de identidade visual (16/10/2026): indicador .idv-kpi (clicável quando leva a uma aba)
-  const card = (cls,num,titulo,sub,onclick) => onclick
-    ? `<button type="button" class="idv-kpi ${cls}" onclick="${onclick}"><span class="idv-num">${num}</span><span class="idv-rot">${titulo}</span>${sub?`<span class="idv-leg">${sub}</span>`:''}</button>`
-    : `<div class="idv-kpi ${cls}"><span class="idv-num">${num}</span><span class="idv-rot">${titulo}</span>${sub?`<span class="idv-leg">${sub}</span>`:''}</div>`;
+  const card = (cor,num,titulo,sub,onclick) =>
+    `<div ${onclick?`onclick="${onclick}" style="cursor:pointer;`:'style="'}background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e2e8f0;border-top:3px solid ${cor}">
+       <div style="font-size:1.7rem;font-weight:800;color:${cor}">${num}</div>
+       <div style="font-size:.74rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-top:2px">${titulo}</div>
+       ${sub?`<div style="font-size:.72rem;color:#94a3b8">${sub}</div>`:''}
+     </div>`;
 
-  let html = `<p class="idv-ola">Olá, <b>${esc(primeiro)}</b>. Este é o seu painel — setor <b>${esc(setorLabel)}</b>.</p>`;
+  let html = `
+    <div style="background:linear-gradient(90deg,#1e3a5f,#1F4E78);color:#fff;border-radius:12px;padding:16px 20px;margin-bottom:18px">
+      <div style="font-size:1.25rem;font-weight:800">Olá, ${esc(primeiro)} \u{1F44B}</div>
+      <div style="font-size:.82rem;opacity:.85;margin-top:2px">Seu painel — Setor: <strong>${esc(setorLabel)}</strong></div>
+    </div>`;
 
   if (pend.length) {
-    html += `<h2 class="idv-secao">Pendências do meu setor</h2>
-      <div class="idv-kpis">
-        ${pend.map(p=>card(p.alerta?'cr':'in', p.valor, p.label, 'clique para abrir', `mudarAba('${p.aba}')`)).join('')}
+    html += `<div class="section-title">Pendências do meu setor</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:6px">
+        ${pend.map(p=>card(p.alerta?'#dc2626':'#1d4ed8', p.valor, p.label, 'clique para abrir', `mudarAba('${p.aba}')`)).join('')}
       </div>`;
   }
 
-  html += `<h2 class="idv-secao">Minha produtividade</h2>
-    <div class="idv-kpis">
-      ${card('ok', totalMes, 'Este mês', 'registros meus')}
-      ${card('in', totalAno, 'No ano', 'registros meus')}
-      ${prodAtivo.map(p=>card('', p.ano, esc(p.label), esc(p.setor)+' · ano')).join('')}
+  html += `<div class="section-title" style="margin-top:18px">Minha produtividade</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px">
+      ${card('#0B6E4F', totalMes, 'Este mês', 'registros meus')}
+      ${card('#1F4E78', totalAno, 'No ano', 'registros meus')}
+      ${prodAtivo.map(p=>card(p.cor, p.ano, p.label, p.setor+' · ano')).join('')}
     </div>
-    ${(!totalAno)?`<div class="idv-mini" style="margin-top:8px">Nenhum registro atribuído a você ainda neste ano.</div>`:''}`;
+    ${(!totalAno)?`<div style="color:#94a3b8;font-size:.84rem;margin-top:8px">Nenhum registro atribuído a você ainda neste ano.</div>`:''}`;
 
   if (atalhos.length) {
-    html += `<h2 class="idv-secao">Atalhos</h2>
-      <div class="idv-acoes">
-        ${atalhos.map(([txt,aba])=>`<button type="button" class="idv-btn" onclick="mudarAba('${aba}')">${txt.replace(/^[^\wÀ-ú]+\s*/u,'')}</button>`).join('')}
+    html += `<div class="section-title" style="margin-top:18px">Atalhos</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        ${atalhos.map(([txt,aba])=>`<button class="btn-secondary" onclick="mudarAba('${aba}')">${txt}</button>`).join('')}
       </div>`;
   }
 
