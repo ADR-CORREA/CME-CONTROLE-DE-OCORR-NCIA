@@ -65,10 +65,10 @@ function _rdsRender() {
 // Código de acesso do app (um só). O CME não guarda o código: só mostra o link logo depois de trocar.
 function _rdsHtmlAcesso(L) {
   return '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:.8rem;color:#475569">'
-    + '<b>Acesso no celular:</b> ' + (L.codigo_definido ? 'código gerado em ' + new Date(L.codigo_trocado_em).toLocaleString('pt-BR') + '. ' : '<span style="color:#b91c1c">ainda sem código — gere um para abrir o radar no app.</span> ')
-    + ' <button type="button" onclick="rds_trocarCodigo()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:4px 10px;font-size:.78rem;cursor:pointer">' + (L.codigo_definido ? 'Gerar novo código' : 'Gerar código') + '</button>'
-    + '<div style="font-size:.72rem;color:#94a3b8;margin-top:3px">O código é gerado pelo servidor (20 letras e números) e aparece só uma vez, aqui. Gerar outro desconecta todos os celulares com o radar aberto.</div>'
-    + (_rdsLinkNovo ? '<div style="margin-top:6px;padding:8px 10px;background:#f0fdf4;border-left:3px solid #16a34a;border-radius:4px">\u{1F511} Código: <b style="font-family:var(--font-mono);letter-spacing:.06em">' + _mpEsc(_rdsCodigoNovo) + '</b> · \u{1F517} link (envie só para quem vai rastrear): <a href="' + _mpEsc(_rdsLinkNovo) + '" target="_blank" rel="noopener" style="font-family:var(--font-mono)">' + _mpEsc(_rdsLinkNovo) + '</a> <button type="button" onclick="navigator.clipboard&&navigator.clipboard.writeText(\'' + _mpEsc(_rdsLinkNovo) + '\');_mostrarToast(\'Link copiado.\',\'sucesso\')" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:2px 8px;font-size:.75rem;cursor:pointer">Copiar</button></div>' : '')
+    + '<b>Acesso no celular:</b> ' + (L.codigo_definido ? 'senha gerada em ' + new Date(L.codigo_trocado_em).toLocaleString('pt-BR') + '. ' : '<span style="color:#b91c1c">ainda sem senha — gere uma para abrir o radar no celular.</span> ')
+    + ' <button type="button" onclick="rds_trocarCodigo()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:4px 10px;font-size:.78rem;cursor:pointer">' + (L.codigo_definido ? 'Gerar nova senha' : 'Gerar senha') + '</button>'
+    + '<div style="font-size:.72rem;color:#94a3b8;margin-top:3px">A senha é gerada pelo servidor (20 letras e números) e aparece só uma vez, aqui. Gerar outra desconecta todos os celulares com o radar aberto.</div>'
+    + (_rdsLinkNovo ? '<div style="margin-top:6px;padding:8px 10px;background:#f0fdf4;border-left:3px solid #16a34a;border-radius:4px">\u{1F511} Senha: <b style="font-family:var(--font-mono);letter-spacing:.06em">' + _mpEsc(_rdsCodigoNovo) + '</b> · \u{1F517} link (envie só para quem vai rastrear): <a href="' + _mpEsc(_rdsLinkNovo) + '" target="_blank" rel="noopener" style="font-family:var(--font-mono)">' + _mpEsc(_rdsLinkNovo) + '</a> <button type="button" onclick="navigator.clipboard&&navigator.clipboard.writeText(\'' + _mpEsc(_rdsLinkNovo) + '\');_mostrarToast(\'Link copiado.\',\'sucesso\')" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:2px 8px;font-size:.75rem;cursor:pointer">Copiar</button></div>' : '')
     + '</div>';
 }
 
@@ -119,7 +119,7 @@ async function rds_remover(reg) {
   await rds_carregar();
 }
 async function rds_trocarCodigo() {
-  if (_rdsLista && _rdsLista.codigo_definido && !confirm('Gerar um novo código do radar? O antigo deixa de valer e todos os celulares com o radar aberto serão desconectados.')) return;
+  if (_rdsLista && _rdsLista.codigo_definido && !confirm('Gerar uma nova senha do radar? A antiga deixa de valer e todos os celulares com o radar aberto serão desconectados.')) return;
   try {
     const r = await _mpApi('/radar/codigo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
     const cod = String(r.codigo || '');
@@ -127,7 +127,7 @@ async function rds_trocarCodigo() {
     _rdsCodigoNovo = cod;
     // o código vai depois do # : essa parte do link não sai do celular (nem em log, nem na prévia do WhatsApp)
     _rdsLinkNovo = _RDS_APP + '/radar#' + cod;
-    _mostrarToast('Novo código do radar gerado. Copie o link agora: ele não aparece de novo.', 'sucesso');
+    _mostrarToast('Nova senha do radar gerada. Copie agora: ela não aparece de novo.', 'sucesso');
   } catch (e) { _mostrarToast('Não consegui trocar o código: ' + (e.message || e), 'erro'); }
   await rds_carregar();
 }
