@@ -6,13 +6,13 @@
 
 const _EP_CAT = { 'Módulo eletrônico de monitoração': 'Tornozeleira', 'Cinta': 'Tornozeleira', 'Trava': 'Tornozeleira', 'Carregador da tornozeleira': 'Tornozeleira', 'Dispositivo DPP': 'DPP — Dispositivo de Proteção Pessoal' };
 const _EP_MOTIVOS = {
-  entrada:   ['Inventário inicial (já estava na sala do plantão)', 'Outro'],
+  entrada:   ['Inventário inicial (já estava na sala do plantão)'],
   saida:     ['Instalação no monitorado', 'Entrega de DPP à vítima', 'Troca de equipamento', 'Outro'],
   devolucao: ['Retirada do monitorado (desinstalação)', 'Troca de equipamento', 'Outro'],
   envio:     ['Defeito / manutenção', 'Sobra — devolver ao setor', 'Outro'],
   baixa:     ['Outro'],
 };
-const _EP_TITULO = { entrada: '\u{2B06} Entrada no estoque do Plantão', saida: '\u{2B07} Saída — instalação / entrega', devolucao: '\u{21A9} Devolução ao plantão (retirado do monitorado)', baixa: '\u{2715} Baixa (defeito, perda, dano)', envio: '\u{1F4E6} Enviar ao setor de Estoque' };
+const _EP_TITULO = { entrada: '\u{2B06} Inventário inicial do Plantão', saida: '\u{2B07} Saída — instalação / entrega', devolucao: '\u{21A9} Devolução ao plantão (retirado do monitorado)', baixa: '\u{2715} Baixa (defeito, perda, dano)', envio: '\u{1F4E6} Enviar ao setor de Estoque' };
 const _EP_BADGE = { 'Entrada': 'badge-ok', 'Recebimento': 'badge-ok', 'Saída': 'badge-vencido', 'Devolução': 'badge-atencao', 'Baixa': 'badge-vencendo', 'Envio ao setor': 'badge-vencendo' };
 
 function _epMin(d, chave) {
@@ -39,12 +39,18 @@ function ep_renderizar() {
   const html = [];
   html.push('<div class="est-header"><div class="est-header-title">\u{1F6E1}\u{FE0F} Estoque do Plantão</div>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap">' + _epBtn('\u{1F504} Atualizar', 'ep_renderizar()')
-    + (pode ? _epBtn('\u{2B06} Entrada', "ep_abrirMov('entrada')", 'btn-primary') + _epBtn('\u{2B07} Saída', "ep_abrirMov('saida')") + _epBtn('\u{21A9} Devolução', "ep_abrirMov('devolucao')")
+    + (pode && !d.inventarioEncerradoEm ? _epBtn('\u{2B06} Inventário inicial', "ep_abrirMov('entrada')", 'btn-primary') + _epBtn('\u{2714} Encerrar inventário', 'ep_encerrarInventario()') : '')
+    + (pode ? _epBtn('\u{2B07} Saída', "ep_abrirMov('saida')") + _epBtn('\u{21A9} Devolução', "ep_abrirMov('devolucao')")
       + _epBtn('\u{1F4E6} Enviar ao Estoque', "ep_abrirMov('envio')") + _epBtn('\u{2715} Baixa', "ep_abrirMov('baixa')", 'btn-danger') + _epBtn('\u{2699}\u{FE0F} Mínimos', 'ep_abrirMinimos()') : '')
+    + (admin && d.inventarioEncerradoEm ? _epBtn('Reabrir inventário', 'ep_reabrirInventario()', 'btn-secondary', 'Libera de novo o cadastro de inventário pelo plantão') : '')
     + (admin ? _epBtn('\u{1F9EE} Zerar contagem', 'ep_zerarContagem()', 'btn-danger', 'Zera os saldos e os números de série do plantão. O histórico é mantido.') : '')
     + '</div></div>'
     + '<div style="font-size:.8rem;color:#64748b;margin:-4px 0 10px">Um estoque só para as equipes ALFA a ECHO, separado do Estoque do CME. Lance na hora tudo que entra e sai. Equipe de hoje: <b>' + esc(equipe || '—') + '</b></div>');
   if (!pode) html.push('<div class="est-aviso-perm">\u{1F512} <strong>Modo visualização:</strong> só o plantão lança movimentações aqui.</div>');
+  // 1º momento: o plantão cadastra o que já tem; depois, tudo novo vem do Estoque do CME
+  html.push(d.inventarioEncerradoEm
+    ? '<div style="font-size:.78rem;color:#64748b;margin-bottom:8px">\u{2714} Inventário inicial encerrado em ' + new Date(d.inventarioEncerradoEm).toLocaleString('pt-BR') + (d.inventarioEncerradoPor ? ' por ' + esc(d.inventarioEncerradoPor) : '') + '. Item novo chega pelo Estoque do CME, em "A receber".</div>'
+    : '<div class="est-alerta-box" style="background:#eef4ff;border-color:#b6cdf7;color:#1a4fa3">\u{1F4CB} <strong>Primeiro passo — inventário inicial:</strong> cadastre em "Inventário inicial" tudo que o plantão já tem na sala (com o IMEI/nº de série de cada DPP e módulo). Quando terminar, clique em <b>Encerrar inventário</b>. Depois disso, item novo só entra pelo que o Estoque do CME enviar ("A receber").</div>');
   if (d.recontagemEm) html.push('<div class="est-alerta-box" style="background:#eef4ff;border-color:#b6cdf7;color:#1a4fa3">\u{1F9EE} <strong>Recontagem em ' + new Date(d.recontagemEm).toLocaleString('pt-BR') + ':</strong> o saldo conta só o que foi lançado a partir dessa data.</div>');
   html.push(_epHtmlPendencias('plantao', pode));
   html.push('<div class="est-kpi-grid">' + kpi(it[M] || 0, 'Módulo Eletrônico') + kpi(cinta, 'Cintas (total)') + kpi(it['Trava'] || 0, 'Travas') + kpi(it['Carregador da tornozeleira'] || 0, 'Carregadores Tornozeleira')
@@ -170,8 +176,25 @@ async function ep_zerarContagem() {
     salvarStore('estoque_plantao_backup', { em: new Date().toISOString(), por: _epQuem(), dados: JSON.parse(JSON.stringify(d)) });
     Object.keys(d.itens).forEach(k => { d.itens[k] = 0; });
     d.seriais = {}; d.registros = {}; d.recontagemEm = new Date().toISOString();
+    d.inventarioEncerradoEm = null; d.inventarioEncerradoPor = ''; // recontagem = o plantão refaz o inventário
   });
   if (ok) { addLog('Estoque do Plantão: contagem zerada para recontagem (' + _epQuem() + ')'); ep_renderizar(); try { _dashEstoqueDisp(); } catch (e) {} }
+}
+
+/* ── inventário inicial: aberto até o plantão encerrar; depois, item novo só pelo Estoque do CME ── */
+async function ep_encerrarInventario() {
+  if (!ep_podeMover()) return;
+  const d = ep_get(), n = Object.values(d.itens).reduce((s, v) => s + (v || 0), 0);
+  if (!confirm('ENCERRAR O INVENTÁRIO INICIAL DO PLANTÃO\n\nForam cadastrados ' + n + ' item(ns).\nDepois de encerrar, o plantão não usa mais a "Entrada": item novo chega pelo Estoque do CME ("A receber").\n\nConfirma que já cadastrou tudo o que existe na sala?')) return;
+  const ok = await _epMutar(x => { if (x.inventarioEncerradoEm) return 'ja'; x.inventarioEncerradoEm = new Date().toISOString(); x.inventarioEncerradoPor = _epQuem(); });
+  if (ok) { addLog('Estoque do Plantão: inventário inicial ENCERRADO com ' + n + ' item(ns) (' + _epQuem() + ')'); _mostrarToast('\u{2714} Inventário encerrado. Daqui em diante o material vem do Estoque do CME.', 'ok'); }
+  ep_renderizar();
+}
+async function ep_reabrirInventario() {
+  if (!usuarioAtual || usuarioAtual.nivel !== 'admin') return;
+  if (!confirm('Reabrir o inventário do plantão?\n\nO plantão volta a poder cadastrar pela "Inventário inicial" até encerrar de novo.')) return;
+  if (await _epMutar(x => { x.inventarioEncerradoEm = null; x.inventarioEncerradoPor = ''; })) addLog('Estoque do Plantão: inventário REABERTO (' + _epQuem() + ')');
+  ep_renderizar();
 }
 
 /* ── mínimos do plantão ── */

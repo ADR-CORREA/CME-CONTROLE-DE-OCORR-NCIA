@@ -364,6 +364,8 @@ async function ep_salvarMov(tipo, op, extra) {
   }
   let mov = null;
   const ok = await _epMutar(d => {
+    // depois do inventário inicial, item novo só entra pelo que vem do Estoque do CME ("A receber")
+    if (tipo === 'entrada' && d.inventarioEncerradoEm) return { erro: 'O inventário inicial do plantão já foi encerrado. Item novo chega pelo Estoque do CME, em "A receber".' };
     const ap = ep_aplicar(d, opF, _epSerial(op.item)); if (ap.erro) return ap;
     mov = ep_mov(EP_TIPO[tipo], opF, ap.unidades, Object.assign({ responsavel: _epQuem(), plantonista: _epQuem(), equipe: _epEquipeHoje() }, extra || {}));
     if (tipo === 'envio') mov.unidades = ap.unidades; // para o "Reenviar ao setor" se o aviso falhar
