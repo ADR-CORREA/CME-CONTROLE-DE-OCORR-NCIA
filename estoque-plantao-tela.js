@@ -2,7 +2,7 @@
    Aba própria "Estoque Plantão" (plantão, gerência e admin) + quadro de transferências dentro da aba Estoque do CME.
    Regras e gravação em estoque-plantao.js. Mesmas funções do setor: Entrada (inventário), Saída (instalação/entrega),
    Devolução, Baixa, Envio ao setor, Receber/Recusar do setor, mínimos, alertas, histórico, detalhe, consulta,
-   zerar contagem (admin) e excluir movimentação (admin). Emojis só por \u{...}. Prefixo ep_ / _ep. */
+   excluir movimentação (admin). SEM "Zerar contagem" (pedido dele: alguém poderia apagar tudo). Emojis só por \u{...}. Prefixo ep_ / _ep. */
 
 const _EP_CAT = { 'Módulo eletrônico de monitoração': 'Tornozeleira', 'Cinta': 'Tornozeleira', 'Trava': 'Tornozeleira', 'Carregador da tornozeleira': 'Tornozeleira', 'Dispositivo DPP': 'DPP — Dispositivo de Proteção Pessoal' };
 const _EP_MOTIVOS = {
@@ -43,7 +43,6 @@ function ep_renderizar() {
     + (pode ? _epBtn('\u{2B07} Saída', "ep_abrirMov('saida')") + _epBtn('\u{21A9} Devolução', "ep_abrirMov('devolucao')")
       + _epBtn('\u{1F4E6} Enviar ao Estoque', "ep_abrirMov('envio')") + _epBtn('\u{2715} Baixa', "ep_abrirMov('baixa')", 'btn-danger') + _epBtn('\u{2699}\u{FE0F} Mínimos', 'ep_abrirMinimos()') : '')
     + (admin && d.inventarioEncerradoEm ? _epBtn('Reabrir inventário', 'ep_reabrirInventario()', 'btn-secondary', 'Libera de novo o cadastro de inventário pelo plantão') : '')
-    + (admin ? _epBtn('\u{1F9EE} Zerar contagem', 'ep_zerarContagem()', 'btn-danger', 'Zera os saldos e os números de série do plantão. O histórico é mantido.') : '')
     + '</div></div>'
     + '<div style="font-size:.8rem;color:#64748b;margin:-4px 0 10px">Um estoque só para as equipes ALFA a ECHO, separado do Estoque do CME. Lance na hora tudo que entra e sai. Equipe de hoje: <b>' + esc(equipe || '—') + '</b></div>');
   if (!pode) html.push('<div class="est-aviso-perm">\u{1F512} <strong>Modo visualização:</strong> só o plantão lança movimentações aqui.</div>');
@@ -167,18 +166,6 @@ async function ep_excluirMov(id) {
   if (!usuarioAtual || usuarioAtual.nivel !== 'admin') return;
   if (!confirm('Excluir esta movimentação do histórico do Plantão?\n\nO saldo NÃO é desfeito (igual ao setor de Estoque).')) return;
   if (await _epMutar(d => { d.movimentacoes = d.movimentacoes.filter(m => m.id !== id); })) { addLog('Estoque do Plantão: movimentação excluída (' + _epQuem() + ')'); ep_renderizar(); }
-}
-async function ep_zerarContagem() {
-  if (!usuarioAtual || usuarioAtual.nivel !== 'admin') return;
-  if (!confirm('ZERAR A CONTAGEM DO ESTOQUE DO PLANTÃO\n\nApaga saldos e números de série/IMEI do plantão. O histórico e as transferências pendentes ficam.\nDepois o plantão refaz o inventário pela Entrada.\n\nConfirma?')) return;
-  if (prompt('Para confirmar, digite ZERAR:') !== 'ZERAR') return;
-  const ok = await _epMutar(d => {
-    salvarStore('estoque_plantao_backup', { em: new Date().toISOString(), por: _epQuem(), dados: JSON.parse(JSON.stringify(d)) });
-    Object.keys(d.itens).forEach(k => { d.itens[k] = 0; });
-    d.seriais = {}; d.registros = {}; d.recontagemEm = new Date().toISOString();
-    d.inventarioEncerradoEm = null; d.inventarioEncerradoPor = ''; // recontagem = o plantão refaz o inventário
-  });
-  if (ok) { addLog('Estoque do Plantão: contagem zerada para recontagem (' + _epQuem() + ')'); ep_renderizar(); try { _dashEstoqueDisp(); } catch (e) {} }
 }
 
 /* ── inventário inicial: aberto até o plantão encerrar; depois, item novo só pelo Estoque do CME ── */

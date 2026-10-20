@@ -39,6 +39,7 @@ function _secNormal(d) {
     escalaServico: (d.escalaServico && typeof d.escalaServico === 'object' && !Array.isArray(d.escalaServico)) ? d.escalaServico : {}, // { 'AAAA-MM': { linhas, guardadoEm } }
     escalaServApoio: (d.escalaServApoio && typeof d.escalaServApoio === 'object' && !Array.isArray(d.escalaServApoio)) ? d.escalaServApoio : {}, // { 'AAAA-MM': { 'AAAA-MM-DD': 'texto' } } quadro fixo da escala de serviço
     faltas: arr('faltas'),
+    prodoc: (d.prodoc && typeof d.prodoc === 'object' && !Array.isArray(d.prodoc)) ? d.prodoc : {}, // marcações da Entrada PRODOC { idDoc: { st, por, em, nota } }
     modelos: Array.isArray(d.modelos) ? d.modelos : null,                       // null = ainda usa os modelos padrão
     config: (d.config && typeof d.config === 'object') ? d.config : {} };
 }
@@ -143,7 +144,7 @@ function _secChip(btn) {
 // Menu em 4 grupos (pedido de 14/10/2026: mais simples para o uso diário); a Auditoria fica num ícone discreto.
 const _SEC_GRUPOS = [
   ['hoje', '\u{1F3E0} Hoje', [['hoje', 'Hoje']]],
-  ['docs', '\u{1F4C5} Agenda e Documentos', [['agenda', '\u{1F4C5} Agenda'], ['despachos', '\u{1F4E8} Despachos PRODOC'], ['arquivo', '\u{1F5C4}\u{FE0F} Arquivo']]],
+  ['docs', '\u{1F4C5} Agenda e Documentos', [['agenda', '\u{1F4C5} Agenda'], ['entrada', '\u{1F4E5} Entrada PRODOC'], ['despachos', '\u{1F4E8} Despachos PRODOC'], ['arquivo', '\u{1F5C4}\u{FE0F} Arquivo']]],
   ['pessoal', '\u{1F465} Pessoal', [['servidores', '\u{1F464} Servidores'], ['faltas', '\u{1F4DD} Faltas e Folha de Ponto'], ['ferias', '\u{1F3D6}\u{FE0F} Férias e Licenças'], ['apoios', '\u{23F1}\u{FE0F} Apoios e Dispensas'], ['folgas', '\u{1F91D} Folgas combinadas']]],
   ['escalas', '\u{1F4C6} Escalas', [['escalas', '\u{1F4CB} Apoio de sábado'], ['escserv', '\u{1F6E1}\u{FE0F} Escala de serviço (24x96)']]],
 ];
@@ -188,7 +189,7 @@ function sec_render() {
   _secRenderMenu();
   if (typeof _secRenderHoje === 'function') _secRenderHoje();
   if (_secPerfilId) return sec_renderPerfil();
-  ({ hoje: sec_renderHojeDash, agenda: sec_renderAgenda, despachos: sec_renderDespachos, arquivo: sec_renderArquivo, servidores: sec_renderServidores, ferias: sec_renderFerias, escalas: sec_renderEscalas, escserv: sec_renderEscServ, faltas: sec_renderFaltas, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
+  ({ hoje: sec_renderHojeDash, agenda: sec_renderAgenda, entrada: sec_renderEntrada, despachos: sec_renderDespachos, arquivo: sec_renderArquivo, servidores: sec_renderServidores, ferias: sec_renderFerias, escalas: sec_renderEscalas, escserv: sec_renderEscServ, faltas: sec_renderFaltas, apoios: sec_renderApoios, folgas: sec_renderFolgas, auditoria: sec_renderAuditoria })[_secAba]();
 }
 
 // ── Servidores ────────────────────────────────────────────────────────────────

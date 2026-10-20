@@ -47,7 +47,8 @@ function _secRenderHoje() {
     + item('#d97706', '<b>' + em30.length + '</b> começa(m) em 30 dias', 'ferias')
     + (typeof _secCompromissosPendentes === 'function' && _secCompromissosPendentes().length ? item('#e11d48', '<b>' + _secCompromissosPendentes().length + '</b> compromisso(s) pendente(s)', 'agenda') : '')
     + item('#2563eb', '<b>' + horas + 'h</b> de dispensa a usufruir', 'apoios')
-    + (semPort ? item('#dc2626', '<b>' + semPort + '</b> sem portaria anexa', 'ferias') : '') + '</div>';
+    + (semPort ? item('#dc2626', '<b>' + semPort + '</b> sem portaria anexa', 'ferias') : '')
+    + (typeof _sprdItemHoje === 'function' ? _sprdItemHoje(item) : '') + '</div>';
 }
 
 // ── Dispensa direto do perfil ─────────────────────────────────────────────────
