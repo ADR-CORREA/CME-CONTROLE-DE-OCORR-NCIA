@@ -18,7 +18,7 @@ const _INC_CAT = {
   bat: { rot: 'Bateria', cor: '#7c3aed', dica: 'arquivada antes de restabelecer ou descarga acima de 15 min sem confirmar' },
 };
 let _incIndice = null, _incMes = null, _incDados = {}, _incCarregando = false, _incErro = '';
-let _incF = { g: '', op: '', cat: '', t: '', q: '' }, _incLimite = 100;
+let _incF = { g: '', op: '', cat: '', t: '', q: '' }, _incLimite = 100, _incEspera = 0;
 
 function _incAno() { return String(new Date().getFullYear()); }
 function _incRot(mes) { const [a, m] = mes.split('_'); return _INC_MESES[+m - 1] + '/' + a; }
@@ -26,7 +26,10 @@ async function _incLer(chave) { const r = await _dbLerChave(chave); if (r.error)
 
 async function inc_render() {
   const box = document.getElementById('inc-secao'); if (!box) return;
-  if (!['admin', 'gerencia'].includes(usuarioAtual?.nivel)) { box.innerHTML = ''; box.style.display = 'none'; return; }
+  // a sub-aba pode abrir antes de o usuário terminar de carregar: espera (até ~15 s) em vez de esconder de vez
+  if (typeof usuarioAtual === 'undefined' || !usuarioAtual) { box.style.display = 'none'; _incEspera = (_incEspera || 0) + 1; if (_incEspera < 30) setTimeout(inc_render, 500); return; }
+  _incEspera = 0;
+  if (!['admin', 'gerencia'].includes(usuarioAtual.nivel)) { box.innerHTML = ''; box.style.display = 'none'; return; }
   box.style.display = '';
   if (_incIndice === null && !_incCarregando) {
     _incCarregando = true; _incDesenhar(box);
