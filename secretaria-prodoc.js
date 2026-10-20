@@ -3,7 +3,7 @@
    "já encaminhei / resolvido". Pedido de 20/10/2026.
    • Dados do robô: chave cme_secretaria_bk_prodoc (robô atualizar-prodoc.js, a cada 30 min; só leitura no PRODOC).
      Lida só quando a Secretaria abre — não vem no login. O banco só entrega a admin, gerência e secretaria.
-   • Texto do documento SÓ de quem já foi aberto no PRODOC; não lido aparece com os dados da lista.
+   • Só entra o que já foi aberto no PRODOC (o não aberto não aparece — pedido de 20/10/2026).
    • Marcações da Secretaria: cme_secretaria.prodoc = { idDoc: { st: 'enc'|'res', por, em, nota } }.
    • Regras (setor, nome, prazo, situação): secretaria-prodoc-regras.js.
    Emojis só por \u{...}. */
@@ -12,7 +12,7 @@ const _SPRD_CHAVE = 'cme_secretaria_bk_prodoc';
 const _SPRD_LINK = 'https://www.prodoc.ap.gov.br/documentos/historico_tramitacao/';
 const _SPRD_SIT = { novo: ['A encaminhar', 'badge-atencao'], aviso: ['Aviso da equipe', 'badge-neutro'], naolido: ['Não aberto no PRODOC', 'badge-neutro'], enc: ['Encaminhado', 'badge-neutro'],
   ciencia: ['Só ciência', 'badge-neutro'], res: ['Resolvido', 'badge-ok'] };
-const _SPRD_FILTROS = [['novo', 'A encaminhar'], ['aviso', 'Avisos das equipes'], ['naolido', 'Não abertos'], ['enc', 'Encaminhados'], ['ciencia', 'Só ciência'], ['res', 'Resolvidos'], ['todos', 'Todos'], ['criados', 'Criados pela CME']];
+const _SPRD_FILTROS = [['novo', 'A encaminhar'], ['aviso', 'Avisos das equipes'], ['enc', 'Encaminhados'], ['ciencia', 'Só ciência'], ['res', 'Resolvidos'], ['todos', 'Todos'], ['criados', 'Criados pela CME']];
 const _SPRD_LOTE_SITS = ['novo', 'aviso', 'ciencia', 'enc']; // situações que podem ser marcadas em lote
 let _sprdMarcados = new Set(); // seleção em lote (ids)
 // setor da regra → "destino" dos modelos de Despachos PRODOC
@@ -34,7 +34,8 @@ async function _sprdCarregar(forcar) {
       const r = await _dbLerChave(_SPRD_CHAVE);
       if (r.error) throw r.error;
       const v = (r.data && r.data.value) || {};
-      _sprdPacote = Object.assign({}, v, { docs: (Array.isArray(v.docs) ? v.docs : []).filter(d => d && _sprdIdOk(d.id)),
+      // só o que já foi aberto no PRODOC entra na tela (pedido de 20/10/2026; o robô também já não guarda os não abertos)
+      _sprdPacote = Object.assign({}, v, { docs: (Array.isArray(v.docs) ? v.docs : []).filter(d => d && _sprdIdOk(d.id) && d.lido === true),
         criadosCME: (Array.isArray(v.criadosCME) ? v.criadosCME : []).filter(c => c && _sprdIdOk(c.id)) });
       _sprdErro = '';
     } catch (e) { _sprdErro = 'Não consegui ler o banco do CME (' + (e.message || e) + ').'; }
@@ -190,7 +191,7 @@ function _sprdTabela(linhas) {
         : l.sit === 'aviso' ? 'Ciência' : (l.sug.ciencia ? 'Só ciência' : l.sug.setores.join(', ') || '—');
       return '<tr data-sprd="' + d.id + '" style="cursor:pointer' + (d.id === _sprdSel ? ';background:#eff6ff;box-shadow:inset 3px 0 0 #2563eb' : '') + '" onclick="sec_prodocSel(\'' + _jsq(d.id) + '\')">'
         + '<td onclick="event.stopPropagation()">' + (_SPRD_LOTE_SITS.includes(l.sit) ? '<input type="checkbox"' + (_sprdMarcados.has(d.id) ? ' checked' : '') + ' onclick="sec_prodocMarcarSel(\'' + _jsq(d.id) + '\',event)">' : '') + '</td>'
-        + '<td><span class="badge ' + cls + '">' + (l.sit === 'naolido' ? '\u{1F512} ' : '') + rot + '</span>' + (l.parado ? ' <span class="badge badge-vencendo">Parado</span>' : '') + '</td>'
+        + '<td><span class="badge ' + cls + '">' + rot + '</span>' + (l.parado ? ' <span class="badge badge-vencendo">Parado</span>' : '') + '</td>'
         + '<td style="font-family:var(--font-mono);white-space:nowrap">' + _sprdBR(d.recebidoEm) + '</td>'
         + '<td><div style="font-weight:600">' + esc(d.assunto) + '</div><div style="font-size:.78rem;color:#64748b">' + esc(l.sug.cat) + ' · <span style="font-family:var(--font-mono)">' + esc(d.numero) + '</span> · ' + esc(d.origem) + '</div>'
         + (d.ia && d.ia.providencia ? '<div style="font-size:.8rem;color:#6d28d9">\u{1F916} ' + esc(d.ia.providencia) + (_sprdIaConferida(d.ia) ? ' <span style="color:#15803d" title="leitura conferida">\u{2714}</span>' : ' <span style="color:#b45309" title="confira">?</span>') + '</div>' : '') + '</td>'
@@ -234,7 +235,6 @@ function _sprdRenderDetalhe() {
   else if (d.texto) h += '<details style="margin-top:8px"' + (l.sit === 'novo' ? ' open' : '') + '><summary style="cursor:pointer;font-size:.8rem;font-weight:700;color:#64748b">TEXTO DO DOCUMENTO (como está no PRODOC)</summary>'
     + '<div style="white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:10px 12px;margin-top:6px;font-size:.88rem;line-height:1.5;max-height:220px;overflow:auto">' + esc(d.texto) + '</div></details>';
   h += _sprdBlocoResponder(l); // passo 2: despacho curto ou modelo formal, aqui mesmo (secretaria-prodoc-responder.js)
-  if (l.sit === 'naolido') h += '<div style="margin-top:10px;font-size:.86rem;color:#475569">\u{1F512} Ainda não foi aberto no PRODOC. O robô só traz o texto depois que alguém abrir lá — e abrir marca "lido por" no nome de quem abriu.</div>';
   if ((d.envios || []).length) h += linha('Encaminhado no PRODOC', d.envios.map(e => {
     const curto = x => _sprdSetorCurto(x).replace(/\s/g, '').toUpperCase();
     const st = (d.setores || []).find(x => curto(e.destino) === curto(x.para));

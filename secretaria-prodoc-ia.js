@@ -42,8 +42,7 @@ function _sprdIaTextos(l, html) {
 function _sprdIaStatus(l) {
   const d = l.d;
   // a IA lê só o que ainda pede ação (pedido de 20/10/2026: não gastar a cota grátis inteira)
-  const motivo = l.sit === 'naolido' ? 'só depois que o documento for aberto no PRODOC'
-    : d.sigiloso ? 'documento sigiloso não vai para a IA'
+  const motivo = d.sigiloso ? 'documento sigiloso não vai para a IA'
     : d.caixa !== 'entrada' ? 'já foi encaminhado — a IA lê só o que ainda está na caixa'
     : /CIRCULAR/i.test(d.tipo || '') ? 'circular é só ciência — a IA não gasta leitura com ela'
     : String(d.recebidoEm || '').slice(0, 10) < _sprdMaisDias(_secHoje(), -7) ? 'a IA lê só o que chegou nos últimos 7 dias'
