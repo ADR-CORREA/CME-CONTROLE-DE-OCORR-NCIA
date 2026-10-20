@@ -3494,6 +3494,10 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
             <tbody id="tbody-est-hist"></tbody>
           </table>
         </div>
+        <div class="pagination" id="est-hist-pag" style="display:none">
+          <span id="est-hist-pag-info"></span>
+          <div class="pagination-btns" id="est-hist-pag-btns"></div>
+        </div>
       </div><!-- /est-panel-estoque -->
 
       <!-- Sub-panel Consultar -->
@@ -8260,7 +8264,7 @@ function mudarAba(aba) {
   if (aba === "ocorrencias") { marcarOcVisto(); renderizarOcorrencias(); }
   if (aba === "juridico") { renderizarJuridico(); atualizarBadgeSemCom(); atualizarBadgeOFC(); }
   if (aba === "comunicacao") { marcarComVisto(); renderizarComunicacao(); }
-  if (aba === "estoque") renderizarEstoque();
+  if (aba === "estoque") { _estHistPag = 1; renderizarEstoque(); }
   if (aba === "triagem") { renderizarTriagem(); atualizarBadgeTriagemArq(); }
   if (aba === "psicossocial") { renderizarPsi(); atualizarBadgePsiArq(); }
   if (aba === "relatorio") { marcarRelVisto(); renderizarRelatorio(); }
@@ -15533,11 +15537,36 @@ function renderizarEstoque() {
   }
   document.getElementById('tbody-est-dpp').innerHTML = rowsDpp.join('');
 
-  /* Histórico */
+  _estHistDesenhar(est);
+}
+
+/* Histórico de movimentações — 20 por página, mais recentes primeiro */
+const EST_HIST_POR_PAG = 20;
+let _estHistPag = 1;
+function _estHistIr(p) { _estHistPag = p; _estHistDesenhar(getEstoque()); }
+function _estHistDesenhar(est) {
   const isAdmin   = usuarioAtual?.nivel === 'admin';
   const podVerEst = podeAlterarEstoque(); // admin ou estoque
-  const movs = (est.movimentacoes || []).slice(0, 300);
+  const todas = est.movimentacoes || [];
+  const total = todas.length;
+  const totalPag = Math.max(1, Math.ceil(total / EST_HIST_POR_PAG));
+  if (_estHistPag > totalPag || _estHistPag < 1) _estHistPag = 1;
+  const inicio = (_estHistPag - 1) * EST_HIST_POR_PAG;
+  const movs = todas.slice(inicio, inicio + EST_HIST_POR_PAG);
   const tbH  = document.getElementById('tbody-est-hist');
+  const pagEl = document.getElementById('est-hist-pag');
+  if (pagEl) pagEl.style.display = totalPag > 1 ? '' : 'none';
+  document.getElementById('est-hist-pag-info').textContent =
+    `Mostrando ${total ? inicio + 1 : 0}–${Math.min(inicio + EST_HIST_POR_PAG, total)} de ${total} movimentaç${total !== 1 ? 'ões' : 'ão'}`;
+  const ini = Math.max(1, Math.min(_estHistPag - 2, totalPag - 4)), fim = Math.min(totalPag, ini + 4);
+  const btnPag = p => `<button class="${p === _estHistPag ? 'active' : ''}" onclick="_estHistIr(${p})" ${p === _estHistPag ? 'aria-current="page"' : ''}>${p}</button>`;
+  const reti = '<span style="align-self:center">\u{2026}</span>';
+  document.getElementById('est-hist-pag-btns').innerHTML = `
+    <button onclick="_estHistIr(${_estHistPag - 1})" ${_estHistPag === 1 ? 'disabled' : ''}>\u{2039} Anterior</button>
+    ${ini > 1 ? btnPag(1) + (ini > 3 ? reti : ini === 3 ? btnPag(2) : '') : ''}
+    ${Array.from({ length: fim - ini + 1 }, (_, i) => btnPag(ini + i)).join('')}
+    ${fim < totalPag ? (fim < totalPag - 2 ? reti : fim === totalPag - 2 ? btnPag(totalPag - 1) : '') + btnPag(totalPag) : ''}
+    <button onclick="_estHistIr(${_estHistPag + 1})" ${_estHistPag >= totalPag ? 'disabled' : ''}>Próxima \u{203A}</button>`;
   if (!movs.length) {
     tbH.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--cz2)">Nenhuma movimentação registrada ainda.</td></tr>`;
     return;
