@@ -60,7 +60,8 @@ const _SPRD_NAO_NOME = /\b(DESCUMPRIMENTO|MEDIDA|LOCAL|TRABALHO|AUTORIZA\S*|SA[�
 const _sprdPareceNome = s => /^[A-ZÀ-Ú]+(\s+[A-ZÀ-Ú]+){1,7}$/.test(s) && !_SPRD_NAO_NOME.test(s);
 function _sprdNome(assunto) {
   const a = _sprdMaiusc(assunto).replace(/\s+/g, ' ').trim();
-  const m = a.match(/\b(?:PPL|MONITORAD[OA]|APENAD[OA]|V[ÍI]TIMA|REEDUCAND[OA]|NACIONAL)\s+([A-ZÀ-Ú]+(?:\s+[A-ZÀ-Ú]+){1,7})/);
+  // monitorado/apenado antes da vítima: "DPP - VÍTIMA MARIA - PPL JOSE" devolve JOSE
+  const m = a.match(/\b(?:PPL|MONITORAD[OA]|APENAD[OA]|REEDUCAND[OA]|NACIONAL)\s+([A-ZÀ-Ú]+(?:\s+[A-ZÀ-Ú]+){1,7})/) || a.match(/\bV[ÍI]TIMA\s+([A-ZÀ-Ú]+(?:\s+[A-ZÀ-Ú]+){1,7})/);
   if (m) { // corta no primeiro termo que não é nome ("PPL JOSE DA SILVA PROCESSO 0001")
     const pal = m[1].split(' '), i = pal.findIndex(w => _SPRD_NAO_NOME.test(w));
     const nome = (i < 0 ? pal : pal.slice(0, i)).join(' ');
@@ -96,19 +97,23 @@ function _sprdPrazo(texto, recebidoEm) {
   return { data: '', urgente };
 }
 
-// novo | antigo | naolido | enc | ciencia | res     (marcas = cme_secretaria.prodoc)
-// antigo = está na caixa há mais de 7 dias sem ninguém marcar (não infla o "A encaminhar" do dia a dia)
-const _SPRD_DIAS_NOVO = 7;
-function _sprdSituacao(d, marcas, agora) {
+// novo | naolido | enc | ciencia | res     (marcas = cme_secretaria.prodoc). A tela mostra um mês por vez.
+function _sprdSituacao(d, marcas) {
   const mk = (marcas || {})[d.id];
   if (mk && mk.st === 'res') return 'res';
   if (d.caixa === 'fora') return 'res';
   if (d.caixa === 'encaminhado' || (mk && mk.st === 'enc')) return 'enc'; // encaminhado entre duas leituras pode estar com lido=false
   if (d.lido !== true) return 'naolido';
   if (_sprdSugestao(d).ciencia) return 'ciencia';
-  if (agora && String(d.recebidoEm || '').slice(0, 10) < _sprdMaisDias(agora, -_SPRD_DIAS_NOVO)) return 'antigo';
   return 'novo';
 }
+
+// setor que a IA devolve (lista do Worker) → nome usado nas regras e nos modelos de despacho
+const _SPRD_SETOR_IA = { 'Relatórios Judiciais': 'Relatórios', 'Relatórios Estatísticos': 'Estatística', 'Logística': 'Administrativo' };
+const _sprdSetorIA = nome => _SPRD_SETOR_IA[nome] || String(nome || '');
+const _SPRD_MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+function _sprdMesRotulo(mes) { const m = String(mes).match(/^(\d{4})-(\d{2})$/); return m ? _SPRD_MESES[+m[2] - 1].replace(/^./, c => c.toUpperCase()) + ' de ' + m[1] : ''; }
+function _sprdMesSoma(mes, n) { const [a, m] = String(mes).split('-').map(Number), d = new Date(a, m - 1 + n, 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
 
 // encaminhado há mais de 24 h e algum setor ainda não abriu no PRODOC
 function _sprdParado(d, agora) {
@@ -119,4 +124,4 @@ function _sprdParado(d, agora) {
   return d.setores.some(s => !s.lido);
 }
 
-if (typeof module !== 'undefined') module.exports = { _SPRD_REGRAS, _sprdSugestao, _sprdNome, _sprdPrazo, _sprdSituacao, _sprdParado, _sprdMaisDias };
+if (typeof module !== 'undefined') module.exports = { _SPRD_REGRAS, _sprdSugestao, _sprdNome, _sprdPrazo, _sprdSituacao, _sprdParado, _sprdMaisDias, _sprdSetorIA, _sprdMesRotulo, _sprdMesSoma };

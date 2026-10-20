@@ -10,12 +10,14 @@
 
 const _SPRD_CHAVE = 'cme_secretaria_bk_prodoc';
 const _SPRD_LINK = 'https://www.prodoc.ap.gov.br/documentos/historico_tramitacao/';
-const _SPRD_SIT = { novo: ['A encaminhar', 'badge-atencao'], antigo: ['Na caixa há +7 dias', 'badge-neutro'], naolido: ['Não aberto no PRODOC', 'badge-neutro'], enc: ['Encaminhado', 'badge-neutro'],
+const _SPRD_SIT = { novo: ['A encaminhar', 'badge-atencao'], naolido: ['Não aberto no PRODOC', 'badge-neutro'], enc: ['Encaminhado', 'badge-neutro'],
   ciencia: ['Só ciência', 'badge-neutro'], res: ['Resolvido', 'badge-ok'] };
-const _SPRD_FILTROS = [['novo', 'A encaminhar'], ['antigo', 'Na caixa há +7 dias'], ['naolido', 'Não abertos'], ['enc', 'Encaminhados'], ['ciencia', 'Só ciência'], ['res', 'Resolvidos'], ['todos', 'Todos'], ['criados', 'Criados pela CME']];
+const _SPRD_FILTROS = [['novo', 'A encaminhar'], ['naolido', 'Não abertos'], ['enc', 'Encaminhados'], ['ciencia', 'Só ciência'], ['res', 'Resolvidos'], ['todos', 'Todos'], ['criados', 'Criados pela CME']];
 // setor da regra → "destino" dos modelos de Despachos PRODOC
 const _SPRD_DESTINO_MODELO = { 'Relatórios': 'Relatório', 'Psicossocial': 'Psicossocial', 'Jurídico': 'Jurídico', 'Plantão': 'Plantão', 'Comunicação Processual': 'Comunicação Processual' };
 let _sprdPacote = null, _sprdCarregando = null, _sprdErro = '', _sprdFiltro = null, _sprdSel = null, _sprdVisiveis = new Set();
+let _sprdMes = ''; // 'AAAA-MM' na tela (vazio = mês atual). Pedido de 20/10/2026: fila mensal, com volta aos meses anteriores
+const _sprdMesTela = () => _sprdMes || _secHoje().slice(0, 7);
 const _sprdIdOk = id => /^[A-Za-z0-9]{10}$/.test(String(id || '')); // o banco aceita qualquer coisa: só exibe id no formato do PRODOC
 
 function _sprdAgora() { const d = new Date(), p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); }
@@ -40,12 +42,18 @@ async function _sprdCarregar(forcar) {
   return _sprdCarregando;
 }
 
-function _sprdLinhas() {
-  const p = _sprdPacote || { docs: [] }, marcas = _secDados().prodoc, agora = _sprdAgora();
-  return (p.docs || []).map(d => ({
-    d, sit: _sprdSituacao(d, marcas, agora), sug: _sprdSugestao(d), marca: marcas[d.id] || null,
-    prazo: _sprdPrazo((d.assunto || '') + ' ' + (d.texto || ''), d.recebidoEm),
+// mes: 'AAAA-MM' (padrão: o mês na tela) ou '*' para todos os meses guardados
+function _sprdLinhas(mes) {
+  const p = _sprdPacote || { docs: [] }, marcas = _secDados().prodoc, agora = _sprdAgora(), m = mes || _sprdMesTela();
+  return (p.docs || []).filter(d => m === '*' || String(d.recebidoEm || '').slice(0, 7) === m).map(d => ({
+    d, sit: _sprdSituacao(d, marcas), sug: _sprdSugestao(d), marca: marcas[d.id] || null, prazo: _sprdPrazoDoc(d),
   })).map(l => Object.assign(l, { parado: l.sit === 'enc' && _sprdParado(l.d, agora) }));
+}
+// prazo achado no texto pela regra, ou o da IA (o que vencer primeiro); urgência de qualquer um dos dois
+function _sprdPrazoDoc(d) {
+  const p = _sprdPrazo((d.assunto || '') + ' ' + (d.texto || ''), d.recebidoEm), ia = d.ia || {};
+  const dIA = /^\d{4}-\d{2}-\d{2}$/.test(String(ia.prazo || '')) ? ia.prazo : '';
+  return { data: dIA && (!p.data || dIA < p.data) ? dIA : p.data, urgente: p.urgente || !!ia.urgente };
 }
 // prazo vencido ou em até 3 dias, só no que ainda está em aberto
 function _sprdPrazoPerto(l) {
@@ -59,7 +67,7 @@ function _sprdItemHoje(item) {
     if (!_sprdErro && !_sprdCarregando && typeof _dbLerChave === 'function') _sprdCarregar().then(() => { if (_sprdPacote && typeof _secRenderHoje === 'function') _secRenderHoje(); });
     return '';
   }
-  const n = _sprdLinhas().filter(l => l.sit === 'novo').length;
+  const n = _sprdLinhas('*').filter(l => l.sit === 'novo').length; // inclui o que sobrou de meses anteriores
   return n ? item('#7c3aed', '<b>' + n + '</b> PRODOC a encaminhar', 'entrada') : '';
 }
 
@@ -76,7 +84,7 @@ function sec_renderEntrada() {
   const hoje = _secHoje(), marcas = _secDados().prodoc;
   const resHoje = Object.values(marcas).filter(m => m.st === 'res' && String(m.em || '').slice(0, 10) === hoje).length;
   const kpi = (cor, v, rot) => '<div class="kpi-card" style="border-left:4px solid ' + cor + '"><div class="kpi-value">' + v + '</div><div class="kpi-label">' + rot + '</div></div>';
-  c.innerHTML = _sprdCabecalho(p)
+  c.innerHTML = _sprdCabecalho(p) + _sprdNavMes()
     + '<div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin:10px 0 12px">'
     + kpi('#d97706', conta('novo'), 'A encaminhar') + kpi('#ea580c', linhas.filter(l => l.parado).length, 'Parado no setor (+24 h)')
     + kpi('#dc2626', linhas.filter(_sprdPrazoPerto).length, 'Prazo em até 3 dias') + kpi('#16a34a', resHoje, 'Resolvidos hoje') + '</div>'
@@ -89,6 +97,23 @@ function sec_renderEntrada() {
     + '<div id="sprd-detalhe" style="margin-top:12px"></div>';
   _sprdRenderDetalhe();
 }
+
+function _sprdNavMes() {
+  const m = _sprdMesTela(), atual = m >= _secHoje().slice(0, 7);
+  // o robô guarda ~3 meses: não deixa voltar para antes do documento mais antigo guardado
+  const meses = ((_sprdPacote || {}).docs || []).map(d => String(d.recebidoEm || '').slice(0, 7)).filter(x => /^\d{4}-\d{2}$/.test(x)).sort();
+  const primeiro = meses[0] || m;
+  const pendAntes = _sprdLinhas('*').filter(l => l.sit === 'novo' && String(l.d.recebidoEm).slice(0, 7) < m);
+  const mesPend = pendAntes.map(l => String(l.d.recebidoEm).slice(0, 7)).sort().pop();
+  const bt = (rot, alvo, desligado) => '<button type="button" class="btn-sm btn-outline"' + (desligado ? ' disabled' : ' onclick="sec_prodocMes(\'' + alvo + '\')"') + '>' + rot + '</button>';
+  return '<div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">' + bt('\u{2039} Mês anterior', _sprdMesSoma(m, -1), m <= primeiro)
+    + '<b style="min-width:150px;text-align:center">' + esc(_sprdMesRotulo(m)) + '</b>' + bt('Próximo mês \u{203A}', _sprdMesSoma(m, 1), atual)
+    + (atual ? '' : bt('Voltar ao mês atual', '', false))
+    + (pendAntes.length ? '<a href="#" onclick="sec_prodocMes(\'' + mesPend + '\');return false" style="font-size:.84rem;color:#b45309;font-weight:600">'
+      + pendAntes.length + ' a encaminhar em meses anteriores — ver ' + esc(_sprdMesRotulo(mesPend).toLowerCase()) + '</a>' : '')
+    + (m <= primeiro ? '<span style="font-size:.78rem;color:#94a3b8">o robô guarda os últimos 3 meses</span>' : '') + '</div>';
+}
+function sec_prodocMes(m) { _sprdMes = /^\d{4}-\d{2}$/.test(m) ? m : ''; _sprdFiltro = null; _sprdSel = null; sec_renderEntrada(); }
 
 function _sprdCabecalho(p) {
   const ger = p.geradoEm || '', h = ger ? (new Date() - new Date(ger)) / 3600e3 : null, hora = new Date().getHours();
@@ -113,9 +138,11 @@ function _sprdTabela(linhas) {
       return '<tr style="cursor:pointer' + (d.id === _sprdSel ? ';background:#eff6ff;box-shadow:inset 3px 0 0 #2563eb' : '') + '" onclick="sec_prodocSel(\'' + _jsq(d.id) + '\')">'
         + '<td><span class="badge ' + cls + '">' + (l.sit === 'naolido' ? '\u{1F512} ' : '') + rot + '</span>' + (l.parado ? ' <span class="badge badge-vencendo">Parado</span>' : '') + '</td>'
         + '<td style="font-family:var(--font-mono);white-space:nowrap">' + _sprdBR(d.recebidoEm) + '</td>'
-        + '<td><div style="font-weight:600">' + esc(d.assunto) + '</div><div style="font-size:.78rem;color:#64748b">' + esc(l.sug.cat) + ' · <span style="font-family:var(--font-mono)">' + esc(d.numero) + '</span> · ' + esc(d.origem) + '</div></td>'
+        + '<td><div style="font-weight:600">' + esc(d.assunto) + '</div><div style="font-size:.78rem;color:#64748b">' + esc(l.sug.cat) + ' · <span style="font-family:var(--font-mono)">' + esc(d.numero) + '</span> · ' + esc(d.origem) + '</div>'
+        + (d.ia && d.ia.providencia ? '<div style="font-size:.8rem;color:#6d28d9">\u{1F916} ' + esc(d.ia.providencia) + (_sprdIaConferida(d.ia) ? ' <span style="color:#15803d" title="leitura conferida">\u{2714}</span>' : ' <span style="color:#b45309" title="confira">?</span>') + '</div>' : '') + '</td>'
         + '<td style="white-space:nowrap' + (_sprdPrazoPerto(l) ? ';color:#b91c1c;font-weight:700' : '') + '">' + prazo + '</td>'
-        + '<td style="color:#1d4ed8">' + esc(para) + '</td></tr>';
+        + '<td style="color:#1d4ed8">' + esc(para) + (d.ia && l.sit !== 'enc' && _sprdSetorIA(d.ia.responsavel) && !l.sug.setores.includes(_sprdSetorIA(d.ia.responsavel))
+          ? '<div style="font-size:.76rem;color:#6d28d9">IA: ' + esc(_sprdSetorIA(d.ia.responsavel)) + '</div>' : '') + '</td></tr>';
     }).join('') : '<tr><td colspan="5" style="text-align:center;padding:24px;color:#888">Nada aqui.</td></tr>')
     + '</tbody></table></div>';
 }
@@ -140,12 +167,14 @@ function _sprdRenderDetalhe() {
     + '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:flex-start"><div style="min-width:0">'
     + '<div style="font-size:.75rem;color:#64748b">' + esc(d.tipo) + ' · <span style="font-family:var(--font-mono)">' + esc(d.numero) + '</span> · de ' + esc(d.origem) + (d.origemNome ? ' (' + esc(d.origemNome) + ')' : '') + ' · recebido <span style="font-family:var(--font-mono)">' + _sprdBR(d.recebidoEm) + '</span></div>'
     + '<div style="font-weight:700;font-size:1.02rem">' + esc(d.assunto) + '</div></div><span class="badge ' + cls + '">' + rot + '</span></div>'
+    + _sprdBlocoIA(l)
     + '<div style="margin-top:10px;padding:10px 12px;background:#eff6ff;border-left:3px solid #2563eb">'
-    + '<div style="font-size:.72rem;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em">O que fazer</div>'
+    + '<div style="font-size:.72rem;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em">' + (d.ia ? 'Pelo histórico da CME' : 'O que fazer') + '</div>'
     + '<div>' + esc(l.sit === 'enc' ? 'Já encaminhado. Acompanhar até o setor resolver.' : l.sit === 'res' ? 'Resolvido.' : s.fazer) + '</div>'
     + '<div style="font-size:.8rem;color:#475569;margin-top:3px">Regra: ' + esc(s.regra) + '</div>'
     + (l.prazo.data || l.prazo.urgente ? '<div style="font-size:.84rem;margin-top:3px;color:' + (_sprdPrazoPerto(l) ? '#b91c1c' : '#475569') + ';font-weight:600">\u{23F0} '
       + (l.prazo.data ? 'Prazo achado no texto: ' + _sprdBR(l.prazo.data) : '') + (l.prazo.urgente ? (l.prazo.data ? ' · ' : '') + 'pede urgência' : '') + '</div>' : '') + '</div>';
+  h += _sprdBlocoDespacho(l);
   if (l.sit === 'naolido') h += '<div style="margin-top:10px;font-size:.86rem;color:#475569">\u{1F512} Ainda não foi aberto no PRODOC. O robô só traz o texto depois que alguém abrir lá — e abrir marca "lido por" no nome de quem abriu.</div>';
   if ((d.envios || []).length) h += linha('Encaminhado no PRODOC', d.envios.map(e => {
     const curto = x => _sprdSetorCurto(x).replace(/\s/g, '').toUpperCase();
@@ -158,8 +187,8 @@ function _sprdRenderDetalhe() {
   else if (d.texto) h += '<details style="margin-top:8px"' + (l.sit === 'novo' ? ' open' : '') + '><summary style="cursor:pointer;font-size:.8rem;font-weight:700;color:#64748b">TEXTO DO DOCUMENTO (como está no PRODOC)</summary>'
     + '<div style="white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:10px 12px;margin-top:6px;font-size:.88rem;line-height:1.5;max-height:260px;overflow:auto">' + esc(d.texto) + '</div></details>';
   h += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px">';
-  if ((l.sit === 'novo' || l.sit === 'antigo') && (s.modelo || _SPRD_DESTINO_MODELO[s.setores[0]])) h += '<button class="btn-secondary" onclick="sec_prodocDespacho(\'' + _jsq(d.id) + '\')">Preparar despacho</button>';
-  if (l.sit === 'novo' || l.sit === 'antigo') h += '<button class="btn-primary" onclick="sec_prodocMarcar(\'' + _jsq(d.id) + '\',\'enc\')">Já encaminhei no PRODOC</button>';
+  if (l.sit === 'novo' && !_sprdIaDespacho(l) && (s.modelo || _SPRD_DESTINO_MODELO[s.setores[0]])) h += '<button class="btn-secondary" onclick="sec_prodocDespacho(\'' + _jsq(d.id) + '\')">Preparar despacho</button>';
+  if (l.sit === 'novo') h += '<button class="btn-primary" onclick="sec_prodocMarcar(\'' + _jsq(d.id) + '\',\'enc\')">Já encaminhei no PRODOC</button>';
   if (l.sit !== 'res') h += '<input id="sprd-nota" placeholder="O que foi feito (opcional)" maxlength="300" style="flex:1;min-width:180px;padding:6px 10px"><button class="btn-primary" onclick="sec_prodocMarcar(\'' + _jsq(d.id) + '\',\'res\')">Confirmar resolvido</button>';
   if (m) h += '<button class="btn-sm btn-outline" onclick="sec_prodocMarcar(\'' + _jsq(d.id) + '\',\'\')">Desfazer marcação</button>';
   h += '<a class="btn-sm btn-outline" style="text-decoration:none" href="' + _SPRD_LINK + encodeURIComponent(d.id) + '" target="_blank" rel="noopener noreferrer"'
@@ -188,16 +217,16 @@ function sec_prodocMarcar(id, st) {
 }
 
 // abre "Despachos PRODOC" no modelo sugerido, com o nome já preenchido
+// (o mesmo modelo e nome do "Despacho sugerido" — leitura da IA quando conferida, senão a regra)
 function sec_prodocDespacho(id) {
-  const d = ((_sprdPacote || {}).docs || []).find(x => x.id === id); if (!d) return;
-  const s = _sprdSugestao(d), mods = _secModelos();
-  const mod = mods.find(x => x.id === s.modelo) || mods.find(x => x.destino === _SPRD_DESTINO_MODELO[s.setores[0]]);
-  if (!mod) { _mostrarToast('Não há modelo de despacho para ' + (s.setores[0] || 'este caso') + '.', 'erro'); return; }
-  _secModeloId = mod.id;
+  const l = _sprdLinhas('*').find(x => x.d.id === id); if (!l) return;
+  const p = _sprdIaDespacho(l);
+  if (!p) { _mostrarToast('Não há modelo de despacho para ' + (l.sug.setores[0] || 'este caso') + '.', 'erro'); return; }
+  _secModeloId = p.mod.id;
   sec_mudarAba('despachos');
-  if (mod.id !== s.modelo) _mostrarToast('Escolha o modelo certo em "PRODOC para ' + mod.destino + '" — o texto não diz qual.', 'info');
+  if (!p.escolhido) _mostrarToast('Escolha o modelo certo em "PRODOC para ' + p.mod.destino + '" — não deu para saber qual.', 'info');
   const el = document.getElementById('sec-dp-NOME');
-  if (el) { el.value = _sprdNome(d.assunto); _secPrevDespacho(); el.focus(); }
+  if (el) { el.value = p.nome; _secPrevDespacho(); el.focus(); }
 }
 
 Object.assign(_SEC_ACOES, { sec_prodoc_enc: 'Marcou PRODOC como encaminhado', sec_prodoc_res: 'Marcou PRODOC como resolvido', sec_prodoc_desfazer: 'Desfez marcação do PRODOC' });
