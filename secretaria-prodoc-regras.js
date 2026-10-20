@@ -84,7 +84,9 @@ function _sprdMaisDias(iso, n) {
 const _SPRD_HORAS = /(?:\(|\bEM\s+|PRAZO DE\s+)(12|24|48|72)\s?H(?:ORAS)?\b(?!:)/;
 function _sprdPrazo(texto, recebidoEm) {
   const t = _sprdMaiusc(texto), desde = String(recebidoEm || '').slice(0, 10);
-  const urgente = /URGENT|URG[ÊE]NCIA|IMEDIAT|REITERA/.test(t) || _SPRD_HORAS.test(t);
+  // "Medida(s) Protetiva(s) de Urgência" é o NOME do tipo de processo, não pedido urgente (achado no teste real de 20/10)
+  const tu = t.replace(/PROTETIVAS? DE URG[ÊE]NCIA/g, '');
+  const urgente = /URGENT|URG[ÊE]NCIA|IMEDIAT|REITERA/.test(tu) || _SPRD_HORAS.test(tu);
   const datas = [...t.matchAll(/AT[ÉE]\s+(?:O\s+DIA\s+)?(\d{2})\/(\d{2})\/(\d{4})/g)].map(m => {
     const d = new Date(+m[3], +m[2] - 1, +m[1]);
     return d.getDate() === +m[1] && d.getMonth() === +m[2] - 1 ? m[3] + '-' + m[2] + '-' + m[1] : '';

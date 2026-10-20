@@ -71,7 +71,9 @@ function _sprdItemHoje(item) {
     if (!_sprdErro && !_sprdCarregando && typeof _dbLerChave === 'function') _sprdCarregar().then(() => { if (_sprdPacote && typeof _secRenderHoje === 'function') _secRenderHoje(); });
     return '';
   }
-  const n = _sprdLinhas('*').filter(l => l.sit === 'novo').length; // inclui o que sobrou de meses anteriores
+  // mês atual + o que sobrou do mês anterior (o que está parado há mais tempo fica nos meses dele, sem inflar o painel)
+  const ate = _sprdMesSoma(_secHoje().slice(0, 7), -1);
+  const n = _sprdLinhas('*').filter(l => l.sit === 'novo' && String(l.d.recebidoEm).slice(0, 7) >= ate).length;
   return n ? item('#7c3aed', '<b>' + n + '</b> PRODOC a encaminhar', 'entrada') : '';
 }
 
@@ -143,14 +145,14 @@ function _sprdNavMes() {
   // o robô guarda ~3 meses: não deixa voltar para antes do documento mais antigo guardado
   const meses = ((_sprdPacote || {}).docs || []).map(d => String(d.recebidoEm || '').slice(0, 7)).filter(x => /^\d{4}-\d{2}$/.test(x)).sort();
   const primeiro = meses[0] || m;
-  const pendAntes = _sprdLinhas('*').filter(l => l.sit === 'novo' && String(l.d.recebidoEm).slice(0, 7) < m);
+  const pendAntes = _sprdLinhas(_sprdMesSoma(m, -1)).filter(l => l.sit === 'novo'); // só o mês anterior (mais antigo: navegar)
   const mesPend = pendAntes.map(l => String(l.d.recebidoEm).slice(0, 7)).sort().pop();
   const bt = (rot, alvo, desligado) => '<button type="button" class="btn-sm btn-outline"' + (desligado ? ' disabled' : ' onclick="sec_prodocMes(\'' + alvo + '\')"') + '>' + rot + '</button>';
   return '<div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">' + bt('\u{2039} Mês anterior', _sprdMesSoma(m, -1), m <= primeiro)
     + '<b style="min-width:150px;text-align:center">' + esc(_sprdMesRotulo(m)) + '</b>' + bt('Próximo mês \u{203A}', _sprdMesSoma(m, 1), atual)
     + (atual ? '' : bt('Voltar ao mês atual', '', false))
     + (pendAntes.length ? '<a href="#" onclick="sec_prodocMes(\'' + mesPend + '\');return false" style="font-size:.84rem;color:#b45309;font-weight:600">'
-      + pendAntes.length + ' a encaminhar em meses anteriores — ver ' + esc(_sprdMesRotulo(mesPend).toLowerCase()) + '</a>' : '')
+      + pendAntes.length + ' a encaminhar no mês anterior — ver ' + esc(_sprdMesRotulo(mesPend).toLowerCase()) + '</a>' : '')
     + (m <= primeiro ? '<span style="font-size:.78rem;color:#94a3b8">o robô guarda os últimos 3 meses</span>' : '') + '</div>';
 }
 function sec_prodocMes(m) { _sprdMes = /^\d{4}-\d{2}$/.test(m) ? m : ''; _sprdFiltro = null; _sprdSel = null; sec_renderEntrada(); }
