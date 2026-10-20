@@ -1,5 +1,5 @@
 /* ═══════════════════════════ ESTOQUE DO PLANTÃO — tela ═══════════════════════════
-   Sub-aba "Plantão" dentro da aba Estoque (o nível plantão vê só ela) + quadro "a receber" no painel do setor.
+   Aba própria "Estoque Plantão" (plantão, gerência e admin) + quadro de transferências dentro da aba Estoque do CME.
    Regras e gravação em estoque-plantao.js. Mesmas funções do setor: Entrada (inventário), Saída (instalação/entrega),
    Devolução, Baixa, Envio ao setor, Receber/Recusar do setor, mínimos, alertas, histórico, detalhe, consulta,
    zerar contagem (admin) e excluir movimentação (admin). Emojis só por \u{...}. Prefixo ep_ / _ep. */
@@ -23,21 +23,10 @@ function _epMin(d, chave) {
 function _epControla(d, chave) { return !chave.startsWith('Cinta_') || (d.itens[chave] || 0) > 0 || _epMin(d, chave) > 0; }
 function _epBtn(txt, js, cls, title) { return '<button type="button" class="' + (cls || 'btn-secondary') + '" onclick="' + js + '"' + (title ? ' title="' + esc(title) + '"' : '') + '>' + txt + '</button>'; }
 
-/* ── acesso: o nível plantão vê só a sub-aba Plantão ── */
-function ep_ajustarAcesso() {
-  const tab = document.getElementById('est-stab-plantao'); if (!tab) return;
-  tab.style.display = ep_podeVer() ? '' : 'none';
-  const soPlantao = usuarioAtual && usuarioAtual.nivel === 'plantao';
-  ['est-stab-estoque', 'est-stab-consultar'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = soPlantao ? 'none' : ''; });
-  const painel = document.getElementById('est-panel-plantao');
-  if (soPlantao && painel && painel.style.display !== 'block' && typeof mudarSubAbaEstoque === 'function') mudarSubAbaEstoque('plantao');
-}
-
 function ep_renderizar() {
+  _epRenderSetorPendentes(); // quadro de transferências dentro da aba Estoque (CME)
   if (!ep_podeVer()) return;
-  ep_ajustarAcesso();
-  _epRenderSetorPendentes();
-  const el = document.getElementById('est-panel-plantao'); if (!el || el.style.display !== 'block') return;
+  const el = document.getElementById('est-panel-plantao'); if (!el || !document.getElementById('panel-estplantao')?.classList.contains('active')) return;
   const d = ep_get(), it = d.itens, pode = ep_podeMover(), admin = usuarioAtual && usuarioAtual.nivel === 'admin';
   const M = 'Módulo eletrônico de monitoração', D = 'Dispositivo DPP';
   const cinta = EST_TAMANHOS.reduce((s, t) => s + (it['Cinta_' + t] || 0), 0);
@@ -48,17 +37,16 @@ function ep_renderizar() {
   const kpi = (n, l, cls) => '<div class="est-kpi' + (cls ? ' ' + cls : '') + '"><div class="est-kpi-num">' + n + '</div><div class="est-kpi-label">' + l + '</div></div>';
   const equipe = _epEquipeHoje();
   const html = [];
-  html.push('<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 8px">'
-    + '<div><div style="font-weight:700;font-size:1rem">\u{1F6E1}\u{FE0F} Estoque do Plantão</div><div style="font-size:.8rem;color:#64748b">Um estoque só para as equipes ALFA a ECHO. Lance na hora tudo que entra e sai. Equipe de hoje: <b>' + esc(equipe || '—') + '</b></div></div>'
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+  html.push('<div class="est-header"><div class="est-header-title">\u{1F6E1}\u{FE0F} Estoque do Plantão</div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap">' + _epBtn('\u{1F504} Atualizar', 'ep_renderizar()')
     + (pode ? _epBtn('\u{2B06} Entrada', "ep_abrirMov('entrada')", 'btn-primary') + _epBtn('\u{2B07} Saída', "ep_abrirMov('saida')") + _epBtn('\u{21A9} Devolução', "ep_abrirMov('devolucao')")
-      + _epBtn('\u{1F4E6} Enviar ao setor', "ep_abrirMov('envio')") + _epBtn('\u{2715} Baixa', "ep_abrirMov('baixa')", 'btn-danger') : '')
-    + (pode || (usuarioAtual && usuarioAtual.nivel === 'estoque') ? _epBtn('\u{2699}\u{FE0F} Mínimos', 'ep_abrirMinimos()') : '')
+      + _epBtn('\u{1F4E6} Enviar ao Estoque', "ep_abrirMov('envio')") + _epBtn('\u{2715} Baixa', "ep_abrirMov('baixa')", 'btn-danger') + _epBtn('\u{2699}\u{FE0F} Mínimos', 'ep_abrirMinimos()') : '')
     + (admin ? _epBtn('\u{1F9EE} Zerar contagem', 'ep_zerarContagem()', 'btn-danger', 'Zera os saldos e os números de série do plantão. O histórico é mantido.') : '')
-    + '</div></div>');
-  if (!pode) html.push('<div class="est-aviso-perm">\u{1F512} <strong>Modo visualização:</strong> só o plantão (e a gerência/administração) lança movimentações aqui.</div>');
+    + '</div></div>'
+    + '<div style="font-size:.8rem;color:#64748b;margin:-4px 0 10px">Um estoque só para as equipes ALFA a ECHO, separado do Estoque do CME. Lance na hora tudo que entra e sai. Equipe de hoje: <b>' + esc(equipe || '—') + '</b></div>');
+  if (!pode) html.push('<div class="est-aviso-perm">\u{1F512} <strong>Modo visualização:</strong> só o plantão lança movimentações aqui.</div>');
   if (d.recontagemEm) html.push('<div class="est-alerta-box" style="background:#eef4ff;border-color:#b6cdf7;color:#1a4fa3">\u{1F9EE} <strong>Recontagem em ' + new Date(d.recontagemEm).toLocaleString('pt-BR') + ':</strong> o saldo conta só o que foi lançado a partir dessa data.</div>');
-  html.push(_epHtmlAReceber(d, pode));
+  html.push(_epHtmlPendencias('plantao', pode));
   html.push('<div class="est-kpi-grid">' + kpi(it[M] || 0, 'Módulo Eletrônico') + kpi(cinta, 'Cintas (total)') + kpi(it['Trava'] || 0, 'Travas') + kpi(it['Carregador da tornozeleira'] || 0, 'Carregadores Tornozeleira')
     + kpi(it[D] || 0, 'Dispositivos DPP') + kpi(pe.novo[M] || 0, 'Tornozeleiras Novas') + kpi(pe.reutilizado[M] || 0, 'Tornozeleiras Reutilizadas') + kpi(total, 'Total Geral')
     + kpi(baixo, 'Estoque Baixo', 'alerta') + kpi(zero, 'Sem Estoque', 'perigo') + '</div>');
@@ -73,41 +61,40 @@ function ep_renderizar() {
 }
 
 function _epHtmlUnid(t) { return (t.unidades || []).length ? '<div style="font-family:ui-monospace,Consolas,monospace;font-size:.78rem;margin-top:2px">' + t.unidades.map(u => esc(u.id) + (u.temCarregador ? ' \u{1F50B}' : '') + (u.temChip ? ' \u{1F4F6}' : '')).join(' · ') + '</div>' : ''; }
-function _epHtmlTransf(t, botoes) {
+function _epHtmlTransf(t, botoes, nota) {
   return '<div style="border:1px solid #fcd34d;border-left:4px solid #d97706;background:#fffbeb;border-radius:6px;padding:8px 10px;margin:6px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap">'
     + '<div style="flex:1;min-width:220px"><b>' + esc(t.item) + (t.tamanho ? ' ' + esc(t.tamanho) : '') + ' \u{00D7}' + esc(t.quantidade) + '</b>' + (t.estado ? ' <span style="color:#64748b">(' + esc(t.estado) + ')</span>' : '')
     + _epHtmlUnid(t)
-    + '<div style="font-size:.76rem;color:#64748b">Enviado por ' + esc(t.enviadoPor || '—') + ' em ' + new Date(t.enviadoEm).toLocaleString('pt-BR') + (t.equipe ? ' · equipe ' + esc(t.equipe) : '') + (t.plantonista ? ' · para ' + esc(t.plantonista) : '') + (t.motivo ? ' · ' + esc(t.motivo) : '') + (t.obs ? ' · ' + esc(t.obs) : '') + '</div></div>'
+    + '<div style="font-size:.76rem;color:#64748b">Enviado por ' + esc(t.enviadoPor || '—') + ' em ' + new Date(t.enviadoEm || t.ts).toLocaleString('pt-BR') + (t.equipe ? ' · equipe ' + esc(t.equipe) : '') + (t.plantonista ? ' · para ' + esc(t.plantonista) : '') + (t.motivo ? ' · ' + esc(t.motivo) : '') + (t.obs ? ' · ' + esc(t.obs) : '') + '</div>'
+    + (t.status === 'recusada' ? '<div style="font-size:.78rem;color:#b91c1c">Recusado por ' + esc(t.decididoPor || '—') + (t.motivoDecisao ? ': ' + esc(t.motivoDecisao) : '') + '</div>' : '')
+    + (nota ? '<div style="font-size:.78rem;color:#b91c1c">' + nota + '</div>' : '') + '</div>'
     + botoes + '</div>';
 }
-function _epHtmlAReceber(d, pode) {
-  const rec = ep_pendentes(d, EP_SETOR_PARA_PLANTAO), env = ep_pendentes(d, EP_PLANTAO_PARA_SETOR);
-  let h = '';
-  if (rec.length) h += '<div class="est-section-title">\u{1F4E5} A receber do setor de Estoque (' + rec.length + ') — confira os números e clique em Receber</div>'
-    + rec.map(t => _epHtmlTransf(t, pode ? _epBtn('\u{2705} Receber', "ep_receberDoSetor('" + _jsq(t.id) + "')", 'btn-primary') + _epBtn('Recusar', "ep_perguntarRecusa('" + _jsq(t.id) + "','plantao')") : '')).join('');
-  if (env.length) h += '<div class="est-section-title">\u{1F4E4} Enviados ao setor — aguardando o setor receber (' + env.length + ')</div>' + env.map(t => _epHtmlTransf(t, '')).join('');
-  return h;
+// pendências de UM lado ('plantao' no painel do plantão, 'setor' dentro da aba Estoque do CME)
+function _epHtmlPendencias(lado, pode) {
+  const p = ep_pendenciasDe(lado), outro = lado === 'plantao' ? 'Estoque do CME' : 'Plantão';
+  const b = (txt, js, cls) => pode ? _epBtn(txt, js, cls) : '';
+  const sec = (tit, lista, botoes, cor) => lista.length ? '<div class="est-section-title"' + (cor ? ' style="color:' + cor + '"' : '') + '>' + tit + ' (' + lista.length + ')</div>' + lista.map(botoes).join('') : '';
+  return sec('\u{1F4E5} A receber do ' + outro + ' — confira os números e clique em Receber', p.aReceber,
+      t => _epHtmlTransf(t, b('\u{2705} Receber', "ep_receberTransf('" + _jsq(t.id) + "')", 'btn-primary') + b('Recusar', "ep_perguntarRecusa('" + _jsq(t.id) + "')")))
+    + sec('\u{21A9} Recusado pelo ' + outro + ' — receba de volta no seu estoque', p.receberDeVolta,
+      t => _epHtmlTransf(t, b('\u{21A9} Receber de volta', "ep_receberDeVolta('" + _jsq(t.id) + "')", 'btn-primary')), '#b45309')
+    + sec('\u{26A0}\u{FE0F} Transferências pela metade — conclua para o saldo ficar certo', p.concluir,
+      t => _epHtmlTransf(t, b('Concluir (lançar no meu estoque)', "ep_concluirPendencia('" + _jsq(t.id) + "')", 'btn-primary'), 'A transferência foi marcada, mas o lançamento no estoque não chegou ao banco.'), '#b91c1c')
+    + sec('\u{26A0}\u{FE0F} Saiu do seu estoque e não chegou ao ' + outro, p.reenviar,
+      m => _epHtmlTransf({ item: m.item, tamanho: m.tamanho, quantidade: m.quantidade, estado: m.estado, unidades: m.unidades || (m.seriais || []).map(id => ({ id })), enviadoPor: m.responsavel, ts: m.ts, equipe: m.plantao || m.equipe, plantonista: m.plantonista },
+        b('Reenviar ao ' + outro, "ep_reenviar('" + lado + "','" + _jsq(m.id) + "')", 'btn-primary')), '#b91c1c')
+    + sec('\u{1F69A} Enviado ao ' + outro + ' — aguardando receber', p.aguardando, t => _epHtmlTransf(t, ''))
+    + sec('\u{23F3} Você recusou — aguardando o ' + outro + ' receber de volta', p.recuseiAguardando, t => _epHtmlTransf(t, ''));
 }
-// no painel do SETOR: o que o plantão devolveu (a receber) e o que o setor mandou e o plantão ainda não recebeu
+// dentro da aba Estoque do CME: só as transferências (o estoque do plantão em si não aparece lá)
 function _epRenderSetorPendentes() {
   const el = document.getElementById('ep-setor-pendentes'); if (!el) return;
-  const d = ep_get(), rec = ep_pendentes(d, EP_PLANTAO_PARA_SETOR), env = ep_pendentes(d, EP_SETOR_PARA_PLANTAO), pode = podeAlterarEstoque();
-  let h = '';
-  if (rec.length) h += '<div class="est-section-title">\u{1F4E5} Devolvido pelo Plantão — a receber (' + rec.length + ')</div>'
-    + rec.map(t => _epHtmlTransf(t, pode ? _epBtn('\u{2705} Receber', "ep_setorReceber('" + _jsq(t.id) + "')", 'btn-primary') + _epBtn('Recusar', "ep_perguntarRecusa('" + _jsq(t.id) + "','setor')") : '')).join('');
-  if (env.length) h += '<div class="est-section-title">\u{1F69A} Enviado ao Plantão — aguardando o plantonista receber (' + env.length + ')</div>' + env.map(t => _epHtmlTransf(t, '')).join('');
-  // transferências que ficaram pela metade (rede caiu entre as duas gravações)
-  const pend = ep_pendenciasSetor();
-  if (pend.transf.length || pend.saidas.length) h += '<div class="est-section-title" style="color:#b91c1c">\u{26A0}\u{FE0F} Transferências pela metade — conclua para o saldo ficar certo</div>'
-    + pend.transf.map(t => _epHtmlTransf(t, pode ? _epBtn('Concluir (lançar no setor)', "ep_concluirPendencia('" + _jsq(t.id) + "')", 'btn-primary') : '')).join('')
-    + pend.saidas.map(m => _epHtmlTransf({ item: m.item, tamanho: m.tamanho, quantidade: m.quantidade, estado: m.estado, unidades: m.unidades || (m.seriais || []).map(id => ({ id })), enviadoPor: m.responsavel, enviadoEm: m.ts, equipe: m.plantao, plantonista: m.plantonista, motivo: 'Saída do setor que não chegou ao Plantão' },
-      pode ? _epBtn('Reenviar ao Plantão', "ep_reenviarSaida('" + _jsq(m.id) + "')", 'btn-primary') : '')).join('');
-  el.innerHTML = h;
+  el.innerHTML = ep_podeVerCme() ? _epHtmlPendencias('setor', podeAlterarEstoque()) : '';
 }
-function ep_perguntarRecusa(id, quem) {
+function ep_perguntarRecusa(id) {
   const motivo = (prompt('Por que recusar? (ex.: número de série não confere, item com defeito)') || '').trim();
-  if (!motivo) return;
-  if (quem === 'plantao') ep_recusarDoSetor(id, motivo); else ep_setorRecusar(id, motivo);
+  if (motivo) ep_decidirTransf(id, 'recusada', motivo);
 }
 
 function _epHtmlTabelas(d, pe) {
@@ -153,7 +140,7 @@ function ep_consultar(valor) {
   const el = document.getElementById('ep-busca-res'); if (!el) return;
   const q = String(valor || '').trim(); if (q.length < 2) { el.innerHTML = ''; return; }
   const p = ep_get(), s = getEstoque(), ql = q.toLowerCase();
-  const onde = ep_onde(q, s, p, ITENS_COM_SERIAL);
+  const onde = ep_onde(q, ep_podeVerCme() ? s : null, p, ITENS_COM_SERIAL, ep_getTransf());
   const movs = p.movimentacoes.filter(m => [m.tipo, m.item, m.tamanho, m.monitorado, m.processo, m.motivo, m.obs, m.equipe, m.plantonista, m.responsavel, ...(m.seriais || [])].some(v => String(v || '').toLowerCase().includes(ql))).slice(0, 50);
   let h = onde ? '<div style="border:1px solid #bfdbfe;background:#eff6ff;border-radius:6px;padding:8px 10px;margin-bottom:8px"><b style="font-family:ui-monospace,Consolas,monospace">' + esc(q) + '</b> — ' + esc(onde.item) + ': <b>' + esc(onde.texto) + '</b></div>' : '';
   h += movs.length ? '<div style="font-size:.8rem;color:#475569;margin-bottom:4px">' + movs.length + ' movimentação(ões) do plantão com "' + esc(q) + '":</div>' + movs.map(m => '<div onclick="ep_verMov(\'' + _jsq(m.id) + '\')" style="cursor:pointer;display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:.82rem"><span class="badge ' + (_EP_BADGE[m.tipo] || '') + '">' + esc(m.tipo) + '</span><span>' + new Date(m.ts).toLocaleString('pt-BR') + '</span><span>' + esc(m.item) + ' \u{00D7}' + esc(m.quantidade) + '</span><span style="color:#64748b">' + esc(m.monitorado || m.motivo || '') + '</span><span style="margin-left:auto;color:#1a4fa3">\u{1F441} detalhe</span></div>').join('')
@@ -195,7 +182,7 @@ function _epModal(titulo, corpo, rodape) {
     + '<div class="modal-body" id="ep-modal-corpo">' + corpo + '</div><div class="modal-footer">' + rodape + '</div></div>';
   ov.classList.add('open');
 }
-function _epPodeMinimos() { return ep_podeMover() || (usuarioAtual && usuarioAtual.nivel === 'estoque'); }
+function _epPodeMinimos() { return ep_podeMover(); }
 function ep_abrirMinimos() {
   if (!_epPodeMinimos()) return;
   const d = ep_get(), linhas = Object.keys(EST_PADRAO.itens).map(k => '<div style="font-size:.88rem">' + esc(k.replace('Cinta_', 'Cinta ')) + '</div><input type="number" min="0" class="ep-min" data-chave="' + esc(k) + '" value="' + _epMin(d, k) + '" style="padding:5px 8px;border:1px solid #ccc;border-radius:6px;width:100%">').join('');
@@ -296,6 +283,6 @@ async function ep_confirmarMov() {
   const ok = await ep_salvarMov(tipo, op, { motivo, monitorado: mon, processo: v('ep-f-proc'), obs: v('ep-f-obs') });
   if (!ok) return;
   fecharModal('ep-modal');
-  _mostrarToast('\u{2713} ' + EP_TIPO[tipo] + ' registrada no estoque do Plantão.' + (tipo === 'envio' ? ' Fica "a receber" no setor.' : ''), 'ok');
+  _mostrarToast('\u{2713} ' + EP_TIPO[tipo] + ' registrada no estoque do Plantão.' + (tipo === 'envio' ? ' Fica "a receber" no Estoque do CME.' : ''), 'ok');
   ep_renderizar(); try { _dashEstoqueDisp(); } catch (e) {}
 }

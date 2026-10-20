@@ -4,11 +4,13 @@
    • Store "estoque_plantao" (chave cme_estoque_plantao). ⚠️ NÃO usar nome que comece com "plantao_":
      no banco, cme_plantao_* só abre para gerência/admin (seguranca-banco/6-plantoes-gerencia.sql).
    • Mesma estrutura do store "estoque" do setor: itens (saldo), registros/seriais (uma linha por nº de série
-     ou IMEI), movimentacoes. A mais: transferencias entre setor e plantão.
-   • Saída do setor para o plantão vira transferência "a receber": sai do saldo do setor na hora e só entra
-     no saldo do plantão quando o plantonista confere e clica em Receber (ou volta ao setor, se recusar).
-     O plantão devolve ao setor do mesmo jeito (Envio ao setor → o setor recebe ou recusa).
-   • Toda gravação relê o banco antes (dois computadores ao mesmo tempo não se apagam).
+     ou IMEI), movimentacoes. Aba própria "Estoque Plantão" (plantão, gerência e admin).
+   • Cada lado só vê e altera o PRÓPRIO estoque (pedido dele, 20/10): o plantão não vê nem mexe no do CME e o CME
+     não vê nem mexe no do plantão; admin e gerência veem os dois; o Dashboard mostra o resumo dos dois a todos.
+   • Transferências num registro neutro "estoque_transferencias": Saída do setor para o plantão fica "a receber";
+     o plantonista confere e Recebe (lança no Plantão) ou Recusa (o setor clica "Receber de volta" e lança no CME).
+     O plantão devolve ao setor do mesmo jeito (Envio ao setor).
+   • Toda gravação relê o banco, espera a confirmação e vai em fila; o que ficar pela metade aparece com "Concluir".
    Depende das constantes do Estoque no index.html (EST_PADRAO, ITENS_COM_SERIAL, EST_TIPOS...).
    A tela fica em estoque-plantao-tela.js. Emojis só por \u{...}. Prefixo ep_ / _ep / EP_. */
 
@@ -117,12 +119,21 @@ function ep_novaTransf(d, t) {
   }
   return nova;
 }
-function ep_decidir(d, id, status, por, motivo) {
+// estados: pendente → recebida (quem recebeu lança no SEU estoque) | recusada → devolvida (quem enviou lança de volta no SEU)
+const _EP_PALAVRA = { recebida: 'recebida', recusada: 'recusada', devolvida: 'recebida de volta', pendente: 'deixada pendente' };
+function ep_decidir(d, id, status, por, motivo, de) {
   const t = d.transferencias.find(x => x.id === id);
   if (!t) return { erro: 'Essa transferência não existe mais. Atualize a tela.' };
-  if (t.status !== 'pendente') return { erro: 'Essa transferência já foi ' + (t.status === 'recebida' ? 'recebida' : 'recusada') + (t.decididoPor ? ' por ' + t.decididoPor : '') + '.' };
-  t.status = status; t.decididoPor = por || ''; t.decididoEm = new Date().toISOString(); t.motivoDecisao = motivo || '';
+  if (t.status !== (de || 'pendente')) return { erro: 'Essa transferência já foi ' + (_EP_PALAVRA[t.status] || t.status) + (t.decididoPor ? ' por ' + t.decididoPor : '') + '. Atualize a tela.' };
+  if (status === 'devolvida') { t.devolvidaPor = por || ''; t.devolvidaEm = new Date().toISOString(); }
+  else { t.decididoPor = por || ''; t.decididoEm = new Date().toISOString(); t.motivoDecisao = motivo || ''; }
+  t.status = status;
   return { t };
+}
+// qual lado lança no próprio estoque, e quando: recebida → destino; devolvida → origem
+function ep_ladoQueLanca(t) {
+  const destino = t.sentido === EP_SETOR_PARA_PLANTAO ? 'plantao' : 'setor', origem = destino === 'plantao' ? 'setor' : 'plantao';
+  return t.status === 'recebida' ? destino : t.status === 'devolvida' ? origem : null;
 }
 function ep_pendentes(d, sentido) { return (d.transferencias || []).filter(t => t.status === 'pendente' && t.sentido === sentido); }
 // a operação "soma" que devolve a mercadoria de uma transferência
@@ -149,16 +160,18 @@ function ep_porEstado(d, itensPadrao, comSerialLista) {
 }
 
 // onde está uma unidade (nº de série / IMEI): plantão, setor, a caminho, ou o último destino conhecido
-function ep_onde(id, setor, plantao, comSerialLista) {
+// setor = null quando quem consulta não pode ver o estoque do CME (plantonista)
+function ep_onde(id, setor, plantao, comSerialLista, transf) {
   id = String(id || '').trim(); if (!id) return null;
-  const tem = (d, item) => ep_unidades(d, item).some(u => u.id === id);
+  const tem = (d, item) => !!d && ep_unidades(d, item).some(u => u.id === id);
   for (const item of comSerialLista) {
     if (tem(plantao, item)) return { onde: 'plantao', item, texto: 'No estoque do Plantão' };
     if (tem(setor, item)) return { onde: 'setor', item, texto: 'No setor de Estoque' };
   }
-  const t = (plantao.transferencias || []).find(x => x.status === 'pendente' && (x.unidades || []).some(u => u.id === id));
-  if (t) return { onde: 'caminho', item: t.item, texto: t.sentido === EP_SETOR_PARA_PLANTAO ? 'A caminho do Plantão (aguarda o plantonista receber)' : 'A caminho do setor de Estoque (aguarda o setor receber)' };
-  const ult = [...(plantao.movimentacoes || []), ...(setor.movimentacoes || [])].filter(m => (m.seriais || []).includes(id)).sort((a, b) => (b.ts || '').localeCompare(a.ts || ''))[0];
+  const t = ((transf || {}).transferencias || []).find(x => (x.status === 'pendente' || x.status === 'recusada') && (x.unidades || []).some(u => u.id === id));
+  if (t) return { onde: 'caminho', item: t.item, texto: t.status === 'recusada' ? 'Recusado — aguardando quem enviou receber de volta'
+    : t.sentido === EP_SETOR_PARA_PLANTAO ? 'A caminho do Plantão (aguarda o plantonista receber)' : 'A caminho do setor de Estoque (aguarda o setor receber)' };
+  const ult = [...(plantao.movimentacoes || []), ...((setor && setor.movimentacoes) || [])].filter(m => (m.seriais || []).includes(id)).sort((a, b) => (b.ts || '').localeCompare(a.ts || ''))[0];
   if (!ult) return null;
   const quando = new Date(ult.ts).toLocaleDateString('pt-BR');
   if (ult.tipo === 'Saída') return { onde: 'fora', item: ult.item, texto: 'Saiu em ' + quando + (ult.monitorado ? ' para ' + ult.monitorado : '') + (ult.motivo ? ' (' + ult.motivo + ')' : '') };
@@ -166,10 +179,15 @@ function ep_onde(id, setor, plantao, comSerialLista) {
   return { onde: 'fora', item: ult.item, texto: 'Última movimentação: ' + ult.tipo + ' em ' + quando };
 }
 
-if (typeof module !== 'undefined') module.exports = { ep_normalizar, ep_unidades, ep_aplicar, ep_mov, ep_registrarMov, ep_novaTransf, ep_decidir, ep_pendentes, ep_opDaTransf, ep_porEstado, ep_onde, ep_chave, EP_SETOR_PARA_PLANTAO, EP_PLANTAO_PARA_SETOR };
+if (typeof module !== 'undefined') module.exports = { ep_normalizar, ep_unidades, ep_aplicar, ep_mov, ep_registrarMov, ep_novaTransf, ep_decidir, ep_ladoQueLanca, ep_pendentes, ep_opDaTransf, ep_porEstado, ep_onde, ep_chave, EP_SETOR_PARA_PLANTAO, EP_PLANTAO_PARA_SETOR };
 
-/* ───────────────────────── leitura e gravação no banco ───────────────────────── */
+/* ───────────────────────── leitura e gravação no banco ─────────────────────────
+   Regra (20/10/2026): cada lado só ALTERA o próprio estoque. O plantão nunca grava no estoque do CME e o setor
+   nunca grava no estoque do Plantão. As transferências ficam num registro neutro ("estoque_transferencias"):
+   quem recebe lança no próprio estoque; se recusar, quem enviou clica "Receber de volta" e lança no seu. */
+const EP_STORE_TR = 'estoque_transferencias';
 function ep_get() { return ep_normalizar(carregarStore(EP_STORE, null), EST_PADRAO.itens); }
+function ep_getTransf() { const d = carregarStore(EP_STORE_TR, null); return { transferencias: _epCopia((d && d.transferencias) || []) }; }
 function _epSerial(item) { return ITENS_COM_SERIAL.includes(item); }
 async function _epLerFresco(chave) {
   if (!window._db) return carregarStore(chave, null);
@@ -190,24 +208,32 @@ async function _epGravar(chave, valor) {
 // fila: duas gravações do mesmo computador nunca leem a mesma base (a 2ª apagaria a 1ª)
 let _epFila = Promise.resolve();
 function _epNaFila(fn) { const p = _epFila.then(fn, fn); _epFila = p.catch(() => {}); return p; }
-// lê o estoque do plantão direto do banco, aplica fn (false = desiste, 'ja' = nada a fazer, { erro } = avisa) e grava
-function _epMutar(fn) {
+// relê do banco, aplica fn (false = desiste, 'ja' = nada a fazer, { erro } = avisa) e grava
+function _epMutarStore(chave, normalizar, fn) {
   return _epNaFila(async () => {
     let base;
-    try { base = await _epLerFresco(EP_STORE); } catch (e) { _mostrarToast('Sem conexão com o banco — nada foi salvo. Tente de novo.', 'erro'); return false; }
-    const d = ep_normalizar(base, EST_PADRAO.itens), r = fn(d);
+    try { base = await _epLerFresco(chave); } catch (e) { _mostrarToast('Sem conexão com o banco — nada foi salvo. Tente de novo.', 'erro'); return false; }
+    const d = normalizar(base), r = fn(d);
     if (r === false) return false;
     if (r === 'ja') return true;
     if (r && r.erro) { alert(r.erro); return false; }
-    return _epGravar(EP_STORE, d);
+    return _epGravar(chave, d);
   });
 }
-// o mesmo para o estoque do SETOR (store "estoque"): só ACRESCENTA movimentação, então a proteção anti-perda não se aplica
+// estoque do PLANTÃO — só o plantão (e o admin) chama
+function _epMutar(fn) {
+  if (!ep_podeMover()) { alert('Sem permissão para alterar o estoque do Plantão.'); return Promise.resolve(false); }
+  return _epMutarStore(EP_STORE, b => ep_normalizar(b, EST_PADRAO.itens), fn);
+}
+// registro de transferências (neutro: não é estoque de ninguém)
+function _epMutarTransf(fn) { return _epMutarStore(EP_STORE_TR, b => ({ transferencias: _epCopia((b && b.transferencias) || []) }), fn); }
+// estoque do SETOR — só o setor (e o admin) chama; só ACRESCENTA movimentação
 function _epMutarSetor(fn) {
+  if (!podeAlterarEstoque()) { alert('Sem permissão para alterar o estoque do CME.'); return Promise.resolve(false); }
   return _epNaFila(async () => {
     let base;
     try { base = await _epLerFresco('estoque'); } catch (e) { _mostrarToast('Sem conexão com o banco — nada foi salvo. Tente de novo.', 'erro'); return false; }
-    if (!base) { alert('Os dados do estoque do setor ainda não carregaram. Recarregue a página (F5) e tente de novo.'); return false; }
+    if (!base) { alert('Os dados do estoque ainda não carregaram. Recarregue a página (F5) e tente de novo.'); return false; }
     const anterior = _cache.estoque;
     _cache.estoque = _epCopia(base);
     const est = getEstoque(), r = fn(est);
@@ -222,161 +248,146 @@ function _epMutarSetor(fn) {
 // depois de gravar a decisão, confere no banco se ela ficou (outro computador pode ter decidido no mesmo instante)
 async function _epDecisaoFicou(t) {
   try {
-    const d = ep_normalizar(await _epLerFresco(EP_STORE), EST_PADRAO.itens), x = d.transferencias.find(y => y.id === t.id);
-    return !!x && x.status === t.status && x.decididoEm === t.decididoEm;
+    const b = await _epLerFresco(EP_STORE_TR), x = ((b && b.transferencias) || []).find(y => y.id === t.id);
+    return !!x && x.status === t.status && (x.decididoEm || '') === (t.decididoEm || '') && (x.devolvidaEm || '') === (t.devolvidaEm || '');
   } catch (e) { return false; }
-}
-// lança no SETOR a parte de uma transferência (plantão recusou o envio / setor recebeu a devolução). Idempotente:
-// se o setor já tem a movimentação dessa transferência, não lança de novo.
-function _epConcluirNoSetor(t, motivo) {
-  return _epMutarSetor(est => {
-    if ((est.movimentacoes || []).some(m => m.transferenciaId === t.id)) return 'ja';
-    const ap = ep_aplicar(est, ep_opDaTransf(t), _epSerial(t.item)); if (ap.erro) return ap;
-    est.movimentacoes.unshift(ep_mov('Devolução', ep_opDaTransf(t), ap.unidades, { responsavel: _epQuem(), motivo, obs: t.obs || '', transferenciaId: t.id }));
-    if (est.movimentacoes.length > 500) est.movimentacoes = est.movimentacoes.slice(0, 500);
-  });
-}
-function _epMotivoSetor(t) {
-  return t.sentido === EP_SETOR_PARA_PLANTAO ? 'Recusado pelo plantão: ' + (t.motivoDecisao || '')
-    : 'Devolvido pelo plantão' + (t.motivo ? ': ' + t.motivo : '') + ' (enviado por ' + (t.enviadoPor || '?') + ')';
-}
-// transferências decididas cuja parte do setor não foi lançada (rede caiu no meio) e Saídas do setor que não chegaram ao plantão
-const _EP_JANELA_CONCILIA_MS = 7 * 864e5, _EP_ESPERA_CONCILIA_MS = 60000;
-function ep_pendenciasSetor() {
-  const p = ep_get(), s = getEstoque(), agora = Date.now();
-  const recente = iso => { const t = Date.parse(iso || ''); return t && agora - t < _EP_JANELA_CONCILIA_MS && agora - t > _EP_ESPERA_CONCILIA_MS; };
-  const noSetor = new Set((s.movimentacoes || []).map(m => m.transferenciaId).filter(Boolean));
-  const transf = p.transferencias.filter(t => ((t.sentido === EP_SETOR_PARA_PLANTAO && t.status === 'recusada') || (t.sentido === EP_PLANTAO_PARA_SETOR && t.status === 'recebida'))
-    && recente(t.decididoEm) && !noSetor.has(t.id));
-  const avisadas = new Set(p.transferencias.map(t => t.movSetorId).filter(Boolean));
-  const saidas = (s.movimentacoes || []).filter(m => m.tipo === 'Saída' && m.destino === 'Estoque do Plantão' && recente(m.ts) && !avisadas.has(m.id));
-  return { transf, saidas };
-}
-async function ep_concluirPendencia(id) {
-  if (!podeAlterarEstoque() && !ep_podeMover()) return;
-  const t = ep_get().transferencias.find(x => x.id === id); if (!t) return;
-  if (await _epConcluirNoSetor(t, _epMotivoSetor(t))) { addLog('Estoque: transferência concluída no setor — ' + _epDesc(t) + ' (' + _epQuem() + ')'); _mostrarToast('\u{2705} Lançado no setor de Estoque.', 'ok'); }
-  try { renderizarEstoque(); } catch (e) {}
-}
-async function ep_reenviarSaida(movId) {
-  if (!podeAlterarEstoque()) return;
-  const m = (getEstoque().movimentacoes || []).find(x => x.id === movId); if (!m) return;
-  await ep_enviarDoSetor(m, m.unidades || (m.seriais || []).map(id => ({ id, estado: m.estado || '' })));
 }
 function _epQuem() { return (usuarioAtual && usuarioAtual.nome) || ''; }
 function _epEquipeHoje() { try { return getPlantaoParaData(_diaPlantao()); } catch (e) { return ''; } }
 function _epDesc(t) { return t.item + (t.tamanho ? ' ' + t.tamanho : '') + ' ×' + t.quantidade + ((t.unidades || []).length ? ' (' + t.unidades.map(u => u.id).join(', ') + ')' : ''); }
 
-/* ── Setor → Plantão: chamada pelo salvarMovEstoque do index depois da Saída com destino "Estoque do Plantão" ── */
+/* ── lançar a parte de uma transferência no PRÓPRIO estoque (idempotente pelo transferenciaId) ── */
+function _epMotivoLanc(t) {
+  if (t.status === 'recebida') return t.sentido === EP_SETOR_PARA_PLANTAO ? 'Recebido do setor de Estoque (enviado por ' + (t.enviadoPor || '?') + ')'
+    : 'Devolvido pelo plantão' + (t.motivo ? ': ' + t.motivo : '') + ' (enviado por ' + (t.enviadoPor || '?') + ')';
+  return (t.sentido === EP_SETOR_PARA_PLANTAO ? 'Recusado pelo plantão' : 'Recusado pelo setor de Estoque') + (t.motivoDecisao ? ': ' + t.motivoDecisao : '') + ' — recebido de volta';
+}
+function _epLancarNoPlantao(t) {
+  return _epMutar(d => {
+    if (d.movimentacoes.some(m => m.transferenciaId === t.id)) return 'ja';
+    const op = ep_opDaTransf(t), ap = ep_aplicar(d, op, _epSerial(t.item)); if (ap.erro) return ap;
+    ep_registrarMov(d, ep_mov(t.status === 'recebida' ? EP_TIPO.recebimento : EP_TIPO.devolucao, op, ap.unidades,
+      { responsavel: _epQuem(), plantonista: _epQuem(), equipe: _epEquipeHoje(), motivo: _epMotivoLanc(t), obs: t.obs || '', transferenciaId: t.id }));
+  });
+}
+function _epLancarNoSetor(t) {
+  return _epMutarSetor(est => {
+    if ((est.movimentacoes || []).some(m => m.transferenciaId === t.id)) return 'ja';
+    const op = ep_opDaTransf(t), ap = ep_aplicar(est, op, _epSerial(t.item)); if (ap.erro) return ap;
+    est.movimentacoes.unshift(ep_mov('Devolução', op, ap.unidades, { responsavel: _epQuem(), motivo: _epMotivoLanc(t), obs: t.obs || '', transferenciaId: t.id }));
+    if (est.movimentacoes.length > 500) est.movimentacoes = est.movimentacoes.slice(0, 500);
+  });
+}
+function _epLancar(t) { return ep_ladoQueLanca(t) === 'plantao' ? _epLancarNoPlantao(t) : _epLancarNoSetor(t); }
+function _epPodeLado(lado) { return lado === 'plantao' ? ep_podeMover() : podeAlterarEstoque(); }
+function _epRender() { try { ep_renderizar(); } catch (e) {} try { renderizarEstoque(); } catch (e) {} try { _dashEstoqueDisp(); } catch (e) {} }
+
+/* ── decidir uma transferência: recebida / recusada (quem recebe) ou devolvida (quem enviou, depois da recusa) ── */
+async function ep_decidirTransf(id, status, motivo) {
+  const t0 = ep_getTransf().transferencias.find(x => x.id === id); if (!t0) { _epRender(); return; }
+  const destino = t0.sentido === EP_SETOR_PARA_PLANTAO ? 'plantao' : 'setor', origem = destino === 'plantao' ? 'setor' : 'plantao';
+  const lado = status === 'devolvida' ? origem : destino;
+  if (!_epPodeLado(lado)) { alert('Sem permissão.'); return; }
+  let t = null;
+  const ok = await _epMutarTransf(d => { const r = ep_decidir(d, id, status, _epQuem(), motivo, status === 'devolvida' ? 'recusada' : 'pendente'); if (r.erro) return r; t = r.t; });
+  if (!ok) { _epRender(); return; }
+  if (!(await _epDecisaoFicou(t))) { alert('Outro computador decidiu essa transferência no mesmo instante. Atualize a tela e confira.'); _epRender(); return; }
+  const lugar = lado === 'plantao' ? 'Plantão' : 'setor de Estoque';
+  addLog('Estoque — transferência ' + (_EP_PALAVRA[status] || status).toUpperCase() + ' pelo ' + lugar + ': ' + _epDesc(t) + (motivo ? ' — ' + motivo : '') + ' (' + _epQuem() + ')');
+  if (status === 'recusada') _mostrarToast('Recusado — quem enviou vai ver "Recusado — receber de volta".', 'ok');
+  else if (await _epLancar(t)) _mostrarToast('\u{2705} Lançado no estoque do ' + lugar + '.', 'ok');
+  else alert('A transferência foi marcada, mas não consegui lançar no estoque do ' + lugar + ' agora. Ela aparece como "pela metade" com o botão "Concluir".');
+  _epRender();
+}
+function ep_receberTransf(id) { return ep_decidirTransf(id, 'recebida'); }
+function ep_receberDeVolta(id) { return ep_decidirTransf(id, 'devolvida'); }
+async function ep_concluirPendencia(id) {
+  const t = ep_getTransf().transferencias.find(x => x.id === id); if (!t) return;
+  if (!_epPodeLado(ep_ladoQueLanca(t))) return;
+  if (await _epLancar(t)) { addLog('Estoque: transferência concluída — ' + _epDesc(t) + ' (' + _epQuem() + ')'); _mostrarToast('\u{2705} Lançado.', 'ok'); }
+  _epRender();
+}
+
+/* ── criar a transferência (depois de tirar do próprio estoque) — idempotente pelo id da movimentação de origem ── */
+async function _epCriarTransf(sentido, mov, unidades) {
+  return _epMutarTransf(d => {
+    if (d.transferencias.some(x => x.movOrigemId === mov.id)) return 'ja';
+    ep_novaTransf(d, { sentido, categoria: mov.categoria, item: mov.item, tamanho: mov.tamanho || '', quantidade: mov.quantidade, estado: mov.estado || '',
+      unidades: unidades || [], enviadoPor: mov.responsavel || _epQuem(), equipe: mov.plantao || mov.equipe || '', plantonista: mov.plantonista || '',
+      motivo: sentido === EP_PLANTAO_PARA_SETOR ? (mov.motivo || '') : '', obs: mov.obs || '', movOrigemId: mov.id });
+  });
+}
+// Setor → Plantão: chamada pelo salvarMovEstoque do index depois da Saída com destino "Estoque do Plantão"
 async function ep_enviarDoSetor(mov, unidades) {
-  const ok = await _epMutar(d => {
-    if (d.transferencias.some(x => x.movSetorId === mov.id)) return 'ja'; // já avisado (reenvio)
-    ep_novaTransf(d, { sentido: EP_SETOR_PARA_PLANTAO, categoria: mov.categoria, item: mov.item, tamanho: mov.tamanho || '', quantidade: mov.quantidade,
-      estado: mov.estado || '', unidades: unidades || [], enviadoPor: mov.responsavel || _epQuem(), equipe: mov.plantao || '', plantonista: mov.plantonista || '',
-      obs: mov.obs || '', movSetorId: mov.id });
-  });
-  if (ok) { _mostrarToast('\u{1F4E6} Enviado ao Plantão — fica "a receber" até o plantonista conferir.', 'ok'); addLog('Estoque → Plantão (a receber): ' + _epDesc(mov) + ' (' + _epQuem() + ')'); }
-  else alert('ATENÇÃO: a Saída foi registrada no setor, mas não consegui avisar o estoque do Plantão agora.\n\n' + _epDesc(mov) + '\n\nEm 1 minuto ela aparece no painel do setor com o botão "Reenviar ao Plantão".');
-  ep_renderizar();
+  if (await _epCriarTransf(EP_SETOR_PARA_PLANTAO, mov, unidades)) { _mostrarToast('\u{1F4E6} Enviado ao Plantão — fica "a receber" até o plantonista conferir.', 'ok'); addLog('Estoque → Plantão (a receber): ' + _epDesc(mov) + ' (' + _epQuem() + ')'); }
+  else alert('ATENÇÃO: a Saída foi registrada no estoque do CME, mas não consegui avisar o Plantão agora.\n\n' + _epDesc(mov) + '\n\nEm 1 minuto ela aparece no painel do Estoque com o botão "Reenviar ao Plantão".');
+  _epRender();
+}
+// reenvio de uma saída/envio que não virou transferência (rede caiu entre as duas gravações)
+async function ep_reenviar(lado, movId) {
+  if (!_epPodeLado(lado)) return;
+  const lista = lado === 'setor' ? (getEstoque().movimentacoes || []) : ep_get().movimentacoes, m = lista.find(x => x.id === movId); if (!m) return;
+  const un = m.unidades || (m.seriais || []).map(id => ({ id, estado: m.estado || '' }));
+  if (await _epCriarTransf(lado === 'setor' ? EP_SETOR_PARA_PLANTAO : EP_PLANTAO_PARA_SETOR, m, un)) { addLog('Estoque: transferência reenviada — ' + _epDesc(m) + ' (' + _epQuem() + ')'); _mostrarToast('\u{2705} Reenviado.', 'ok'); }
+  _epRender();
 }
 
-/* ── Plantão recebe / recusa o que veio do setor ── */
-async function ep_receberDoSetor(id) {
-  if (!ep_podeMover()) return;
-  let t = null;
-  const ok = await _epMutar(d => {
-    const r = ep_decidir(d, id, 'recebida', _epQuem()); if (r.erro) return r;
-    t = r.t;
-    const ap = ep_aplicar(d, ep_opDaTransf(t), _epSerial(t.item)); if (ap.erro) return ap;
-    ep_registrarMov(d, ep_mov(EP_TIPO.recebimento, ep_opDaTransf(t), ap.unidades, { responsavel: _epQuem(), plantonista: _epQuem(), equipe: _epEquipeHoje(),
-      motivo: 'Recebido do setor de Estoque (enviado por ' + (t.enviadoPor || '?') + ')', obs: t.obs || '', transferenciaId: t.id }));
-  });
-  if (!ok) return;
-  if (!(await _epDecisaoFicou(t))) { alert('Outro computador decidiu essa transferência no mesmo instante. Atualize a tela e confira.'); ep_renderizar(); return; }
-  addLog('Plantão RECEBEU do setor: ' + _epDesc(t) + ' (' + _epQuem() + ')');
-  _mostrarToast('\u{2705} Recebido no estoque do Plantão.', 'ok');
-  ep_renderizar(); try { _dashEstoqueDisp(); } catch (e) {}
-}
-async function ep_recusarDoSetor(id, motivo) {
-  if (!ep_podeMover()) return;
-  let t = null;
-  const ok = await _epMutar(d => { const r = ep_decidir(d, id, 'recusada', _epQuem(), motivo); if (r.erro) return r; t = r.t; });
-  if (!ok) return;
-  if (!(await _epDecisaoFicou(t))) { alert('Outro computador decidiu essa transferência no mesmo instante. Atualize a tela e confira.'); ep_renderizar(); return; }
-  addLog('Plantão RECUSOU o que veio do setor: ' + _epDesc(t) + ' — ' + motivo + ' (' + _epQuem() + ')');
-  // a mercadoria volta para o setor
-  if (!(await _epConcluirNoSetor(t, _epMotivoSetor(t)))) alert('A recusa foi registrada, mas não consegui devolver ao saldo do setor agora. Ela aparece no painel do setor com o botão "Concluir".');
-  else _mostrarToast('Recusado — o item voltou para o setor de Estoque.', 'ok');
-  ep_renderizar(); try { renderizarEstoque(); } catch (e) {}
+/* ── pendências de um lado: o que ele precisa fazer ── */
+const _EP_JANELA_CONCILIA_MS = 7 * 864e5, _EP_ESPERA_CONCILIA_MS = 60000;
+function ep_pendenciasDe(lado) {
+  const tr = ep_getTransf().transferencias, agora = Date.now();
+  const recente = iso => { const x = Date.parse(iso || ''); return x && agora - x < _EP_JANELA_CONCILIA_MS && agora - x > _EP_ESPERA_CONCILIA_MS; };
+  const meuSentidoEntrada = lado === 'plantao' ? EP_SETOR_PARA_PLANTAO : EP_PLANTAO_PARA_SETOR, meuSentidoSaida = lado === 'plantao' ? EP_PLANTAO_PARA_SETOR : EP_SETOR_PARA_PLANTAO;
+  const movs = lado === 'plantao' ? ep_get().movimentacoes : (getEstoque().movimentacoes || []);
+  const lancadas = new Set(movs.map(m => m.transferenciaId).filter(Boolean)), viraram = new Set(tr.map(t => t.movOrigemId).filter(Boolean));
+  return {
+    aReceber: tr.filter(t => t.status === 'pendente' && t.sentido === meuSentidoEntrada),
+    aguardando: tr.filter(t => t.status === 'pendente' && t.sentido === meuSentidoSaida),
+    receberDeVolta: tr.filter(t => t.status === 'recusada' && t.sentido === meuSentidoSaida),
+    recuseiAguardando: tr.filter(t => t.status === 'recusada' && t.sentido === meuSentidoEntrada),
+    concluir: tr.filter(t => ep_ladoQueLanca(t) === lado && recente(t.devolvidaEm || t.decididoEm) && !lancadas.has(t.id)),
+    reenviar: movs.filter(m => (lado === 'setor' ? m.tipo === 'Saída' && m.destino === 'Estoque do Plantão' : m.tipo === EP_TIPO.envio) && recente(m.ts) && !viraram.has(m.id)),
+  };
 }
 
-/* ── Setor recebe / recusa o que o plantão devolveu ── */
-async function ep_setorReceber(id) {
-  if (!podeAlterarEstoque()) return;
-  let t = null;
-  const ok = await _epMutar(d => { const r = ep_decidir(d, id, 'recebida', _epQuem()); if (r.erro) return r; t = r.t; });
-  if (!ok) return;
-  if (!(await _epDecisaoFicou(t))) { alert('Outro computador decidiu essa transferência no mesmo instante. Atualize a tela e confira.'); try { renderizarEstoque(); } catch (e) {} return; }
-  addLog('Setor de Estoque RECEBEU do plantão: ' + _epDesc(t) + ' (' + _epQuem() + ')');
-  if (!(await _epConcluirNoSetor(t, _epMotivoSetor(t)))) alert('O recebimento foi registrado, mas não consegui somar no saldo do setor agora. Ele aparece no painel do setor com o botão "Concluir".');
-  else _mostrarToast('\u{2705} Recebido no setor de Estoque.', 'ok');
-  try { renderizarEstoque(); } catch (e) {}
-}
-async function ep_setorRecusar(id, motivo) {
-  if (!podeAlterarEstoque()) return;
-  let t = null;
-  const ok = await _epMutar(d => {
-    const r = ep_decidir(d, id, 'recusada', _epQuem(), motivo); if (r.erro) return r;
-    t = r.t;
-    const ap = ep_aplicar(d, ep_opDaTransf(t), _epSerial(t.item)); if (ap.erro) return ap;
-    ep_registrarMov(d, ep_mov(EP_TIPO.devolucao, ep_opDaTransf(t), ap.unidades, { responsavel: _epQuem(), motivo: 'Recusado pelo setor de Estoque: ' + motivo, transferenciaId: t.id }));
-  });
-  if (!ok) return;
-  if (!(await _epDecisaoFicou(t))) { alert('Outro computador decidiu essa transferência no mesmo instante. Atualize a tela e confira.'); try { renderizarEstoque(); } catch (e) {} return; }
-  addLog('Setor de Estoque RECUSOU o que veio do plantão: ' + _epDesc(t) + ' — ' + motivo + ' (' + _epQuem() + ')');
-  _mostrarToast('Recusado — o item voltou para o estoque do Plantão.', 'ok');
-  try { renderizarEstoque(); } catch (e) {}
-}
-
-/* ── Movimentação do plantão (Entrada, Saída, Devolução, Baixa, Envio ao setor) ── */
+/* ── Movimentação do plantão (Entrada, Saída, Devolução, Baixa, Envio ao setor) — só no estoque do Plantão ── */
 async function ep_salvarMov(tipo, op, extra) {
   if (!ep_podeMover()) { alert('Sem permissão para mexer no estoque do Plantão.'); return false; }
   const soma = tipo === 'entrada' || tipo === 'devolucao';
   const opF = Object.assign({}, op, { soma });
-  // inventário/entrada: uma unidade que ainda está no setor não pode aparecer nos dois estoques
+  // inventário/entrada: uma unidade que está no CME (ou a caminho) não pode aparecer nos dois estoques
   if (tipo === 'entrada' && _epSerial(op.item)) {
-    const doSetor = new Set(ep_unidades(getEstoque(), op.item).map(u => u.id)), dup = (op.unidades || []).find(u => doSetor.has(String(u.id || '').trim()));
-    if (dup) { alert('O ' + (op.item === 'Dispositivo DPP' ? 'IMEI' : 'nº de série') + ' "' + dup.id + '" ainda está no estoque do SETOR. Peça ao setor a Saída para o Plantão e receba por "A receber".'); return false; }
+    const noCme = new Set(ep_unidades(getEstoque(), op.item).map(u => u.id));
+    ep_getTransf().transferencias.filter(t => t.status === 'pendente' || t.status === 'recusada').forEach(t => (t.unidades || []).forEach(u => noCme.add(u.id)));
+    const dup = (op.unidades || []).find(u => noCme.has(String(u.id || '').trim()));
+    if (dup) { alert('O ' + (op.item === 'Dispositivo DPP' ? 'IMEI' : 'nº de série') + ' "' + dup.id + '" está registrado no estoque do CME (ou a caminho). Peça ao Estoque a Saída para o Plantão e receba por "A receber".'); return false; }
   }
   let mov = null;
   const ok = await _epMutar(d => {
     const ap = ep_aplicar(d, opF, _epSerial(op.item)); if (ap.erro) return ap;
     mov = ep_mov(EP_TIPO[tipo], opF, ap.unidades, Object.assign({ responsavel: _epQuem(), plantonista: _epQuem(), equipe: _epEquipeHoje() }, extra || {}));
-    if (tipo === 'envio') {
-      const t = ep_novaTransf(d, { sentido: EP_PLANTAO_PARA_SETOR, categoria: op.categoria, item: op.item, tamanho: op.tamanho || '', quantidade: mov.quantidade, estado: op.estado || '',
-        unidades: ap.unidades, enviadoPor: _epQuem(), equipe: mov.equipe, motivo: (extra && extra.motivo) || '', obs: (extra && extra.obs) || '' });
-      mov.transferenciaId = t.id;
-    }
+    if (tipo === 'envio') mov.unidades = ap.unidades; // para o "Reenviar ao setor" se o aviso falhar
     ep_registrarMov(d, mov);
   });
   if (!ok) return false;
   addLog('Estoque do Plantão — ' + mov.tipo + ': ' + mov.item + (mov.tamanho ? ' ' + mov.tamanho : '') + ' ×' + mov.quantidade + (mov.monitorado ? ' — ' + mov.monitorado : '') + ' (' + _epQuem() + ', ' + (mov.equipe || '') + ')');
+  if (tipo === 'envio' && !(await _epCriarTransf(EP_PLANTAO_PARA_SETOR, mov, mov.unidades)))
+    alert('Saiu do estoque do Plantão, mas não consegui avisar o Estoque do CME agora. Em 1 minuto aparece o botão "Reenviar ao setor" no painel do Plantão.');
   return true;
 }
 
-// resumo para o Dashboard: módulos e DPP no setor, no plantão e a caminho
+// resumo para o Dashboard (todos veem): módulos e DPP no CME e no plantão + o que está a caminho
 function ep_resumo() {
-  const p = ep_get(), s = getEstoque(), M = 'Módulo eletrônico de monitoração', D = 'Dispositivo DPP';
-  const caminho = (sentido, item) => ep_pendentes(p, sentido).filter(t => t.item === item).reduce((n, t) => n + (parseInt(t.quantidade, 10) || 0), 0);
+  const p = ep_get(), s = getEstoque(), tr = ep_getTransf(), M = 'Módulo eletrônico de monitoração', D = 'Dispositivo DPP';
   return {
     setor: { mod: s.itens[M] || 0, dpp: s.itens[D] || 0 },
     plantao: { mod: p.itens[M] || 0, dpp: p.itens[D] || 0 },
-    aReceberPlantao: ep_pendentes(p, EP_SETOR_PARA_PLANTAO).length,
-    aReceberSetor: ep_pendentes(p, EP_PLANTAO_PARA_SETOR).length,
-    caminhoPlantao: { mod: caminho(EP_SETOR_PARA_PLANTAO, M), dpp: caminho(EP_SETOR_PARA_PLANTAO, D) },
+    aReceberPlantao: ep_pendentes(tr, EP_SETOR_PARA_PLANTAO).length,
+    aReceberSetor: ep_pendentes(tr, EP_PLANTAO_PARA_SETOR).length,
   };
 }
 
-/* ── Permissões ── */
-function ep_podeMover() { return !!usuarioAtual && ['plantao', 'admin', 'gerencia'].includes(usuarioAtual.nivel); }
-function ep_podeVer() { return !!usuarioAtual && ['plantao', 'estoque', 'admin', 'gerencia'].includes(usuarioAtual.nivel); }
+/* ── Permissões: cada lado altera só o seu; admin e gerência veem os dois ── */
+function ep_podeMover() { return !!usuarioAtual && ['plantao', 'admin'].includes(usuarioAtual.nivel); }
+function ep_podeVer() { return !!usuarioAtual && ['plantao', 'admin', 'gerencia'].includes(usuarioAtual.nivel); }
+function ep_podeVerCme() { return !!usuarioAtual && usuarioAtual.nivel !== 'plantao'; }
