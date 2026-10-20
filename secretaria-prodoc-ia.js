@@ -76,36 +76,33 @@ function _sprdBlocoIA(l) {
     + (faixa ? '<div style="margin-top:8px">' + faixa + '</div>' : '') + '</div>';
 }
 
-// despacho sugerido: pronto para copiar só sem dúvida; senão leva ao Despachos com o modelo e o nome
+// Despacho curto = o padrão que a CME usa de verdade ("TIPO - NOME" + "Encaminha-se o expediente para providências."):
+// sempre pronto para colar. O modelo formal (Despachos PRODOC) continua a um clique. Pedido de 20/10/2026.
+function _sprdIaCurto(l) {
+  const d = l.d, ia = d.ia, setorIA = _sprdIaConferida(ia) ? _sprdSetorIA(ia.responsavel) : '';
+  const setores = setorIA ? [setorIA] : l.sug.setores.filter(x => x !== 'Secretaria');
+  const p = _sprdIaPessoa(ia, /DPP/.test(l.sug.cat) ? 'p03' : '');
+  const nome = String((p && p.nome) || _sprdNome(d.assunto) || '').toUpperCase();
+  return Object.assign({ setores, nome }, _sprdDespachoCurto(l.sug.cat, nome, setores, d.assunto));
+}
 function _sprdBlocoDespacho(l) {
   if (l.sit !== 'novo') return '';
-  const t = _sprdIaTextos(l, true); if (!t) return '';
-  const pronto = t.escolhido && !t.faltam.length && !t.genero;
-  const cab = '<div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Despacho sugerido · PRODOC para ' + esc(t.mod.destino) + ' · modelo "' + esc(t.mod.titulo) + '"</div>';
-  const abrir = '<button class="btn-secondary" onclick="sec_prodocDespacho(\'' + _jsq(l.d.id) + '\')">' + (pronto ? 'Ajustar no Despachos' : 'Preparar despacho') + '</button>';
-  if (!pronto) {
-    const porque = !t.escolhido ? 'o modelo foi escolhido só pelo setor — confira se é o certo'
-      : t.genero ? 'escolha o gênero da pessoa' : 'falta preencher: ' + t.faltam.map(_secRotulo).join(', ');
-    return '<div style="margin-top:10px;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px">' + cab
-      + '<div style="font-size:.84rem;color:#b45309;margin-top:4px">Ainda não está pronto para colar: ' + esc(porque) + '.</div>'
-      + '<div style="display:flex;justify-content:flex-end;margin-top:8px">' + abrir + '</div></div>';
-  }
-  return '<div style="margin-top:10px;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px">' + cab
-    + '<div style="margin-top:6px;font-weight:600">ASSUNTO: ' + t.assunto + '</div>'
-    + '<div style="margin-top:4px;line-height:1.5;text-align:justify">' + t.texto + '</div>'
-    + '<div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px">' + abrir
-    + '<button class="btn-secondary" onclick="sec_prodocCopiar(\'' + _jsq(l.d.id) + '\',\'assunto\')">Copiar assunto</button>'
-    + '<button class="btn-primary" onclick="sec_prodocCopiar(\'' + _jsq(l.d.id) + '\',\'texto\')">Copiar texto</button></div></div>';
+  const t = _sprdIaCurto(l), id = _jsq(l.d.id);
+  const para = t.setores.length ? t.setores.map(x => 'CME-' + x.toUpperCase()).join(', ') : 'escolha o setor';
+  const linha = (rot, valor, qual) => '<div style="display:flex;gap:8px;align-items:flex-start;margin-top:6px"><div style="flex:1;min-width:0"><span style="font-size:.72rem;color:#64748b">' + rot + '</span>'
+    + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:6px 8px;' + (qual === 'assunto' ? 'font-weight:600' : '') + '">' + esc(valor) + '</div></div>'
+    + '<button class="btn-sm btn-outline" style="margin-top:16px" onclick="sec_prodocCopiar(\'' + id + '\',\'' + qual + '\')">Copiar</button></div>';
+  return '<div style="margin-top:10px;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px">'
+    + '<div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Despacho (padrão da CME) · encaminhar no PRODOC para: ' + esc(para) + '</div>'
+    + (/cópia/i.test(l.sug.fazer) && t.setores.includes('Plantão') ? '<div style="font-size:.8rem;color:#475569;margin-top:2px">' + esc(l.sug.fazer.replace(/^[^.]*\.\s*/, '')) + '</div>' : '')
+    + linha('Assunto (se for criar um PRODOC novo)', t.assunto, 'assunto') + linha('Texto do despacho', t.texto, 'texto')
+    + '<div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn-sm btn-outline" onclick="sec_prodocDespacho(\'' + id + '\')">Usar modelo formal</button></div></div>';
 }
 
 async function sec_prodocCopiar(id, qual) {
-  const l = _sprdLinhas().find(x => x.d.id === id); if (!l) return;
-  const puro = _sprdIaTextos(l, false), html = _sprdIaTextos(l, true); if (!puro) return;
-  if (!puro.escolhido || puro.faltam.length || puro.genero) { sec_prodocDespacho(id); return; } // nunca copia texto com campo em aberto
-  try {
-    if (window.ClipboardItem && qual === 'texto') await navigator.clipboard.write([new ClipboardItem({ 'text/plain': new Blob([puro.texto], { type: 'text/plain' }), 'text/html': new Blob([html.texto], { type: 'text/html' }) })]);
-    else await navigator.clipboard.writeText(qual === 'assunto' ? puro.assunto : puro.texto);
-    _mostrarToast((qual === 'assunto' ? 'Assunto' : 'Texto') + ' copiado — cole no PRODOC (Ctrl+V).', 'sucesso');
-  } catch (e) { _mostrarToast('Não consegui copiar automaticamente — selecione o texto e use Ctrl+C.', 'erro'); }
-  if (qual === 'texto') auditar({ modulo: 'Secretaria', action: 'sec_despacho_copiar', alvo: l.d.numero || id, detalhe: 'Entrada PRODOC · PRODOC para ' + puro.mod.destino });
+  const l = _sprdLinhas('*').find(x => x.d.id === id); if (!l) return;
+  const t = _sprdIaCurto(l), valor = qual === 'assunto' ? t.assunto : t.texto;
+  try { await navigator.clipboard.writeText(valor); _mostrarToast((qual === 'assunto' ? 'Assunto' : 'Texto') + ' copiado — cole no PRODOC (Ctrl+V).', 'sucesso'); }
+  catch (e) { _mostrarToast('Não consegui copiar automaticamente — selecione o texto e use Ctrl+C.', 'erro'); }
+  if (qual === 'texto') auditar({ modulo: 'Secretaria', action: 'sec_despacho_copiar', alvo: l.d.numero || id, detalhe: 'Entrada PRODOC · despacho curto' + (t.setores.length ? ' para ' + t.setores.join(', ') : '') });
 }

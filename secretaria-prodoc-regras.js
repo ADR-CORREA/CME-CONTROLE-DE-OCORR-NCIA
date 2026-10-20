@@ -97,15 +97,49 @@ function _sprdPrazo(texto, recebidoEm) {
   return { data: '', urgente };
 }
 
-// novo | naolido | enc | ciencia | res     (marcas = cme_secretaria.prodoc). A tela mostra um mês por vez.
-function _sprdSituacao(d, marcas) {
+// documento vindo das próprias equipes da CME (Plantão, Jari, Psico, Jurídico, CMB…): em geral é AVISO do que já
+// foi feito ("vinculação realizada"), não demanda — em outubro/2026 eram metade da fila (38 de 75)
+const _sprdInterno = origem => /^(CME|CMB)\b/i.test(String(origem || '').trim());
+
+// nome comparável: sem acento, só letras, espaços simples
+const _sprdNorm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z ]+/g, ' ').replace(/\s+/g, ' ').trim();
+// A CME costuma atender um documento recebido criando um PRODOC NOVO ("INSTALAÇÃO DE TORNOZELEIRA - NOME" para o
+// Plantão) em vez de repassar o original. Acha esse PRODOC: criado depois da chegada e com o mesmo nome no assunto.
+function _sprdAtendidoPor(d, criados) {
+  const ia = d.ia || {}, nomes = [_sprdNome(d.assunto)].concat((ia.pessoas || []).filter(p => p && p.nome).map(p => p.nome))
+    .map(_sprdNorm).filter(n => n.split(' ').length >= 2);
+  if (!nomes.length) return null;
+  const desde = String(d.recebidoEm || '').slice(0, 10);
+  return (criados || []).filter(c => c && String(c.em || '') >= desde && nomes.some(n => (' ' + _sprdNorm(c.assunto) + ' ').includes(' ' + n + ' ')))
+    .sort((a, b) => String(a.em).localeCompare(String(b.em)))[0] || null;
+}
+
+// novo | aviso | naolido | enc | ciencia | res     (marcas = cme_secretaria.prodoc). A tela mostra um mês por vez.
+// op.atendido: há PRODOC novo da CME para o mesmo nome (_sprdAtendidoPor)
+function _sprdSituacao(d, marcas, op) {
   const mk = (marcas || {})[d.id];
   if (mk && mk.st === 'res') return 'res';
   if (d.caixa === 'fora') return 'res';
-  if (d.caixa === 'encaminhado' || (mk && mk.st === 'enc')) return 'enc'; // encaminhado entre duas leituras pode estar com lido=false
+  if (d.caixa === 'encaminhado' || (mk && mk.st === 'enc') || (op && op.atendido)) return 'enc'; // encaminhado entre duas leituras pode estar com lido=false
   if (d.lido !== true) return 'naolido';
   if (_sprdSugestao(d).ciencia) return 'ciencia';
+  if (_sprdInterno(d.origem)) { // aviso interno só vira "a encaminhar" se pedir prazo ou urgência
+    const p = _sprdPrazo((d.assunto || '') + ' ' + (d.texto || ''), d.recebidoEm), ia = d.ia || {};
+    if (!p.data && !p.urgente && !ia.prazo && !ia.urgente) return 'aviso';
+  }
   return 'novo';
+}
+
+// Despacho curto = o padrão que a CME usa de verdade (análise dos 200 enviados): "TIPO - NOME" + uma frase.
+const _SPRD_TIPO_CURTO = { 'Alvará / instalação': 'INSTALAÇÃO DE TORNOZELEIRA', 'DPP / botão do pânico': 'DPP', 'Revogação / retirada': 'REVOGAÇÃO DE MONITORAMENTO',
+  'Relatório / informação': 'RELATÓRIO', 'Vinculação': 'VINCULAÇÃO', 'Desvinculação': 'DESVINCULAÇÃO', 'Não comparecimento': 'COMUNICAR NÃO COMPARECIMENTO',
+  'Ocorrência / violação': 'COMUNICAR DESCUMPRIMENTO', 'Decisão judicial': 'DECISÃO JUDICIAL', 'Trabalho externo': 'TRABALHO EXTERNO' };
+function _sprdDespachoCurto(cat, nome, setores, assuntoOriginal) {
+  const tipo = _SPRD_TIPO_CURTO[cat];
+  const assunto = tipo && nome ? tipo + ' - ' + nome : String(assuntoOriginal || '').toUpperCase();
+  const texto = (setores || []).length === 1 && setores[0] === 'Comunicação Processual' ? 'Encaminha-se o expediente para comunicação ao juízo.'
+    : 'Encaminha-se o expediente para providências.';
+  return { assunto, texto };
 }
 
 // setor que a IA devolve (lista do Worker) → nome usado nas regras e nos modelos de despacho
@@ -124,4 +158,5 @@ function _sprdParado(d, agora) {
   return d.setores.some(s => !s.lido);
 }
 
-if (typeof module !== 'undefined') module.exports = { _SPRD_REGRAS, _sprdSugestao, _sprdNome, _sprdPrazo, _sprdSituacao, _sprdParado, _sprdMaisDias, _sprdSetorIA, _sprdMesRotulo, _sprdMesSoma };
+if (typeof module !== 'undefined') module.exports = { _SPRD_REGRAS, _sprdSugestao, _sprdNome, _sprdPrazo, _sprdSituacao, _sprdParado, _sprdMaisDias, _sprdSetorIA, _sprdMesRotulo, _sprdMesSoma,
+  _sprdInterno, _sprdNorm, _sprdAtendidoPor, _sprdDespachoCurto };
