@@ -2161,6 +2161,8 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       <!-- ── Sub-painel: Produtividade dos servidores (plantões em cima, administrativo embaixo) ── -->
       <div class="sub-panel" id="ger-panel-produtividade">
+        <!-- 🧭 Inconsistências no tratamento de ocorrências (gerência e administrador; robô mensal — inconsistencias.js) -->
+        <div id="inc-secao" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:18px"></div>
         <div style="font-weight:700;color:var(--az1);font-size:1.05rem;margin-bottom:10px">🛡️ Plantonistas</div>
         <!-- 📊 Desempenho dos Plantões (gerência e administrador; dados do robô às 08h10) -->
         <div id="pl-secao" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px">
@@ -13240,7 +13242,7 @@ function mudarSubAbaGer(aba) {
   if (aba === 'agenda')     renderizarGerencia();
   if (aba === 'arquivados') renderizarGerArquivados();
   if (aba === 'calendario') cal_render('ger-calendario');
-  if (aba === 'produtividade') { pl_renderizar(); if (typeof prod_renderAdm === 'function') prod_renderAdm(); }
+  if (aba === 'produtividade') { if (typeof inc_render === 'function') inc_render(); pl_renderizar(); if (typeof prod_renderAdm === 'function') prod_renderAdm(); }
   if (aba === 'vdzona' && typeof vdz_render === 'function') vdz_render();
 }
 
@@ -29638,6 +29640,7 @@ function estat_exportarResultado() {
 <script src="secretaria-atencao.js?v=20261014o"></script>
 <script src="semcom-contatos.js?v=20261015b"></script>
 <script src="produtividade.js?v=20261013k"></script>
+<script src="inconsistencias.js?v=20261020a"></script>
 <script src="plantoes-resumo.js?v=20261016a"></script>
 <script src="plantoes-detalhe.js?v=20261016a"></script>
 <script src="plantoes-servidores.js?v=20261016a"></script>
