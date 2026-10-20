@@ -18660,11 +18660,13 @@ function r2_fecharConfig() {
 }
 
 /* ── API helper ───────────────────────────────────────────────── */
+const _R2_GET_RETENTATIVAS = 2;   // consultas: até 2 novas tentativas em erro 5xx/rede
+const _R2_GET_ESPERA_MS = 700;    // pausa crescente entre elas (0,7 s, 1,4 s)
 async function r2_api(method, path, headers = {}, body = null) {
   if (!_r2Pronto()) throw new Error('R2 não configurado.');
   await _garantirTokenSessao(); // renova o token de sessão do Worker se tiver expirado
   const base = r2_state.url.replace(/\/$/, '');
-  const res = await fetch(base + path, {
+  const pedir = () => fetch(base + path, {
     method,
     headers: {
       'Authorization': `Bearer ${_workerToken()}`,
@@ -18674,6 +18676,18 @@ async function r2_api(method, path, headers = {}, body = null) {
     },
     body,
   });
+  // 20/10/2026: falha passageira do servidor/R2 (500–599 ou queda de rede) aparecia direto na tela
+  // ("Erro interno no servidor"). Consulta (GET) é só leitura → tenta de novo sozinha; envio/exclusão não repete.
+  let res;
+  for (let tentativa = 0; ; tentativa++) {
+    try {
+      res = await pedir();
+      if (method !== 'GET' || res.status < 500 || tentativa >= _R2_GET_RETENTATIVAS) break;
+    } catch (e) {
+      if (method !== 'GET' || tentativa >= _R2_GET_RETENTATIVAS) throw e;
+    }
+    await new Promise(r => setTimeout(r, _R2_GET_ESPERA_MS * (tentativa + 1)));
+  }
   const ct = res.headers.get('Content-Type') || '';
   if (ct.includes('application/json')) {
     const json = await res.json();
@@ -19843,7 +19857,8 @@ async function r2_carregarArquivos() {
     const nivelAdmin = true; // todos os servidores podem excluir
     tbody.innerHTML = arquivos.map(f => r2_linhaArquivo(f, nivelAdmin)).join('');
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="5" style="padding:20px;text-align:center;color:#dc3545">${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:20px;text-align:center;color:#dc3545">${esc(e.message)}`
+      + ` <button type="button" class="btn-secondary btn-sm" style="margin-left:8px" onclick="r2_carregarArquivos()">Tentar de novo</button></td></tr>`;
   }
 }
 
