@@ -34,31 +34,31 @@ function _sprdBlocoResponder(l) {
   const grupos = {};
   _secModelos().forEach(m => { (grupos[m.destino] = grupos[m.destino] || []).push(m); });
   const ordem = Object.keys(grupos).sort((a, b) => (sug && b === sug.mod.destino) - (sug && a === sug.mod.destino));
-  const sel = '<select onchange="sec_prodocRespModo(\'' + idq + '\',this.value)" style="width:100%;padding:6px 8px;margin-top:6px">'
+  const sel = '<select class="idv-select" onchange="sec_prodocRespModo(\'' + idq + '\',this.value)" style="width:100%;margin-top:8px">'
     + '<option value="curto"' + (st.modo === 'curto' ? ' selected' : '') + '>Despacho curto (padrão da CME)</option>'
     + ordem.map(g => '<optgroup label="Modelo formal — PRODOC para ' + esc(g) + '">' + grupos[g].map(m => '<option value="' + esc(m.id) + '"' + (m.id === st.modo ? ' selected' : '') + '>'
       + esc(m.titulo) + (sug && sug.mod.id === m.id ? ' (sugerido)' : '') + '</option>').join('') + '</optgroup>').join('') + '</select>';
-  const caixa = (rot, html, qual, idPrev) => '<div style="display:flex;gap:8px;align-items:flex-start;margin-top:8px"><div style="flex:1;min-width:0"><span style="font-size:.72rem;color:#64748b">' + rot + '</span>'
-    + '<div' + (idPrev ? ' id="' + idPrev + '"' : '') + ' style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:6px 8px;line-height:1.5;' + (qual === 'assunto' ? 'font-weight:600' : idPrev ? 'text-align:justify' : '') + '">' + html + '</div></div>'
-    + '<button class="btn-sm ' + (qual === 'texto' ? 'btn-primary' : 'btn-outline') + '" style="margin-top:16px;white-space:nowrap" onclick="'
+  const caixa = (rot, html, qual, idPrev) => '<div style="display:flex;gap:8px;align-items:flex-start;margin-top:8px"><div style="flex:1;min-width:0"><span style="font-size:12px;color:var(--idv-sec)">' + rot + '</span>'
+    + '<div' + (idPrev ? ' id="' + idPrev + '"' : '') + ' style="background:var(--idv-zebra);border:1px solid var(--idv-borda);border-radius:6px;padding:6px 10px;line-height:1.5;font-size:14px;color:var(--idv-texto);' + (qual === 'assunto' ? 'font-weight:600' : idPrev ? 'text-align:justify' : '') + '">' + html + '</div></div>'
+    + '<button class="idv-btn mini' + (qual === 'texto' ? ' criar' : '') + '" style="margin-top:18px;white-space:nowrap" onclick="'
     + (mod ? 'sec_prodocRespCopiar' : 'sec_prodocCopiar') + '(\'' + idq + '\',\'' + qual + '\')">Copiar ' + qual + '</button></div>';
   let h = _sprdPasso(l, 2, 'Despacho') + sel;
   if (!mod) {
     const t = _sprdIaCurto(l);
-    h += '<div style="font-size:.8rem;color:#475569;margin-top:6px">Encaminhar no PRODOC para: <b>' + esc(_sprdRespPara(t.setores)) + '</b>'
+    h += '<div style="font-size:13px;color:var(--idv-sec);margin-top:6px">Encaminhar no PRODOC para: <b style="color:var(--idv-texto)">' + esc(_sprdRespPara(t.setores)) + '</b>'
       + (/cópia/i.test(l.sug.fazer) && t.setores.includes('Plantão') ? ' — ' + esc(l.sug.fazer.replace(/^[^.]*\.\s*/, '')) : '') + '</div>'
       + caixa('Assunto (se for criar um PRODOC novo)', esc(t.assunto), 'assunto') + caixa('Texto do despacho', esc(t.texto), 'texto');
     return h;
   }
   const campos = _secCamposDe(mod), vals = _sprdRespValores(l, mod, st, false), prev = _sprdRespValores(l, mod, st, true), ger = _secGerente();
-  h += '<div style="font-size:.8rem;color:#475569;margin-top:6px">Encaminhar no PRODOC para: <b>' + esc(_sprdRespPara([_SPRD_SETOR_DO_DESTINO[mod.destino] || mod.destino])) + '</b>'
-    + (sug && sug.mod.id !== mod.id ? ' · <span style="color:#b45309">a sugestão era "' + esc(sug.mod.titulo) + '"</span>' : '') + '</div>'
+  h += '<div style="font-size:13px;color:var(--idv-sec);margin-top:6px">Encaminhar no PRODOC para: <b style="color:var(--idv-texto)">' + esc(_sprdRespPara([_SPRD_SETOR_DO_DESTINO[mod.destino] || mod.destino])) + '</b>'
+    + (sug && sug.mod.id !== mod.id ? ' · <span style="color:var(--idv-at);font-weight:600">a sugestão era "' + esc(sug.mod.titulo) + '"</span>' : '') + '</div>'
     + '<div class="form-grid" style="margin-top:6px">' + campos.map(k => /^DATA/.test(k)
       ? _secCampo('sprd-r-' + k, _secRotulo(k), vals[k], 'type="date" oninput="sec_prodocRespPrev(\'' + idq + '\')"')
       : _secCampo('sprd-r-' + k, _secRotulo(k), vals[k], 'oninput="sec_prodocRespPrev(\'' + idq + '\')" style="text-transform:uppercase"')).join('') + '</div>'
-    + (_secUsaGenero(mod) ? '<div style="display:flex;gap:6px;align-items:center;margin-top:6px;font-size:.84rem"><span style="color:#64748b">Gênero:</span>'
-      + [['M', 'Masculino'], ['F', 'Feminino']].map(([v, r]) => '<button type="button" class="chip' + (st.genero === v ? ' active' : '') + '" onclick="sec_prodocRespGenero(\'' + idq + '\',\'' + v + '\')" '
-        + 'style="padding:3px 12px;border-radius:4px;border:1px solid ' + (st.genero === v ? '#2563eb' : '#cbd5e1') + ';background:' + (st.genero === v ? '#dbeafe' : '#fff') + ';cursor:pointer;font-weight:600">' + r + '</button>').join('') + '</div>' : '')
+    + (_secUsaGenero(mod) ? '<div class="idv-chips" style="margin-top:8px;font-size:13px"><span style="color:var(--idv-sec)">Gênero:</span>'
+      + [['M', 'Masculino'], ['F', 'Feminino']].map(([v, r]) => '<button type="button" class="idv-chip' + (st.genero === v ? ' ativo' : '') + '" onclick="sec_prodocRespGenero(\'' + idq + '\',\'' + v + '\')" '
+        + 'style="height:32px">' + r + '</button>').join('') + '</div>' : '')
     + caixa('Assunto', 'ASSUNTO: ' + _secPreencher(mod.assunto, prev, st.genero, ger, true), 'assunto', 'sprd-r-prev-assunto')
     + caixa('Texto do despacho', _secPreencher(mod.texto, prev, st.genero, ger, true), 'texto', 'sprd-r-prev-texto');
   return h;

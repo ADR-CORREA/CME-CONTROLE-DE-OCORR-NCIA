@@ -49,7 +49,7 @@ function _sprdIaStatus(l) {
     : d.iaErro && (d.iaErro.n || 1) >= 3 ? 'a leitura falhou 3 vezes — leia no PRODOC'
     : d.iaErro ? 'a última tentativa falhou; o robô tenta de novo em algumas horas'
     : 'está na fila — entra nas próximas leituras do robô (a cota grátis da IA é dividida ao longo do dia)';
-  return '<div style="margin-top:8px;font-size:.84rem;color:#64748b">\u{1F916} A IA ainda não leu este documento: ' + esc(motivo) + '.</div>';
+  return '<div style="margin-top:8px;font-size:13px;color:var(--idv-sec)">A IA ainda não leu este documento: ' + esc(motivo) + '.</div>';
 }
 
 function _sprdBlocoIA(l) {
@@ -60,13 +60,13 @@ function _sprdBlocoIA(l) {
   const notas = (ia.notasOcr || []).filter(n => Array.isArray(n)).map(n => [String(n[0]), n[1]]);
   const faixa = typeof lc_faixa === 'function' ? lc_faixa({ confianca: ia.confianca, avisos: ia.avisos, duvidas: ia.duvidas, alternativa: ia.alternativa },
     { avisosLeitura: typeof lc_avisosOcr === 'function' ? lc_avisosOcr(notas) : [], verbo: 'encaminhar' }) : '';
-  const lin = (rot, html) => '<div style="margin-top:4px"><b style="font-size:.78rem;color:#475569">' + rot + ':</b> ' + html + '</div>';
+  const lin = (rot, html) => '<div style="margin-top:4px;font-size:14px"><b style="font-size:12px;color:var(--idv-sec)">' + rot + ':</b> ' + html + '</div>';
   const pessoas = (ia.pessoas || []).filter(p => p && p.nome);
-  return '<div style="margin-top:10px;padding:10px 12px;background:#f5f3ff;border-left:3px solid #7c3aed">'
-    + '<div style="font-size:.72rem;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.05em">\u{1F916} Leitura da IA — o que fazer</div>'
+  return '<div style="margin-top:10px;padding:10px 12px;background:var(--idv-de-f);border-left:4px solid var(--idv-de);border-radius:0 6px 6px 0">'
+    + '<div style="font-size:12px;font-weight:600;color:var(--idv-de);text-transform:uppercase;letter-spacing:.05em">Leitura da IA — o que fazer</div>'
     + '<div style="font-weight:600;margin-top:2px">' + esc(ia.providencia || '—') + '</div>'
-    + lin('Setor', esc(setorIA || '—') + (concorda ? '' : ' <span style="color:#b45309">· pelo histórico da CME iria para ' + esc(regra) + ' — confira</span>'))
-    + (ia.prazo || ia.urgente ? lin('Prazo', (ia.prazo ? '<span style="font-family:var(--font-mono)">' + _sprdBR(ia.prazo) + '</span>' : '') + (ia.prazoTrecho ? ' ("' + esc(ia.prazoTrecho) + '")' : '') + (ia.urgente ? ' <b style="color:#b91c1c">urgente</b>' : '')) : '')
+    + lin('Setor', esc(setorIA || '—') + (concorda ? '' : ' <span style="color:var(--idv-at);font-weight:600">· pelo histórico da CME iria para ' + esc(regra) + ' — confira</span>'))
+    + (ia.prazo || ia.urgente ? lin('Prazo', (ia.prazo ? '<span class="idv-mono">' + _sprdBR(ia.prazo) + '</span>' : '') + (ia.prazoTrecho ? ' ("' + esc(ia.prazoTrecho) + '")' : '') + (ia.urgente ? ' <b style="color:var(--idv-cr)">urgente</b>' : '')) : '')
     + (ia.determinacao ? lin('O documento determina', esc(ia.determinacao)) : '')
     + (pessoas.length ? lin('Pessoas', pessoas.map(p => esc(p.nome) + (p.papel ? ' (' + esc(p.papel) + ')' : '')).join('; ')) : '')
     + (ia.processo ? lin('Processo', '<span style="font-family:var(--font-mono)">' + esc(ia.processo) + '</span>') : '')
