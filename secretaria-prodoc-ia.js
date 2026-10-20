@@ -3,8 +3,7 @@
    e dos anexos de cada documento do mês JÁ ABERTO; o resultado vem em d.ia.
    Aqui: o bloco "Leitura da IA" (faixa de confiança padrão do CME — leitura-conferida.js) e o despacho sugerido,
    montado com os modelos de "Despachos PRODOC" (texto aprovado, nada inventado pela IA).
-   O texto só fica pronto para copiar quando não há dúvida (modelo indicado pela regra, sem campo nem gênero a
-   escolher); nos outros casos o botão abre o Despachos já no modelo e com o nome.
+   O passo 2 (curto ou modelo formal, na própria Entrada) fica em secretaria-prodoc-responder.js.
    Emojis só por \u{...}. Prefixo _sprdIa / sec_prodoc. */
 
 const _SPRD_MODELOS_VITIMA = ['p03', 'p04', 'p12', 'p13']; // modelos de DPP: o nome é o da vítima
@@ -77,7 +76,7 @@ function _sprdBlocoIA(l) {
 }
 
 // Despacho curto = o padrão que a CME usa de verdade ("TIPO - NOME" + "Encaminha-se o expediente para providências."):
-// sempre pronto para colar. O modelo formal (Despachos PRODOC) continua a um clique. Pedido de 20/10/2026.
+// sempre pronto para colar. O bloco do passo 2 (curto ou modelo formal) fica em secretaria-prodoc-responder.js. Pedido de 20/10/2026.
 function _sprdIaCurto(l) {
   const d = l.d, ia = d.ia, setorIA = _sprdIaConferida(ia) ? _sprdSetorIA(ia.responsavel) : '';
   const setores = setorIA ? [setorIA] : l.sug.setores.filter(x => x !== 'Secretaria');
@@ -85,24 +84,12 @@ function _sprdIaCurto(l) {
   const nome = String((p && p.nome) || _sprdNome(d.assunto) || '').toUpperCase();
   return Object.assign({ setores, nome }, _sprdDespachoCurto(l.sug.cat, nome, setores, d.assunto));
 }
-function _sprdBlocoDespacho(l) {
-  if (l.sit !== 'novo') return '';
-  const t = _sprdIaCurto(l), id = _jsq(l.d.id);
-  const para = t.setores.length ? t.setores.map(x => 'CME-' + x.toUpperCase()).join(', ') : 'escolha o setor';
-  const linha = (rot, valor, qual) => '<div style="display:flex;gap:8px;align-items:flex-start;margin-top:6px"><div style="flex:1;min-width:0"><span style="font-size:.72rem;color:#64748b">' + rot + '</span>'
-    + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:6px 8px;' + (qual === 'assunto' ? 'font-weight:600' : '') + '">' + esc(valor) + '</div></div>'
-    + '<button class="btn-sm btn-outline" style="margin-top:16px" onclick="sec_prodocCopiar(\'' + id + '\',\'' + qual + '\')">Copiar</button></div>';
-  return '<div style="margin-top:10px;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px">'
-    + '<div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Despacho (padrão da CME) · encaminhar no PRODOC para: ' + esc(para) + '</div>'
-    + (/cópia/i.test(l.sug.fazer) && t.setores.includes('Plantão') ? '<div style="font-size:.8rem;color:#475569;margin-top:2px">' + esc(l.sug.fazer.replace(/^[^.]*\.\s*/, '')) + '</div>' : '')
-    + linha('Assunto (se for criar um PRODOC novo)', t.assunto, 'assunto') + linha('Texto do despacho', t.texto, 'texto')
-    + '<div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn-sm btn-outline" onclick="sec_prodocDespacho(\'' + id + '\')">Usar modelo formal</button></div></div>';
-}
-
 async function sec_prodocCopiar(id, qual) {
   const l = _sprdLinhas('*').find(x => x.d.id === id); if (!l) return;
   const t = _sprdIaCurto(l), valor = qual === 'assunto' ? t.assunto : t.texto;
   try { await navigator.clipboard.writeText(valor); _mostrarToast((qual === 'assunto' ? 'Assunto' : 'Texto') + ' copiado — cole no PRODOC (Ctrl+V).', 'sucesso'); }
-  catch (e) { _mostrarToast('Não consegui copiar automaticamente — selecione o texto e use Ctrl+C.', 'erro'); }
-  if (qual === 'texto') auditar({ modulo: 'Secretaria', action: 'sec_despacho_copiar', alvo: l.d.numero || id, detalhe: 'Entrada PRODOC · despacho curto' + (t.setores.length ? ' para ' + t.setores.join(', ') : '') });
+  catch (e) { _mostrarToast('Não consegui copiar automaticamente — selecione o texto e use Ctrl+C.', 'erro'); return; }
+  if (qual !== 'texto') return;
+  auditar({ modulo: 'Secretaria', action: 'sec_despacho_copiar', alvo: l.d.numero || id, detalhe: 'Entrada PRODOC · despacho curto' + (t.setores.length ? ' para ' + t.setores.join(', ') : '') });
+  _sprdRespMarcarCopia(id); // passo 3 destaca "Já encaminhei" (secretaria-prodoc-responder.js)
 }

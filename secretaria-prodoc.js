@@ -99,8 +99,14 @@ function sec_renderEntrada() {
       return '<button type="button" onclick="sec_prodocFiltro(\'' + k + '\')" style="padding:4px 12px;border-radius:4px;cursor:pointer;font-size:.84rem;'
         + (on ? 'border:1px solid #2563eb;background:#eff6ff;color:#1d4ed8;font-weight:700;box-shadow:inset 2px 0 0 #2563eb' : 'border:1px solid #cbd5e1;background:#fff;color:#475569') + '">' + r + ' <span style="opacity:.75">' + n + '</span></button>';
     }).join('') + '</div>'
-    + (_sprdFiltro === 'criados' ? _sprdTabelaCriados(p) : '<div id="sprd-lote"></div>' + _sprdTabela(linhas))
-    + '<div id="sprd-detalhe" style="margin-top:12px"></div>';
+    + (_sprdFiltro === 'criados' ? _sprdTabelaCriados(p)
+      // lista e documento lado a lado (pedido de 20/10/2026: análise e resposta na mesma tela); em tela estreita, um embaixo do outro
+      : '<style>.sprd-split{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(380px,1fr);gap:12px;align-items:start}'
+        + '.sprd-col-det{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto}.sprd-split .table-scroll{max-height:calc(100vh - 120px)!important}'
+        + '.sprd-lista{container-type:inline-size}@container (max-width:640px){.sprd-lista th:nth-child(3),.sprd-lista td:nth-child(3){display:none}}' // lista estreita: a data fica no painel
+        + '@media(max-width:980px){.sprd-split{grid-template-columns:1fr}.sprd-col-det{position:static;max-height:none}.sprd-split .table-scroll{max-height:48vh!important}}</style>'
+        + '<div class="sprd-split"><div class="sprd-lista" style="min-width:0"><div id="sprd-lote"></div>' + _sprdTabela(linhas) + '</div>'
+        + '<div id="sprd-detalhe" class="sprd-col-det"></div></div>');
   _sprdRenderLote();
   _sprdRenderDetalhe();
 }
@@ -182,7 +188,7 @@ function _sprdTabela(linhas) {
       const para = l.sit === 'enc' && d.envios && d.envios.length ? d.envios.map(e => _sprdSetorCurto(e.destino)).join(', ')
         : l.sit === 'enc' && l.atendido ? (l.atendido.destinos || [l.atendido.destino]).map(_sprdSetorCurto).join(', ')
         : l.sit === 'aviso' ? 'Ciência' : (l.sug.ciencia ? 'Só ciência' : l.sug.setores.join(', ') || '—');
-      return '<tr style="cursor:pointer' + (d.id === _sprdSel ? ';background:#eff6ff;box-shadow:inset 3px 0 0 #2563eb' : '') + '" onclick="sec_prodocSel(\'' + _jsq(d.id) + '\')">'
+      return '<tr data-sprd="' + d.id + '" style="cursor:pointer' + (d.id === _sprdSel ? ';background:#eff6ff;box-shadow:inset 3px 0 0 #2563eb' : '') + '" onclick="sec_prodocSel(\'' + _jsq(d.id) + '\')">'
         + '<td onclick="event.stopPropagation()">' + (_SPRD_LOTE_SITS.includes(l.sit) ? '<input type="checkbox"' + (_sprdMarcados.has(d.id) ? ' checked' : '') + ' onclick="sec_prodocMarcarSel(\'' + _jsq(d.id) + '\',event)">' : '') + '</td>'
         + '<td><span class="badge ' + cls + '">' + (l.sit === 'naolido' ? '\u{1F512} ' : '') + rot + '</span>' + (l.parado ? ' <span class="badge badge-vencendo">Parado</span>' : '') + '</td>'
         + '<td style="font-family:var(--font-mono);white-space:nowrap">' + _sprdBR(d.recebidoEm) + '</td>'
@@ -215,6 +221,7 @@ function _sprdRenderDetalhe() {
     + '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:flex-start"><div style="min-width:0">'
     + '<div style="font-size:.75rem;color:#64748b">' + esc(d.tipo) + ' · <span style="font-family:var(--font-mono)">' + esc(d.numero) + '</span> · de ' + esc(d.origem) + (d.origemNome ? ' (' + esc(d.origemNome) + ')' : '') + ' · recebido <span style="font-family:var(--font-mono)">' + _sprdBR(d.recebidoEm) + '</span></div>'
     + '<div style="font-weight:700;font-size:1.02rem">' + esc(d.assunto) + '</div></div><span class="badge ' + cls + '">' + rot + '</span></div>'
+    + _sprdPasso(l, 1, 'O que fazer')
     + _sprdBlocoIA(l)
     + '<div style="margin-top:10px;padding:10px 12px;background:#eff6ff;border-left:3px solid #2563eb">'
     + '<div style="font-size:.72rem;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em">' + (d.ia ? 'Pelo histórico da CME' : 'O que fazer') + '</div>'
@@ -223,7 +230,10 @@ function _sprdRenderDetalhe() {
     + '<div style="font-size:.8rem;color:#475569;margin-top:3px">Regra: ' + esc(s.regra) + '</div>'
     + (l.prazo.data || l.prazo.urgente ? '<div style="font-size:.84rem;margin-top:3px;color:' + (_sprdPrazoPerto(l) ? '#b91c1c' : '#475569') + ';font-weight:600">\u{23F0} '
       + (l.prazo.data ? 'Prazo achado no texto: ' + _sprdBR(l.prazo.data) : '') + (l.prazo.urgente ? (l.prazo.data ? ' · ' : '') + 'pede urgência' : '') + '</div>' : '') + '</div>';
-  h += _sprdBlocoDespacho(l);
+  if (d.sigiloso) h += linha('Texto', 'Documento sigiloso: o robô não traz o texto. Leia no PRODOC.');
+  else if (d.texto) h += '<details style="margin-top:8px"' + (l.sit === 'novo' ? ' open' : '') + '><summary style="cursor:pointer;font-size:.8rem;font-weight:700;color:#64748b">TEXTO DO DOCUMENTO (como está no PRODOC)</summary>'
+    + '<div style="white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:10px 12px;margin-top:6px;font-size:.88rem;line-height:1.5;max-height:220px;overflow:auto">' + esc(d.texto) + '</div></details>';
+  h += _sprdBlocoResponder(l); // passo 2: despacho curto ou modelo formal, aqui mesmo (secretaria-prodoc-responder.js)
   if (l.sit === 'naolido') h += '<div style="margin-top:10px;font-size:.86rem;color:#475569">\u{1F512} Ainda não foi aberto no PRODOC. O robô só traz o texto depois que alguém abrir lá — e abrir marca "lido por" no nome de quem abriu.</div>';
   if ((d.envios || []).length) h += linha('Encaminhado no PRODOC', d.envios.map(e => {
     const curto = x => _sprdSetorCurto(x).replace(/\s/g, '').toUpperCase();
@@ -234,20 +244,37 @@ function _sprdRenderDetalhe() {
   if (l.atendido && l.sit === 'enc' && !(d.envios || []).length) h += linha('Atendido com PRODOC novo da CME', esc(l.atendido.assunto) + ' → ' + esc((l.atendido.destinos || [l.atendido.destino]).map(_sprdSetorCurto).join(', '))
     + ' em <span style="font-family:var(--font-mono)">' + _sprdBR(l.atendido.em) + '</span> <span style="font-size:.78rem;color:#64748b">(achado pelo nome — se não for o mesmo caso, marque abaixo)</span>');
   if (m) h += linha('Marcado na Secretaria', esc(m.st === 'res' ? 'Resolvido' : 'Encaminhado') + ' por ' + esc(m.por || '?') + ' em <span style="font-family:var(--font-mono)">' + _sprdBR(String(m.em || '').slice(0, 16)) + '</span>' + (m.nota ? ' · "' + esc(m.nota) + '"' : ''));
-  if (d.sigiloso) h += linha('Texto', 'Documento sigiloso: o robô não traz o texto. Leia no PRODOC.');
-  else if (d.texto) h += '<details style="margin-top:8px"' + (l.sit === 'novo' ? ' open' : '') + '><summary style="cursor:pointer;font-size:.8rem;font-weight:700;color:#64748b">TEXTO DO DOCUMENTO (como está no PRODOC)</summary>'
-    + '<div style="white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:10px 12px;margin-top:6px;font-size:.88rem;line-height:1.5;max-height:260px;overflow:auto">' + esc(d.texto) + '</div></details>';
-  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px">';
-  if (l.sit === 'aviso') h += '<button class="btn-primary" onclick="sec_prodocMarcarCiencia(\'' + _jsq(d.id) + '\')">Dar ciência</button>';
-  if (l.sit === 'novo' || l.sit === 'aviso') h += '<button class="btn-primary" onclick="sec_prodocMarcar(\'' + _jsq(d.id) + '\',\'enc\')">Já encaminhei no PRODOC</button>';
-  if (l.sit !== 'res') h += '<input id="sprd-nota" placeholder="O que foi feito (opcional)" maxlength="300" style="flex:1;min-width:180px;padding:6px 10px"><button class="btn-primary" onclick="sec_prodocMarcar(\'' + _jsq(d.id) + '\',\'res\')">Confirmar resolvido</button>';
-  if (m) h += '<button class="btn-sm btn-outline" onclick="sec_prodocMarcar(\'' + _jsq(d.id) + '\',\'\')">Desfazer marcação</button>';
-  h += '<a class="btn-sm btn-outline" style="text-decoration:none" href="' + _SPRD_LINK + encodeURIComponent(d.id) + '" target="_blank" rel="noopener noreferrer"'
-    + (d.lido !== true ? ' onclick="return confirm(\'Abrir no PRODOC marca este documento como LIDO no seu nome. Abrir mesmo assim?\')"' : '') + '>Abrir no PRODOC \u{2197}</a></div></div>';
-  box.innerHTML = h;
+  // passo 3: abrir no PRODOC, colar e confirmar aqui mesmo
+  const copiou = l.sit === 'novo' && _sprdRespCopiou(d.id), idq = _jsq(d.id);
+  h += _sprdPasso(l, 3, 'Encaminhar no PRODOC e confirmar aqui');
+  if (copiou) h += '<div id="sprd-r-copiado" style="margin-top:6px;padding:6px 10px;background:#f0fdf4;border-left:3px solid #16a34a;font-size:.86rem">\u{2714} Texto copiado. Abra no PRODOC, cole (Ctrl+V), encaminhe e depois clique em <b>Já encaminhei no PRODOC</b>.</div>';
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:' + (l.sit === 'novo' ? 8 : 12) + 'px">'
+    + '<a class="btn-sm btn-outline" style="text-decoration:none" href="' + _SPRD_LINK + encodeURIComponent(d.id) + '" target="_blank" rel="noopener noreferrer"'
+    + (d.lido !== true ? ' onclick="return confirm(\'Abrir no PRODOC marca este documento como LIDO no seu nome. Abrir mesmo assim?\')"' : '') + '>Abrir no PRODOC \u{2197}</a>';
+  if (l.sit === 'aviso') h += '<button class="btn-primary" onclick="sec_prodocMarcarCiencia(\'' + idq + '\')">Dar ciência</button>';
+  if (l.sit === 'novo' || l.sit === 'aviso') h += '<button class="' + (l.sit === 'novo' ? 'btn-primary' : 'btn-secondary') + '"' + (l.sit === 'novo' ? ' id="sprd-r-jaenc"' : '') + (copiou ? ' style="box-shadow:0 0 0 3px #bbf7d0"' : '') + ' onclick="sec_prodocMarcar(\'' + idq + '\',\'enc\')">Já encaminhei no PRODOC</button>';
+  if (l.sit !== 'res') h += '<input id="sprd-nota" placeholder="O que foi feito (opcional)" maxlength="300" value="' + esc(_sprdRespEstado(d.id).nota || '') + '" oninput="_sprdRespEstado(\'' + idq + '\').nota=this.value" style="flex:1;min-width:180px;padding:6px 10px"><button class="' + (l.sit === 'novo' ? 'btn-secondary' : 'btn-primary') + '" onclick="sec_prodocMarcar(\'' + idq + '\',\'res\')">Confirmar resolvido</button>';
+  if (m) h += '<button class="btn-sm btn-outline" onclick="sec_prodocMarcar(\'' + idq + '\',\'\')">Desfazer marcação</button>';
+  const y = box.scrollTop; box.innerHTML = h + '</div></div>'; box.scrollTop = y; // redesenhar (gênero, modelo, cópia) não perde a rolagem do painel
+}
+// título numerado dos passos — só no que está "A encaminhar" (nos outros o painel é só consulta/confirmação)
+function _sprdPasso(l, n, titulo) {
+  if (l.sit !== 'novo') return '';
+  return '<div style="display:flex;align-items:center;gap:8px;margin-top:' + (n === 1 ? 12 : 16) + 'px;padding-top:' + (n === 1 ? 0 : 10) + 'px;' + (n === 1 ? '' : 'border-top:1px solid #e2e8f0;')
+    + 'font-size:.78rem;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.05em">'
+    + '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:3px;background:#1d4ed8;color:#fff;font-size:.75rem">' + n + '</span>' + esc(titulo) + '</div>';
 }
 
-function sec_prodocSel(id) { _sprdSel = id; sec_renderEntrada(); }
+// troca só o destaque da linha e o painel do documento (sem redesenhar a lista nem perder a rolagem dela)
+function sec_prodocSel(id) {
+  _sprdSel = id;
+  document.querySelectorAll('tr[data-sprd]').forEach(tr => { const on = tr.dataset.sprd === id; tr.style.background = on ? '#eff6ff' : ''; tr.style.boxShadow = on ? 'inset 3px 0 0 #2563eb' : ''; });
+  _sprdRenderDetalhe();
+  const box = document.getElementById('sprd-detalhe');
+  if (box) { box.scrollTop = 0; if (window.innerWidth <= 980) box.scrollIntoView({ block: 'start' }); }
+}
+// próximo da lista na tela (para abrir sozinho depois de marcar); o anterior se era o último
+function _sprdProximoDe(id) { const ord = [..._sprdVisiveis], i = ord.indexOf(id); return i < 0 ? null : ord[i + 1] || ord[i - 1] || null; }
 function sec_prodocFiltro(f) { _sprdFiltro = f; _sprdSel = null; sec_renderEntrada(); }
 async function sec_prodocAtualizar() {
   _sprdErro = ''; await _sprdCarregar(true);
@@ -261,25 +288,20 @@ function sec_prodocMarcar(id, st, notaFixa) {
   const d = ((_sprdPacote || {}).docs || []).find(x => x.id === id); if (!d) return;
   const nota = notaFixa || (st === 'res' ? _secVal('sprd-nota').slice(0, 300) : '');
   const limite = _sprdMaisDias(_secHoje(), -90), vivos = new Set(_sprdPacote.docs.map(x => x.id));
+  const prox = st && _sprdFiltro !== 'todos' && _sprdSel === id ? _sprdProximoDe(id) : null; // o marcado sai do filtro: abre o seguinte
   _secMutar(n => {
     n.prodoc = Object.fromEntries(Object.entries(n.prodoc || {}).filter(([k, v]) => vivos.has(k) || String(v.em || '') > limite)); // esquece marca velha de documento que já saiu do pacote
     if (st) n.prodoc[id] = { st, por: (usuarioAtual && usuarioAtual.nome) || '', em: _sprdAgora(), nota }; // hora local, como o resto da Secretaria
     else delete n.prodoc[id];
   }, { action: st ? 'sec_prodoc_' + st : 'sec_prodoc_desfazer', alvo: d.numero || id, detalhe: 'PRODOC ' + (d.origem || '') })
-    .then(ok => { if (ok) { _mostrarToast(st === 'res' ? 'Marcado como resolvido.' : st === 'enc' ? 'Marcado como encaminhado.' : 'Marcação desfeita.', 'sucesso'); sec_renderEntrada(); } });
-}
-
-// abre "Despachos PRODOC" no modelo sugerido, com o nome já preenchido
-// (o mesmo modelo e nome do "Despacho sugerido" — leitura da IA quando conferida, senão a regra)
-function sec_prodocDespacho(id) {
-  const l = _sprdLinhas('*').find(x => x.d.id === id); if (!l) return;
-  const p = _sprdIaDespacho(l);
-  if (!p) { _mostrarToast('Não há modelo de despacho para ' + (l.sug.setores[0] || 'este caso') + '.', 'erro'); return; }
-  _secModeloId = p.mod.id;
-  sec_mudarAba('despachos');
-  if (!p.escolhido) _mostrarToast('Escolha o modelo certo em "PRODOC para ' + p.mod.destino + '" — não deu para saber qual.', 'info');
-  const el = document.getElementById('sec-dp-NOME');
-  if (el) { el.value = p.nome; _secPrevDespacho(); el.focus(); }
+    .then(ok => { if (ok) {
+      if (prox && _sprdSel === id) _sprdSel = prox; // se a pessoa já clicou em outro, respeita
+      if (!st && _sprdResp[id]) _sprdResp[id].copiou = false; // desfez: começa o passo 3 de novo
+      const lista = document.querySelector('.sprd-lista .table-scroll'), y = lista ? lista.scrollTop : 0;
+      _mostrarToast(st === 'res' ? 'Marcado como resolvido.' : st === 'enc' ? 'Marcado como encaminhado.' : 'Marcação desfeita.', 'sucesso'); sec_renderEntrada();
+      const l2 = document.querySelector('.sprd-lista .table-scroll'), tr = document.querySelector('tr[data-sprd="' + _sprdSel + '"]');
+      if (l2) l2.scrollTop = y; if (tr) tr.scrollIntoView({ block: 'nearest' }); // a lista não volta ao topo
+    } });
 }
 
 Object.assign(_SEC_ACOES, { sec_prodoc_enc: 'Marcou PRODOC como encaminhado', sec_prodoc_res: 'Marcou PRODOC como resolvido', sec_prodoc_desfazer: 'Desfez marcação do PRODOC', sec_prodoc_lote: 'Marcou PRODOCs em lote' });
