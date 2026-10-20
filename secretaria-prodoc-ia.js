@@ -42,9 +42,12 @@ function _sprdIaTextos(l, html) {
 
 function _sprdIaStatus(l) {
   const d = l.d;
+  // a IA lê só o que ainda pede ação (pedido de 20/10/2026: não gastar a cota grátis inteira)
   const motivo = l.sit === 'naolido' ? 'só depois que o documento for aberto no PRODOC'
     : d.sigiloso ? 'documento sigiloso não vai para a IA'
-    : String(d.recebidoEm || '').slice(0, 7) !== _secHoje().slice(0, 7) ? 'a IA lê só os documentos do mês atual'
+    : d.caixa !== 'entrada' ? 'já foi encaminhado — a IA lê só o que ainda está na caixa'
+    : /CIRCULAR/i.test(d.tipo || '') ? 'circular é só ciência — a IA não gasta leitura com ela'
+    : String(d.recebidoEm || '').slice(0, 10) < _sprdMaisDias(_secHoje(), -7) ? 'a IA lê só o que chegou nos últimos 7 dias'
     : d.iaErro && (d.iaErro.n || 1) >= 3 ? 'a leitura falhou 3 vezes — leia no PRODOC'
     : d.iaErro ? 'a última tentativa falhou; o robô tenta de novo em algumas horas'
     : 'está na fila — entra nas próximas leituras do robô (a cota grátis da IA é dividida ao longo do dia)';
