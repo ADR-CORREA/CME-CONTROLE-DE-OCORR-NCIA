@@ -22638,7 +22638,25 @@ const COM_MODELOS = [
       ...(c.obs_finais ? c.obs_finais.split('\n').filter(l=>l.trim()).map((l,i) => i===0 ? `<b>Observações finais:</b> ${l.trim()}` : l.trim()) : []),
       `Encaminha-se o presente relatório para ciência e demais providências que Vossa Excelência entender necessárias.`,
     ]},
+  /* ── REITERAÇÃO (20/10/2026: modelo do Ofício nº 2530/2026 usado pela Comunicação) ── */
+  { id:'reiteracao-info', cat:'Reiteração', nome:'Reiteração — informação já prestada (ofício anterior)',
+    assunto:'Reiteração de informação acerca da vinculação ao Sistema de Monitoramento Eletrônico',
+    campos:[
+      {id:'info_reiterada', label:'O que está sendo reiterado', tipo:'text', placeholder:'vinculação (padrão) · desvinculação · ausência de comunicação…'},
+      {id:'oficio_anterior', label:'Nº do ofício anterior', tipo:'text', placeholder:'ex: 2215/2026'},
+      {id:'data_envio_anterior', label:'Data em que foi encaminhado', tipo:'date'},
+    ],
+    // assunto acompanha os campos (enquanto a pessoa não digitar um assunto próprio)
+    assuntoDe:c=>`Reiteração de informação acerca da ${_comReitInfo(c)}${_comReitSist(c)}${c.oficio_anterior ? ` – Ofício nº ${c.oficio_anterior}-CME/IAPEN` : ''}`,
+    corpo:c=>[
+      `Com os cumprimentos de estilo, a Central de Monitoramento Eletrônico – CME/IAPEN vem, respeitosamente, à presença de Vossa Excelência, informar que a ${_comReitInfo(c)} de <b>${c.nome_monitorado}</b>${_comReitSist(c)} já foi devidamente comunicada a esse Juízo, por meio do Ofício nº ${c.oficio_anterior || '____'}-CME/IAPEN, encaminhado em ${c.data_envio_anterior || '____'}.`,
+      `Dessa forma, esta Central reitera que a informação referente à ${_comReitInfo(c)} do custodiado foi oportunamente prestada, para fins de ciência e registro, colocando-se à disposição para quaisquer esclarecimentos adicionais que se fizerem necessários.`,
+      // o fecho "Sem mais, esta CME se coloca à disposição…" o gerador já põe em todo ofício
+    ]},
 ];
+// Reiteração: "vinculação" quando o campo fica vazio; "… ao/do Sistema de Monitoramento Eletrônico" só p/ vinculação e desvinculação
+function _comReitInfo(c) { return String((c && c.info_reiterada) || 'vinculação').trim().replace(/[.]+$/, ''); }
+function _comReitSist(c) { const i = _comReitInfo(c); return /^desvincula/i.test(i) ? ' do Sistema de Monitoramento Eletrônico' : /^vincula/i.test(i) ? ' ao Sistema de Monitoramento Eletrônico' : ''; }
 
 /* ─── Helpers ────────────────────────────────────────────────── */
 function com_fmtData(s) {
@@ -22914,6 +22932,7 @@ function com_atualizarDestinatario() {
 /* Handler da troca de modelo: refaz corpo/campos/número/prévia. No modo LIVRE,
    começa com o corpo EM BRANCO para o usuário escrever do zero (sem herdar o
    texto do modelo anterior). */
+let _comAssuntoAuto = ''; // último assunto preenchido sozinho (não sobrescreve o que a pessoa digitou)
 function com_onModeloTrocado() {
   _comTextoBloqueado = false;
   _comCorpoEditado   = false;
@@ -22931,6 +22950,7 @@ function com_atualizarCampos() {
   // modelo (editável — a Comunicação pode digitar um próprio depois).
   const assEl = document.getElementById('com-of-assunto');
   if (assEl) assEl.value = m ? (m.assunto || '') : '';
+  _comAssuntoAuto = assEl ? assEl.value : '';
   const div = document.getElementById('com-of-campos-dinamicos');
   if (!m || !m.campos.length) { div.innerHTML = ''; return; }
   const temWide = m.campos.some(c => c.tipo === 'textarea' || c.tipo === 'lista' || c.tipo === 'lista-par');
@@ -24187,6 +24207,11 @@ function com_atualizarPreview() {
     if (c.tipo === 'date' && val) val = com_fmtData(val);
     campos[c.id] = val;
   });
+  // modelo com assunto que depende dos campos (Reiteração): acompanha enquanto a pessoa não digitar um assunto próprio
+  if (typeof modelo.assuntoDe === 'function') {
+    const assEl = document.getElementById('com-of-assunto');
+    if (assEl && assEl.value === _comAssuntoAuto) { assEl.value = modelo.assuntoDe(campos); _comAssuntoAuto = assEl.value; }
+  }
 
   const paragrafos = modelo.corpo(campos);
   const stripTags  = s => s.replace(/<\/?(b|i)>/g,'');
