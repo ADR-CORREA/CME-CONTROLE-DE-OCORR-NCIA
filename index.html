@@ -1337,11 +1337,17 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         </div>
         <!-- Estoque disponível (Módulos de tornozeleira + DPP) — visível a todos os perfis -->
         <div class="idv-bloco" id="dash-estoque-disp">
-          <div class="idv-bloco-cab"><span>Estoque disponível</span></div>
+          <div class="idv-bloco-cab"><span>Estoque disponível — setor de Estoque</span></div>
           <div class="idv-bloco-corpo lado">
             <div><span class="idv-grande idv-mono" id="dash-est-mod">—</span><span class="idv-mini">módulos de tornozeleira</span></div>
             <div><span class="idv-grande idv-mono" id="dash-est-dpp">—</span><span class="idv-mini">dispositivos DPP</span></div>
           </div>
+          <div class="idv-bloco-cab" style="margin-top:8px"><span>Estoque disponível — Plantão</span></div>
+          <div class="idv-bloco-corpo lado">
+            <div><span class="idv-grande idv-mono" id="dash-estp-mod">—</span><span class="idv-mini">módulos de tornozeleira</span></div>
+            <div><span class="idv-grande idv-mono" id="dash-estp-dpp">—</span><span class="idv-mini">dispositivos DPP</span></div>
+          </div>
+          <div id="dash-estp-aviso" class="idv-mini" style="display:none;margin-top:4px;color:#b45309;font-weight:600"></div>
         </div>
       </div>
 
@@ -3433,6 +3439,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       <div class="sub-tabs" style="margin-bottom:0">
         <div class="sub-tab active" id="est-stab-estoque"  onclick="mudarSubAbaEstoque('estoque')">📦 Estoque</div>
         <div class="sub-tab"       id="est-stab-consultar" onclick="mudarSubAbaEstoque('consultar')">🔍 Consultar</div>
+        <div class="sub-tab"       id="est-stab-plantao"   onclick="mudarSubAbaEstoque('plantao')" style="display:none">🛡️ Plantão</div>
       </div>
 
       <!-- Sub-panel Estoque -->
@@ -3441,6 +3448,8 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           🔒 <strong>Modo visualização:</strong> seu perfil não possui permissão para alterar o estoque.
         </div>
         <div id="est-alertas"></div>
+        <!-- Transferências com o estoque do Plantão (estoque-plantao-tela.js) -->
+        <div id="ep-setor-pendentes"></div>
 
         <!-- KPI Cards -->
         <div class="est-kpi-grid">
@@ -3501,6 +3510,9 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           <div id="est-consultar-resultado"></div>
         </div>
       </div><!-- /est-panel-consultar -->
+
+      <!-- Sub-panel Estoque do Plantão (preenchido por estoque-plantao-tela.js) -->
+      <div id="est-panel-plantao" class="sub-panel" style="display:none"></div>
 
     </div><!-- /panel-estoque -->
 
@@ -7032,6 +7044,13 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       <div class="form-section">
         <div class="form-section-title">Dados da Entrega</div>
         <div class="form-grid">
+          <div class="form-field"><label>Destino *</label>
+            <select id="sai-destino">
+              <option value="plantao">Estoque do Plantão (fica "a receber" até o plantonista conferir)</option>
+              <option value="outro">Outro destino (não entra no estoque do Plantão)</option>
+            </select></div>
+        </div>
+        <div class="form-grid">
           <div class="form-field"><label>Plantão que recebe *</label>
             <select id="sai-plantao">
               <option value="">Selecione...</option>
@@ -8116,7 +8135,7 @@ function fazerLogout() {
 
 // ── Mapa de abas permitidas por nível ─────────────────────
 const TABS_POR_NIVEL = {
-  plantao:    ['dashboard', 'criticos', 'ocorrencias', 'links', 'modelos', 'arquivos', 'psicossocial', 'semcom'],
+  plantao:    ['dashboard', 'criticos', 'ocorrencias', 'estoque', 'links', 'modelos', 'arquivos', 'psicossocial', 'semcom'],
   comunicacao: ['dashboard', 'comunicacao', 'links', 'modelos', 'arquivos', 'psicossocial', 'semcom'],
   relatorio:  ['dashboard', 'relatorio', 'links', 'modelos', 'arquivos', 'psicossocial', 'semcom'],
   juridico:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'links', 'modelos', 'arquivos', 'psicossocial', 'semcom'],
@@ -8294,6 +8313,17 @@ function _dashEstoqueDisp() {
   set('dash-est-mod', mod);
   set('dash-est-dpp', dpp);
   set('psi-est-dpp', dpp); // campo dentro do Psicossocial
+  // estoque do Plantão (estoque-plantao.js) + o que está a caminho entre setor e plantão
+  try {
+    if (typeof ep_resumo !== 'function') return;
+    const r = ep_resumo(), av = document.getElementById('dash-estp-aviso');
+    set('dash-estp-mod', r.plantao.mod);
+    set('dash-estp-dpp', r.plantao.dpp);
+    const partes = [];
+    if (r.aReceberPlantao) partes.push(r.aReceberPlantao + ' envio(s) do setor a receber pelo Plantão');
+    if (r.aReceberSetor) partes.push(r.aReceberSetor + ' devolução(ões) do Plantão a receber pelo setor');
+    if (av) { av.textContent = partes.length ? '\u{26A0}\u{FE0F} ' + partes.join(' · ') : ''; av.style.display = partes.length ? '' : 'none'; }
+  } catch (e) {}
 }
 
 /* ─── DASHBOARD ──────────────────────────────────────── */
@@ -15363,6 +15393,8 @@ function estStatusLabel(cls)     { return cls === 'ok' ? 'DISPONÍVEL' : cls ===
 
 /* ─ Renderização ────────────────────────────────────────── */
 function renderizarEstoque() {
+  // estoque do Plantão + transferências (estoque-plantao-tela.js)
+  try { if (typeof ep_renderizar === 'function') ep_renderizar(); } catch (e) { console.warn('[CME] estoque do plantão:', e); }
   const est   = getEstoque();
   const itens = est.itens;
   const regs  = est.registros || {};
@@ -15658,10 +15690,14 @@ function excluirMovEstoque(id) {
 }
 
 function mudarSubAbaEstoque(aba) {
-  document.getElementById('est-panel-estoque').style.display  = aba === 'estoque'  ? 'block' : 'none';
-  document.getElementById('est-panel-consultar').style.display = aba === 'consultar' ? 'block' : 'none';
-  document.getElementById('est-stab-estoque').classList.toggle('active',  aba === 'estoque');
-  document.getElementById('est-stab-consultar').classList.toggle('active', aba === 'consultar');
+  ['estoque', 'consultar', 'plantao'].forEach(a => {
+    const p = document.getElementById('est-panel-' + a), t = document.getElementById('est-stab-' + a);
+    if (p) p.style.display = a === aba ? 'block' : 'none';
+    if (t) t.classList.toggle('active', a === aba);
+  });
+  // os botões do topo (Entrada, Saída...) são do setor; o Plantão tem os seus dentro do painel
+  const _acoes = document.getElementById('est-btns-acao'); if (_acoes) _acoes.style.visibility = aba === 'plantao' ? 'hidden' : '';
+  if (aba === 'plantao' && typeof ep_renderizar === 'function') ep_renderizar();
   if (aba === 'consultar') {
     const inp = document.getElementById('est-consultar-input');
     if (inp) { inp.value = ''; inp.focus(); }
@@ -15833,7 +15869,7 @@ function abrirModalEstoque(tipo) {
   const pfxs = { entrada:'ent', saida:'sai', devolucao:'dev', baixa:'bxa' };
   const pfx  = pfxs[tipo];
   // Limpar campos
-  ['categoria','tipo','tamanho','quantidade','responsavel','obs','motivo','monitorado','processo','numserie','plantao','plantonista','data-entrega','estado'].forEach(f => {
+  ['categoria','tipo','tamanho','quantidade','responsavel','obs','motivo','monitorado','processo','numserie','plantao','plantonista','data-entrega','estado','destino'].forEach(f => {
     const el = document.getElementById(pfx + '-' + f);
     if (!el) return;
     if (el.tagName === 'SELECT') el.selectedIndex = 0;
@@ -16093,6 +16129,15 @@ function salvarMovEstoque(tipo) {
   if ((tipo === 'saida' || tipo === 'baixa') && qtd > qtdAtual) {
     return alert(`Saldo insuficiente. Estoque atual: ${qtdAtual} unidade(s).`);
   }
+  // Saída para o estoque do Plantão: o plantonista confere unidade por unidade (estoque-plantao.js)
+  const paraPlantao = tipo === 'saida' && g('destino') !== 'outro' && typeof ep_enviarDoSetor === 'function';
+  if (paraPlantao && ITENS_COM_SERIAL.includes(itemTipo)) {
+    const _ids = Array.from(document.querySelectorAll('.sai-serial-input')).map(i => i.value.trim()).filter(Boolean);
+    if (_ids.length !== qtd || new Set(_ids).size !== qtd) return alert(`Para mandar ao Plantão, informe o ${_serialLabel(itemTipo)} de cada unidade (${qtd}), sem repetir.`);
+    const _noSetor = _buildSerialEstadoMap(est, itemTipo), _fora = _ids.find(id => !_noSetor[id]);
+    if (_fora) return alert(`O ${_serialLabel(itemTipo)} "${_fora}" não está no estoque do setor. Escolha da lista.`);
+  }
+  const unidadesSaida = []; // nº de série/IMEI que saem, com estado/carregador/chip (vão junto para o Plantão)
 
   // Atualizar saldo
   est.itens[chave] = (tipo === 'entrada' || tipo === 'devolucao')
@@ -16138,6 +16183,8 @@ function salvarMovEstoque(tipo) {
       inputs.forEach(inp => {
         const sn = inp.value.trim();
         if (sn) {
+          const _r0 = est.registros[itemTipo].find(r => (r.imei||r.serial) === sn);
+          unidadesSaida.push({ id: sn, estado: (_r0 && _r0.estado) || estadoVal, temCarregador: !!(_r0 && _r0.temCarregador), temChip: !!(_r0 && _r0.temChip) });
           est.seriais[itemTipo] = est.seriais[itemTipo].filter(s => s !== sn);
           est.registros[itemTipo] = est.registros[itemTipo].filter(r => (r.imei||r.serial) !== sn);
         }
@@ -16170,13 +16217,16 @@ function salvarMovEstoque(tipo) {
     plantao:      tipo === 'saida' ? g('plantao')      : '',
     plantonista:  tipo === 'saida' ? g('plantonista')  : '',
     dataEntrega:  tipo === 'saida' ? g('data-entrega') : '',
+    destino:      tipo === 'saida' ? (paraPlantao ? 'Estoque do Plantão' : 'Outro destino') : '',
   };
+  if (paraPlantao && unidadesSaida.length) mov.unidades = unidadesSaida; // para o "Reenviar ao Plantão" se o aviso falhar
   est.movimentacoes.unshift(mov);
   if (est.movimentacoes.length > 500) est.movimentacoes = est.movimentacoes.slice(0, 500);
 
   salvarEstoque(est);
   addLog(`Estoque — ${tipoLabel}: ${itemTipo}${tamanho ? ' ' + tamanho : ''} ×${qtd} (${resp})`);
   fecharModal(modalId);
+  if (paraPlantao) ep_enviarDoSetor(mov, unidadesSaida);
   renderizarEstoque();
   _mostrarToast('\u{2713} ' + tipoLabel + ' registrada com sucesso!', 'ok');
 }
@@ -29736,5 +29786,7 @@ function estat_exportarResultado() {
 <script src="vd-zonas.js?v=20261015s"></script>
 <script src="radar-mandado.js?v=20261016d"></script>
 <script src="rv-justificativas.js?v=20261016b"></script>
+<script src="estoque-plantao.js?v=20261020a"></script>
+<script src="estoque-plantao-tela.js?v=20261020a"></script>
 </body>
 </html>
