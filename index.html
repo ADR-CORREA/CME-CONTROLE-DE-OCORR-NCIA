@@ -20002,9 +20002,14 @@ async function r2_enviarComCategoria(input, categoria) {
   const bar  = document.getElementById('r2-progress-bar');
   const txt  = document.getElementById('r2-progress-text');
   wrap.style.display = 'block';
+  const notasImg = [];
   for (let i = 0; i < files.length; i++) {
-    const file = files[i];
     bar.style.width = Math.round((i / files.length) * 100) + '%';
+    // Imagem com escrita (documento) vira PDF; foto sem escrita fica imagem.
+    if (_uipEhImagem(files[i])) txt.textContent = `Lendo imagem (${i+1}/${files.length}): ${files[i].name}`;
+    const prep = await _uipPrepararUpload(files[i]);
+    const file = prep.file;
+    notasImg.push(prep.nota);
     txt.textContent = `Enviando (${i+1}/${files.length}): ${file.name}`;
     // Prefixar o nome com a categoria (ASCII id sem codificar os colchetes)
     // Formato: [catId] filename — colchetes ficam como ASCII para sobreviver
@@ -20023,7 +20028,8 @@ async function r2_enviarComCategoria(input, categoria) {
   }
   bar.style.width = '100%';
   txt.textContent = `\u{2705} ${files.length} arquivo(s) enviado(s)!`;
-  setTimeout(() => { wrap.style.display = 'none'; bar.style.width = '0%'; }, 2500);
+  const temImg = _uipAvisar(notasImg, txt);
+  setTimeout(() => { wrap.style.display = 'none'; bar.style.width = '0%'; }, temImg ? 10000 : 2500);
   input.value = '';
   addLog(`R2: arquivo(s) enviado(s) — ${categoria} — ${r2_state.monitorado}`);
   await r2_carregarArquivos();
@@ -20072,11 +20078,17 @@ async function r2_enviarArquivos(input) {
   const txt  = document.getElementById('r2-progress-text');
   wrap.style.display = 'block';
   let enviados = 0, pulados = 0;
+  const notasImg = [];
   for (let i = 0; i < files.length; i++) {
-    const file     = files[i];
-    const nomeEnv  = prefixoData ? `${prefixoData}${file.name}` : file.name;
+    const original = files[i];
     const pct      = Math.round((i / files.length) * 100);
     bar.style.width = pct + '%';
+    // Imagem com escrita (documento) vira PDF; foto sem escrita fica imagem.
+    if (_uipEhImagem(original)) txt.textContent = `Lendo imagem (${i + 1}/${files.length}): ${original.name}`;
+    const prep     = await _uipPrepararUpload(original);
+    const file     = prep.file;
+    notasImg.push(prep.nota);
+    const nomeEnv  = prefixoData ? `${prefixoData}${file.name}` : file.name;
     txt.textContent = `Verificando (${i + 1}/${files.length}): ${file.name}`;
     // Verificar duplicata antes de enviar
     try {
@@ -20104,7 +20116,7 @@ async function r2_enviarArquivos(input) {
       enviados++;
       // Auto-leitura: se o upload foi para a pasta "Relatório" e é PDF, lê a capa
       // e abastece a sub-aba Arquivadas (não derruba o upload se o parse falhar).
-      if (r2_state.pasta === 'Relatório' && /\.pdf$/i.test(file.name)) {
+      if (r2_state.pasta === 'Relatório' && /\.pdf$/i.test(original.name)) {
         try { await _relImportarDoUpload(file); } catch(eRel) { console.error('[CME] auto-relatório:', eRel); }
       }
     } catch(e) {
@@ -20113,7 +20125,8 @@ async function r2_enviarArquivos(input) {
   }
   bar.style.width = '100%';
   txt.textContent = `\u{2705} ${enviados} enviado(s)${pulados ? `, ${pulados} ignorado(s)` : ''}!`;
-  setTimeout(() => { wrap.style.display = 'none'; bar.style.width = '0%'; }, 2500);
+  const temImg = _uipAvisar(notasImg, txt);
+  setTimeout(() => { wrap.style.display = 'none'; bar.style.width = '0%'; }, temImg ? 10000 : 2500);
   input.value = '';
   addLog(`R2: ${files.length} arquivo(s) enviado(s) para ${r2_state.monitorado}/${r2_state.pasta}`);
   await r2_carregarArquivos();
@@ -24521,7 +24534,7 @@ async function _bmonSelecionarMon(pref, nome) {
     let html = '';
     for (const [pasta, arqs] of Object.entries(porPasta)) {
       html += `<div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;padding:6px 4px 3px;margin-top:4px">${pasta}</div>`;
-      for (const arq of arqs) {
+      for (const arq of _uipOrdenarPorData(arqs)) {   // mais recente primeiro
         const ext = (arq.nome || arq.key || '').split('.').pop().toLowerCase();
         const icon = icons[ext] || '\u{1F4C4}';
         const kb = arq.tamanho ? (arq.tamanho / 1024).toFixed(0) + ' KB' : '';
@@ -24531,6 +24544,7 @@ async function _bmonSelecionarMon(pref, nome) {
             style="width:15px;height:15px;cursor:pointer;accent-color:#1d4ed8" onchange="_bmonAtualizarContador('${pref}')">
           <span style="font-size:1rem">${icon}</span>
           <span style="flex:1;font-size:.8rem;color:#1e293b">${esc(arq.nome || arq.key.split('/').pop())}</span>
+          ${_uipSeloData(arq)}
           <span style="font-size:.72rem;color:#94a3b8">${kb}</span>
         </label>`;
       }
@@ -25260,7 +25274,7 @@ async function com_selecionarMonitorado(nome) {
     let html = '';
     for (const [pasta, arqs] of Object.entries(porPasta)) {
       html += `<div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;padding:6px 4px 3px;margin-top:4px">${pasta}</div>`;
-      for (const arq of arqs) {
+      for (const arq of _uipOrdenarPorData(arqs)) {   // mais recente primeiro
         const ext  = (arq.nome || arq.key || '').split('.').pop().toLowerCase();
         const icon = icons[ext] || '\u{1F4C4}';
         const kb   = arq.tamanho ? (arq.tamanho / 1024).toFixed(0) + ' KB' : '';
@@ -25279,6 +25293,7 @@ async function com_selecionarMonitorado(nome) {
           <button onclick="com_previewDocR2('${safeKeyPreview}','${safeNomePreview}')" title="Visualizar documento"
             style="background:none;border:1px solid #cbd5e1;border-radius:5px;cursor:pointer;color:#1d4ed8;
                    font-size:.72rem;padding:2px 7px;line-height:1.5;flex-shrink:0;white-space:nowrap">\u{1F441}\u{FE0F} Ver</button>
+          ${_uipSeloData(arq)}
           <span style="font-size:.72rem;color:#94a3b8;flex-shrink:0">${kb}</span>
         </div>`;
       }
@@ -29804,5 +29819,6 @@ function estat_exportarResultado() {
 <script src="rv-justificativas.js?v=20261016b"></script>
 <script src="estoque-plantao.js?v=20261020c"></script>
 <script src="estoque-plantao-tela.js?v=20261020d"></script>
+<script src="upload-imagem-pdf.js?v=20261020a"></script>
 </body>
 </html>
