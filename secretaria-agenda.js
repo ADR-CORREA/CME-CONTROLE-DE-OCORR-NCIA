@@ -39,27 +39,27 @@ function sec_renderAgenda() {
   for (let dia = 1; dia <= ultimo; dia++) {
     const iso = _secAgMes + '-' + String(dia).padStart(2, '0'), itens = _secDoDia(iso, d);
     const sel = iso === _secAgDia, eHoje = iso === hoje, fer = feriados.includes(iso), fds = [0, 6].includes(new Date(iso + 'T12:00:00').getDay());
-    grade += '<div onclick="_secAgDia=\'' + iso + '\';sec_renderAgenda()" style="cursor:pointer;min-height:92px;padding:4px 5px;border-radius:4px;border:' + (sel ? '2px solid #2563eb' : '1px solid #e2e8f0') + ';background:' + (eHoje ? '#eff6ff' : fds ? '#f8fafc' : '#fff') + ';overflow:hidden">'
-      + '<div style="display:flex;justify-content:space-between;font-size:.78rem;font-weight:700;color:' + (fer ? '#dc2626' : eHoje ? '#2563eb' : '#334155') + '"><span>' + dia + '</span>' + (fer ? '<span style="font-size:.62rem">FERIADO</span>' : eHoje ? '<span style="font-size:.62rem">HOJE</span>' : '') + '</div>'
+    grade += '<div onclick="_secAgDia=\'' + iso + '\';sec_renderAgenda()" style="cursor:pointer;min-height:92px;padding:4px 5px;border-radius:6px;border:' + (sel ? '2px solid var(--idv-in)' : '1px solid var(--idv-linha)') + ';background:' + (eHoje ? 'var(--idv-in-f)' : fds ? 'var(--idv-fundo)' : 'var(--idv-cartao)') + ';overflow:hidden">'
+      + '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:' + (fer ? 'var(--idv-cr)' : eHoje ? 'var(--idv-in)' : 'var(--idv-texto)') + '"><span class="idv-data">' + dia + '</span>' + (fer ? '<span style="font-size:12px">FERIADO</span>' : eHoje ? '<span style="font-size:12px">HOJE</span>' : '') + '</div>'
       + itens.slice(0, 3).map(x => {
         const atras = !x.concluido && x.data < iso, cor = _secCorCat(x.categoria, d);
-        return '<div title="' + esc((x.hora ? x.hora + ' · ' : '') + x.titulo + ' (' + x.categoria + ')') + '" style="margin-top:2px;font-size:.68rem;line-height:1.25;padding:1px 4px;border-radius:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
-          + (x.concluido ? 'background:#f1f5f9;color:#94a3b8;text-decoration:line-through' : 'background:' + cor + ';color:#fff') + (atras ? ';outline:2px solid #e11d48' : '') + '">'
+        return '<div title="' + esc((x.hora ? x.hora + ' · ' : '') + x.titulo + ' (' + x.categoria + ')') + '" style="margin-top:2px;font-size:12px;line-height:1.25;padding:1px 4px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
+          + (x.concluido ? 'background:var(--idv-zebra);color:var(--idv-sec);text-decoration:line-through' : 'background:' + cor + ';color:#fff') + (atras ? ';outline:2px solid var(--idv-cr)' : '') + '">'
           + (atras ? '\u{21BB} ' : '') + (x.hora ? x.hora + ' ' : '') + esc(x.titulo) + '</div>';
       }).join('')
-      + (itens.length > 3 ? '<div style="font-size:.66rem;color:#475569;margin-top:2px">+' + (itens.length - 3) + ' mais</div>' : '') + '</div>';
+      + (itens.length > 3 ? '<div style="font-size:12px;color:var(--idv-sec);margin-top:2px">+' + (itens.length - 3) + ' mais</div>' : '') + '</div>';
   }
   const nomeMes = primeiro.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
   c.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
     + '<div style="display:flex;align-items:center;gap:6px"><button class="btn-secondary" onclick="sec_agNavegar(-1)">\u{2039}</button>'
-    + '<div style="min-width:170px;text-align:center;font-weight:700;font-size:1.05rem;text-transform:capitalize">' + esc(nomeMes) + '</div>'
+    + '<div style="min-width:170px;text-align:center;font-weight:600;font-size:16px;text-transform:capitalize">' + esc(nomeMes) + '</div>'
     + '<button class="btn-secondary" onclick="sec_agNavegar(1)">\u{203A}</button><button class="btn-secondary" onclick="_secAgMes=null;_secAgDia=null;sec_renderAgenda()">Hoje</button></div>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn-secondary" onclick="sec_agCategorias()">Categorias e cores</button>'
     + '<button class="btn-primary" onclick="sec_agNovo(\'' + _secAgDia + '\')">+ Novo compromisso</button></div></div>'
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-size:.78rem">' + cats.map(k => '<span onclick="sec_agFiltro(\'' + _jsq(k.nome) + '\')" title="Clique para mostrar/esconder" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:3px;border:1px solid #e2e8f0;'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-size:13px">' + cats.map(k => '<span onclick="sec_agFiltro(\'' + _jsq(k.nome) + '\')" title="Clique para mostrar/esconder" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;border:1px solid var(--idv-borda);background:var(--idv-cartao);'
       + (_secAgOcultas.has(k.nome) ? 'opacity:.4;text-decoration:line-through' : '') + '"><span style="width:10px;height:10px;background:' + k.cor + '"></span>' + esc(k.nome) + '</span>').join('') + '</div>'
     + '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start"><div style="flex:3 1 560px;min-width:0">'
-    + '<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:4px">' + _SEC_DIAS_SEM.map(s => '<div style="text-align:center;font-size:.72rem;font-weight:700;color:#64748b">' + s + '</div>').join('') + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:4px">' + _SEC_DIAS_SEM.map(s => '<div style="text-align:center;font-size:12px;font-weight:600;color:var(--idv-sec)">' + s + '</div>').join('') + '</div>'
     + '<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">' + grade + '</div></div>'
     + '<div id="sec-ag-dia" style="flex:1 1 300px;min-width:280px"></div></div>';
   _secRenderDiaAgenda(_secAgDia);
@@ -73,37 +73,38 @@ function sec_agFiltro(nome) { _secAgOcultas.has(nome) ? _secAgOcultas.delete(nom
 // ── Lista do dia (painel ao lado do calendário e cartão do painel Hoje) ──────
 function _secLinhaCompromisso(x, d, diaRef) {
   const hoje = _secHoje(), cor = _secCorCat(x.categoria, d), atraso = !x.concluido && x.data < hoje ? _secDiasEntre(x.data, hoje) : 0;
-  return '<div style="display:flex;gap:10px;padding:8px 0;border-top:1px solid #f1f5f9;align-items:flex-start">'
+  return '<div style="display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--idv-linha);align-items:flex-start">'
     + '<input type="checkbox" title="' + (x.concluido ? 'Reabrir' : 'Marcar como concluído') + '" ' + (x.concluido ? 'checked ' : '') + 'onchange="sec_agConcluir(\'' + x.id + '\',this.checked)" style="margin-top:3px;width:17px;height:17px;cursor:pointer">'
     + '<div style="flex:1;min-width:0;border-left:3px solid ' + cor + ';padding-left:8px">'
-    + '<div style="font-weight:600;font-size:.9rem' + (x.concluido ? ';text-decoration:line-through;color:#94a3b8' : '') + '">' + (x.hora ? '<span style="font-family:var(--font-mono)">' + esc(x.hora) + '</span> · ' : '') + esc(x.titulo) + '</div>'
-    + '<div style="font-size:.74rem;color:#64748b">' + esc(x.categoria) + (x.responsavel ? ' · ' + esc(x.responsavel) : '') + (x.data !== diaRef ? ' · marcado para ' + _secBR(x.data) : '') + '</div>'
-    + (atraso ? '<div style="font-size:.74rem;font-weight:700;color:#e11d48">\u{21BB} Atrasado desde ' + _secBRc(x.data) + ' (' + atraso + ' dia' + (atraso > 1 ? 's' : '') + ')</div>' : '')
-    + (x.descricao ? '<div style="font-size:.82rem;color:#334155;margin-top:2px;white-space:pre-wrap">' + esc(x.descricao) + '</div>' : '')
-    + ((x.arquivos || []).length ? '<div style="font-size:.8rem;margin-top:3px">' + x.arquivos.map(a => '<a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + _jsq(a.nome) + '\');return false">\u{1F4CE} ' + esc(a.nome) + '</a>').join(' · ') + '</div>' : '')
-    + (x.concluido ? '<div style="font-size:.72rem;color:#16a34a">Concluído por ' + esc(x.concluidoPor || '') + ' em ' + new Date(x.concluidoEm).toLocaleString('pt-BR') + '</div>' : '')
+    + '<div style="font-weight:600;font-size:14px' + (x.concluido ? ';text-decoration:line-through;color:var(--idv-sec)' : '') + '">' + (x.hora ? '<span class="idv-data">' + esc(x.hora) + '</span> · ' : '') + esc(x.titulo) + '</div>'
+    + '<div style="font-size:12px;color:var(--idv-sec)">' + esc(x.categoria) + (x.responsavel ? ' · ' + esc(x.responsavel) : '') + (x.data !== diaRef ? ' · marcado para ' + _secBR(x.data) : '') + '</div>'
+    + (atraso ? '<div style="font-size:12px;font-weight:600;color:var(--idv-cr)">\u{21BB} Atrasado desde ' + _secBRc(x.data) + ' (' + atraso + ' dia' + (atraso > 1 ? 's' : '') + ')</div>' : '')
+    + (x.descricao ? '<div style="font-size:13px;color:var(--idv-texto);margin-top:2px;white-space:pre-wrap">' + esc(x.descricao) + '</div>' : '')
+    + ((x.arquivos || []).length ? '<div style="font-size:13px;margin-top:3px">' + x.arquivos.map(a => '<a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + _jsq(a.nome) + '\');return false">\u{1F4CE} ' + esc(a.nome) + '</a>').join(' · ') + '</div>' : '')
+    + (x.concluido ? '<div style="font-size:12px;color:var(--idv-ok)">Concluído por ' + esc(x.concluidoPor || '') + ' em ' + new Date(x.concluidoEm).toLocaleString('pt-BR') + '</div>' : '')
     + '</div><div style="display:flex;flex-direction:column;gap:3px"><button class="btn-sm btn-outline" onclick="sec_agNovo(\'\',\'' + x.id + '\')">Editar</button>'
-    + '<button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_agExcluir(\'' + x.id + '\')">Excluir</button></div></div>';
+    + '<button class="btn-sm btn-danger" onclick="sec_agExcluir(\'' + x.id + '\')">Excluir</button></div></div>';
 }
 function _secRenderDiaAgenda(dia) {
   const box = document.getElementById('sec-ag-dia'); if (!box) return;
   const d = _secDados(), itens = _secDoDia(dia, d);
   const titulo = new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
-  box.innerHTML = '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:12px 14px">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:700;text-transform:capitalize">' + esc(titulo) + '</div>'
+  box.innerHTML = '<div style="background:var(--idv-cartao);border:1px solid var(--idv-borda);border-radius:6px;padding:12px 16px">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:600;font-size:15px;text-transform:capitalize">' + esc(titulo) + '</div>'
     + '<button class="btn-sm btn-primary" onclick="sec_agNovo(\'' + dia + '\')">+ Neste dia</button></div>'
-    + (itens.length ? itens.map(x => _secLinhaCompromisso(x, d, dia)).join('') : '<div style="font-size:.86rem;color:#94a3b8;padding:12px 0">Nenhum compromisso neste dia.</div>') + '</div>';
+    + (itens.length ? itens.map(x => _secLinhaCompromisso(x, d, dia)).join('') : '<div style="font-size:14px;color:var(--idv-sec);padding:12px 0">Nenhum compromisso neste dia.</div>') + '</div>';
 }
 function _secCartaoCompromissos() {
   const d = _secDados(), hoje = _secHoje(), itens = _secDoDia(hoje, d);
   const amanha = d.compromissos.filter(c => c.data === _secMaisDias(hoje, 1) && !c.concluido).length;
   const atras = itens.filter(x => !x.concluido && x.data < hoje).length;
-  return '<div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #e11d48;border-radius:6px;padding:12px 14px;margin-bottom:12px">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div style="font-weight:700;font-size:1.02rem">\u{1F4CC} Compromissos de hoje'
-    + (atras ? ' <span style="font-size:.78rem;color:#e11d48">· ' + atras + ' atrasado(s)</span>' : '') + '</div>'
+  return '<div class="idv-bloco" style="margin-bottom:12px">'
+    + '<div class="idv-bloco-cab" style="flex-wrap:wrap"><div>\u{1F4CC} Compromissos de hoje'
+    + (atras ? ' <span style="font-size:13px;color:var(--idv-cr)">· ' + atras + ' atrasado(s)</span>' : '') + '</div>'
     + '<div style="display:flex;gap:6px"><button class="btn-sm btn-outline" onclick="sec_mudarAba(\'agenda\')">Abrir agenda</button><button class="btn-sm btn-primary" onclick="sec_agNovo(\'' + hoje + '\')">+ Novo</button></div></div>'
-    + (itens.length ? itens.map(x => _secLinhaCompromisso(x, d, hoje)).join('') : '<div style="font-size:.86rem;color:#94a3b8;padding:8px 0">Nada marcado para hoje.</div>')
-    + (amanha ? '<div style="font-size:.78rem;color:#64748b;margin-top:6px">Amanhã: ' + amanha + ' compromisso(s).</div>' : '') + '</div>';
+    + '<div style="padding:0 16px 12px">'
+    + (itens.length ? itens.map(x => _secLinhaCompromisso(x, d, hoje)).join('') : '<div style="font-size:14px;color:var(--idv-sec);padding:10px 0 0">Nada marcado para hoje.</div>')
+    + (amanha ? '<div style="font-size:13px;color:var(--idv-sec);margin-top:6px">Amanhã: ' + amanha + ' compromisso(s).</div>' : '') + '</div></div>';
 }
 
 // ── Criar / editar / concluir / excluir ───────────────────────────────────────
@@ -116,11 +117,11 @@ function sec_agNovo(dia, id) {
     + _secCampo('sec-ag-titulo', 'O que precisa ser feito *', x.titulo || '', 'placeholder="Ex.: Enviar folhas de ponto assinadas à UNIPES"')
     + '<div class="form-grid">' + _secCampo('sec-ag-data', 'Data *', x.data || dia || _secHoje(), 'type="date"') + _secCampo('sec-ag-hora', 'Hora (opcional)', x.hora || '', 'type="time"') + '</div>'
     + '<div class="form-field"><label>Categoria</label><div style="display:flex;gap:6px;flex-wrap:wrap">' + cats.map(k => '<button type="button" data-grupo="sec-ag-cat" data-valor="' + esc(k.nome) + '" onclick="_secAgEscolherCat(this)" style="cursor:pointer;padding:5px 10px;border-radius:4px;border:2px solid '
-      + (k.nome === cat ? k.cor : 'transparent') + ';background:' + k.cor + '22;color:#0f172a;font-weight:600;font-size:.82rem" class="' + (k.nome === cat ? 'active' : '') + '"><span style="display:inline-block;width:9px;height:9px;background:' + k.cor + ';margin-right:5px"></span>' + esc(k.nome) + '</button>').join('')
+      + (k.nome === cat ? k.cor : 'transparent') + ';background:' + k.cor + '22;color:var(--idv-texto);font-weight:600;font-size:13px" class="' + (k.nome === cat ? 'active' : '') + '"><span style="display:inline-block;width:9px;height:9px;background:' + k.cor + ';margin-right:5px"></span>' + esc(k.nome) + '</button>').join('')
     + '</div><input type="hidden" id="sec-ag-cat" value="' + esc(cat) + '"></div>'
     + _secCampo('sec-ag-resp', 'Responsável (opcional)', x.responsavel || '', 'list="sec-ag-nomes"') + '<datalist id="sec-ag-nomes">' + nomes.map(n => '<option>' + esc(n) + '</option>').join('') + '</datalist>'
     + '<div class="form-field"><label>Detalhes (opcional)</label><textarea id="sec-ag-desc" rows="3">' + esc(x.descricao || '') + '</textarea></div>'
-    + '<div style="font-size:.78rem;color:#64748b">Se não for marcado como concluído no dia, ele continua aparecendo nos dias seguintes (no painel Hoje e no contador do menu) até ser concluído.</div>',
+    + '<div style="font-size:13px;color:var(--idv-sec)">Se não for marcado como concluído no dia, ele continua aparecendo nos dias seguintes (no painel Hoje e no contador do menu) até ser concluído.</div>',
     '<button class="btn-primary" id="sec-ag-salvar" onclick="sec_agSalvar(\'' + (id || '') + '\')">Salvar</button>', 640);
   setTimeout(() => document.getElementById('sec-ag-titulo')?.focus(), 50);
 }
@@ -179,12 +180,12 @@ function sec_agCategorias() {
   _secModal('Categorias e cores',
     '<div id="sec-ag-cats">' + cats.map((k, i) => _secLinhaCat(k, i)).join('') + '</div>'
     + '<button type="button" class="btn-secondary" style="margin-top:6px" onclick="document.getElementById(\'sec-ag-cats\').insertAdjacentHTML(\'beforeend\', _secLinhaCat({ nome: \'\', cor: \'#0891b2\' }, Date.now()))">+ Nova categoria</button>'
-    + '<div style="font-size:.78rem;color:#64748b;margin-top:8px">Compromissos de uma categoria removida continuam guardados (aparecem em cinza).</div>',
+    + '<div style="font-size:13px;color:var(--idv-sec);margin-top:8px">Compromissos de uma categoria removida continuam guardados (aparecem em cinza).</div>',
     '<button class="btn-primary" onclick="sec_agSalvarCategorias()">Salvar</button>', 520);
 }
 function _secLinhaCat(k, i) {
   return '<div class="sec-ag-cat-linha" style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><input type="color" value="' + esc(k.cor) + '" style="width:44px;height:32px;padding:0;border:none">'
-    + '<input value="' + esc(k.nome) + '" placeholder="Nome da categoria" style="flex:1;padding:6px 10px"><button type="button" class="btn-sm btn-outline" style="color:#b91c1c" onclick="this.parentElement.remove()">Remover</button></div>';
+    + '<input value="' + esc(k.nome) + '" placeholder="Nome da categoria" style="flex:1;padding:6px 10px"><button type="button" class="btn-sm btn-danger" onclick="this.parentElement.remove()">Remover</button></div>';
 }
 async function sec_agSalvarCategorias() {
   const cats = [...document.querySelectorAll('.sec-ag-cat-linha')].map(l => { const [cor, nome] = l.querySelectorAll('input'); return { nome: nome.value.trim(), cor: cor.value }; }).filter(k => k.nome);

@@ -87,27 +87,27 @@ async function _secRenderPagina(page) {
 // bloco do modal: anexar + status da IA (+ anexos que o compromisso já tem)
 function _secAgHtmlAnexo(x) {
   const ja = (x && x.arquivos) || [];
-  return '<div style="border:1px dashed #93c5fd;background:#f8fbff;border-radius:6px;padding:8px 10px;margin-bottom:10px">'
-    + '<div style="font-weight:600;font-size:.86rem">\u{1F4CE} Anexar documento (opcional)</div>'
-    + '<div style="font-size:.75rem;color:#64748b">Pedido do PRODOC, ofício, memorando… em PDF, foto ou Word. A IA lê e preenche o assunto e os detalhes — confira antes de salvar.</div>'
-    + (ja.length ? '<div style="font-size:.8rem;margin-top:4px">' + ja.map(a => '<a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + _jsq(a.nome) + '\');return false">\u{1F4CE} ' + esc(a.nome) + '</a>').join('<br>') + '</div>' : '')
+  return '<div style="border:1px dashed var(--idv-borda);background:var(--idv-fundo);border-radius:6px;padding:10px 12px;margin-bottom:10px">'
+    + '<div style="font-weight:600;font-size:14px">\u{1F4CE} Anexar documento (opcional)</div>'
+    + '<div style="font-size:13px;color:var(--idv-sec)">Pedido do PRODOC, ofício, memorando… em PDF, foto ou Word. A IA lê e preenche o assunto e os detalhes — confira antes de salvar.</div>'
+    + (ja.length ? '<div style="font-size:13px;margin-top:4px">' + ja.map(a => '<a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + _jsq(a.nome) + '\');return false">\u{1F4CE} ' + esc(a.nome) + '</a>').join('<br>') + '</div>' : '')
     + '<input type="file" id="sec-ag-files" multiple accept="' + _SEC_AG_ACEITA + '" onchange="sec_agIaLer(this)" style="margin-top:6px;width:100%">'
-    + '<div id="sec-ag-ia" style="font-size:.8rem;margin-top:4px"></div></div>';
+    + '<div id="sec-ag-ia" style="font-size:13px;margin-top:4px"></div></div>';
 }
-function _secAgIaStatus(txt, cor) { const el = document.getElementById('sec-ag-ia'); if (el) el.innerHTML = '<span style="color:' + (cor || '#475569') + '">' + txt + '</span>'; }
+function _secAgIaStatus(txt, cor) { const el = document.getElementById('sec-ag-ia'); if (el) el.innerHTML = '<span style="color:' + (cor || 'var(--idv-sec)') + '">' + txt + '</span>'; }
 
 async function sec_agIaLer(input) {
   const files = [...(input.files || [])]; if (!files.length) return;
-  const grande = files.find(f => f.size > 15 * 1024 * 1024); if (grande) { _secAgIaStatus(esc(grande.name) + ': maior que 15 MB.', '#b91c1c'); return; }
+  const grande = files.find(f => f.size > 15 * 1024 * 1024); if (grande) { _secAgIaStatus(esc(grande.name) + ': maior que 15 MB.', 'var(--idv-cr)'); return; }
   _secAgIaStatus('\u{23F3} Lendo o documento…');
   let texto = ''; _secIaPagsIlegiveis = [];
   try { for (const f of files) texto += '\n\n=== ' + f.name + ' ===\n' + await _secTextoDoArquivo(f, m => _secAgIaStatus(m)); }
   catch (e) { console.warn('[Agenda] leitura do anexo:', e); }
-  if (texto.replace(/===[^\n]*===/g, '').replace(/\s/g, '').length < 30) { _secAgIaStatus('Não consegui ler o texto do documento — preencha à mão. O arquivo será anexado mesmo assim.', '#b45309'); return; }
+  if (texto.replace(/===[^\n]*===/g, '').replace(/\s/g, '').length < 30) { _secAgIaStatus('Não consegui ler o texto do documento — preencha à mão. O arquivo será anexado mesmo assim.', 'var(--idv-at)'); return; }
   _secAgIaStatus('\u{1F916} A IA está lendo e resumindo…');
   let r;
   try { r = await r2_api('POST', '/sec/resumir', { 'Content-Type': 'application/json' }, JSON.stringify(Object.assign({ texto: texto.slice(0, 14000), nome: files.map(f => f.name).join(', ').slice(0, 120) }, window.__secIaModelo ? { modelo: window.__secIaModelo } : {}))); }
-  catch (e) { _secAgIaStatus('A IA não respondeu (' + esc(e.message || e) + '). Preencha à mão — o arquivo será anexado mesmo assim.', '#b91c1c'); return; }
+  catch (e) { _secAgIaStatus('A IA não respondeu (' + esc(e.message || e) + '). Preencha à mão — o arquivo será anexado mesmo assim.', 'var(--idv-cr)'); return; }
   const tit = document.getElementById('sec-ag-titulo'), desc = document.getElementById('sec-ag-desc'), data = document.getElementById('sec-ag-data');
   const feitos = [];
   if (r.assunto && tit) { tit.value = r.assunto; feitos.push('assunto'); }
@@ -128,22 +128,22 @@ async function sec_agIaLer(input) {
 }
 // Faixa que diz se dá para confiar na leitura (15/10/2026 — sem IA paga: em vez de prometer 100%, AVISAR quando há dúvida)
 function _secAgHtmlConfianca(r, feitos) {
-  const urg = r.urgente ? '<div style="color:#b91c1c;font-weight:700;margin-top:4px">\u{1F6A8} O documento fala em URGÊNCIA.</div>' : '';
-  if (!feitos.length) return '<span style="color:#b45309">A IA não achou informação suficiente — preencha à mão.</span>' + urg;
-  const preencheu = '<div style="font-size:.78rem;color:#475569;margin-top:2px">A IA preencheu: ' + feitos.join(', ') + '.</div>';
+  const urg = r.urgente ? '<div style="color:var(--idv-cr);font-weight:600;margin-top:4px">\u{1F6A8} O documento fala em URGÊNCIA.</div>' : '';
+  if (!feitos.length) return '<span style="color:var(--idv-at)">A IA não achou informação suficiente — preencha à mão.</span>' + urg;
+  const preencheu = '<div style="font-size:12px;color:var(--idv-sec);margin-top:2px">A IA preencheu: ' + feitos.join(', ') + '.</div>';
   const duvidas = r.duvidas || [], avisos = r.avisos || [];
   if (r.confianca === 'alta' && !avisos.length) {
-    return '<div style="border:1px solid #86efac;background:#f0fdf4;border-left:4px solid #16a34a;border-radius:6px;padding:8px 10px">'
-      + '<div style="font-weight:700;color:#15803d">\u{2705} Leitura conferida</div>'
-      + '<div style="font-size:.8rem;color:#166534">Duas IAs leram o documento e concordaram; números e datas batem com o texto. Dê uma olhada rápida antes de salvar.</div>' + preencheu + urg + '</div>';
+    return '<div style="border:1px solid var(--idv-ok);background:var(--idv-ok-f);border-left:4px solid var(--idv-ok);border-radius:6px;padding:8px 12px">'
+      + '<div style="font-weight:600;color:var(--idv-ok)">\u{2705} Leitura conferida</div>'
+      + '<div style="font-size:13px;color:var(--idv-texto)">Duas IAs leram o documento e concordaram; números e datas batem com o texto. Dê uma olhada rápida antes de salvar.</div>' + preencheu + urg + '</div>';
   }
   const forte = r.confianca === 'baixa';
   const lista = duvidas.map(d => '<li><b>' + esc(d.campo) + ':</b> 1ª leitura <i>' + esc(d.campo === 'prazo' ? _secAgBRouTxt(d.a) : d.a) + '</i> · 2ª leitura <i>' + esc(d.campo === 'prazo' ? _secAgBRouTxt(d.b) : d.b) + '</i></li>').join('')
     + avisos.map(a => '<li>' + esc(a) + '</li>').join('');
-  return '<div style="border:1px solid ' + (forte ? '#fcd34d' : '#cbd5e1') + ';background:' + (forte ? '#fffbeb' : '#f8fafc') + ';border-left:4px solid ' + (forte ? '#d97706' : '#64748b') + ';border-radius:6px;padding:8px 10px">'
-    + '<div style="font-weight:700;color:' + (forte ? '#b45309' : '#334155') + '">' + (forte ? '\u{26A0}\u{FE0F} Confira antes de salvar — a leitura pode ter erro' : '\u{2139}\u{FE0F} Confira antes de salvar') + '</div>'
-    + (duvidas.length ? '<div style="font-size:.8rem;color:#92400e">As duas IAs leram o documento de jeitos diferentes. Veja no documento qual está certa.</div>' : '')
-    + (lista ? '<ul style="margin:4px 0 0 18px;padding:0;font-size:.8rem;color:#334155">' + lista + '</ul>' : '')
+  return '<div style="border:1px solid ' + (forte ? 'var(--idv-at)' : 'var(--idv-borda)') + ';background:' + (forte ? 'var(--idv-at-f)' : 'var(--idv-fundo)') + ';border-left:4px solid ' + (forte ? 'var(--idv-at)' : 'var(--idv-sec)') + ';border-radius:6px;padding:8px 12px">'
+    + '<div style="font-weight:600;color:' + (forte ? 'var(--idv-at)' : 'var(--idv-texto)') + '">' + (forte ? '\u{26A0}\u{FE0F} Confira antes de salvar — a leitura pode ter erro' : '\u{2139}\u{FE0F} Confira antes de salvar') + '</div>'
+    + (duvidas.length ? '<div style="font-size:13px;color:var(--idv-at)">As duas IAs leram o documento de jeitos diferentes. Veja no documento qual está certa.</div>' : '')
+    + (lista ? '<ul style="margin:4px 0 0 18px;padding:0;font-size:13px;color:var(--idv-texto)">' + lista + '</ul>' : '')
     + (r.alternativa ? '<button type="button" class="btn-sm btn-outline" style="margin-top:6px" onclick="sec_agUsarAlternativa()">Usar a 2ª leitura</button>' : '')
     + preencheu + urg + '</div>';
 }
@@ -176,17 +176,17 @@ async function _secAgEnviarAnexos(files, v) {
 // ── Arquivo geral: a IA preenche a ficha do documento (tipo, número, data, origem, assunto) e marca os servidores citados ──
 function _secIaNorm(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim(); }
 async function sec_arqIaLer(input) {
-  const st = (txt, cor) => { const el = document.getElementById('sec-arq-ia'); if (el) el.innerHTML = '<span style="color:' + (cor || '#475569') + '">' + txt + '</span>'; };
+  const st = (txt, cor) => { const el = document.getElementById('sec-arq-ia'); if (el) el.innerHTML = '<span style="color:' + (cor || 'var(--idv-sec)') + '">' + txt + '</span>'; };
   const files = [...(input.files || [])]; if (!files.length) return;
   st('\u{23F3} Lendo o documento…');
   let texto = ''; _secIaPagsIlegiveis = [];
   try { for (const f of files) texto += '\n\n' + await _secTextoDoArquivo(f); } catch (e) { console.warn('[Arquivo] leitura:', e); }
   const avisosLeitura = _secIaPagsIlegiveis.map(p => typeof p === 'number' ? 'a página ' + p + ' não pôde ser lida — confira-a no documento' : p);
-  if (texto.replace(/\s/g, '').length < 30) { st('Não consegui ler o texto — preencha à mão. O arquivo será anexado mesmo assim.', '#b45309'); return; }
+  if (texto.replace(/\s/g, '').length < 30) { st('Não consegui ler o texto — preencha à mão. O arquivo será anexado mesmo assim.', 'var(--idv-at)'); return; }
   st('\u{1F916} A IA está lendo o documento…');
   let r;
   try { r = await r2_api('POST', '/sec/resumir', { 'Content-Type': 'application/json' }, JSON.stringify({ texto: texto.slice(0, 9000), nome: files.map(f => f.name).join(', ').slice(0, 120), modo: 'arquivo' })); }
-  catch (e) { st('A IA não respondeu (' + esc(e.message || e) + ') — preencha à mão.', '#b91c1c'); return; }
+  catch (e) { st('A IA não respondeu (' + esc(e.message || e) + ') — preencha à mão.', 'var(--idv-cr)'); return; }
   const feitos = [], campo = (id, v, rot) => { const el = document.getElementById(id); if (el && v && !el.value.trim()) { el.value = v; feitos.push(rot); } };
   const chip = r.tipo && document.querySelector('[data-grupo="sec-arq-tipo"][data-valor="' + r.tipo.replace(/"/g, '') + '"]');
   if (chip) { _secChip(chip); feitos.push('tipo'); }
@@ -202,7 +202,7 @@ async function sec_arqIaLer(input) {
     if (tn.includes(' ' + p.join(' ') + ' ') || (p.length > 2 && tn.includes(' ' + p[0] + ' ' + p[p.length - 1] + ' '))) { cb.checked = true; marcados++; }
   });
   if (marcados) feitos.push(marcados + ' servidor(es) citado(s)');
-  if (!feitos.length) { st('A IA não achou informação suficiente — preencha à mão.', '#b45309'); return; }
+  if (!feitos.length) { st('A IA não achou informação suficiente — preencha à mão.', 'var(--idv-at)'); return; }
   // faixa de confiança (leitura conferida — leitura-conferida.js)
   window.__secArqConf = Object.assign({}, r, { primeira: { tipo: r.tipo, numero: r.numero, data: r.data }, _feitos: feitos, _leitura: avisosLeitura });
   const el = document.getElementById('sec-arq-ia');

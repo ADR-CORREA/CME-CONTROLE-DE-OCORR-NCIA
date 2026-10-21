@@ -23,9 +23,7 @@ function _secBRc(iso) { return _secBR(iso).slice(0, 5); } // dd/mm
 // Selo "Férias até 20/10" na lista e no perfil
 function _secSeloForaHoje(servId, d) {
   const a = _secAfastamentoEm(servId, _secHoje(), d); if (!a) return '';
-  const cor = _secCorTipo(a.tipo);
-  return '<span title="' + esc(a.tipo + ' de ' + _secBR(a.inicio) + ' a ' + _secBR(a.fim)) + '" style="display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;padding:2px 7px;border-radius:3px;border-left:2px solid '
-    + cor + ';background:' + cor + '1f;color:' + cor + ';white-space:nowrap">' + esc(a.tipo === 'Férias' ? 'Férias' : 'Licença') + ' até ' + _secBRc(a.fim) + '</span>';
+  return '<span class="idv-etq in" title="' + esc(a.tipo + ' de ' + _secBR(a.inicio) + ' a ' + _secBR(a.fim)) + '">' + esc(a.tipo === 'Férias' ? 'Férias' : 'Licença') + ' até ' + _secBRc(a.fim) + '</span>';
 }
 
 // ── Aba geral ─────────────────────────────────────────────────────────────────
@@ -38,16 +36,16 @@ function sec_renderFerias() {
   const foraHoje = d.afastamentos.filter(a => _secSobrepoe(a, hoje, hoje));
   const em30 = d.afastamentos.filter(a => a.inicio > hoje && a.inicio <= _secMaisDias(hoje, 30));
   const nome = id => _secNomeServ(id, d);
-  c.innerHTML = '<div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:12px">'
-    + '<div class="kpi-card" style="border-left:4px solid #0d9488"><div class="kpi-value">' + foraHoje.length + '</div><div class="kpi-label">Afastados hoje</div>'
-    + '<div style="font-size:.78rem;color:#475569;margin-top:4px">' + (foraHoje.map(a => esc(nome(a.servidorId).split(' ')[0]) + ' (' + esc(a.tipo === 'Férias' ? 'férias' : 'licença') + ' até ' + _secBRc(a.fim) + ')').join(', ') || '—') + '</div></div>'
-    + '<div class="kpi-card" style="border-left:4px solid #d97706"><div class="kpi-value">' + em30.length + '</div><div class="kpi-label">Começam nos próximos 30 dias</div>'
-    + '<div style="font-size:.78rem;color:#475569;margin-top:4px">' + (em30.sort((a, b) => a.inicio.localeCompare(b.inicio)).map(a => esc(nome(a.servidorId).split(' ')[0]) + ' (' + _secBRc(a.inicio) + ')').join(', ') || '—') + '</div></div></div>'
+  c.innerHTML = '<div class="idv-kpis" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-bottom:12px">'
+    + '<div class="idv-kpi in"><div class="idv-num">' + foraHoje.length + '</div><div class="idv-rot">Afastados hoje</div>'
+    + '<div class="idv-leg">' + (foraHoje.map(a => esc(nome(a.servidorId).split(' ')[0]) + ' (' + esc(a.tipo === 'Férias' ? 'férias' : 'licença') + ' até ' + _secBRc(a.fim) + ')').join(', ') || '—') + '</div></div>'
+    + '<div class="idv-kpi at"><div class="idv-num">' + em30.length + '</div><div class="idv-rot">Começam nos próximos 30 dias</div>'
+    + '<div class="idv-leg">' + (em30.sort((a, b) => a.inicio.localeCompare(b.inicio)).map(a => esc(nome(a.servidorId).split(' ')[0]) + ' (' + _secBRc(a.inicio) + ')').join(', ') || '—') + '</div></div></div>'
     + '<div class="table-toolbar" style="flex-wrap:wrap;gap:8px">'
     + '<div class="sub-tabs" style="margin:0">' + [['mes', 'Por mês'], ['ano', 'Escala do ano']].map(([k, r]) => '<div class="sub-tab' + (k === _secFeriasVisao ? ' active' : '') + '" onclick="_secFeriasVisao=\'' + k + '\';sec_renderFerias()">' + r + '</div>').join('') + '</div>'
     + (_secFeriasVisao === 'mes'
-      ? '<label style="font-size:.85rem">Mês <input type="month" id="sec-fe-mes" value="' + esc(fMes) + '" onchange="sec_renderFerias()"></label>'
-      : '<label style="font-size:.85rem">Ano <input type="number" id="sec-fe-ano" value="' + fAno + '" min="2020" max="2100" style="width:90px" onchange="sec_renderFerias()"></label>')
+      ? '<label style="font-size:14px">Mês <input type="month" id="sec-fe-mes" value="' + esc(fMes) + '" onchange="sec_renderFerias()"></label>'
+      : '<label style="font-size:14px">Ano <input type="number" id="sec-fe-ano" value="' + fAno + '" min="2020" max="2100" style="width:90px" onchange="sec_renderFerias()"></label>')
     + '<select id="sec-fe-tipo" onchange="sec_renderFerias()"><option value="">Todos os tipos</option>' + _SEC_TIPOS_AFA.map(([t]) => '<option' + (t === fTipo ? ' selected' : '') + '>' + t + '</option>').join('') + '</select>'
     + '<span style="flex:1"></span><button class="btn-secondary" onclick="sec_exportarFerias(' + (_secFeriasVisao === 'ano' ? fAno : +fMes.slice(0, 4)) + ')">Exportar ano (Excel)</button>'
     + '<button class="btn-primary" onclick="sec_novoAfastamento()">+ Lançar férias / licença</button></div><div id="sec-fe-corpo"></div>';
@@ -60,29 +58,29 @@ function sec_renderFerias() {
 }
 function _secHtmlTabelaAfa(lista, comNome, d, vazio) {
   const hoje = _secHoje();
-  return '<div class="table-scroll"><table class="data-table"><thead><tr>' + (comNome ? '<th>Servidor</th><th>Equipe</th>' : '') + '<th>Tipo</th><th>Período</th><th>Dias</th><th>Portaria</th><th>Exercício</th><th>Anexos</th><th></th></tr></thead><tbody>'
+  return '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr>' + (comNome ? '<th>Servidor</th><th>Equipe</th>' : '') + '<th>Tipo</th><th>Período</th><th>Dias</th><th>Portaria</th><th>Exercício</th><th>Anexos</th><th></th></tr></thead><tbody>'
     + (lista.length ? lista.map(a => {
       const s = _secServ(a.servidorId, d) || {}, cor = _secCorTipo(a.tipo), agora = _secSobrepoe(a, hoje, hoje);
       const anexos = (a.anexos || []).map(x => '<a href="#" title="Abrir" onclick="sec_abrirDoc(\'' + encodeURIComponent(x.key) + '\',\'' + _jsq(x.nome) + '\');return false">\u{1F4CE} ' + esc(x.nome.length > 22 ? x.nome.slice(0, 20) + '…' : x.nome) + '</a>').join('<br>');
-      return '<tr' + (agora ? ' style="background:#f0fdfa"' : '') + '>' + (comNome ? '<td><a href="#" onclick="sec_abrirPerfil(\'' + a.servidorId + '\');return false"><strong>' + esc(s.nome || '(removido)') + '</strong></a></td><td>' + esc(s.equipe || '—') + '</td>' : '')
-        + '<td><span style="display:inline-block;width:8px;height:8px;background:' + cor + ';margin-right:6px"></span>' + esc(a.tipo) + (agora ? ' <b style="color:#0d9488;font-size:.72rem">EM CURSO</b>' : '') + '</td>'
-        + '<td style="font-family:var(--font-mono);white-space:nowrap">' + _secBR(a.inicio) + ' a ' + _secBR(a.fim) + '</td><td>' + _secDias(a.inicio, a.fim) + '</td>'
+      return '<tr' + (agora ? ' style="box-shadow:inset 3px 0 0 var(--idv-in)"' : '') + '>' + (comNome ? '<td><a href="#" onclick="sec_abrirPerfil(\'' + a.servidorId + '\');return false"><strong>' + esc(s.nome || '(removido)') + '</strong></a></td><td>' + esc(s.equipe || '—') + '</td>' : '')
+        + '<td><span style="display:inline-block;width:8px;height:8px;background:' + cor + ';margin-right:6px"></span>' + esc(a.tipo) + (agora ? ' <span class="idv-etq in">EM CURSO</span>' : '') + '</td>'
+        + '<td class="idv-data" style="white-space:nowrap">' + _secBR(a.inicio) + ' a ' + _secBR(a.fim) + '</td><td class="idv-data">' + _secDias(a.inicio, a.fim) + '</td>'
         + '<td>' + esc(a.portaria || '—') + '</td><td>' + esc(a.exercicio || '—') + '</td>'
-        + '<td style="font-size:.8rem">' + (anexos || '<span style="color:#b45309">sem portaria anexa</span>') + '</td>'
+        + '<td style="font-size:13px">' + (anexos || '<span class="idv-etq at">sem portaria anexa</span>') + '</td>'
         + '<td style="white-space:nowrap"><label class="btn-sm btn-outline" style="cursor:pointer">Anexar<input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx" style="display:none" onchange="sec_anexarAfastamento(this,\'' + a.id + '\')"></label> '
         + '<button class="btn-sm btn-outline" onclick="sec_novoAfastamento(\'' + a.servidorId + '\',\'' + a.id + '\')">Editar</button> '
-        + '<button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_excluirAfastamento(\'' + a.id + '\')">Excluir</button></td></tr>';
-    }).join('') : '<tr><td colspan="' + (comNome ? 9 : 7) + '" style="text-align:center;padding:24px;color:#888">' + vazio + '</td></tr>')
+        + '<button class="btn-sm btn-danger" onclick="sec_excluirAfastamento(\'' + a.id + '\')">Excluir</button></td></tr>';
+    }).join('') : '<tr><td colspan="' + (comNome ? 9 : 7) + '" class="idv-vazio">' + vazio + '</td></tr>')
     + '</tbody></table></div>';
 }
 function _secHtmlEscalaAno(base, ano, d) {
   const servs = d.servidores.filter(s => (s.situacao || 'ativo') === 'ativo' || base.some(a => a.servidorId === s.id && a.inicio.slice(0, 4) <= String(ano) && a.fim.slice(0, 4) >= String(ano)))
     .sort((a, b) => String(a.equipe || '').localeCompare(String(b.equipe || '')) || a.nome.localeCompare(b.nome));
-  if (!servs.length) return '<div style="color:#888;padding:24px;text-align:center">Cadastre os servidores para ver a escala.</div>';
+  if (!servs.length) return '<div class="idv-vazio">Cadastre os servidores para ver a escala.</div>';
   const mesAtual = _secHoje().slice(0, 7);
-  return '<div style="font-size:.8rem;color:#64748b;margin:4px 0 8px">Clique num servidor para abrir o perfil. Cada cor é um tipo de afastamento.</div>'
-    + '<div class="table-scroll"><table class="data-table" style="font-size:.78rem"><thead><tr><th>Servidor</th><th>Equipe</th>'
-    + _SEC_MESES.map((m, i) => '<th style="text-align:center' + (ano + '-' + String(i + 1).padStart(2, '0') === mesAtual ? ';background:#dbeafe' : '') + '">' + m + '</th>').join('') + '</tr></thead><tbody>'
+  return '<div style="font-size:13px;color:var(--idv-sec);margin:4px 0 8px">Clique num servidor para abrir o perfil. Cada cor é um tipo de afastamento.</div>'
+    + '<div class="table-scroll"><table class="data-table idv-tabela" style="font-size:13px"><thead><tr><th>Servidor</th><th>Equipe</th>'
+    + _SEC_MESES.map((m, i) => '<th style="text-align:center' + (ano + '-' + String(i + 1).padStart(2, '0') === mesAtual ? ';background:var(--idv-in-f);color:var(--idv-in)' : '') + '">' + m + '</th>').join('') + '</tr></thead><tbody>'
     + servs.map(s => '<tr><td style="white-space:nowrap"><a href="#" onclick="sec_abrirPerfil(\'' + s.id + '\');return false">' + esc(s.nome) + '</a></td><td>' + esc(s.equipe || '—') + '</td>'
       + _SEC_MESES.map((m, i) => {
         const ini = ano + '-' + String(i + 1).padStart(2, '0') + '-01', fim = _secMaisDias(_secMaisDias(ini, 31).slice(0, 7) + '-01', -1);
@@ -93,7 +91,7 @@ function _secHtmlEscalaAno(base, ano, d) {
             + di.slice(8) + '–' + df.slice(8) + '</div>';
         }).join('') + '</td>';
       }).join('') + '</tr>').join('')
-    + '</tbody></table></div><div style="display:flex;gap:12px;flex-wrap:wrap;font-size:.75rem;margin-top:8px">'
+    + '</tbody></table></div><div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--idv-sec);margin-top:8px">'
     + _SEC_TIPOS_AFA.map(([t, c]) => '<span><span style="display:inline-block;width:10px;height:10px;background:' + c + ';margin-right:4px"></span>' + t + '</span>').join('') + '</div>';
 }
 
@@ -103,7 +101,7 @@ function _secHtmlAfastamentosServidor(s, d) {
   const ano = _secHoje().slice(0, 4);
   const feriasAno = lista.filter(a => a.tipo === 'Férias' && (a.exercicio === ano || (!a.exercicio && a.inicio.slice(0, 4) === ano))).reduce((t, a) => t + _secDias(a.inicio, a.fim), 0);
   return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
-    + '<div style="font-size:.85rem;color:#475569">Férias do exercício ' + ano + ': <b>' + feriasAno + ' dia(s)</b> lançados</div>'
+    + '<div style="font-size:14px;color:var(--idv-sec)">Férias do exercício ' + ano + ': <b>' + feriasAno + ' dia(s)</b> lançados</div>'
     + '<button class="btn-primary" onclick="sec_novoAfastamento(\'' + s.id + '\')">+ Lançar férias / licença</button></div>'
     + _secHtmlTabelaAfa(lista, false, d, 'Nenhuma férias ou licença lançada.');
 }
@@ -125,7 +123,7 @@ function sec_novoAfastamento(servidorId, id) {
     + _secCampo('sec-af-exercicio', 'Exercício (ano de referência)', a.exercicio || '', 'placeholder="Ex.: 2026" inputmode="numeric"') + '</div>'
     + '<div class="form-field"><label>Observação</label><input id="sec-af-obs" value="' + esc(a.obs || '') + '"></div>'
     + (id ? '' : '<div class="form-field"><label>Portaria / documento (opcional — pode anexar depois)</label><input type="file" id="sec-af-arq" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"></div>')
-    + '<div id="sec-af-aviso" style="font-size:.82rem;color:#b45309"></div>',
+    + '<div id="sec-af-aviso" style="font-size:13px;color:var(--idv-at)"></div>',
     '<button class="btn-primary" onclick="sec_salvarAfastamento(\'' + (id || '') + '\')">Salvar</button>', 620);
 }
 // Início + dias → fim; início + fim → dias (o que a pessoa preencher por último manda).

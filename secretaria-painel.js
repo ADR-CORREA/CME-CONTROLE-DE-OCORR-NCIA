@@ -36,18 +36,19 @@ function _secRenderHoje() {
   const horas = d.apoios.filter(a => !a.dispensa).reduce((t, a) => t + (+a.horas || 0), 0);
   const semPort = _secSemPortaria(d).length;
   if (!d.servidores.length) {
-    box.innerHTML = '<div style="margin-top:10px;background:#eff6ff;border-left:4px solid #2563eb;padding:10px 14px;border-radius:4px;font-size:.88rem">'
+    box.innerHTML = '<div class="idv-faixa" style="margin-top:10px;font-size:14px"><span>'
       + '<b>Primeiro passo:</b> cadastre os servidores em <a href="#" onclick="sec_mudarAba(\'servidores\');return false">Servidores</a> — um por um ou de uma vez pela planilha modelo. '
-      + 'Os Despachos PRODOC já funcionam sem cadastro.</div>';
+      + 'Os Despachos PRODOC já funcionam sem cadastro.</span></div>';
     return;
   }
-  const item = (cor, txt, aba) => '<a href="#" onclick="sec_mudarAba(\'' + aba + '\');return false" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:4px;border-left:3px solid ' + cor + ';background:' + cor + '14;color:#0f172a;text-decoration:none;font-size:.84rem">' + txt + '</a>';
-  box.innerHTML = '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Hoje, ' + _secBR(hoje).slice(0, 5) + '</span>'
-    + item('#0d9488', '<b>' + fora.length + '</b> afastado(s)' + (fora.length ? ': ' + fora.slice(0, 4).map(a => esc(_secNomeServ(a.servidorId, d).split(' ')[0]) + ' até ' + _secBRc(a.fim)).join(', ') + (fora.length > 4 ? '…' : '') : ''), 'ferias')
-    + item('#d97706', '<b>' + em30.length + '</b> começa(m) em 30 dias', 'ferias')
-    + (typeof _secCompromissosPendentes === 'function' && _secCompromissosPendentes().length ? item('#e11d48', '<b>' + _secCompromissosPendentes().length + '</b> compromisso(s) pendente(s)', 'agenda') : '')
-    + item('#2563eb', '<b>' + horas + 'h</b> de dispensa a usufruir', 'apoios')
-    + (semPort ? item('#dc2626', '<b>' + semPort + '</b> sem portaria anexa', 'ferias') : '')
+  const item = (cor, txt, aba) => { const k = ({ '#7c3aed': 'de' })[cor] || cor; // cr/at/ok/in/de do guia (identidade.css)
+    return '<a href="#" onclick="sec_mudarAba(\'' + aba + '\');return false" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:4px;border-left:3px solid var(--idv-' + k + ');background:var(--idv-' + k + '-f);color:var(--idv-texto);text-decoration:none;font-size:13px">' + txt + '</a>'; };
+  box.innerHTML = '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span style="font-size:13px;font-weight:600;color:var(--idv-sec)">Hoje, ' + _secBR(hoje).slice(0, 5) + '</span>'
+    + item('in', '<b>' + fora.length + '</b> afastado(s)' + (fora.length ? ': ' + fora.slice(0, 4).map(a => esc(_secNomeServ(a.servidorId, d).split(' ')[0]) + ' até ' + _secBRc(a.fim)).join(', ') + (fora.length > 4 ? '…' : '') : ''), 'ferias')
+    + item('at', '<b>' + em30.length + '</b> começa(m) em 30 dias', 'ferias')
+    + (typeof _secCompromissosPendentes === 'function' && _secCompromissosPendentes().length ? item('cr', '<b>' + _secCompromissosPendentes().length + '</b> compromisso(s) pendente(s)', 'agenda') : '')
+    + item('in', '<b>' + horas + 'h</b> de dispensa a usufruir', 'apoios')
+    + (semPort ? item('cr', '<b>' + semPort + '</b> sem portaria anexa', 'ferias') : '')
     + (typeof _sprdItemHoje === 'function' ? _sprdItemHoje(item) : '') + '</div>';
 }
 
@@ -107,11 +108,11 @@ async function sec_importarServidores(input) {
   });
   _secImportPendente = novos;
   _secModal('Importar servidores',
-    '<div style="font-size:.9rem;margin-bottom:8px"><b>' + novos.length + '</b> servidor(es) novo(s) para cadastrar'
+    '<div style="font-size:14px;margin-bottom:8px"><b>' + novos.length + '</b> servidor(es) novo(s) para cadastrar'
     + (ignorados.length ? ' · <b>' + ignorados.length + '</b> linha(s) ignorada(s)' : '') + (avisos.length ? ' · <b>' + avisos.length + '</b> aviso(s)' : '') + '.</div>'
-    + (novos.length ? '<div class="table-scroll" style="max-height:240px"><table class="data-table" style="font-size:.8rem"><thead><tr><th>Nome</th><th>Matrícula</th><th>CPF</th><th>Cargo</th><th>Equipe</th></tr></thead><tbody>'
+    + (novos.length ? '<div class="table-scroll" style="max-height:240px"><table class="data-table idv-tabela" style="font-size:13px"><thead><tr><th>Nome</th><th>Matrícula</th><th>CPF</th><th>Cargo</th><th>Equipe</th></tr></thead><tbody>'
       + novos.map(s => '<tr><td>' + esc(s.nome) + '</td><td>' + esc(s.matricula) + '</td><td>' + esc(_secCpfFmt(s.cpf)) + '</td><td>' + esc(s.cargo) + '</td><td>' + esc(s.equipe) + '</td></tr>').join('') + '</tbody></table></div>' : '')
-    + (ignorados.concat(avisos).length ? '<details style="margin-top:8px;font-size:.8rem;color:#b45309"><summary>Ver avisos</summary>' + ignorados.concat(avisos).map(x => '<div>• ' + esc(x) + '</div>').join('') + '</details>' : ''),
+    + (ignorados.concat(avisos).length ? '<details style="margin-top:8px;font-size:13px;color:var(--idv-at)"><summary>Ver avisos</summary>' + ignorados.concat(avisos).map(x => '<div>• ' + esc(x) + '</div>').join('') + '</details>' : ''),
     novos.length ? '<button class="btn-primary" onclick="sec_confirmarImportacao()">Cadastrar ' + novos.length + '</button>' : '', 720);
 }
 async function sec_confirmarImportacao() {

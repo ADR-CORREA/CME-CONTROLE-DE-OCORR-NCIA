@@ -134,14 +134,14 @@ function _secPlanoPonto(folhas, d) {
 }
 function _secMostrarPrevPonto(p) {
   const mesTxt = _SEC_MESES[p.mes - 1] + '/' + p.ano, mudou = p.mudancas.filter(m => m.mud.length);
-  const tab = (cab, linhas) => '<div class="table-scroll" style="max-height:200px"><table class="data-table" style="font-size:.8rem"><thead><tr>' + cab.map(c => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>' + linhas.join('') + '</tbody></table></div>';
+  const tab = (cab, linhas) => '<div class="table-scroll" style="max-height:200px"><table class="data-table idv-tabela" style="font-size:13px"><thead><tr>' + cab.map(c => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>' + linhas.join('') + '</tbody></table></div>';
   _secModal('Folhas de ponto — ' + mesTxt,
-    '<div style="font-size:.9rem;margin-bottom:8px">Li <b>' + p.folhas + '</b> folha(s): <b>' + p.novos.length + '</b> servidor(es) novo(s), <b>' + mudou.length + '</b> com mudança, '
+    '<div style="font-size:14px;margin-bottom:8px">Li <b>' + p.folhas + '</b> folha(s): <b>' + p.novos.length + '</b> servidor(es) novo(s), <b>' + mudou.length + '</b> com mudança, '
     + '<b>' + p.afast.filter(a => !a.ja).length + '</b> férias/licença(s) a lançar' + (p.feriados.length ? ', feriado(s): ' + p.feriados.map(_secBRc).join(', ') : '') + '.</div>'
     + (p.novos.length ? '<div style="font-weight:600;margin:8px 0 4px">Novos servidores</div>' + tab(['Nome', 'Matrícula', 'Cargo', 'Equipe'], p.novos.map(n => '<tr><td>' + esc(n.f.nome) + '</td><td>' + esc(n.f.matricula) + '</td><td>' + esc(n.f.cargo) + '</td><td>' + esc(n.equipe) + '</td></tr>')) : '')
     + (mudou.length ? '<div style="font-weight:600;margin:8px 0 4px">Atualizações</div>' + tab(['Servidor', 'O que muda'], mudou.map(m => '<tr><td>' + esc(m.s.nome) + '</td><td>' + esc(m.mud.join(', ')) + '</td></tr>')) : '')
-    + (p.afast.length ? '<div style="font-weight:600;margin:8px 0 4px">Férias e licenças marcadas na folha</div>' + tab(['Servidor', 'Tipo', 'Período', ''], p.afast.map(a => '<tr><td>' + esc(a.nome) + '</td><td>' + esc(a.tipo) + '</td><td>' + _secBR(a.inicio) + ' a ' + _secBR(a.fim) + '</td><td>' + (a.ja ? '<span style="color:#64748b">já lançado</span>' : '<b style="color:#0d9488">novo</b>') + '</td></tr>')) : '')
-    + '<div style="font-size:.78rem;color:#64748b;margin-top:8px">Nada é apagado: servidores que não aparecem nas folhas continuam cadastrados. Confira e confirme.</div>',
+    + (p.afast.length ? '<div style="font-weight:600;margin:8px 0 4px">Férias e licenças marcadas na folha</div>' + tab(['Servidor', 'Tipo', 'Período', ''], p.afast.map(a => '<tr><td>' + esc(a.nome) + '</td><td>' + esc(a.tipo) + '</td><td>' + _secBR(a.inicio) + ' a ' + _secBR(a.fim) + '</td><td>' + (a.ja ? '<span style="color:var(--idv-sec)">já lançado</span>' : '<span class="idv-etq ok">novo</span>') + '</td></tr>')) : '')
+    + '<div style="font-size:13px;color:var(--idv-sec);margin-top:8px">Nada é apagado: servidores que não aparecem nas folhas continuam cadastrados. Confira e confirme.</div>',
     '<button class="btn-primary" onclick="sec_confirmarPonto()">Confirmar e gravar</button>', 780);
 }
 async function sec_confirmarPonto() {
@@ -195,25 +195,25 @@ function _secPlantaoAgora() {
 function _secSituacaoHoje(s, d, hoje) {
   const af = _secAfastamentoEm(s.id, hoje, d); if (af) return { fora: true, txt: af.tipo + ' até ' + _secBRc(af.fim), cor: _secCorTipo(af.tipo) };
   const disp = d.apoios.find(a => a.servidorId === s.id && a.dispensa && a.dispensa.data === hoje);
-  if (disp) return { fora: true, txt: 'Dispensa (' + _secTurnoTxt(disp.dispensa.turno).toLowerCase() + ')', cor: '#d97706' };
+  if (disp) return { fora: true, txt: 'Dispensa (' + _secTurnoTxt(disp.dispensa.turno).toLowerCase() + ')', cor: 'var(--idv-at)' };
   const fol = d.folgas.find(f => f.servidorId === s.id && f.data <= hoje && (f.ate || f.data) >= hoje);
-  if (fol) return { fora: true, txt: 'Folga combinada', cor: '#7c3aed' };
+  if (fol) return { fora: true, txt: 'Folga combinada', cor: 'var(--idv-de)' };
   const ap = d.apoios.find(a => a.servidorId === s.id && a.data === hoje);
-  if (ap) return { fora: false, txt: 'Apoio: ' + ap.acao, cor: '#2563eb' };
+  if (ap) return { fora: false, txt: 'Apoio: ' + ap.acao, cor: 'var(--idv-in)' };
   return { fora: false, txt: '', cor: '' };
 }
-function _secCartaoEquipe(titulo, sub, cor, servs, d, hoje, vazio) {
+function _secCartaoEquipe(titulo, sub, classe, servs, d, hoje, vazio) {
   const sits = servs.map(s => ({ s, st: _secSituacaoHoje(s, d, hoje) }));
   const presentes = sits.filter(x => !x.st.fora).length;
-  return '<div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid ' + cor + ';border-radius:6px;padding:12px 14px">'
-    + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div style="font-weight:700;font-size:1.02rem">' + titulo + '</div>'
-    + (servs.length ? '<div style="font-size:.8rem;color:#475569"><b>' + presentes + '</b> de ' + servs.length + ' presentes</div>' : '') + '</div>'
-    + '<div style="font-size:.78rem;color:#64748b;margin-bottom:6px">' + sub + '</div>'
-    + (servs.length ? '<div style="max-height:340px;overflow:auto">' + sits.sort((a, b) => b.st.fora - a.st.fora || a.s.nome.localeCompare(b.s.nome)).map(x => '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid #f1f5f9;font-size:.86rem' + (x.st.fora ? ';color:#94a3b8' : '') + '">'
+  return '<div class="idv-bloco' + (classe ? ' ' + classe : '') + '">'
+    + '<div class="idv-bloco-cab"><div>' + titulo + '</div>'
+    + (servs.length ? '<div class="idv-data" style="font-weight:400"><b>' + presentes + '</b> de ' + servs.length + ' presentes</div>' : '') + '</div>'
+    + '<div class="idv-bloco-corpo"><div class="idv-mini" style="margin-bottom:6px">' + sub + '</div>'
+    + (servs.length ? '<div style="max-height:340px;overflow:auto">' + sits.sort((a, b) => b.st.fora - a.st.fora || a.s.nome.localeCompare(b.s.nome)).map(x => '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid var(--idv-linha);font-size:14px' + (x.st.fora ? ';color:var(--idv-sec)' : '') + '">'
       + '<span><a href="#" onclick="sec_abrirPerfil(\'' + x.s.id + '\');return false" style="color:inherit;text-decoration:' + (x.st.fora ? 'line-through' : 'none') + '">' + esc(x.s.nome) + '</a>'
-      + (!x.st.fora && _secRotuloEscala(x.s) ? ' <span title="' + esc(_SEC_POSTOS[_secPostoNoMes(x.s.posto)] || '') + '" style="font-size:.68rem;font-weight:600;color:#475569;background:#f1f5f9;border-left:2px solid #94a3b8;border-radius:3px;padding:1px 5px;white-space:nowrap">' + esc(_secRotuloEscala(x.s)) + '</span>' : '') + '</span>'
-      + (x.st.txt ? '<span style="font-size:.72rem;font-weight:600;color:' + x.st.cor + ';white-space:nowrap">' + esc(x.st.txt) + '</span>' : '') + '</div>').join('') + '</div>'
-      : '<div style="font-size:.85rem;color:#94a3b8;padding:6px 0">' + vazio + '</div>') + '</div>';
+      + (!x.st.fora && _secRotuloEscala(x.s) ? ' <span class="idv-etq ne" title="' + esc(_SEC_POSTOS[_secPostoNoMes(x.s.posto)] || '') + '" style="padding:1px 6px">' + esc(_secRotuloEscala(x.s)) + '</span>' : '') + '</span>'
+      + (x.st.txt ? '<span style="font-size:12px;font-weight:600;color:' + x.st.cor + ';white-space:nowrap">' + esc(x.st.txt) + '</span>' : '') + '</div>').join('') + '</div>'
+      : '<div style="font-size:14px;color:var(--idv-sec);padding:6px 0">' + vazio + '</div>') + '</div></div>';
 }
 function sec_renderHojeDash() {
   const c = document.getElementById('sec-conteudo'); if (!c) return;
@@ -225,18 +225,18 @@ function sec_renderHojeDash() {
   const foraHoje = ativos.filter(s => _secSituacaoHoje(s, d, hoje).fora);
   const diaTxt = new Date(hoje + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
   c.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
-    + '<div style="font-size:1.05rem;font-weight:700;text-transform:capitalize">' + esc(diaTxt) + (feriado ? ' <span style="color:#dc2626;font-size:.8rem">· FERIADO</span>' : '') + '</div>'
+    + '<div style="font-size:20px;font-weight:600;line-height:1.25;text-transform:capitalize">' + esc(diaTxt) + (feriado ? ' <span style="color:var(--idv-cr);font-size:13px">· FERIADO</span>' : '') + '</div>'
     + '</div>'
-    + (!d.servidores.length ? '<div style="background:#eff6ff;border-left:4px solid #2563eb;padding:10px 14px;border-radius:4px;font-size:.88rem;margin-bottom:12px"><b>Comece por aqui:</b> na aba Servidores, importe os PDFs das folhas de ponto do mês (plantão e expediente). O sistema cadastra os servidores com a guarnição de cada um, e as férias e licenças marcadas.</div>' : '')
+    + (!d.servidores.length ? '<div class="idv-faixa" style="font-size:14px;margin-bottom:12px"><span><b>Comece por aqui:</b> na aba Servidores, importe os PDFs das folhas de ponto do mês (plantão e expediente). O sistema cadastra os servidores com a guarnição de cada um, e as férias e licenças marcadas.</span></div>' : '')
     + (typeof _secCartaoAtencao === 'function' ? _secCartaoAtencao() : '')
     + (typeof _secCartaoCompromissos === 'function' ? _secCartaoCompromissos() : '')
-    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">'
-    + _secCartaoEquipe('\u{1F6E1}\u{FE0F} Plantão — ' + pl.guarnicao, 'Das 08h de ' + _secBRc(pl.dia) + ' às 08h de ' + _secBRc(_secMaisDias(pl.dia, 1)) + ' · próximo: ' + pl.proxima, '#0d9488', guarn, d, hoje, 'Nenhum servidor cadastrado na guarnição ' + pl.guarnicao + '.')
-    + (diaUtil ? _secCartaoEquipe('\u{1F3E2} Expediente', 'Segunda a sexta', '#2563eb', exp, d, hoje, 'Nenhum servidor de expediente cadastrado.')
-      : '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #94a3b8;border-radius:6px;padding:12px 14px"><div style="font-weight:700">\u{1F3E2} Expediente</div><div style="font-size:.86rem;color:#64748b;margin-top:6px">Hoje não há expediente (' + (feriado ? 'feriado' : 'fim de semana') + ').</div></div>')
-    + '<div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #dc2626;border-radius:6px;padding:12px 14px"><div style="font-weight:700;font-size:1.02rem">\u{1F6AB} Fora hoje</div>'
-    + (foraHoje.length ? foraHoje.map(s => { const st = _secSituacaoHoje(s, d, hoje); return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid #f1f5f9;font-size:.86rem"><a href="#" onclick="sec_abrirPerfil(\'' + s.id + '\');return false">' + esc(s.nome) + '</a><span style="font-size:.72rem;font-weight:600;color:' + st.cor + ';white-space:nowrap">' + esc(st.txt) + '</span></div>'; }).join('')
-      : '<div style="font-size:.85rem;color:#94a3b8;padding:6px 0">Ninguém afastado hoje.</div>') + '</div></div>';
+    + '<div class="idv-blocos">'
+    + _secCartaoEquipe('\u{1F6E1}\u{FE0F} Plantão — ' + pl.guarnicao, 'Das 08h de ' + _secBRc(pl.dia) + ' às 08h de ' + _secBRc(_secMaisDias(pl.dia, 1)) + ' · próximo: ' + pl.proxima, 'destaque', guarn, d, hoje, 'Nenhum servidor cadastrado na guarnição ' + pl.guarnicao + '.')
+    + (diaUtil ? _secCartaoEquipe('\u{1F3E2} Expediente', 'Segunda a sexta', '', exp, d, hoje, 'Nenhum servidor de expediente cadastrado.')
+      : '<div class="idv-bloco"><div class="idv-bloco-cab"><div>\u{1F3E2} Expediente</div></div><div class="idv-bloco-corpo" style="font-size:14px;color:var(--idv-sec)">Hoje não há expediente (' + (feriado ? 'feriado' : 'fim de semana') + ').</div></div>')
+    + '<div class="idv-bloco"><div class="idv-bloco-cab"><div>\u{1F6AB} Fora hoje</div>' + (foraHoje.length ? '<div class="idv-data" style="font-weight:400">' + foraHoje.length + '</div>' : '') + '</div><div class="idv-bloco-corpo">'
+    + (foraHoje.length ? foraHoje.map(s => { const st = _secSituacaoHoje(s, d, hoje); return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid var(--idv-linha);font-size:14px"><a href="#" onclick="sec_abrirPerfil(\'' + s.id + '\');return false">' + esc(s.nome) + '</a><span style="font-size:12px;font-weight:600;color:' + st.cor + ';white-space:nowrap">' + esc(st.txt) + '</span></div>'; }).join('')
+      : '<div style="font-size:14px;color:var(--idv-sec);padding:6px 0">Ninguém afastado hoje.</div>') + '</div></div></div>';
   // a escala de sábado mora na sub-aba "Escala de Serviço e Apoio", mas continua sendo montada sozinha ao abrir a Secretaria
   if (typeof _secEscAutoAgendar === 'function') [hoje.slice(0, 7), _secEscMaisMes(hoje.slice(0, 7), 1)].forEach(_secEscAutoAgendar);
   if (typeof _secServGuardarAuto === 'function') _secServGuardarAuto(); // guarda a escala de serviço do mês no histórico

@@ -7,18 +7,16 @@
    Depende de secretaria*.js. Emojis só por \u{...}. */
 
 const _SEC_TIPOS_DOC = [
-  { nome: 'Portaria', pasta: 'portaria', cor: '#7c3aed' }, { nome: 'Memorando', pasta: 'memorando', cor: '#2563eb' },
-  { nome: 'Ofício', pasta: 'oficio', cor: '#0d9488' }, { nome: 'Circular / Comunicado', pasta: 'circular', cor: '#d97706' },
-  { nome: 'Ordem de Serviço', pasta: 'ordem-servico', cor: '#dc2626' }, { nome: 'Escala', pasta: 'escala', cor: '#0891b2' },
-  { nome: 'Ata', pasta: 'ata', cor: '#db2777' }, { nome: 'Outros', pasta: 'outros', cor: '#64748b' },
+  { nome: 'Portaria', pasta: 'portaria' }, { nome: 'Memorando', pasta: 'memorando' },
+  { nome: 'Ofício', pasta: 'oficio' }, { nome: 'Circular / Comunicado', pasta: 'circular' },
+  { nome: 'Ordem de Serviço', pasta: 'ordem-servico' }, { nome: 'Escala', pasta: 'escala' },
+  { nome: 'Ata', pasta: 'ata' }, { nome: 'Outros', pasta: 'outros' },
 ];
 let _secArqTipo = '', _secArqAno = '', _secArqBusca = '';
 
 function _secTipoDoc(nome) { return _SEC_TIPOS_DOC.find(t => t.nome === nome) || _SEC_TIPOS_DOC[_SEC_TIPOS_DOC.length - 1]; }
 function _secSeloTipo(nome) {
-  const t = _secTipoDoc(nome);
-  return '<span style="display:inline-flex;align-items:center;gap:5px;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:3px;border-left:2px solid ' + t.cor + ';background:' + t.cor + '1f;color:' + t.cor + ';white-space:nowrap">'
-    + '<span style="width:5px;height:5px;background:' + t.cor + '"></span>' + esc(nome) + '</span>';
+  return '<span class="idv-etq ne">' + esc(nome) + '</span>';
 }
 function _secTextoBusca(x, d) {
   return [x.tipo, x.numero, x.assunto, x.origem, _secBR(x.data)].concat((x.servidorIds || []).map(id => _secNomeServ(id, d)), (x.arquivos || []).map(a => a.nome))
@@ -37,42 +35,41 @@ function sec_renderArquivo() {
   const d = _secDados();
   const anos = [...new Set(d.documentos.map(x => String(x.data).slice(0, 4)).filter(a => /^\d{4}$/.test(a)))].sort().reverse();
   const conta = n => d.documentos.filter(x => (!n || x.tipo === n) && (!_secArqAno || String(x.data).slice(0, 4) === _secArqAno)).length;
-  const chip = (v, r) => '<button type="button" class="chip' + (v === _secArqTipo ? ' active' : '') + '" onclick="_secArqTipo=\'' + esc(v) + '\';sec_renderArquivo()" style="padding:5px 12px;border-radius:4px;cursor:pointer;font-size:.82rem;border:1px solid '
-    + (v === _secArqTipo ? '#388bfd;background:#dbeafe;font-weight:600;box-shadow:inset 2px 0 0 #2563eb' : '#cbd5e1;background:#fff') + '">' + esc(r) + ' <span style="color:#64748b">' + conta(v) + '</span></button>';
+  const chip = (v, r) => '<button type="button" class="idv-chip' + (v === _secArqTipo ? ' ativo' : '') + '" onclick="_secArqTipo=\'' + esc(v) + '\';sec_renderArquivo()">' + esc(r) + ' <span class="idv-n">' + conta(v) + '</span></button>';
   c.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
     + '<div style="display:flex;gap:8px;flex:1;min-width:260px"><input id="sec-arq-busca" value="' + esc(_secArqBusca) + '" oninput="_secArqBusca=this.value;_secRenderListaArquivo()" placeholder="Buscar por número, assunto, servidor, origem ou nome do arquivo…" style="flex:1;padding:7px 10px">'
     + '<select onchange="_secArqAno=this.value;sec_renderArquivo()" style="padding:6px 8px"><option value="">Todos os anos</option>' + anos.map(a => '<option' + (a === _secArqAno ? ' selected' : '') + '>' + a + '</option>').join('') + '</select></div>'
     + '<button class="btn-primary" onclick="sec_arqNovo()">+ Arquivar documento</button></div>'
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' + chip('', 'Todos') + _SEC_TIPOS_DOC.map(t => chip(t.nome, t.nome)).join('') + '</div>'
+    + '<div class="idv-chips" style="margin-bottom:10px">' + chip('', 'Todos') + _SEC_TIPOS_DOC.map(t => chip(t.nome, t.nome)).join('') + '</div>'
     + '<div id="sec-arq-lista"></div>';
   _secRenderListaArquivo();
 }
 function _secRenderListaArquivo() {
   const box = document.getElementById('sec-arq-lista'); if (!box) return;
   const d = _secDados(), lista = _secFiltrarDocs(d, _secArqTipo, _secArqAno, _secArqBusca);
-  box.innerHTML = '<div style="font-size:.78rem;color:#64748b;margin-bottom:4px">' + lista.length + ' documento(s)' + (lista.length !== d.documentos.length ? ' de ' + d.documentos.length : '') + '</div>'
-    + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Data</th><th>Tipo</th><th>Nº</th><th>Assunto</th><th>Servidores</th><th>Arquivos</th><th></th></tr></thead><tbody>'
+  box.innerHTML = '<div class="idv-data" style="font-size:13px;color:var(--idv-sec);margin-bottom:6px">' + lista.length + ' documento(s)' + (lista.length !== d.documentos.length ? ' de ' + d.documentos.length : '') + '</div>'
+    + '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Data</th><th>Tipo</th><th>Nº</th><th>Assunto</th><th>Servidores</th><th>Arquivos</th><th></th></tr></thead><tbody>'
     + (lista.length ? lista.map(x => _secLinhaDoc(x, d)).join('')
-      : '<tr><td colspan="7" style="text-align:center;padding:24px;color:#888">' + (d.documentos.length ? 'Nenhum documento com esse filtro.' : 'Nenhum documento arquivado ainda. Use "+ Arquivar documento".') + '</td></tr>')
+      : '<tr><td colspan="7" class="idv-vazio">' + (d.documentos.length ? 'Nenhum documento com esse filtro.' : 'Nenhum documento arquivado ainda. Use "+ Arquivar documento".') + '</td></tr>')
     + '</tbody></table></div>';
 }
 function _secLinhaDoc(x, d) {
-  return '<tr><td style="font-family:var(--font-mono);font-size:.8rem;white-space:nowrap">' + _secBR(x.data) + '</td><td>' + _secSeloTipo(x.tipo) + '</td>'
-    + '<td style="font-family:var(--font-mono);font-size:.82rem;white-space:nowrap">' + esc(x.numero || '—') + '</td>'
-    + '<td><div style="font-weight:600">' + esc(x.assunto) + '</div>' + (x.origem ? '<div style="font-size:.75rem;color:#64748b">' + esc(x.origem) + '</div>' : '') + '</td>'
-    + '<td style="font-size:.8rem">' + ((x.servidorIds || []).map(id => _secServ(id, d) ? '<a href="#" onclick="sec_abrirPerfil(\'' + id + '\');return false">' + esc(_secNomeServ(id, d)) + '</a>' : '').filter(Boolean).join('<br>') || '<span style="color:#94a3b8">—</span>') + '</td>'
-    + '<td style="font-size:.8rem">' + (x.arquivos || []).map(a => '<a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + _jsq(a.nome) + '\');return false">\u{1F4CE} ' + esc(a.nome) + '</a>').join('<br>') + '</td>'
+  return '<tr><td class="idv-data" style="white-space:nowrap">' + _secBR(x.data) + '</td><td>' + _secSeloTipo(x.tipo) + '</td>'
+    + '<td class="idv-mono" style="font-size:13px;white-space:nowrap">' + esc(x.numero || '—') + '</td>'
+    + '<td><div style="font-weight:600">' + esc(x.assunto) + '</div>' + (x.origem ? '<div class="idv-mini">' + esc(x.origem) + '</div>' : '') + '</td>'
+    + '<td style="font-size:13px">' + ((x.servidorIds || []).map(id => _secServ(id, d) ? '<a href="#" onclick="sec_abrirPerfil(\'' + id + '\');return false">' + esc(_secNomeServ(id, d)) + '</a>' : '').filter(Boolean).join('<br>') || '<span style="color:var(--idv-sec)">—</span>') + '</td>'
+    + '<td style="font-size:13px">' + (x.arquivos || []).map(a => '<a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + _jsq(a.nome) + '\');return false">\u{1F4CE} ' + esc(a.nome) + '</a>').join('<br>') + '</td>'
     + '<td style="white-space:nowrap"><button class="btn-sm btn-outline" onclick="sec_arqNovo(\'' + x.id + '\')">Editar</button> '
-    + '<button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_arqExcluir(\'' + x.id + '\')">Excluir</button></td></tr>';
+    + '<button class="btn-sm btn-danger" onclick="sec_arqExcluir(\'' + x.id + '\')">Excluir</button></td></tr>';
 }
 // usado na aba Documentos do perfil do servidor
 function _secHtmlArquivoDoServidor(id, d) {
   const lista = _secFiltrarDocs(d, '', '', '').filter(x => (x.servidorIds || []).includes(id));
-  return '<div style="font-weight:700;margin-bottom:4px">\u{1F5C4}\u{FE0F} No arquivo geral (' + lista.length + ')</div>'
-    + (lista.length ? '<div class="table-scroll" style="margin-bottom:14px"><table class="data-table"><thead><tr><th>Data</th><th>Tipo</th><th>Nº</th><th>Assunto</th><th>Servidores</th><th>Arquivos</th><th></th></tr></thead><tbody>'
+  return '<div class="idv-secao" style="margin:0 0 8px">\u{1F5C4}\u{FE0F} No arquivo geral (' + lista.length + ')</div>'
+    + (lista.length ? '<div class="table-scroll" style="margin-bottom:14px"><table class="data-table idv-tabela"><thead><tr><th>Data</th><th>Tipo</th><th>Nº</th><th>Assunto</th><th>Servidores</th><th>Arquivos</th><th></th></tr></thead><tbody>'
       + lista.map(x => _secLinhaDoc(x, d)).join('') + '</tbody></table></div>'
-      : '<div style="font-size:.85rem;color:#94a3b8;margin-bottom:14px">Nenhuma portaria ou documento do arquivo geral vinculado a este servidor.</div>')
-    + '<div style="font-weight:700;margin-bottom:4px">\u{1F4CE} Documentos pessoais</div>';
+      : '<div style="font-size:14px;color:var(--idv-sec);margin-bottom:14px">Nenhuma portaria ou documento do arquivo geral vinculado a este servidor.</div>')
+    + '<div class="idv-secao" style="margin:0 0 8px">\u{1F4CE} Documentos pessoais</div>';
 }
 
 // ── Arquivar / editar ─────────────────────────────────────────────────────────
@@ -87,14 +84,14 @@ function sec_arqNovo(id) {
     + _secCampo('sec-arq-origem', 'Origem / emitido por (opcional)', x.origem || '', 'placeholder="Ex.: Diretoria do IAPEN, Gerência do CME, Vara de Execuções"')
     + '<div class="form-field"><label>Servidores citados (opcional) — o documento aparece no perfil de cada um</label>'
     + '<input placeholder="Filtrar nomes…" oninput="_secArqFiltrarServs(this.value)" style="margin-bottom:4px">'
-    + '<div id="sec-arq-servs" style="max-height:170px;overflow:auto;border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px">'
-    + (servs.length ? servs.map(s => '<label data-nome="' + esc(s.nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()) + '" style="display:flex;gap:8px;align-items:center;padding:2px 0;font-size:.85rem;font-weight:400;cursor:pointer">'
-      + '<input type="checkbox" value="' + s.id + '"' + (marcados.has(s.id) ? ' checked' : '') + '>' + esc(s.nome) + ' <span style="color:#94a3b8;font-size:.75rem">' + esc(s.equipe || '') + '</span></label>').join('') : '<div style="color:#94a3b8;font-size:.85rem">Nenhum servidor cadastrado.</div>')
+    + '<div id="sec-arq-servs" style="max-height:170px;overflow:auto;border:1px solid var(--idv-borda);border-radius:6px;padding:4px 8px">'
+    + (servs.length ? servs.map(s => '<label data-nome="' + esc(s.nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()) + '" style="display:flex;gap:8px;align-items:center;padding:2px 0;font-size:14px;font-weight:400;cursor:pointer">'
+      + '<input type="checkbox" value="' + s.id + '"' + (marcados.has(s.id) ? ' checked' : '') + '>' + esc(s.nome) + ' <span style="color:var(--idv-sec);font-size:12px">' + esc(s.equipe || '') + '</span></label>').join('') : '<div style="color:var(--idv-sec);font-size:14px">Nenhum servidor cadastrado.</div>')
     + '</div></div>'
-    + (x.arquivos && x.arquivos.length ? '<div class="form-field"><label>Arquivos já anexados</label><div style="font-size:.85rem">' + x.arquivos.map(a => '\u{1F4CE} ' + esc(a.nome)).join('<br>') + '</div></div>' : '')
+    + (x.arquivos && x.arquivos.length ? '<div class="form-field"><label>Arquivos já anexados</label><div style="font-size:14px">' + x.arquivos.map(a => '\u{1F4CE} ' + esc(a.nome)).join('<br>') + '</div></div>' : '')
     + '<div class="form-field"><label>' + (id ? 'Anexar mais arquivos (opcional)' : 'Arquivo(s) * — PDF, imagem, Word ou Excel, até 15 MB cada') + '</label>'
     + '<input type="file" id="sec-arq-files" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.odt,.txt"' + (typeof sec_arqIaLer === 'function' ? ' onchange="sec_arqIaLer(this)"' : '') + '>'
-    + '<div id="sec-arq-ia" style="font-size:.8rem;margin-top:4px;color:#64748b">\u{1F916} Ao escolher o arquivo, a IA lê e preenche tipo, número, data, assunto e os servidores citados.</div></div>',
+    + '<div id="sec-arq-ia" style="font-size:13px;margin-top:4px;color:var(--idv-sec)">\u{1F916} Ao escolher o arquivo, a IA lê e preenche tipo, número, data, assunto e os servidores citados.</div></div>',
     '<button class="btn-primary" id="sec-arq-salvar" onclick="sec_arqSalvar(\'' + (id || '') + '\')">Salvar</button>', 680);
 }
 function _secArqFiltrarServs(q) {

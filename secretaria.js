@@ -118,7 +118,7 @@ function _secModal(titulo, corpo, botoes, largura) {
   if (!ov) { ov = document.createElement('div'); ov.id = 'sec-modal'; ov.className = 'modal-overlay'; document.body.appendChild(ov); }
   ov.innerHTML = '<div class="modal-box" style="max-width:' + (largura || 620) + 'px"><div class="modal-header"><h3>' + titulo + '</h3>'
     + '<button class="modal-close" onclick="_secFecharModal()">\u{2715}</button></div><div class="modal-body">' + corpo + '</div>'
-    + '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid var(--borda,#e2e8f0)">'
+    + '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid var(--idv-linha)">'
     + '<button class="btn-secondary" onclick="_secFecharModal()">Cancelar</button>' + (botoes || '') + '</div></div>';
   ov.classList.add('open');
 }
@@ -127,16 +127,15 @@ function _secCampo(id, rotulo, valor, extra) {
   return '<div class="form-field"><label>' + rotulo + '</label><input id="' + id + '" value="' + esc(valor || '') + '" ' + (extra || '') + '></div>';
 }
 function _secChips(nome, opcoes, atual) {
-  return '<div style="display:flex;gap:6px;flex-wrap:wrap">' + opcoes.map(o => {
+  return '<div class="idv-chips">' + opcoes.map(o => {
     const v = Array.isArray(o) ? o[0] : o, r = Array.isArray(o) ? o[1] : o;
-    return '<button type="button" class="chip' + (String(v) === String(atual) ? ' active' : '') + '" data-grupo="' + nome + '" data-valor="' + esc(String(v)) + '" onclick="_secChip(this)" '
-      + 'style="padding:6px 14px;border-radius:4px;border:1px solid #cbd5e1;background:' + (String(v) === String(atual) ? '#dbeafe' : '#fff') + ';cursor:pointer;font-weight:600">' + esc(r) + '</button>';
+    return '<button type="button" class="chip idv-chip' + (String(v) === String(atual) ? ' active ativo' : '') + '" data-grupo="' + nome + '" data-valor="' + esc(String(v)) + '" onclick="_secChip(this)">' + esc(r) + '</button>';
   }).join('') + '</div><input type="hidden" id="' + nome + '" value="' + esc(String(atual == null ? '' : atual)) + '">';
 }
 function _secChip(btn) {
   const g = btn.dataset.grupo;
-  document.querySelectorAll('[data-grupo="' + g + '"]').forEach(b => { b.classList.remove('active'); b.style.background = '#fff'; });
-  btn.classList.add('active'); btn.style.background = '#dbeafe';
+  document.querySelectorAll('[data-grupo="' + g + '"]').forEach(b => { b.classList.remove('active', 'ativo'); });
+  btn.classList.add('active', 'ativo');
   document.getElementById(g).value = btn.dataset.valor;
 }
 
@@ -153,11 +152,11 @@ function _secGrupoDe(aba) { const g = _SEC_GRUPOS.find(x => x[2].some(a => a[0] 
 function sec_inicializar() {
   const root = document.getElementById('sec-root');
   if (!root) return;
-  if (!_secPode()) { root.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b">Acesso restrito à Secretaria e à Gerência.</div>'; return; }
+  if (!_secPode()) { root.innerHTML = '<div class="idv-vazio">Acesso restrito à Secretaria e à Gerência.</div>'; return; }
   root.innerHTML = '<div class="dash-header" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><div class="dash-title">\u{1F5C2}\u{FE0F} Secretaria</div>'
     + '<div class="dash-update">Servidores, apoios e dispensas, folgas e documentos — acesso restrito à Secretaria e à Gerência</div></div>'
-    + '<div style="display:flex;gap:6px;align-items:center"><input id="sec-busca" list="sec-busca-lista" placeholder="\u{1F50E} Buscar servidor pelo nome…" onchange="sec_buscaAbrir(this.value)" style="min-width:250px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px"><datalist id="sec-busca-lista"></datalist>'
-    + '<button type="button" id="sec-stab-auditoria" title="Auditoria — quem fez o quê na Secretaria" onclick="sec_mudarAba(\'auditoria\')" style="padding:6px 9px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;cursor:pointer">\u{1F50D}</button></div></div>'
+    + '<div style="display:flex;gap:6px;align-items:center"><input id="sec-busca" list="sec-busca-lista" placeholder="\u{1F50E} Buscar servidor pelo nome…" onchange="sec_buscaAbrir(this.value)" style="min-width:250px;height:38px;padding:0 12px;border:1px solid var(--idv-borda);border-radius:6px;font-size:14px"><datalist id="sec-busca-lista"></datalist>'
+    + '<button type="button" id="sec-stab-auditoria" title="Auditoria — quem fez o quê na Secretaria" onclick="sec_mudarAba(\'auditoria\')" class="idv-btn icone">\u{1F50D}</button></div></div>'
     + '<div id="sec-menu"></div><div id="sec-hoje"></div><div id="sec-conteudo" style="padding-top:12px"></div>';
   sec_render();
 }
@@ -165,9 +164,8 @@ function _secRenderMenu() {
   const m = document.getElementById('sec-menu'); if (!m) return;
   const g = _secGrupoDe(_secAba), grupo = _SEC_GRUPOS.find(x => x[0] === g);
   m.innerHTML = '<div class="sub-tabs">' + _SEC_GRUPOS.map(([k, r]) => '<div class="sub-tab' + (k === g ? ' active' : '') + '" id="sec-grp-' + k + '" onclick="sec_mudarGrupo(\'' + k + '\')">' + r + '</div>').join('') + '</div>'
-    + (grupo && grupo[2].length > 1 ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' + grupo[2].map(([k, r]) => '<button type="button" id="sec-stab-' + k + '" onclick="sec_mudarAba(\'' + k + '\')" style="padding:5px 12px;border-radius:4px;cursor:pointer;font-size:.84rem;'
-      + (k === _secAba ? 'border:1px solid #2563eb;background:#eff6ff;color:#1d4ed8;font-weight:700;box-shadow:inset 2px 0 0 #2563eb' : 'border:1px solid #cbd5e1;background:#fff;color:#475569') + '">' + r + '</button>').join('') + '</div>' : '');
-  const aud = document.getElementById('sec-stab-auditoria'); if (aud) aud.style.background = _secAba === 'auditoria' ? '#eff6ff' : '#fff';
+    + (grupo && grupo[2].length > 1 ? '<div class="idv-chips" style="margin-top:10px">' + grupo[2].map(([k, r]) => '<button type="button" id="sec-stab-' + k + '" class="idv-chip' + (k === _secAba ? ' ativo' : '') + '" onclick="sec_mudarAba(\'' + k + '\')">' + r + '</button>').join('') + '</div>' : '');
+  const aud = document.getElementById('sec-stab-auditoria'); if (aud) aud.style.background = _secAba === 'auditoria' ? 'var(--idv-ativo)' : '';
   const lst = document.getElementById('sec-busca-lista');
   if (lst) lst.innerHTML = _secDados().servidores.filter(s => (s.situacao || 'ativo') === 'ativo').map(s => s.nome).sort().map(n => '<option value="' + esc(n) + '">').join('');
 }
@@ -205,10 +203,10 @@ function sec_renderServidores() {
   if (fSit) lista = lista.filter(s => (s.situacao || 'ativo') === fSit);
   const ativos = d.servidores.filter(s => (s.situacao || 'ativo') === 'ativo');
   const horasPend = ativos.reduce((t, s) => t + _secSaldo(s.id, d).horasPendentes, 0);
-  c.innerHTML = '<div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:12px">'
-    + '<div class="kpi-card" style="border-left:4px solid #0d9488"><div class="kpi-value">' + ativos.length + '</div><div class="kpi-label">Servidores ativos</div></div>'
-    + '<div class="kpi-card" style="border-left:4px solid #d97706"><div class="kpi-value">' + horasPend + 'h</div><div class="kpi-label">Dispensas a usufruir</div></div>'
-    + '<div class="kpi-card" style="border-left:4px solid #2563eb"><div class="kpi-value">' + d.apoios.filter(a => String(a.data).slice(0, 7) === _secHoje().slice(0, 7)).length + '</div><div class="kpi-label">Apoios neste mês</div></div></div>'
+  c.innerHTML = '<div class="idv-kpis" style="margin-bottom:12px">'
+    + '<div class="idv-kpi ok"><div class="idv-num">' + ativos.length + '</div><div class="idv-rot">Servidores ativos</div></div>'
+    + '<div class="idv-kpi at"><div class="idv-num">' + horasPend + 'h</div><div class="idv-rot">Dispensas a usufruir</div></div>'
+    + '<div class="idv-kpi in"><div class="idv-num">' + d.apoios.filter(a => String(a.data).slice(0, 7) === _secHoje().slice(0, 7)).length + '</div><div class="idv-rot">Apoios neste mês</div></div></div>'
     + '<div class="table-toolbar" style="flex-wrap:wrap;gap:8px">'
     + '<input id="sec-f-busca" placeholder="Buscar nome, matrícula, CPF ou cargo" value="' + esc(busca) + '" oninput="sec_renderServidores()" style="flex:1;min-width:220px;padding:6px 10px">'
     + '<select id="sec-f-equipe" onchange="sec_renderServidores()"><option value="">Todas as equipes</option>' + _SEC_EQUIPES.map(e => '<option' + (e === fEq ? ' selected' : '') + '>' + e + '</option>').join('') + '</select>'
@@ -217,14 +215,14 @@ function sec_renderServidores() {
     + '<label class="btn-secondary" style="cursor:pointer">Importar planilha<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="sec_importarServidores(this)"></label>'
     + '<label class="btn-secondary" style="cursor:pointer" title="PDFs mensais do SIGRH (plantão e expediente): atualiza guarnições, férias e licenças">Importar folhas de ponto (PDF)<input type="file" accept=".pdf" multiple style="display:none" onchange="sec_importarPonto(this)"></label>'
     + '<button class="btn-primary" onclick="sec_editarServidor()">+ Novo servidor</button></div>'
-    + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Nome</th><th>Cargo</th><th>Matrícula</th><th>Equipe</th><th>Telefone</th><th>Hoje</th><th>Dispensas a usufruir</th><th></th></tr></thead><tbody>'
+    + '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Nome</th><th>Cargo</th><th>Matrícula</th><th>Equipe</th><th>Telefone</th><th>Hoje</th><th>Dispensas a usufruir</th><th></th></tr></thead><tbody>'
     + (lista.length ? lista.map(s => {
       const sd = _secSaldo(s.id, d);
-      return '<tr style="cursor:pointer" onclick="sec_abrirPerfil(\'' + s.id + '\')"><td><strong>' + esc(s.nome) + '</strong></td><td>' + esc(s.cargo || '—') + '</td>'
-        + '<td style="font-family:var(--font-mono)">' + esc(s.matricula || '—') + '</td><td>' + esc(s.equipe || '—') + '</td><td>' + esc(s.telefone || '—') + '</td><td>' + _secSeloForaHoje(s.id, d) + '</td>'
-        + '<td>' + (sd.pendentes ? '<b style="color:#b45309">' + sd.horasPendentes + 'h</b> (' + sd.pendentes + ' apoio' + (sd.pendentes > 1 ? 's' : '') + ')' : '—') + '</td>'
+      return '<tr style="cursor:pointer" onclick="sec_abrirPerfil(\'' + s.id + '\')"><td><span class="idv-nome">' + esc(s.nome) + '</span></td><td>' + esc(s.cargo || '—') + '</td>'
+        + '<td class="idv-mono">' + esc(s.matricula || '—') + '</td><td>' + esc(s.equipe || '—') + '</td><td>' + esc(s.telefone || '—') + '</td><td>' + _secSeloForaHoje(s.id, d) + '</td>'
+        + '<td>' + (sd.pendentes ? '<b class="idv-data" style="color:var(--idv-at)">' + sd.horasPendentes + 'h</b> (' + sd.pendentes + ' apoio' + (sd.pendentes > 1 ? 's' : '') + ')' : '—') + '</td>'
         + '<td><button class="btn-sm btn-outline">Abrir perfil</button></td></tr>';
-    }).join('') : '<tr><td colspan="8" style="text-align:center;padding:28px;color:#888">' + (d.servidores.length ? 'Nenhum servidor com esse filtro.' : 'Nenhum servidor cadastrado. Clique em "+ Novo servidor".') + '</td></tr>')
+    }).join('') : '<tr><td colspan="8" class="idv-vazio">' + (d.servidores.length ? 'Nenhum servidor com esse filtro.' : 'Nenhum servidor cadastrado. Clique em "+ Novo servidor".') + '</td></tr>')
     + '</tbody></table></div>';
   const b = document.getElementById('sec-f-busca'); if (b && busca) { b.focus(); b.setSelectionRange(busca.length, busca.length); }
 }
@@ -291,9 +289,9 @@ function sec_renderPerfil() {
   const abas = [['ficha', 'Ficha de apoio e dispensas'], ['afastamentos', 'Férias e licenças'], ['folgas', 'Folgas combinadas'], ['faltas', 'Faltas'], ['documentos', 'Documentos'], ['qualificacao', 'Qualificação']];
   c.innerHTML = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">'
     + '<button class="btn-secondary" onclick="_secPerfilId=null;sec_render()">\u{2190} Voltar</button>'
-    + '<div style="flex:1"><div style="font-size:1.15rem;font-weight:700">' + esc(s.nome) + '</div>'
-    + '<div style="color:#64748b;font-size:.85rem">' + esc([s.cargo, s.formacao && '(' + s.formacao + ')', s.matricula && 'Matrícula ' + s.matricula, s.equipe].filter(Boolean).join(' · ')) + ' ' + _secSeloForaHoje(s.id, d) + '</div></div>'
-    + '<div style="background:#fffbeb;border-left:4px solid #d97706;padding:6px 12px;border-radius:4px"><b>' + sd.horasPendentes + 'h</b> de dispensa a usufruir<div style="font-size:.75rem;color:#64748b">' + sd.apoios + ' apoio(s) · ' + sd.usufruidas + ' usufruída(s)</div></div></div>'
+    + '<div style="flex:1"><div style="font-size:20px;font-weight:600;line-height:1.25">' + esc(s.nome) + '</div>'
+    + '<div style="color:var(--idv-sec);font-size:14px">' + esc([s.cargo, s.formacao && '(' + s.formacao + ')', s.matricula && 'Matrícula ' + s.matricula, s.equipe].filter(Boolean).join(' · ')) + ' ' + _secSeloForaHoje(s.id, d) + '</div></div>'
+    + '<div class="idv-kpi at" style="min-width:200px"><div class="idv-num">' + sd.horasPendentes + 'h</div><div class="idv-rot">de dispensa a usufruir</div><div class="idv-leg">' + sd.apoios + ' apoio(s) · ' + sd.usufruidas + ' usufruída(s)</div></div></div>'
     + '<div class="sub-tabs">' + abas.map(([k, r]) => '<div class="sub-tab' + (k === _secPerfilAba ? ' active' : '') + '" onclick="sec_perfilAba(\'' + k + '\')">' + r + '</div>').join('') + '</div>'
     + '<div id="sec-perfil-corpo" style="padding-top:12px"></div>';
   const corpo = document.getElementById('sec-perfil-corpo');
@@ -308,7 +306,7 @@ function sec_renderPerfil() {
   else if (_secPerfilAba === 'faltas') corpo.innerHTML = typeof _secHtmlFaltasDoServidor === 'function' ? _secHtmlFaltasDoServidor(s, d) : '';
 }
 function _secHtmlQualificacao(s) {
-  const linha = (r, v) => '<tr><th style="width:230px;background:#f8fafc;text-align:left">' + r + '</th><td>' + (v ? esc(v) : '<span style="color:#94a3b8">—</span>') + '</td></tr>';
+  const linha = (r, v) => '<tr><th style="width:230px;background:var(--idv-fundo);color:var(--idv-sec);text-align:left;position:static">' + r + '</th><td>' + (v ? esc(v) : '<span style="color:var(--idv-sec)">—</span>') + '</td></tr>';
   return '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn-primary" onclick="sec_editarServidor(\'' + s.id + '\')">Editar dados</button></div>'
     + '<table class="data-table"><tbody>' + linha('Nome', s.nome) + linha('Matrícula', s.matricula) + linha('CPF', _secCpfFmt(s.cpf)) + linha('RG', s.rg)
     + linha('Nascimento', _secBR(s.nascimento)) + linha('Cargo', s.cargo) + linha('Formação', s.formacao) + linha('Admissão / lotação', _secBR(s.admissao))
@@ -327,21 +325,21 @@ function _secHtmlFicha(s, d) {
     + '<button class="btn-secondary" onclick="sec_imprimirFicha(\'' + s.id + '\')">\u{1F5A8}\u{FE0F} Imprimir ficha</button>'
     + (ap.some(a => !a.dispensa) ? '<button class="btn-secondary" onclick="sec_lancarDispensaProxima(\'' + s.id + '\')">Lançar dispensa</button>' : '')
     + '<button class="btn-primary" onclick="sec_novoApoio(\'' + s.id + '\')">+ Registrar apoio</button></div>'
-    + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Data do apoio</th><th>Ação</th><th>Direito</th><th>Data da dispensa</th><th>Turno</th><th>Lançado por</th><th></th></tr></thead><tbody>'
-    + (ap.length ? ap.map(a => _secLinhaApoio(a, false)).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:#888">Nenhum apoio registrado.</td></tr>')
+    + '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Data do apoio</th><th>Ação</th><th>Direito</th><th>Data da dispensa</th><th>Turno</th><th>Lançado por</th><th></th></tr></thead><tbody>'
+    + (ap.length ? ap.map(a => _secLinhaApoio(a, false)).join('') : '<tr><td colspan="7" class="idv-vazio">Nenhum apoio registrado.</td></tr>')
     + '</tbody></table></div>';
 }
 function _secLinhaApoio(a, comNome, dados) {
   const disp = a.dispensa;
-  return '<tr' + (disp ? '' : ' style="background:#fffbeb"') + '>' + (comNome ? '<td><a href="#" onclick="sec_abrirPerfil(\'' + a.servidorId + '\');return false"><strong>' + esc(_secNomeServ(a.servidorId, dados)) + '</strong></a></td>' : '')
-    + '<td style="font-family:var(--font-mono)">' + _secBR(a.data) + '</td><td>' + esc(a.acao) + '</td><td><b>' + a.horas + 'h</b></td>'
-    + '<td style="font-family:var(--font-mono)">' + (disp ? _secBR(disp.data) : '<span style="color:#b45309;font-weight:600">a usufruir</span>') + '</td>'
+  return '<tr' + (disp ? '' : ' style="box-shadow:inset 3px 0 0 var(--idv-at)"') + '>' + (comNome ? '<td><a href="#" onclick="sec_abrirPerfil(\'' + a.servidorId + '\');return false"><strong>' + esc(_secNomeServ(a.servidorId, dados)) + '</strong></a></td>' : '')
+    + '<td class="idv-data">' + _secBR(a.data) + '</td><td>' + esc(a.acao) + '</td><td><b class="idv-data">' + a.horas + 'h</b></td>'
+    + '<td class="idv-data">' + (disp ? _secBR(disp.data) : '<span class="idv-etq at">a usufruir</span>') + '</td>'
     + '<td>' + (disp ? _secTurnoTxt(disp.turno) : '') + '</td>'
-    + '<td style="font-size:.8rem;color:#64748b">' + esc(disp ? disp.por : a.criadoPor || '') + '</td>'
+    + '<td style="font-size:13px;color:var(--idv-sec)">' + esc(disp ? disp.por : a.criadoPor || '') + '</td>'
     + '<td style="white-space:nowrap">' + (disp
       ? '<button class="btn-sm btn-outline" title="Desfazer o lançamento da dispensa" onclick="sec_desfazerDispensa(\'' + a.id + '\')">Desfazer</button>'
       : '<button class="btn-sm btn-primary" onclick="sec_lancarDispensa(\'' + a.id + '\')">Lançar dispensa</button> '
-        + '<button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_excluirApoio(\'' + a.id + '\')">Excluir</button>') + '</td></tr>';
+        + '<button class="btn-sm btn-danger" onclick="sec_excluirApoio(\'' + a.id + '\')">Excluir</button>') + '</td></tr>';
 }
 
 function sec_novoApoio(servidorId) {
@@ -351,15 +349,15 @@ function sec_novoApoio(servidorId) {
   const acoes = [...new Set(d.apoios.map(a => a.acao).filter(Boolean))].slice(-40);
   _secModal('Registrar apoio prestado',
     '<div class="form-field"><label>Servidor(es) — marque todos que prestaram o apoio</label>'
-    + '<div style="max-height:180px;overflow:auto;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px">'
-    + ativos.map(s => '<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-weight:400"><input type="checkbox" class="sec-ap-serv" value="' + s.id + '"' + (s.id === servidorId ? ' checked' : '') + '> ' + esc(s.nome) + ' <span style="color:#94a3b8;font-size:.8rem">' + esc(s.equipe || '') + '</span></label>').join('')
+    + '<div style="max-height:180px;overflow:auto;border:1px solid var(--idv-borda);border-radius:6px;padding:6px 10px">'
+    + ativos.map(s => '<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-weight:400"><input type="checkbox" class="sec-ap-serv" value="' + s.id + '"' + (s.id === servidorId ? ' checked' : '') + '> ' + esc(s.nome) + ' <span style="color:var(--idv-sec);font-size:12px">' + esc(s.equipe || '') + '</span></label>').join('')
     + '</div></div><div class="form-grid">'
     + _secCampo('sec-ap-ini', 'Data do apoio (ou 1º dia)', _secHoje(), 'type="date"') + _secCampo('sec-ap-fim', 'Último dia (se for mais de um dia)', '', 'type="date"')
     + '</div>' + _secCampo('sec-ap-acao', 'Ação / evento', '', 'list="sec-ap-acoes" placeholder="Ex.: Apoio EXPO 2026 – OCB, 7 de Setembro"')
     + '<datalist id="sec-ap-acoes">' + acoes.map(a => '<option>' + esc(a) + '</option>').join('') + '</datalist>'
     + '<div class="form-field"><label>Cada dia de apoio dá direito a</label>' + _secChips('sec-ap-horas', _SEC_DIREITOS.map(h => [h, h + ' horas']), 12) + '</div>'
     + '<div class="form-field"><label>Observação</label><input id="sec-ap-obs"></div>'
-    + '<div style="font-size:.8rem;color:#64748b">É criada uma linha na ficha de cada servidor para cada dia de apoio, como na ficha de papel.</div>',
+    + '<div style="font-size:13px;color:var(--idv-sec)">É criada uma linha na ficha de cada servidor para cada dia de apoio, como na ficha de papel.</div>',
     '<button class="btn-primary" onclick="sec_salvarApoio()">Registrar</button>', 640);
 }
 async function sec_salvarApoio() {
@@ -388,7 +386,7 @@ function sec_lancarDispensa(apoioId) {
   const a = _secDados().apoios.find(x => x.id === apoioId); if (!a) return;
   const turnos = a.horas >= 24 ? [['integral', 'Integral (24h)']] : [['diurno', a.horas + 'h diurna'], ['noturno', a.horas + 'h noturna']];
   _secModal('Lançar dispensa',
-    '<div style="background:#f8fafc;border-radius:6px;padding:8px 12px;margin-bottom:10px"><b>' + esc(_secNomeServ(a.servidorId)) + '</b><br>'
+    '<div style="background:var(--idv-fundo);border:1px solid var(--idv-linha);border-radius:6px;padding:8px 12px;margin-bottom:10px"><b>' + esc(_secNomeServ(a.servidorId)) + '</b><br>'
     + 'Apoio de ' + _secBR(a.data) + ' — ' + esc(a.acao) + ' · direito a <b>' + a.horas + 'h</b></div>'
     + _secCampo('sec-di-data', 'Data da dispensa', _secHoje(), 'type="date"')
     + '<div class="form-field"><label>Turno</label>' + _secChips('sec-di-turno', turnos, turnos[0][0]) + '</div>'
@@ -473,18 +471,18 @@ function sec_renderApoios() {
   if (fSit === 'usufruida') lista = lista.filter(a => a.dispensa);
   const pend = d.apoios.filter(a => !a.dispensa);
   const servs = d.servidores.slice().sort((a, b) => a.nome.localeCompare(b.nome));
-  c.innerHTML = '<div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:12px">'
-    + '<div class="kpi-card" style="border-left:4px solid #2563eb"><div class="kpi-value">' + d.apoios.filter(a => String(a.data).slice(0, 7) === _secHoje().slice(0, 7)).length + '</div><div class="kpi-label">Apoios neste mês</div></div>'
-    + '<div class="kpi-card" style="border-left:4px solid #d97706"><div class="kpi-value">' + pend.reduce((t, a) => t + (+a.horas || 0), 0) + 'h</div><div class="kpi-label">A usufruir (' + pend.length + ' apoios)</div></div>'
-    + '<div class="kpi-card" style="border-left:4px solid #16a34a"><div class="kpi-value">' + d.apoios.filter(a => a.dispensa && String(a.dispensa.data).slice(0, 7) === _secHoje().slice(0, 7)).length + '</div><div class="kpi-label">Dispensas usufruídas no mês</div></div></div>'
+  c.innerHTML = '<div class="idv-kpis" style="margin-bottom:12px">'
+    + '<div class="idv-kpi in"><div class="idv-num">' + d.apoios.filter(a => String(a.data).slice(0, 7) === _secHoje().slice(0, 7)).length + '</div><div class="idv-rot">Apoios neste mês</div></div>'
+    + '<div class="idv-kpi at"><div class="idv-num">' + pend.reduce((t, a) => t + (+a.horas || 0), 0) + 'h</div><div class="idv-rot">A usufruir (' + pend.length + ' apoios)</div></div>'
+    + '<div class="idv-kpi ok"><div class="idv-num">' + d.apoios.filter(a => a.dispensa && String(a.dispensa.data).slice(0, 7) === _secHoje().slice(0, 7)).length + '</div><div class="idv-rot">Dispensas usufruídas no mês</div></div></div>'
     + '<div class="table-toolbar" style="flex-wrap:wrap;gap:8px">'
-    + '<label style="font-size:.85rem">Mês <input type="month" id="sec-a-mes" value="' + esc(fMes) + '" onchange="sec_renderApoios()"></label>'
+    + '<label style="font-size:14px">Mês <input type="month" id="sec-a-mes" value="' + esc(fMes) + '" onchange="sec_renderApoios()"></label>'
     + '<select id="sec-a-serv" onchange="sec_renderApoios()"><option value="">Todos os servidores</option>' + servs.map(s => '<option value="' + s.id + '"' + (s.id === fServ ? ' selected' : '') + '>' + esc(s.nome) + '</option>').join('') + '</select>'
     + '<select id="sec-a-sit" onchange="sec_renderApoios()"><option value="">Todas</option><option value="pendente"' + (fSit === 'pendente' ? ' selected' : '') + '>A usufruir</option><option value="usufruida"' + (fSit === 'usufruida' ? ' selected' : '') + '>Usufruídas</option></select>'
     + '<button class="btn-secondary" onclick="document.getElementById(\'sec-a-mes\').value=\'\';sec_renderApoios()">Todos os meses</button>'
     + '<span style="flex:1"></span><button class="btn-primary" onclick="sec_novoApoio()">+ Registrar apoio</button></div>'
-    + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Servidor</th><th>Data do apoio</th><th>Ação</th><th>Direito</th><th>Data da dispensa</th><th>Turno</th><th>Lançado por</th><th></th></tr></thead><tbody>'
-    + (lista.length ? lista.map(a => _secLinhaApoio(a, true, d)).join('') : '<tr><td colspan="8" style="text-align:center;padding:24px;color:#888">Nenhum apoio com esse filtro.</td></tr>')
+    + '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Servidor</th><th>Data do apoio</th><th>Ação</th><th>Direito</th><th>Data da dispensa</th><th>Turno</th><th>Lançado por</th><th></th></tr></thead><tbody>'
+    + (lista.length ? lista.map(a => _secLinhaApoio(a, true, d)).join('') : '<tr><td colspan="8" class="idv-vazio">Nenhum apoio com esse filtro.</td></tr>')
     + '</tbody></table></div>';
 }
 
@@ -493,12 +491,12 @@ function _secHtmlFolgas(lista, comNome, servidorId) {
   const d = _secDados();
   lista = lista.slice().sort((a, b) => String(b.data).localeCompare(String(a.data)));
   return '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn-primary" onclick="sec_novaFolga(\'' + (servidorId || '') + '\')">+ Folga combinada</button></div>'
-    + '<div class="table-scroll"><table class="data-table"><thead><tr>' + (comNome ? '<th>Servidor</th>' : '') + '<th>Data</th><th>Até</th><th>Combinado / motivo</th><th>Autorizado por</th><th>Lançado por</th><th></th></tr></thead><tbody>'
+    + '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr>' + (comNome ? '<th>Servidor</th>' : '') + '<th>Data</th><th>Até</th><th>Combinado / motivo</th><th>Autorizado por</th><th>Lançado por</th><th></th></tr></thead><tbody>'
     + (lista.length ? lista.map(f => '<tr>' + (comNome ? '<td><a href="#" onclick="sec_abrirPerfil(\'' + f.servidorId + '\');return false"><strong>' + esc(_secNomeServ(f.servidorId, d)) + '</strong></a></td>' : '')
-      + '<td style="font-family:var(--font-mono)">' + _secBR(f.data) + '</td><td style="font-family:var(--font-mono)">' + (f.ate && f.ate !== f.data ? _secBR(f.ate) : '—') + '</td>'
-      + '<td>' + esc(f.descricao) + '</td><td>' + esc(f.autorizadoPor || '') + '</td><td style="font-size:.8rem;color:#64748b">' + esc(f.criadoPor || '') + '</td>'
-      + '<td><button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_excluirFolga(\'' + f.id + '\')">Excluir</button></td></tr>').join('')
-      : '<tr><td colspan="' + (comNome ? 7 : 6) + '" style="text-align:center;padding:24px;color:#888">Nenhuma folga combinada registrada.</td></tr>')
+      + '<td class="idv-data">' + _secBR(f.data) + '</td><td class="idv-data">' + (f.ate && f.ate !== f.data ? _secBR(f.ate) : '—') + '</td>'
+      + '<td>' + esc(f.descricao) + '</td><td>' + esc(f.autorizadoPor || '') + '</td><td style="font-size:13px;color:var(--idv-sec)">' + esc(f.criadoPor || '') + '</td>'
+      + '<td><button class="btn-sm btn-danger" onclick="sec_excluirFolga(\'' + f.id + '\')">Excluir</button></td></tr>').join('')
+      : '<tr><td colspan="' + (comNome ? 7 : 6) + '" class="idv-vazio">Nenhuma folga combinada registrada.</td></tr>')
     + '</tbody></table></div>';
 }
 function sec_renderFolgas() {
@@ -506,7 +504,7 @@ function sec_renderFolgas() {
   const d = _secDados(), fMes = document.getElementById('sec-fo-mes')?.value ?? '';
   let lista = d.folgas;
   if (fMes) lista = lista.filter(f => String(f.data).slice(0, 7) === fMes || String(f.ate || '').slice(0, 7) === fMes);
-  c.innerHTML = '<div class="table-toolbar"><label style="font-size:.85rem">Mês <input type="month" id="sec-fo-mes" value="' + esc(fMes) + '" onchange="sec_renderFolgas()"></label></div>'
+  c.innerHTML = '<div class="table-toolbar"><label style="font-size:14px">Mês <input type="month" id="sec-fo-mes" value="' + esc(fMes) + '" onchange="sec_renderFolgas()"></label></div>'
     + _secHtmlFolgas(lista, true, '');
 }
 function sec_novaFolga(servidorId) {
@@ -543,18 +541,18 @@ async function sec_excluirFolga(id) {
 async function sec_renderDocs(el, pasta, referencia) {
   el.innerHTML = '<div class="table-toolbar" style="flex-wrap:wrap;gap:8px"><input id="sec-doc-desc" placeholder="Descrição (ex.: Portaria de férias 2026, RG, comprovante de residência)" style="flex:1;min-width:240px;padding:6px 10px">'
     + '<label class="btn-primary" style="cursor:pointer">+ Anexar arquivo<input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.odt,.txt" style="display:none" onchange="sec_enviarDocs(this,\'' + pasta + '\',\'' + _jsq(referencia) + '\')"></label></div>'
-    + '<div id="sec-doc-lista" style="color:#64748b;padding:12px">Carregando…</div>';
+    + '<div id="sec-doc-lista" style="color:var(--idv-sec);padding:12px">Carregando…</div>';
   try {
     const r = await r2_api('GET', '/sec/list?pasta=' + encodeURIComponent(pasta));
     const arq = (r.arquivos || []).sort((a, b) => String(b.enviadoEm).localeCompare(String(a.enviadoEm)));
     const box = document.getElementById('sec-doc-lista'); if (!box) return;
     box.style.padding = '0';
-    box.innerHTML = '<div class="table-scroll"><table class="data-table"><thead><tr><th>Arquivo</th><th>Descrição</th><th>Enviado</th><th>Por</th><th></th></tr></thead><tbody>'
+    box.innerHTML = '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Arquivo</th><th>Descrição</th><th>Enviado</th><th>Por</th><th></th></tr></thead><tbody>'
       + (arq.length ? arq.map(a => '<tr><td><a href="#" onclick="sec_abrirDoc(\'' + encodeURIComponent(a.key) + '\',\'' + _jsq(a.nome) + '\');return false"><strong>' + esc(a.nome) + '</strong></a>'
-        + ' <span style="color:#94a3b8;font-size:.75rem">' + Math.max(1, Math.round((a.tamanho || 0) / 1024)) + ' KB</span></td><td>' + esc(a.descricao || '') + '</td>'
-        + '<td style="font-family:var(--font-mono);font-size:.8rem">' + (a.enviadoEm ? new Date(a.enviadoEm).toLocaleString('pt-BR') : '') + '</td><td style="font-size:.8rem">' + esc(a.enviadoPor || '') + '</td>'
-        + '<td><button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_apagarDoc(\'' + encodeURIComponent(a.key) + '\',\'' + pasta + '\',\'' + _jsq(referencia) + '\')">Apagar</button></td></tr>').join('')
-        : '<tr><td colspan="5" style="text-align:center;padding:24px;color:#888">Nenhum documento anexado.</td></tr>') + '</tbody></table></div>';
+        + ' <span class="idv-data" style="color:var(--idv-sec);font-size:12px">' + Math.max(1, Math.round((a.tamanho || 0) / 1024)) + ' KB</span></td><td>' + esc(a.descricao || '') + '</td>'
+        + '<td class="idv-data" style="font-size:13px">' + (a.enviadoEm ? new Date(a.enviadoEm).toLocaleString('pt-BR') : '') + '</td><td style="font-size:13px">' + esc(a.enviadoPor || '') + '</td>'
+        + '<td><button class="btn-sm btn-danger" onclick="sec_apagarDoc(\'' + encodeURIComponent(a.key) + '\',\'' + pasta + '\',\'' + _jsq(referencia) + '\')">Apagar</button></td></tr>').join('')
+        : '<tr><td colspan="5" class="idv-vazio">Nenhum documento anexado.</td></tr>') + '</tbody></table></div>';
   } catch (e) {
     const box = document.getElementById('sec-doc-lista');
     if (box) box.textContent = 'Não consegui abrir os documentos: ' + (e.message || e) + '. Se acabou de ser liberado o acesso, saia e entre de novo no sistema.';
@@ -600,16 +598,16 @@ const _SEC_ACOES = {
 };
 async function sec_renderAuditoria() {
   const c = document.getElementById('sec-conteudo'); if (!c) return;
-  c.innerHTML = '<div style="color:#64748b;padding:12px">Carregando auditoria…</div>';
+  c.innerHTML = '<div style="color:var(--idv-sec);padding:12px">Carregando auditoria…</div>';
   try {
     const r = await r2_api('GET', '/sec/audit?limit=500');
     const linhas = r.audit || [];
-    c.innerHTML = '<div style="font-size:.85rem;color:#64748b;margin-bottom:8px">Últimos 500 registros da Secretaria — visível só para Administração, Gerência e Secretaria.</div>'
-      + '<div class="table-scroll"><table class="data-table"><thead><tr><th>Data e hora</th><th>Usuário</th><th>Ação</th><th>Sobre</th><th>Detalhe</th></tr></thead><tbody>'
-      + (linhas.length ? linhas.map(a => '<tr><td style="font-family:var(--font-mono);font-size:.8rem;white-space:nowrap">' + new Date(a.ts).toLocaleString('pt-BR') + '</td>'
-        + '<td>' + esc(a.usuario || '') + '</td><td>' + esc(_SEC_ACOES[a.action] || a.action) + '</td><td>' + esc(a.alvo || '') + '</td><td style="font-size:.82rem">' + esc(a.detalhe || '') + '</td></tr>').join('')
-        : '<tr><td colspan="5" style="text-align:center;padding:24px;color:#888">Nenhum registro ainda.</td></tr>') + '</tbody></table></div>';
-  } catch (e) { c.innerHTML = '<div style="color:#b91c1c;padding:12px">Não consegui carregar a auditoria: ' + esc(e.message || String(e)) + '</div>'; }
+    c.innerHTML = '<div style="font-size:14px;color:var(--idv-sec);margin-bottom:8px">Últimos 500 registros da Secretaria — visível só para Administração, Gerência e Secretaria.</div>'
+      + '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Data e hora</th><th>Usuário</th><th>Ação</th><th>Sobre</th><th>Detalhe</th></tr></thead><tbody>'
+      + (linhas.length ? linhas.map(a => '<tr><td class="idv-data" style="font-size:13px;white-space:nowrap">' + new Date(a.ts).toLocaleString('pt-BR') + '</td>'
+        + '<td>' + esc(a.usuario || '') + '</td><td>' + esc(_SEC_ACOES[a.action] || a.action) + '</td><td>' + esc(a.alvo || '') + '</td><td style="font-size:13px">' + esc(a.detalhe || '') + '</td></tr>').join('')
+        : '<tr><td colspan="5" class="idv-vazio">Nenhum registro ainda.</td></tr>') + '</tbody></table></div>';
+  } catch (e) { c.innerHTML = '<div class="idv-faixa cr"><span>Não consegui carregar a auditoria: ' + esc(e.message || String(e)) + '</span></div>'; }
 }
 
 /* ═══════════ DESPACHOS PRODOC (modelo "Texto para responder documentos do PJEDOC – TUCUJURISDOC") ═══════════
@@ -676,9 +674,9 @@ function sec_renderDespachos() {
   mods.filter(m => !busca || (m.destino + ' ' + m.titulo + ' ' + m.assunto).toLowerCase().includes(busca)).forEach(m => { (grupos[m.destino] = grupos[m.destino] || []).push(m); });
   c.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">'
     + '<div style="flex:0 1 300px;min-width:240px"><input id="sec-dp-busca" placeholder="Buscar modelo" value="' + esc(busca) + '" oninput="sec_renderDespachos()" style="width:100%;padding:6px 10px;margin-bottom:8px">'
-    + Object.keys(grupos).map(g => '<div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px">PRODOC para ' + esc(g) + '</div>'
-      + grupos[g].map(m => '<div onclick="_secModeloId=\'' + m.id + '\';sec_renderDespachos()" style="cursor:pointer;padding:7px 10px;border-radius:4px;margin-bottom:3px;font-size:.88rem;'
-        + (m.id === _secModeloId ? 'background:#dbeafe;border-left:3px solid #2563eb;font-weight:600' : 'background:#f8fafc;border-left:3px solid transparent') + '">' + esc(m.titulo) + '</div>').join('')).join('')
+    + Object.keys(grupos).map(g => '<div style="font-size:13px;font-weight:600;color:var(--idv-sec);margin:12px 0 4px">PRODOC para ' + esc(g) + '</div>'
+      + grupos[g].map(m => '<div onclick="_secModeloId=\'' + m.id + '\';sec_renderDespachos()" style="cursor:pointer;padding:7px 10px;border-radius:4px;margin-bottom:3px;font-size:14px;'
+        + (m.id === _secModeloId ? 'background:var(--idv-ativo);border-left:3px solid var(--idv-cab);font-weight:600' : 'background:var(--idv-fundo);border-left:3px solid transparent') + '">' + esc(m.titulo) + '</div>').join('')).join('')
     + '<div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap"><button class="btn-primary" onclick="sec_editarModelo()">+ Novo modelo</button>'
     + '<button class="btn-secondary" onclick="sec_configGerente()">Gerente: ' + esc(_secGerente(d)) + '</button></div></div>'
     + '<div id="sec-dp-form" style="flex:1 1 440px;min-width:0"></div></div>';
@@ -694,23 +692,23 @@ function _secNomesConhecidos() {
 function _secRenderFormDespacho() {
   const box = document.getElementById('sec-dp-form'); if (!box) return;
   const m = _secModelos().find(x => x.id === _secModeloId);
-  if (!m) { box.innerHTML = '<div style="color:#888;padding:20px">Nenhum modelo.</div>'; return; }
+  if (!m) { box.innerHTML = '<div class="idv-vazio">Nenhum modelo.</div>'; return; }
   const campos = _secCamposDe(m);
-  box.innerHTML = '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:14px 16px">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div><div style="font-size:.75rem;color:#64748b">PRODOC PARA ' + esc(String(m.destino).toUpperCase()) + '</div>'
-    + '<div style="font-weight:700;font-size:1.02rem">' + esc(m.titulo) + '</div></div>'
+  box.innerHTML = '<div style="background:var(--idv-cartao);border:1px solid var(--idv-borda);border-radius:6px;padding:16px">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div><div style="font-size:12px;color:var(--idv-sec)">PRODOC PARA ' + esc(String(m.destino).toUpperCase()) + '</div>'
+    + '<div style="font-weight:600;font-size:16px">' + esc(m.titulo) + '</div></div>'
     + '<div style="display:flex;gap:6px"><button class="btn-sm btn-outline" onclick="sec_editarModelo(\'' + m.id + '\')">Editar modelo</button>'
-    + '<button class="btn-sm btn-outline" style="color:#b91c1c" onclick="sec_excluirModelo(\'' + m.id + '\')">Excluir</button></div></div>'
+    + '<button class="btn-sm btn-danger" onclick="sec_excluirModelo(\'' + m.id + '\')">Excluir</button></div></div>'
     + '<div class="form-grid" style="margin-top:10px">'
     + campos.map(k => /^DATA/.test(k)
       ? _secCampo('sec-dp-' + k, _secRotulo(k), '', 'type="date" oninput="_secPrevDespacho()"')
       : _secCampo('sec-dp-' + k, _secRotulo(k), '', (k === 'NOME' ? 'list="sec-dp-nomes" ' : '') + 'oninput="_secPrevDespacho()" style="text-transform:uppercase"')).join('')
     + '</div>' + (campos.includes('NOME') ? '<datalist id="sec-dp-nomes">' + _secNomesConhecidos().map(n => '<option>' + esc(n) + '</option>').join('') + '</datalist>' : '')
     + (_secUsaGenero(m) ? '<div class="form-field"><label>Gênero</label>' + _secChips('sec-dp-genero', [['M', 'Masculino'], ['F', 'Feminino']], 'M') + '</div>' : '')
-    + '<div style="margin-top:12px;font-size:.75rem;font-weight:700;color:#64748b">ASSUNTO</div>'
-    + '<div id="sec-dp-prev-assunto" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:8px 10px;font-weight:600"></div>'
-    + '<div style="margin-top:10px;font-size:.75rem;font-weight:700;color:#64748b">TEXTO</div>'
-    + '<div id="sec-dp-prev-texto" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:10px 12px;line-height:1.55;text-align:justify"></div>'
+    + '<div style="margin-top:12px;font-size:12px;font-weight:600;color:var(--idv-sec)">ASSUNTO</div>'
+    + '<div id="sec-dp-prev-assunto" style="background:var(--idv-fundo);border:1px solid var(--idv-borda);border-radius:6px;padding:8px 10px;font-weight:600"></div>'
+    + '<div style="margin-top:10px;font-size:12px;font-weight:600;color:var(--idv-sec)">TEXTO</div>'
+    + '<div id="sec-dp-prev-texto" style="background:var(--idv-fundo);border:1px solid var(--idv-borda);border-radius:6px;padding:10px 12px;line-height:1.55;text-align:justify"></div>'
     + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap">'
     + '<button class="btn-secondary" onclick="sec_copiarDespacho(\'assunto\')">Copiar assunto</button>'
     + '<button class="btn-primary" onclick="sec_copiarDespacho(\'texto\')">Copiar texto</button></div></div>';
@@ -753,7 +751,7 @@ function sec_editarModelo(id) {
     + '<datalist id="sec-md-destinos">' + destinos.map(x => '<option>' + esc(x) + '</option>').join('') + '</datalist>'
     + _secCampo('sec-md-assunto', 'Assunto', m.assunto, 'placeholder="Ex.: SOLICITA RELATÓRIO - {{NOME}}"')
     + '<div class="form-field"><label>Texto</label><textarea id="sec-md-texto" rows="7">' + esc(m.texto || '') + '</textarea></div>'
-    + '<div style="font-size:.8rem;color:#475569;background:#f8fafc;border-radius:6px;padding:8px 10px;line-height:1.6">'
+    + '<div style="font-size:13px;color:var(--idv-sec);background:var(--idv-fundo);border:1px solid var(--idv-linha);border-radius:6px;padding:8px 12px;line-height:1.6">'
     + '<b>Campos:</b> escreva entre chaves duplas e o sistema cria o campo para preencher — <code>{{NOME}}</code>, <code>{{OFICIO}}</code>, <code>{{ORGAO}}</code>, <code>{{PROJETO}}</code>, <code>{{UNIDADE}}</code> ou qualquer outro nome em MAIÚSCULAS. '
     + 'Nomes começando com <code>DATA</code> viram campo de data. <code>{{GERENTE}}</code> entra sozinho.<br>'
     + '<b>Gênero:</b> <code>{{G:o monitorado|a monitorada}}</code> troca conforme o botão Masculino/Feminino. <b>Negrito:</b> <code>**texto**</code>.</div>',
