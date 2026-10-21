@@ -378,6 +378,26 @@ async function ep_salvarMov(tipo, op, extra) {
   return true;
 }
 
+/* ── Saída do kit de instalação: vários itens para o mesmo monitorado numa gravação só.
+   Tudo ou nada: se faltar saldo de um item, nenhum sai. Uma movimentação por item, ligadas pelo kitId. ── */
+async function ep_salvarKit(ops, extra) {
+  if (!ep_podeMover()) { alert('Sem permissão para mexer no estoque do Plantão.'); return false; }
+  const kitId = _epId('kit-'), movs = [];
+  const ok = await _epMutar(d => {
+    movs.length = 0;
+    for (const op of ops) {
+      const opF = Object.assign({}, op, { soma: false });
+      const ap = ep_aplicar(d, opF, _epSerial(op.item)); if (ap.erro) return ap;
+      movs.push(ep_mov(EP_TIPO.saida, opF, ap.unidades, Object.assign({ responsavel: _epQuem(), plantonista: _epQuem(), equipe: _epEquipeHoje(), kitId }, extra || {})));
+    }
+    movs.slice().reverse().forEach(m => ep_registrarMov(d, m)); // o 1º item (módulo) fica no topo do histórico
+  });
+  if (!ok) return false;
+  addLog('Estoque do Plantão — Saída (kit): ' + movs.map(m => m.item + (m.tamanho ? ' ' + m.tamanho : '') + ' ×' + m.quantidade + (m.seriais.length ? ' (' + m.seriais.join(', ') + ')' : '')).join('; ')
+    + ' — ' + ((extra || {}).monitorado || '') + ' (' + _epQuem() + ', ' + _epEquipeHoje() + ')');
+  return true;
+}
+
 // resumo para o Dashboard (todos veem): módulos e DPP no CME e no plantão + o que está a caminho
 function ep_resumo() {
   const p = ep_get(), s = getEstoque(), tr = ep_getTransf(), M = 'Módulo eletrônico de monitoração', D = 'Dispositivo DPP';

@@ -208,6 +208,8 @@ async function ep_salvarMinimos() {
 
 /* ── formulário de movimentação ── */
 let _epForm = null; // { tipo }
+// Saída: kit de instalação (módulo + cinta + trava + carregador) para um monitorado só, gravado de uma vez (pedido de 21/10)
+const _EP_KIT = '__kit', _EP_MOD = 'Módulo eletrônico de monitoração', _EP_CARR = 'Carregador da tornozeleira';
 function ep_abrirMov(tipo) {
   if (!ep_podeMover()) { alert('Sem permissão.'); return; }
   _epForm = { tipo };
@@ -228,12 +230,70 @@ function ep_abrirMov(tipo) {
     + campo(tipo === 'baixa' ? 'Motivo da baixa *' : 'Descreva', '<input type="text" id="ep-f-mottxt" placeholder="' + (tipo === 'baixa' ? 'Defeito, perda, dano...' : 'Qual motivo?') + '">', 'ep-row-mottxt') + '</div>'
     + '<div class="form-grid">' + campo('Observação', '<input type="text" id="ep-f-obs" placeholder="Opcional">') + '</div>';
   _epModal(_EP_TITULO[tipo], corpo, _epBtn('Cancelar', "fecharModal('ep-modal')") + _epBtn('Registrar', 'ep_confirmarMov()', tipo === 'baixa' ? 'btn-danger' : 'btn-primary'));
+  // instalação nova é o caso comum da Saída: já abre no kit (dá para trocar para um item só)
+  if (tipo === 'saida') { document.getElementById('ep-f-cat').value = 'Tornozeleira'; _epAtualizarTipos(); document.getElementById('ep-f-item').value = _EP_KIT; }
   _epAtualizarForm(); _epAtualizarMotivo();
 }
 function _epAtualizarTipos() {
   const cat = document.getElementById('ep-f-cat').value, tipos = cat ? (EST_TIPOS[cat] || []) : [];
-  document.getElementById('ep-f-item').innerHTML = '<option value="">Selecione...</option>' + tipos.map(t => '<option value="' + esc(t) + '">' + esc(t) + '</option>').join('');
+  const kit = _epForm.tipo === 'saida' && cat === 'Tornozeleira' ? '<option value="' + _EP_KIT + '">Kit de instalação (módulo + cinta + trava + carregador)</option>' : '';
+  document.getElementById('ep-f-item').innerHTML = '<option value="">Selecione...</option>' + kit + tipos.map(t => '<option value="' + esc(t) + '">' + esc(t) + '</option>').join('');
   _epAtualizarForm();
+}
+// lista de unidades com busca pelo nº: "60499" acha "60499-1"; Enter marca quando sobra uma só
+function _epSoDig(s) { return String(s || '').toLowerCase().replace(/[^0-9a-z]/g, ''); }
+function _epHtmlListaUnid(us, tipoInput, cls, lbl) {
+  if (!us.length) return '<p style="color:var(--idv-at);font-size:13px">\u{26A0}\u{FE0F} Nenhuma unidade deste item no estoque do Plantão.</p>';
+  return '<input type="search" class="ep-busca" placeholder="Buscar ' + lbl + '..." autocomplete="off" oninput="_epFiltrarUnid(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();_epFiltrarUnid(this,true)}"'
+    + ' style="width:100%;padding:6px 10px;border:1px solid var(--idv-borda);border-radius:6px;font-family:var(--idv-mono);font-size:14px;margin:4px 0 6px">'
+    + '<div class="ep-lista" style="max-height:240px;overflow:auto;border:1px solid var(--idv-linha);border-radius:6px;padding:4px 8px">'
+    + us.map(u => '<label class="ep-u-lin" data-busca="' + _epSoDig(u.id) + '" style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:14px;cursor:pointer"><input type="' + tipoInput + '" class="' + cls + '"' + (tipoInput === 'radio' ? ' name="' + cls + '"' : '') + ' value="' + esc(u.id) + '"><span class="idv-mono">' + esc(u.id) + '</span>'
+      + (u.estado ? ' <span style="font-size:12px;color:var(--idv-sec)">' + esc(u.estado) + '</span>' : '') + (u.temCarregador ? ' \u{1F50B}' : '') + (u.temChip ? ' \u{1F4F6}' : '') + '</label>').join('')
+    + '</div><div class="ep-busca-nada" style="display:none;color:var(--idv-at);font-size:13px;margin-top:4px">Nenhum nº encontrado com esse número.</div>';
+}
+function _epFiltrarUnid(inp, marcar) {
+  const q = _epSoDig(inp.value), lista = inp.nextElementSibling, achou = [];
+  lista.querySelectorAll('.ep-u-lin').forEach(l => {
+    const bate = !!q && l.dataset.busca.includes(q); if (bate) achou.push(l);
+    l.style.display = !q || bate || l.querySelector('input').checked ? 'flex' : 'none'; // o já marcado nunca some
+  });
+  lista.nextElementSibling.style.display = q && !achou.length ? '' : 'none';
+  if (marcar && achou.length === 1) { achou[0].querySelector('input').checked = true; inp.value = ''; _epFiltrarUnid(inp); }
+}
+function _epHtmlKit() {
+  const d = ep_get(), saldo = k => d.itens[k] || 0, mods = ep_unidades(d, _EP_MOD);
+  const tams = EST_TAMANHOS.filter(t => saldo('Cinta_' + t) > 0), cinza = 'font-size:13px;color:var(--idv-sec)';
+  const linha = (id, rot, resto) => '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 0 4px;border-top:1px solid var(--idv-linha)">'
+    + '<label style="display:flex;gap:8px;align-items:center;min-width:130px;font-weight:600;font-size:14px;cursor:pointer"><input type="checkbox" id="' + id + '" checked> ' + rot + '</label>' + resto + '</div>';
+  const qtd = (id, k) => '<input type="number" id="' + id + '" min="1" value="1" style="width:80px;padding:5px 8px;border:1px solid var(--idv-borda);border-radius:6px;font-size:14px"><span style="' + cinza + '">' + saldo(k) + ' no plantão</span>';
+  return '<div class="form-section-title" style="margin-top:8px">Kit de instalação — desmarque o que não vai para este monitorado</div>'
+    + linha('ep-k-usa-mod', 'Módulo', '<span style="' + cinza + '">marque o nº de série (' + mods.length + ' no plantão)</span>')
+    + _epHtmlListaUnid(mods, 'radio', 'ep-k-mod', 'nº de série')
+    + linha('ep-k-usa-cinta', 'Cinta', tams.length
+      ? '<select id="ep-k-tam" style="padding:5px 8px;border:1px solid var(--idv-borda);border-radius:6px;font-size:14px"><option value="">Tamanho...</option>' + tams.map(t => '<option value="' + t + '">' + t + ' (' + saldo('Cinta_' + t) + ' no plantão)</option>').join('') + '</select>'
+      : '<span style="color:var(--idv-at);font-size:13px">Nenhuma cinta no plantão</span>')
+    + linha('ep-k-usa-trava', 'Trava', qtd('ep-k-qtd-trava', 'Trava'))
+    + linha('ep-k-usa-carr', 'Carregador', qtd('ep-k-qtd-carr', _EP_CARR));
+}
+// monta as saídas do kit (uma por item marcado); null = avisou e parou
+function _epOpsKit(v) {
+  const marcado = id => !!(document.getElementById(id) || {}).checked, ops = [], cat = 'Tornozeleira';
+  if (marcado('ep-k-usa-mod')) {
+    const r = document.querySelector('#ep-unidades .ep-k-mod:checked');
+    if (!r) { alert('Marque o nº de série do módulo (ou desmarque "Módulo").'); return null; }
+    ops.push({ categoria: cat, item: _EP_MOD, tamanho: '', estado: '', seriais: [r.value], qtd: 1 });
+  }
+  if (marcado('ep-k-usa-cinta')) {
+    if (!v('ep-k-tam')) { alert('Escolha o tamanho da cinta (ou desmarque "Cinta").'); return null; }
+    ops.push({ categoria: cat, item: 'Cinta', tamanho: v('ep-k-tam'), estado: '', qtd: 1 });
+  }
+  for (const [usa, campo, item, rot] of [['ep-k-usa-trava', 'ep-k-qtd-trava', 'Trava', 'Trava'], ['ep-k-usa-carr', 'ep-k-qtd-carr', _EP_CARR, 'Carregador']]) {
+    if (!marcado(usa)) continue;
+    if (!(parseInt(v(campo), 10) >= 1)) { alert('Informe a quantidade de ' + rot + ' (mínimo 1) ou desmarque.'); return null; }
+    ops.push({ categoria: cat, item, tamanho: '', estado: '', qtd: v(campo) });
+  }
+  if (!ops.length) { alert('Marque ao menos um item do kit.'); return null; }
+  return ops;
 }
 function _epAtualizarMotivo() {
   const sel = document.getElementById('ep-f-motsel'), row = document.getElementById('ep-row-mottxt');
@@ -243,13 +303,14 @@ function _epAtualizarForm() {
   const item = (document.getElementById('ep-f-item') || {}).value || '', soma = _epForm.tipo === 'entrada' || _epForm.tipo === 'devolucao';
   document.getElementById('ep-row-tam').style.display = item === 'Cinta' ? '' : 'none';
   // saída de item com nº de série: a quantidade é o número de unidades marcadas
-  document.getElementById('ep-row-qtd').style.display = ITENS_COM_SERIAL.includes(item) && !soma ? 'none' : '';
+  document.getElementById('ep-row-qtd').style.display = (ITENS_COM_SERIAL.includes(item) && !soma) || item === _EP_KIT ? 'none' : '';
   const rEst = document.getElementById('ep-row-estado'); if (rEst && _epForm.tipo === 'envio') rEst.style.display = ITENS_COM_SERIAL.includes(item) ? 'none' : '';
   _epAtualizarUnidades();
 }
 function _epAtualizarUnidades() {
   const box = document.getElementById('ep-unidades'); if (!box) return;
   const item = document.getElementById('ep-f-item').value, soma = _epForm.tipo === 'entrada' || _epForm.tipo === 'devolucao';
+  if (item === _EP_KIT) { box.innerHTML = _epHtmlKit(); return; }
   if (!ITENS_COM_SERIAL.includes(item)) { box.innerHTML = ''; return; }
   const dpp = item === 'Dispositivo DPP', lbl = dpp ? 'IMEI' : 'Nº de série';
   if (soma) {
@@ -262,9 +323,7 @@ function _epAtualizarUnidades() {
   }
   const us = ep_unidades(ep_get(), item);
   box.innerHTML = '<div class="form-section-title" style="margin-top:8px">Marque o ' + lbl + ' de cada unidade que sai (' + us.length + ' no plantão)</div>'
-    + (us.length ? us.map(u => '<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:14px;cursor:pointer"><input type="checkbox" class="ep-u-sel" value="' + esc(u.id) + '"><span class="idv-mono">' + esc(u.id) + '</span>'
-      + (u.estado ? ' <span style="font-size:12px;color:var(--idv-sec)">' + esc(u.estado) + '</span>' : '') + (u.temCarregador ? ' \u{1F50B}' : '') + (u.temChip ? ' \u{1F4F6}' : '') + '</label>').join('')
-      : '<p style="color:var(--idv-at);font-size:13px">\u{26A0}\u{FE0F} Nenhuma unidade deste item no estoque do Plantão.</p>');
+    + _epHtmlListaUnid(us, 'checkbox', 'ep-u-sel', lbl);
 }
 async function ep_confirmarMov() {
   const tipo = _epForm && _epForm.tipo; if (!tipo) return;
@@ -272,28 +331,35 @@ async function ep_confirmarMov() {
   const item = v('ep-f-item'), soma = tipo === 'entrada' || tipo === 'devolucao', serial = ITENS_COM_SERIAL.includes(item);
   if (!v('ep-f-cat')) return alert('Selecione a categoria.');
   if (!item) return alert('Selecione o tipo de item.');
-  if (item === 'Cinta' && !v('ep-f-tam')) return alert('Selecione o tamanho da cinta.');
-  const pedeEstado = soma || (tipo === 'envio' && !serial);
-  const op = { categoria: v('ep-f-cat'), item, tamanho: item === 'Cinta' ? v('ep-f-tam') : '', estado: pedeEstado ? v('ep-f-estado') : '' };
-  if (pedeEstado && !op.estado) return alert('Selecione o Estado do Item (Novo ou Reutilizado).');
-  if (serial && soma) {
-    op.unidades = [...document.querySelectorAll('#ep-unidades .ep-u')].map(r => ({ id: r.querySelector('.ep-u-id').value.trim(), estado: op.estado,
-      temCarregador: !!(r.querySelector('.ep-u-car') || {}).checked, temChip: !!(r.querySelector('.ep-u-chip') || {}).checked }));
-    op.qtd = v('ep-f-qtd');
-  } else if (serial) {
-    op.seriais = [...document.querySelectorAll('#ep-unidades .ep-u-sel:checked')].map(c => c.value);
-    op.qtd = op.seriais.length;
-    if (!op.qtd) return alert('Marque ao menos uma unidade.');
-  } else op.qtd = v('ep-f-qtd');
-  if (!(parseInt(op.qtd, 10) >= 1)) return alert('Informe uma quantidade válida (mínimo 1).');
+  const kit = item === _EP_KIT, ops = kit ? _epOpsKit(v) : null;
+  if (kit && !ops) return;
+  let op = null;
+  if (!kit) {
+    if (item === 'Cinta' && !v('ep-f-tam')) return alert('Selecione o tamanho da cinta.');
+    const pedeEstado = soma || (tipo === 'envio' && !serial);
+    op = { categoria: v('ep-f-cat'), item, tamanho: item === 'Cinta' ? v('ep-f-tam') : '', estado: pedeEstado ? v('ep-f-estado') : '' };
+    if (pedeEstado && !op.estado) return alert('Selecione o Estado do Item (Novo ou Reutilizado).');
+    if (serial && soma) {
+      op.unidades = [...document.querySelectorAll('#ep-unidades .ep-u')].map(r => ({ id: r.querySelector('.ep-u-id').value.trim(), estado: op.estado,
+        temCarregador: !!(r.querySelector('.ep-u-car') || {}).checked, temChip: !!(r.querySelector('.ep-u-chip') || {}).checked }));
+      op.qtd = v('ep-f-qtd');
+    } else if (serial) {
+      op.seriais = [...document.querySelectorAll('#ep-unidades .ep-u-sel:checked')].map(c => c.value);
+      op.qtd = op.seriais.length;
+      if (!op.qtd) return alert('Marque ao menos uma unidade.');
+    } else op.qtd = v('ep-f-qtd');
+    if (!(parseInt(op.qtd, 10) >= 1)) return alert('Informe uma quantidade válida (mínimo 1).');
+  }
   const sel = v('ep-f-motsel'), txt = v('ep-f-mottxt');
   const motivo = tipo === 'baixa' ? txt : sel === 'Outro' ? txt : sel + (txt ? ' — ' + txt : '');
   if (!motivo) return alert('Informe o motivo.');
   const mon = v('ep-f-mon');
   if ((tipo === 'saida' || tipo === 'devolucao') && !mon) return alert('Informe o monitorado.');
-  const ok = await ep_salvarMov(tipo, op, { motivo, monitorado: mon, processo: v('ep-f-proc'), obs: v('ep-f-obs') });
+  const extra = { motivo, monitorado: mon, processo: v('ep-f-proc'), obs: v('ep-f-obs') };
+  const ok = kit ? await ep_salvarKit(ops, extra) : await ep_salvarMov(tipo, op, extra);
   if (!ok) return;
   fecharModal('ep-modal');
-  _mostrarToast('\u{2713} ' + EP_TIPO[tipo] + ' registrada no estoque do Plantão.' + (tipo === 'envio' ? ' Fica "a receber" no Estoque do CME.' : ''), 'ok');
+  _mostrarToast(kit ? '\u{2713} Saída do kit registrada para ' + mon + ': ' + ops.map(o => o.item === _EP_MOD ? 'módulo ' + o.seriais[0] : o.item === 'Cinta' ? 'cinta ' + o.tamanho : (o.item === 'Trava' ? 'trava' : 'carregador') + ' ×' + o.qtd).join(', ') + '.'
+    : '\u{2713} ' + EP_TIPO[tipo] + ' registrada no estoque do Plantão.' + (tipo === 'envio' ? ' Fica "a receber" no Estoque do CME.' : ''), 'ok');
   ep_renderizar(); try { _dashEstoqueDisp(); } catch (e) {}
 }
