@@ -32,32 +32,34 @@ async function rds_carregar() {
 
 function _rdsRender() {
   const el = document.getElementById('rds-corpo'); if (!el) return;
-  if (_rdsErro && !_rdsLista) { el.innerHTML = '<div style="color:#b91c1c;font-size:.85rem">Não consegui abrir o radar: ' + _mpEsc(_rdsErro) + '</div>'; return; }
-  if (!_rdsLista) { el.innerHTML = '<div style="color:#64748b;font-size:.85rem">Carregando o radar…</div>'; return; }
+  if (_rdsErro && !_rdsLista) { el.innerHTML = '<div class="idv-faixa cr"><span>Não consegui abrir o radar: ' + _mpEsc(_rdsErro) + '</span></div>'; return; }
+  if (!_rdsLista) { el.innerHTML = '<div style="color:var(--idv-sec);font-size:13px">Carregando o radar…</div>'; return; }
   const L = _rdsLista, alvos = L.alvos || [];
   const linha = a => {
     const viaMandado = a.origem === 'mandado';
     let al = null; try { al = a.tz_alertas ? JSON.parse(a.tz_alertas) : null; } catch (e) { al = null; }
-    const alertasAk = (al && al.rompida ? '<div style="font-size:.72rem;font-weight:700;color:#b91c1c">PULSEIRA ROMPIDA</div>' : '') + (al && al.descarregada ? '<div style="font-size:.72rem;font-weight:700;color:#c2410c">BATERIA DESCARREGADA</div>' : '');
-    const ficha = a.ficha_erro ? '<span style="color:#b91c1c">' + _mpEsc(a.ficha_erro) + '</span>'
-      : !a.ficha_em ? '<span style="color:#b45309">\u{23F3} aguardando o robô buscar a ficha no AKILES</span>' : '';
-    const sinal = a.tz_ts ? (Date.now() - a.tz_ts < 20 * 60000 ? '<b style="color:#15803d">ao vivo</b> ' : '<b style="color:#b45309">sem comunicar</b> ') + _rdsHa(a.tz_ts) : '<span style="color:#64748b">sem posição ainda</span>';
-    return '<tr style="border-top:1px solid #f1f5f9">'
-      + '<td style="padding:6px"><b>' + _mpEsc(a.nome || '(nome a buscar)') + '</b><div style="font-family:var(--font-mono);font-size:.75rem;color:#64748b">reg. ' + _mpEsc(a.id_akiles) + '</div>' + (ficha ? '<div style="font-size:.74rem">' + ficha + '</div>' : '') + '</td>'
-      + '<td style="padding:6px"><span style="display:inline-block;font-size:.66rem;font-weight:700;padding:2px 7px;border-radius:3px;border-left:2px solid ' + (viaMandado ? '#dc2626;background:#fef2f2;color:#b91c1c">MANDADO' : '#2563eb;background:#eff6ff;color:#1d4ed8">INDIVIDUAL') + '</span>'
-        + (viaMandado && a.mandado_numero ? '<div style="font-size:.72rem;color:#475569;margin-top:2px">nº ' + _mpEsc(a.mandado_numero) + (a.mandado_orgao ? ' · ' + _mpEsc(a.mandado_orgao) : '') + '</div>' : '') + '</td>'
-      + '<td style="padding:6px;font-size:.8rem">' + sinal + alertasAk + (a.end_atual ? '<div style="color:#334155">\u{1F4CD} ' + _mpEsc(a.end_atual) + '</div>' : '') + '</td>'
-      + '<td style="padding:6px;font-size:.72rem;color:#64748b">' + _mpEsc(a.adicionado_por || '') + '<div>' + (a.adicionado_em ? new Date(a.adicionado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '') + '</div></td>'
-      + '<td style="padding:6px;text-align:right"><button type="button" data-rds-remover="' + _mpEsc(a.id_akiles) + '" style="background:#fff;border:1px solid #fca5a5;color:#b91c1c;border-radius:6px;padding:4px 10px;font-size:.78rem;cursor:pointer">Remover</button></td></tr>';
+    const alertasAk = (al && al.rompida ? '<div class="idv-det cr">PULSEIRA ROMPIDA</div>' : '') + (al && al.descarregada ? '<div class="idv-det at">BATERIA DESCARREGADA</div>' : '');
+    const ficha = a.ficha_erro ? '<span style="color:var(--idv-cr)">' + _mpEsc(a.ficha_erro) + '</span>'
+      : !a.ficha_em ? '<span style="color:var(--idv-at)">\u{23F3} aguardando o robô buscar a ficha no AKILES</span>' : '';
+    const sinal = a.tz_ts ? (Date.now() - a.tz_ts < 20 * 60000 ? '<b style="color:var(--idv-ok);font-weight:600">ao vivo</b> ' : '<b style="color:var(--idv-at);font-weight:600">sem comunicar</b> ') + '<span class="idv-data">' + _rdsHa(a.tz_ts) + '</span>' : '<span style="color:var(--idv-sec)">sem posição ainda</span>';
+    // situação como faixa à esquerda da linha (só visual): pulseira rompida = vermelho; bateria ou sem comunicar = amarelo
+    const faixa = al && al.rompida ? 'var(--idv-cr)' : (al && al.descarregada) || (a.tz_ts && Date.now() - a.tz_ts >= 20 * 60000) ? 'var(--idv-at)' : '';
+    return '<tr' + (faixa ? ' style="box-shadow:inset 3px 0 0 ' + faixa + '"' : '') + '>'
+      + '<td><div class="idv-nome">' + _mpEsc(a.nome || '(nome a buscar)') + '</div><div class="idv-mini">reg. <span class="idv-mono">' + _mpEsc(a.id_akiles) + '</span></div>' + (ficha ? '<div style="font-size:12px;margin-top:2px">' + ficha + '</div>' : '') + '</td>'
+      + '<td>' + (viaMandado ? '<span class="idv-etq cr">MANDADO</span>' : '<span class="idv-etq in">INDIVIDUAL</span>')
+        + (viaMandado && a.mandado_numero ? '<div class="idv-mini" style="margin-top:3px">nº <span class="idv-mono">' + _mpEsc(a.mandado_numero) + '</span>' + (a.mandado_orgao ? ' · ' + _mpEsc(a.mandado_orgao) : '') + '</div>' : '') + '</td>'
+      + '<td style="font-size:13px">' + sinal + alertasAk + (a.end_atual ? '<div style="color:var(--idv-texto)">\u{1F4CD} ' + _mpEsc(a.end_atual) + '</div>' : '') + '</td>'
+      + '<td style="font-size:12px;color:var(--idv-sec)">' + _mpEsc(a.adicionado_por || '') + '<div class="idv-data">' + (a.adicionado_em ? new Date(a.adicionado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '') + '</div></td>'
+      + '<td style="text-align:right"><button type="button" class="idv-btn mini perigo" data-rds-remover="' + _mpEsc(a.id_akiles) + '">Remover</button></td></tr>';
   };
   el.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'
-    + '<input id="rds-codigo" inputmode="numeric" maxlength="15" placeholder="Código (nº de registro)" style="padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;font-family:var(--font-mono);width:210px" onkeydown="if(event.key===\'Enter\')rds_adicionarDoCampo()">'
-    + '<button type="button" onclick="rds_adicionarDoCampo()" style="background:#1f883d;color:#fff;border:1px solid rgba(31,35,40,.15);border-radius:6px;padding:6px 14px;font-weight:600;cursor:pointer">\u{1F4E1} Rastrear este código</button>'
-    + '<span style="font-size:.75rem;color:#64748b">' + alvos.length + ' de ' + (L.max || 30) + ' no radar · atualiza a cada 1 min</span>'
-    + '<div style="flex:1"></div><button type="button" onclick="rds_carregar()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:5px 12px;font-size:.8rem;cursor:pointer">\u{1F504} Atualizar</button></div>'
-    + (alvos.length ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr style="color:#64748b;text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em">'
-        + ['Monitorado', 'Motivo', 'Agora', 'Colocado por', ''].map(h => '<th style="padding:4px 6px;font-weight:600">' + h + '</th>').join('') + '</tr></thead><tbody>' + alvos.map(linha).join('') + '</tbody></table></div>'
-      : '<div style="font-size:.85rem;color:#64748b">Ninguém no radar. Use "Rastrear" na ficha de quem tem mandado ou digite o código acima.</div>')
+    + '<input id="rds-codigo" inputmode="numeric" maxlength="15" placeholder="Código (nº de registro)" style="height:32px;padding:0 10px;border:1px solid var(--idv-borda);border-radius:6px;font-family:var(--idv-mono);font-size:14px;width:210px" onkeydown="if(event.key===\'Enter\')rds_adicionarDoCampo()">'
+    + '<button type="button" class="idv-btn mini criar" onclick="rds_adicionarDoCampo()">\u{1F4E1} Rastrear este código</button>'
+    + '<span style="font-size:12px;color:var(--idv-sec)"><span class="idv-data">' + alvos.length + ' de ' + (L.max || 30) + '</span> no radar · atualiza a cada 1 min</span>'
+    + '<div style="flex:1"></div><button type="button" class="idv-btn mini" onclick="rds_carregar()">\u{1F504} Atualizar</button></div>'
+    + (alvos.length ? '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr>'
+        + ['Monitorado', 'Motivo', 'Agora', 'Colocado por', ''].map(h => '<th>' + h + '</th>').join('') + '</tr></thead><tbody>' + alvos.map(linha).join('') + '</tbody></table></div>'
+      : '<div style="font-size:14px;color:var(--idv-sec);padding:12px 0">Ninguém no radar. Use "Rastrear" na ficha de quem tem mandado ou digite o código acima.</div>')
     + _rdsHtmlAcesso(L);
   el.querySelectorAll('[data-rds-remover]').forEach(b => b.addEventListener('click', () => rds_remover(b.getAttribute('data-rds-remover'))));
   // copiar o link sem montar o texto dentro de onclick (senha escolhida pode ter aspas e símbolos)
@@ -66,13 +68,13 @@ function _rdsRender() {
 
 // Código de acesso do app (um só). O CME não guarda o código: só mostra o link logo depois de trocar.
 function _rdsHtmlAcesso(L) {
-  return '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:.8rem;color:#475569">'
-    + '<b>Acesso no celular:</b> ' + (L.codigo_definido ? 'senha gerada em ' + new Date(L.codigo_trocado_em).toLocaleString('pt-BR') + '. ' : '<span style="color:#b91c1c">ainda sem senha — gere uma para abrir o radar no celular.</span> ')
-    + ' <button type="button" onclick="rds_trocarCodigo()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:4px 10px;font-size:.78rem;cursor:pointer">' + (L.codigo_definido ? 'Gerar nova senha' : 'Gerar senha') + '</button>'
-    + ' <span style="color:#94a3b8">ou</span> <input id="rds-senha-propria" type="password" autocomplete="new-password" maxlength="40" placeholder="escolha a senha" style="padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px;width:170px">'
-    + ' <button type="button" onclick="rds_cadastrarSenha()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:4px 10px;font-size:.78rem;cursor:pointer">Cadastrar senha</button>'
-    + '<div style="font-size:.72rem;color:#94a3b8;margin-top:3px">Gere uma senha forte (20 letras e números, aparece só uma vez, aqui) ou cadastre a sua: de 8 a 40 caracteres, sem espaço, com letra e número. Trocar a senha desconecta todos os celulares com o radar aberto.</div>'
-    + (_rdsLinkNovo ? '<div style="margin-top:6px;padding:8px 10px;background:#f0fdf4;border-left:3px solid #16a34a;border-radius:4px">' + (_rdsCodigoNovo ? '\u{1F511} Senha: <b style="font-family:var(--font-mono);letter-spacing:.06em">' + _mpEsc(_rdsCodigoNovo) + '</b> · ' : '\u{1F511} Senha cadastrada. · ') + '\u{1F517} link (envie só para quem vai rastrear; ele já leva a senha): <a href="' + _mpEsc(_rdsLinkNovo).replace(/"/g, '&quot;') + '" target="_blank" rel="noopener" style="font-family:var(--font-mono)">' + _mpEsc(_rdsLinkNovo) + '</a> <button type="button" data-rds-copiar="1" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:2px 8px;font-size:.75rem;cursor:pointer">Copiar</button></div>' : '')
+  return '<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--idv-linha);font-size:13px;color:var(--idv-sec)">'
+    + '<b>Acesso no celular:</b> ' + (L.codigo_definido ? 'senha gerada em <span class="idv-data">' + new Date(L.codigo_trocado_em).toLocaleString('pt-BR') + '</span>. ' : '<span style="color:var(--idv-cr)">ainda sem senha — gere uma para abrir o radar no celular.</span> ')
+    + ' <button type="button" class="idv-btn mini" onclick="rds_trocarCodigo()">' + (L.codigo_definido ? 'Gerar nova senha' : 'Gerar senha') + '</button>'
+    + ' <span style="color:var(--idv-sec)">ou</span> <input id="rds-senha-propria" type="password" autocomplete="new-password" maxlength="40" placeholder="escolha a senha" style="height:32px;padding:0 10px;border:1px solid var(--idv-borda);border-radius:6px;width:170px;font-size:14px">'
+    + ' <button type="button" class="idv-btn mini" onclick="rds_cadastrarSenha()">Cadastrar senha</button>'
+    + '<div style="font-size:12px;color:var(--idv-sec);margin-top:6px">Gere uma senha forte (20 letras e números, aparece só uma vez, aqui) ou cadastre a sua: de 8 a 40 caracteres, sem espaço, com letra e número. Trocar a senha desconecta todos os celulares com o radar aberto.</div>'
+    + (_rdsLinkNovo ? '<div class="idv-faixa ok" style="margin-top:8px"><span>' + (_rdsCodigoNovo ? '\u{1F511} Senha: <b class="idv-mono" style="letter-spacing:.06em">' + _mpEsc(_rdsCodigoNovo) + '</b> · ' : '\u{1F511} Senha cadastrada. · ') + '\u{1F517} link (envie só para quem vai rastrear; ele já leva a senha): <a href="' + _mpEsc(_rdsLinkNovo).replace(/"/g, '&quot;') + '" target="_blank" rel="noopener" class="idv-mono" style="color:var(--idv-in)">' + _mpEsc(_rdsLinkNovo) + '</a> <button type="button" class="idv-btn mini" data-rds-copiar="1">Copiar</button></span></div>' : '')
     + '</div>';
 }
 
@@ -158,12 +160,12 @@ function _rdsMarcarCartoes() {
     const i = +b.getAttribute('data-rds-item'), x = (_mpPastaAtual.itens || [])[i], reg = x && x.ficha && x.ficha.registro;
     const no = _rdsNoRadar(reg);
     b.textContent = no ? '\u{1F4E1} No radar' : '\u{1F4E1} Rastrear';
-    b.style.background = no ? '#f0fdf4' : '#fff'; b.style.color = no ? '#15803d' : '#1d4ed8'; b.style.borderColor = no ? '#86efac' : '#93c5fd';
+    b.style.background = no ? 'var(--idv-ok-f)' : 'var(--idv-cartao)'; b.style.color = no ? 'var(--idv-ok)' : 'var(--idv-in)'; b.style.borderColor = no ? 'var(--idv-ok)' : 'var(--idv-borda)';
     b.disabled = !reg;
     b.title = !reg ? 'Sem registro do AKILES nesta ficha' : no ? 'Já está no radar (remova na lista do radar)' : 'Colocar no radar do Satélite';
   });
 }
 function _rdsBotaoCartao(i) {
   if (!_rdsPode()) return '';
-  return '<button type="button" data-rds-item="' + i + '" onclick="event.stopPropagation();if(!this.textContent.includes(\'No radar\'))rds_rastrearDaPasta(' + i + ')" style="margin-top:6px;background:#fff;border:1px solid #93c5fd;color:#1d4ed8;border-radius:4px;padding:3px 8px;font-size:.72rem;font-weight:600;cursor:pointer">\u{1F4E1} Rastrear</button>';
+  return '<button type="button" data-rds-item="' + i + '" onclick="event.stopPropagation();if(!this.textContent.includes(\'No radar\'))rds_rastrearDaPasta(' + i + ')" style="margin-top:6px;background:var(--idv-cartao);border:1px solid var(--idv-borda);color:var(--idv-in);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;cursor:pointer">\u{1F4E1} Rastrear</button>';
 }

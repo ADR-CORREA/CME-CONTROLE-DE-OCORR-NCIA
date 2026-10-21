@@ -13,7 +13,8 @@ const _EP_MOTIVOS = {
   baixa:     ['Outro'],
 };
 const _EP_TITULO = { entrada: '\u{2B06} Inventário inicial do Plantão', saida: '\u{2B07} Saída — instalação / entrega', devolucao: '\u{21A9} Devolução ao plantão (retirado do monitorado)', baixa: '\u{2715} Baixa (defeito, perda, dano)', envio: '\u{1F4E6} Enviar ao setor de Estoque' };
-const _EP_BADGE = { 'Entrada': 'badge-ok', 'Recebimento': 'badge-ok', 'Saída': 'badge-vencido', 'Devolução': 'badge-atencao', 'Baixa': 'badge-vencendo', 'Envio ao setor': 'badge-vencendo' };
+const _EP_BADGE = { 'Entrada': 'ok', 'Recebimento': 'ok', 'Saída': 'cr', 'Devolução': 'at', 'Baixa': 'at', 'Envio ao setor': 'at' };
+const _EP_ETQ = { ok: 'ok', baixo: 'at', zero: 'cr' }; // estStatusCls → cor da etiqueta do guia
 
 function _epMin(d, chave) {
   const m = (d.configuracoes.minimos || {})[chave];
@@ -34,30 +35,30 @@ function ep_renderizar() {
   let baixo = 0, zero = 0;
   Object.keys(EST_PADRAO.itens).filter(k => _epControla(d, k)).forEach(k => { const s = estStatusCls(it[k] || 0, _epMin(d, k)); if (s === 'zero') zero++; else if (s === 'baixo') baixo++; });
   const total = Object.keys(EST_PADRAO.itens).reduce((s, k) => s + (it[k] || 0), 0);
-  const kpi = (n, l, cls) => '<div class="est-kpi' + (cls ? ' ' + cls : '') + '"><div class="est-kpi-num">' + n + '</div><div class="est-kpi-label">' + l + '</div></div>';
+  const kpi = (n, l, cls) => '<div class="idv-kpi' + (cls ? ' ' + cls : '') + '"><div class="idv-num">' + n + '</div><div class="idv-rot">' + l + '</div></div>';
   const equipe = _epEquipeHoje();
   const html = [];
-  html.push('<div class="est-header"><div class="est-header-title">\u{1F6E1}\u{FE0F} Estoque do Plantão</div>'
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap">' + _epBtn('\u{1F504} Atualizar', 'ep_renderizar()')
+  html.push('<div class="idv-cab"><div><h1>\u{1F6E1}\u{FE0F} Estoque do Plantão</h1>'
+    + '<div class="idv-sub">Um estoque só para as equipes ALFA a ECHO, separado do Estoque do CME. Lance na hora tudo que entra e sai. Equipe de hoje: <b>' + esc(equipe || '—') + '</b></div></div>'
+    + '<div class="idv-acoes">' + _epBtn('\u{1F504} Atualizar', 'ep_renderizar()')
     + (pode && !d.inventarioEncerradoEm ? _epBtn('\u{2B06} Inventário inicial', "ep_abrirMov('entrada')", 'btn-primary') + _epBtn('\u{2714} Encerrar inventário', 'ep_encerrarInventario()') : '')
     + (pode ? _epBtn('\u{2B07} Saída', "ep_abrirMov('saida')") + _epBtn('\u{21A9} Devolução', "ep_abrirMov('devolucao')")
       + _epBtn('\u{1F4E6} Enviar ao Estoque', "ep_abrirMov('envio')") + _epBtn('\u{2715} Baixa', "ep_abrirMov('baixa')", 'btn-danger') + _epBtn('\u{2699}\u{FE0F} Mínimos', 'ep_abrirMinimos()') : '')
     + (admin && d.inventarioEncerradoEm ? _epBtn('Reabrir inventário', 'ep_reabrirInventario()', 'btn-secondary', 'Libera de novo o cadastro de inventário pelo plantão') : '')
-    + '</div></div>'
-    + '<div style="font-size:.8rem;color:#64748b;margin:-4px 0 10px">Um estoque só para as equipes ALFA a ECHO, separado do Estoque do CME. Lance na hora tudo que entra e sai. Equipe de hoje: <b>' + esc(equipe || '—') + '</b></div>');
-  if (!pode) html.push('<div class="est-aviso-perm">\u{1F512} <strong>Modo visualização:</strong> só o plantão lança movimentações aqui.</div>');
+    + '</div></div>');
+  if (!pode) html.push('<div class="idv-faixa at" style="margin-bottom:12px"><span>\u{1F512} <strong>Modo visualização:</strong> só o plantão lança movimentações aqui.</span></div>');
   // 1º momento: o plantão cadastra o que já tem; depois, tudo novo vem do Estoque do CME
   html.push(d.inventarioEncerradoEm
-    ? '<div style="font-size:.78rem;color:#64748b;margin-bottom:8px">\u{2714} Inventário inicial encerrado em ' + new Date(d.inventarioEncerradoEm).toLocaleString('pt-BR') + (d.inventarioEncerradoPor ? ' por ' + esc(d.inventarioEncerradoPor) : '') + '. Item novo chega pelo Estoque do CME, em "A receber".</div>'
-    : '<div class="est-alerta-box" style="background:#eef4ff;border-color:#b6cdf7;color:#1a4fa3">\u{1F4CB} <strong>Primeiro passo — inventário inicial:</strong> cadastre em "Inventário inicial" tudo que o plantão já tem na sala (com o IMEI/nº de série de cada DPP e módulo). Quando terminar, clique em <b>Encerrar inventário</b>. Depois disso, item novo só entra pelo que o Estoque do CME enviar ("A receber").</div>');
-  if (d.recontagemEm) html.push('<div class="est-alerta-box" style="background:#eef4ff;border-color:#b6cdf7;color:#1a4fa3">\u{1F9EE} <strong>Recontagem em ' + new Date(d.recontagemEm).toLocaleString('pt-BR') + ':</strong> o saldo conta só o que foi lançado a partir dessa data.</div>');
+    ? '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:12px">\u{2714} Inventário inicial encerrado em <span class="idv-data">' + new Date(d.inventarioEncerradoEm).toLocaleString('pt-BR') + '</span>' + (d.inventarioEncerradoPor ? ' por ' + esc(d.inventarioEncerradoPor) : '') + '. Item novo chega pelo Estoque do CME, em "A receber".</div>'
+    : '<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:12px"><span>\u{1F4CB} <strong>Primeiro passo — inventário inicial:</strong> cadastre em "Inventário inicial" tudo que o plantão já tem na sala (com o IMEI/nº de série de cada DPP e módulo). Quando terminar, clique em <b>Encerrar inventário</b>. Depois disso, item novo só entra pelo que o Estoque do CME enviar ("A receber").</span></div>');
+  if (d.recontagemEm) html.push('<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:12px"><span>\u{1F9EE} <strong>Recontagem em <span class="idv-data">' + new Date(d.recontagemEm).toLocaleString('pt-BR') + '</span>:</strong> o saldo conta só o que foi lançado a partir dessa data.</span></div>');
   html.push(_epHtmlPendencias('plantao', pode));
-  html.push('<div class="est-kpi-grid">' + kpi(it[M] || 0, 'Módulo Eletrônico') + kpi(cinta, 'Cintas (total)') + kpi(it['Trava'] || 0, 'Travas') + kpi(it['Carregador da tornozeleira'] || 0, 'Carregadores Tornozeleira')
+  html.push('<div class="idv-kpis" style="margin-bottom:16px">' + kpi(it[M] || 0, 'Módulo Eletrônico') + kpi(cinta, 'Cintas (total)') + kpi(it['Trava'] || 0, 'Travas') + kpi(it['Carregador da tornozeleira'] || 0, 'Carregadores Tornozeleira')
     + kpi(it[D] || 0, 'Dispositivos DPP') + kpi(pe.novo[M] || 0, 'Tornozeleiras Novas') + kpi(pe.reutilizado[M] || 0, 'Tornozeleiras Reutilizadas') + kpi(total, 'Total Geral')
-    + kpi(baixo, 'Estoque Baixo', 'alerta') + kpi(zero, 'Sem Estoque', 'perigo') + '</div>');
+    + kpi(baixo, 'Estoque Baixo', 'at') + kpi(zero, 'Sem Estoque', 'cr') + '</div>');
   html.push(_epHtmlTabelas(d, pe));
-  html.push('<div class="est-section-title" style="margin-top:22px">\u{1F50D} Onde está? (nº de série, IMEI, monitorado, plantonista)</div>'
-    + '<input type="text" id="ep-busca" placeholder="Digite o IMEI, nº de série, nome do monitorado..." oninput="ep_consultar(this.value)" style="width:100%;max-width:560px;padding:8px 12px;border:1px solid #ccc;border-radius:6px">'
+  html.push('<div class="idv-secao">\u{1F50D} Onde está? (nº de série, IMEI, monitorado, plantonista)</div>'
+    + '<input type="text" id="ep-busca" placeholder="Digite o IMEI, nº de série, nome do monitorado..." oninput="ep_consultar(this.value)" style="width:100%;max-width:560px;height:38px;padding:0 12px;border:1px solid var(--idv-borda);border-radius:6px;font-size:14px;background:var(--idv-cartao);color:var(--idv-texto)">'
     + '<div id="ep-busca-res" style="margin-top:8px"></div>');
   html.push(_epHtmlHistorico(d, admin));
   const busca = document.getElementById('ep-busca'), valor = busca ? busca.value : '';
@@ -65,30 +66,30 @@ function ep_renderizar() {
   if (valor) { const b = document.getElementById('ep-busca'); b.value = valor; ep_consultar(valor); }
 }
 
-function _epHtmlUnid(t) { return (t.unidades || []).length ? '<div style="font-family:ui-monospace,Consolas,monospace;font-size:.78rem;margin-top:2px">' + t.unidades.map(u => esc(u.id) + (u.temCarregador ? ' \u{1F50B}' : '') + (u.temChip ? ' \u{1F4F6}' : '')).join(' · ') + '</div>' : ''; }
+function _epHtmlUnid(t) { return (t.unidades || []).length ? '<div class="idv-mono" style="font-size:12px;margin-top:2px">' + t.unidades.map(u => esc(u.id) + (u.temCarregador ? ' \u{1F50B}' : '') + (u.temChip ? ' \u{1F4F6}' : '')).join(' · ') + '</div>' : ''; }
 function _epHtmlTransf(t, botoes, nota) {
-  return '<div style="border:1px solid #fcd34d;border-left:4px solid #d97706;background:#fffbeb;border-radius:6px;padding:8px 10px;margin:6px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap">'
-    + '<div style="flex:1;min-width:220px"><b>' + esc(t.item) + (t.tamanho ? ' ' + esc(t.tamanho) : '') + ' \u{00D7}' + esc(t.quantidade) + '</b>' + (t.estado ? ' <span style="color:#64748b">(' + esc(t.estado) + ')</span>' : '')
+  return '<div style="border:1px solid var(--idv-borda);border-left:3px solid var(--idv-at);background:var(--idv-cartao);border-radius:6px;padding:8px 12px;margin:6px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap">'
+    + '<div style="flex:1;min-width:220px"><b>' + esc(t.item) + (t.tamanho ? ' ' + esc(t.tamanho) : '') + ' \u{00D7}' + esc(t.quantidade) + '</b>' + (t.estado ? ' <span style="color:var(--idv-sec)">(' + esc(t.estado) + ')</span>' : '')
     + _epHtmlUnid(t)
-    + '<div style="font-size:.76rem;color:#64748b">Enviado por ' + esc(t.enviadoPor || '—') + ' em ' + new Date(t.enviadoEm || t.ts).toLocaleString('pt-BR') + (t.equipe ? ' · equipe ' + esc(t.equipe) : '') + (t.plantonista ? ' · para ' + esc(t.plantonista) : '') + (t.motivo ? ' · ' + esc(t.motivo) : '') + (t.obs ? ' · ' + esc(t.obs) : '') + '</div>'
-    + (t.status === 'recusada' ? '<div style="font-size:.78rem;color:#b91c1c">Recusado por ' + esc(t.decididoPor || '—') + (t.motivoDecisao ? ': ' + esc(t.motivoDecisao) : '') + '</div>' : '')
-    + (nota ? '<div style="font-size:.78rem;color:#b91c1c">' + nota + '</div>' : '') + '</div>'
+    + '<div style="font-size:12px;color:var(--idv-sec)">Enviado por ' + esc(t.enviadoPor || '—') + ' em <span class="idv-data">' + new Date(t.enviadoEm || t.ts).toLocaleString('pt-BR') + '</span>' + (t.equipe ? ' · equipe ' + esc(t.equipe) : '') + (t.plantonista ? ' · para ' + esc(t.plantonista) : '') + (t.motivo ? ' · ' + esc(t.motivo) : '') + (t.obs ? ' · ' + esc(t.obs) : '') + '</div>'
+    + (t.status === 'recusada' ? '<div style="font-size:12px;color:var(--idv-cr)">Recusado por ' + esc(t.decididoPor || '—') + (t.motivoDecisao ? ': ' + esc(t.motivoDecisao) : '') + '</div>' : '')
+    + (nota ? '<div style="font-size:12px;color:var(--idv-cr)">' + nota + '</div>' : '') + '</div>'
     + botoes + '</div>';
 }
 // pendências de UM lado ('plantao' no painel do plantão, 'setor' dentro da aba Estoque do CME)
 function _epHtmlPendencias(lado, pode) {
   const p = ep_pendenciasDe(lado), outro = lado === 'plantao' ? 'Estoque do CME' : 'Plantão';
   const b = (txt, js, cls) => pode ? _epBtn(txt, js, cls) : '';
-  const sec = (tit, lista, botoes, cor) => lista.length ? '<div class="est-section-title"' + (cor ? ' style="color:' + cor + '"' : '') + '>' + tit + ' (' + lista.length + ')</div>' + lista.map(botoes).join('') : '';
+  const sec = (tit, lista, botoes, cor) => lista.length ? '<div class="idv-secao"' + (cor ? ' style="color:' + cor + '"' : '') + '>' + tit + ' (' + lista.length + ')</div>' + lista.map(botoes).join('') : '';
   return sec('\u{1F4E5} A receber do ' + outro + ' — confira os números e clique em Receber', p.aReceber,
       t => _epHtmlTransf(t, b('\u{2705} Receber', "ep_receberTransf('" + _jsq(t.id) + "')", 'btn-primary') + b('Recusar', "ep_perguntarRecusa('" + _jsq(t.id) + "')")))
     + sec('\u{21A9} Recusado pelo ' + outro + ' — receba de volta no seu estoque', p.receberDeVolta,
-      t => _epHtmlTransf(t, b('\u{21A9} Receber de volta', "ep_receberDeVolta('" + _jsq(t.id) + "')", 'btn-primary')), '#b45309')
+      t => _epHtmlTransf(t, b('\u{21A9} Receber de volta', "ep_receberDeVolta('" + _jsq(t.id) + "')", 'btn-primary')), 'var(--idv-at)')
     + sec('\u{26A0}\u{FE0F} Transferências pela metade — conclua para o saldo ficar certo', p.concluir,
-      t => _epHtmlTransf(t, b('Concluir (lançar no meu estoque)', "ep_concluirPendencia('" + _jsq(t.id) + "')", 'btn-primary'), 'A transferência foi marcada, mas o lançamento no estoque não chegou ao banco.'), '#b91c1c')
+      t => _epHtmlTransf(t, b('Concluir (lançar no meu estoque)', "ep_concluirPendencia('" + _jsq(t.id) + "')", 'btn-primary'), 'A transferência foi marcada, mas o lançamento no estoque não chegou ao banco.'), 'var(--idv-cr)')
     + sec('\u{26A0}\u{FE0F} Saiu do seu estoque e não chegou ao ' + outro, p.reenviar,
       m => _epHtmlTransf({ item: m.item, tamanho: m.tamanho, quantidade: m.quantidade, estado: m.estado, unidades: m.unidades || (m.seriais || []).map(id => ({ id })), enviadoPor: m.responsavel, ts: m.ts, equipe: m.plantao || m.equipe, plantonista: m.plantonista },
-        b('Reenviar ao ' + outro, "ep_reenviar('" + lado + "','" + _jsq(m.id) + "')", 'btn-primary')), '#b91c1c')
+        b('Reenviar ao ' + outro, "ep_reenviar('" + lado + "','" + _jsq(m.id) + "')", 'btn-primary')), 'var(--idv-cr)')
     + sec('\u{1F69A} Enviado ao ' + outro + ' — aguardando receber', p.aguardando, t => _epHtmlTransf(t, ''))
     + sec('\u{23F3} Você recusou — aguardando o ' + outro + ' receber de volta', p.recuseiAguardando, t => _epHtmlTransf(t, ''));
 }
@@ -106,37 +107,37 @@ function _epHtmlTabelas(d, pe) {
   const it = d.itens, linhaSer = (item, colunas) => {
     const us = ep_unidades(d, item); if (!us.length) return '';
     const grupo = (lbl, cor, lista) => lista.length ? '<span style="color:' + cor + '">' + lbl + ' (' + lista.length + '):</strong> ' + lista.map(u => esc(u.id) + (u.temCarregador ? ' \u{1F50B}' : '') + (u.temChip ? ' \u{1F4F6}' : '')).join(' · ') + '</span>' : '';
-    const partes = [grupo('\u{1F4E6} <strong>Novos', '#1a7f37', us.filter(u => u.estado === 'Novo')), grupo('\u{1F504} <strong>Reutilizados', '#b45309', us.filter(u => u.estado === 'Reutilizado')), grupo('\u{1F4CB} <strong>Sem estado', '#888', us.filter(u => u.estado !== 'Novo' && u.estado !== 'Reutilizado'))].filter(Boolean);
-    return '<tr style="background:#f8f9ff"><td colspan="' + colunas + '" style="font-size:.78rem;padding:4px 12px;line-height:1.8">' + partes.join('<br>') + '</td></tr>';
+    const partes = [grupo('\u{1F4E6} <strong>Novos', 'var(--idv-ok)', us.filter(u => u.estado === 'Novo')), grupo('\u{1F504} <strong>Reutilizados', 'var(--idv-at)', us.filter(u => u.estado === 'Reutilizado')), grupo('\u{1F4CB} <strong>Sem estado', 'var(--idv-sec)', us.filter(u => u.estado !== 'Novo' && u.estado !== 'Reutilizado'))].filter(Boolean);
+    return '<tr style="background:var(--idv-fundo)"><td colspan="' + colunas + '" style="font-size:12px;padding:4px 14px;line-height:1.8">' + partes.join('<br>') + '</td></tr>';
   };
-  const ne = (k, v) => v > 0 ? '<span style="color:' + (k === 'n' ? '#1a7f37' : '#b45309') + ';font-weight:600">' + (k === 'n' ? '\u{1F4E6} ' : '\u{1F504} ') + v + '</span>' : '<span style="color:#aaa">—</span>';
+  const ne = (k, v) => v > 0 ? '<span style="color:' + (k === 'n' ? 'var(--idv-ok)' : 'var(--idv-at)') + ';font-weight:600">' + (k === 'n' ? '\u{1F4E6} ' : '\u{1F504} ') + v + '</span>' : '<span style="color:var(--idv-sec)">—</span>';
   const linha = (item, tam, chave) => {
     const q = it[chave] || 0, min = _epMin(d, chave), cls = estStatusCls(q, min);
-    return '<tr' + (q <= min ? ' style="background:#ffeaea"' : '') + '><td>' + esc(item) + '</td><td>' + (tam ? esc(tam) : '<span style="color:var(--cz2)">—</span>') + '</td><td style="text-align:center"><strong>' + q + '</strong></td>'
-      + '<td style="text-align:center">' + ne('n', pe.novo[chave] || 0) + '</td><td style="text-align:center">' + ne('r', pe.reutilizado[chave] || 0) + '</td><td style="text-align:center">' + min + '</td><td><span class="est-badge ' + cls + '">' + estStatusLabel(cls) + '</span></td></tr>';
+    return '<tr' + (q <= min ? ' style="box-shadow:inset 3px 0 0 var(--idv-cr)"' : '') + '><td>' + esc(item) + '</td><td>' + (tam ? esc(tam) : '<span style="color:var(--idv-sec)">—</span>') + '</td><td style="text-align:center"><strong>' + q + '</strong></td>'
+      + '<td style="text-align:center">' + ne('n', pe.novo[chave] || 0) + '</td><td style="text-align:center">' + ne('r', pe.reutilizado[chave] || 0) + '</td><td style="text-align:center">' + min + '</td><td><span class="idv-etq ' + _EP_ETQ[cls] + '">' + estStatusLabel(cls) + '</span></td></tr>';
   };
   const torn = ['Módulo eletrônico de monitoração', 'Trava', 'Carregador da tornozeleira'].map(i => linha(i, '', i) + (ITENS_COM_SERIAL.includes(i) ? linhaSer(i, 7) : '')).join('')
     + (EST_TAMANHOS.filter(t => _epControla(d, 'Cinta_' + t)).map(t => linha('Cinta', t, 'Cinta_' + t)).join('')
-      || '<tr><td>Cinta</td><td colspan="6" style="color:#64748b;font-size:.8rem">Nenhuma cinta no plantão (as medidas aparecem quando entram ou quando têm mínimo).</td></tr>');
+      || '<tr><td>Cinta</td><td colspan="6" style="color:var(--idv-sec);font-size:13px">Nenhuma cinta no plantão (as medidas aparecem quando entram ou quando têm mínimo).</td></tr>');
   const D = 'Dispositivo DPP', us = ep_unidades(d, D);
   const qd = it[D] || 0, mind = _epMin(d, D), clsd = estStatusCls(qd, mind);
-  const dpp = '<tr' + (qd <= mind ? ' style="background:#ffeaea"' : '') + '><td>' + D + '</td><td style="text-align:center"><strong>' + qd + '</strong></td><td style="text-align:center">' + ne('n', pe.novo[D] || 0) + '</td><td style="text-align:center">' + ne('r', pe.reutilizado[D] || 0) + '</td>'
-    + '<td style="text-align:center">' + mind + '</td><td><span class="est-badge ' + clsd + '">' + estStatusLabel(clsd) + '</span></td><td style="text-align:center">' + (us.filter(u => u.temCarregador).length || '—') + '</td><td style="text-align:center">' + (us.filter(u => u.temChip).length || '—') + '</td></tr>' + linhaSer(D, 8);
-  return '<div class="est-section-title">Tornozeleira Eletrônica</div><div class="table-wrapper"><table class="data-table"><thead><tr><th>Item</th><th>Tamanho</th><th style="text-align:center">Total</th><th style="text-align:center">\u{1F4E6} Novos</th><th style="text-align:center">\u{1F504} Reutilizados</th><th style="text-align:center">Mínimo</th><th>Status</th></tr></thead><tbody>' + torn + '</tbody></table></div>'
-    + '<div class="est-section-title">DPP — Dispositivo de Proteção Pessoal</div><div class="table-wrapper"><table class="data-table"><thead><tr><th>Item</th><th style="text-align:center">Total</th><th style="text-align:center">\u{1F4E6} Novos</th><th style="text-align:center">\u{1F504} Reutilizados</th><th style="text-align:center">Mínimo</th><th>Status</th><th style="text-align:center">Com Carregador</th><th style="text-align:center">Com Chip</th></tr></thead><tbody>' + dpp + '</tbody></table></div>';
+  const dpp = '<tr' + (qd <= mind ? ' style="box-shadow:inset 3px 0 0 var(--idv-cr)"' : '') + '><td>' + D + '</td><td style="text-align:center"><strong>' + qd + '</strong></td><td style="text-align:center">' + ne('n', pe.novo[D] || 0) + '</td><td style="text-align:center">' + ne('r', pe.reutilizado[D] || 0) + '</td>'
+    + '<td style="text-align:center">' + mind + '</td><td><span class="idv-etq ' + _EP_ETQ[clsd] + '">' + estStatusLabel(clsd) + '</span></td><td style="text-align:center">' + (us.filter(u => u.temCarregador).length || '—') + '</td><td style="text-align:center">' + (us.filter(u => u.temChip).length || '—') + '</td></tr>' + linhaSer(D, 8);
+  return '<div class="idv-secao">Tornozeleira Eletrônica</div><div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Item</th><th>Tamanho</th><th style="text-align:center">Total</th><th style="text-align:center">\u{1F4E6} Novos</th><th style="text-align:center">\u{1F504} Reutilizados</th><th style="text-align:center">Mínimo</th><th>Status</th></tr></thead><tbody>' + torn + '</tbody></table></div>'
+    + '<div class="idv-secao">DPP — Dispositivo de Proteção Pessoal</div><div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Item</th><th style="text-align:center">Total</th><th style="text-align:center">\u{1F4E6} Novos</th><th style="text-align:center">\u{1F504} Reutilizados</th><th style="text-align:center">Mínimo</th><th>Status</th><th style="text-align:center">Com Carregador</th><th style="text-align:center">Com Chip</th></tr></thead><tbody>' + dpp + '</tbody></table></div>';
 }
 
 function _epHtmlHistorico(d, admin) {
   const movs = d.movimentacoes.slice(0, 300);
   const corpo = movs.length ? movs.map(m => {
     const antes = d.recontagemEm && (m.ts || '') < d.recontagemEm;
-    return '<tr' + (antes ? ' style="background:#fafafa;color:#8b949e" title="Anterior à recontagem — não entra no saldo"' : '') + '><td style="white-space:nowrap;font-size:.8rem">' + new Date(m.ts).toLocaleString('pt-BR') + '</td>'
-      + '<td><span class="badge ' + (_EP_BADGE[m.tipo] || '') + '">' + esc(m.tipo) + '</span></td><td>' + esc(m.item) + '</td><td>' + esc(m.tamanho || '—') + '</td><td style="text-align:center">' + esc(m.quantidade) + '</td>'
-      + '<td style="font-family:ui-monospace,Consolas,monospace;font-size:.76rem">' + esc((m.seriais || []).join(', ') || '—') + '</td><td>' + esc(m.equipe || '—') + '</td><td>' + esc(m.plantonista || m.responsavel || '—') + '</td>'
+    return '<tr' + (antes ? ' style="background:var(--idv-fundo);color:var(--idv-sec)" title="Anterior à recontagem — não entra no saldo"' : '') + '><td class="idv-data" style="white-space:nowrap;font-size:13px">' + new Date(m.ts).toLocaleString('pt-BR') + '</td>'
+      + '<td><span class="idv-etq ' + (_EP_BADGE[m.tipo] || 'ne') + '">' + esc(m.tipo) + '</span></td><td>' + esc(m.item) + '</td><td>' + esc(m.tamanho || '—') + '</td><td style="text-align:center">' + esc(m.quantidade) + '</td>'
+      + '<td class="idv-mono" style="font-size:12px">' + esc((m.seriais || []).join(', ') || '—') + '</td><td>' + esc(m.equipe || '—') + '</td><td>' + esc(m.plantonista || m.responsavel || '—') + '</td>'
       + '<td>' + esc(m.monitorado || '—') + '</td><td>' + esc(m.motivo || '—') + '</td><td>' + esc(m.obs || '—') + '</td>'
       + '<td style="white-space:nowrap">' + _epBtn('\u{1F441}', "ep_verMov('" + _jsq(m.id) + "')", 'btn-sm') + (admin ? _epBtn('\u{1F5D1}', "ep_excluirMov('" + _jsq(m.id) + "')", 'btn-sm btn-danger') : '') + '</td></tr>';
-  }).join('') : '<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--cz2)">Nenhuma movimentação no estoque do Plantão ainda. Comece pelo inventário: botão "Entrada" → "Inventário inicial".</td></tr>';
-  return '<div class="est-section-title" style="margin-top:26px">Histórico do Plantão</div><div class="table-wrapper" style="overflow-x:auto"><table class="data-table"><thead><tr>'
+  }).join('') : '<tr><td colspan="12" class="idv-vazio">Nenhuma movimentação no estoque do Plantão ainda. Comece pelo inventário: botão "Entrada" → "Inventário inicial".</td></tr>';
+  return '<div class="idv-secao" style="margin-top:28px">Histórico do Plantão</div><div class="table-scroll"><table class="data-table idv-tabela"><thead><tr>'
     + '<th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Tam.</th><th>Qtd</th><th>Série/IMEI</th><th>Equipe</th><th>Plantonista</th><th>Monitorado</th><th>Motivo</th><th>Obs.</th><th>Ações</th></tr></thead><tbody>' + corpo + '</tbody></table></div>';
 }
 
@@ -147,9 +148,9 @@ function ep_consultar(valor) {
   const p = ep_get(), s = getEstoque(), ql = q.toLowerCase();
   const onde = ep_onde(q, ep_podeVerCme() ? s : null, p, ITENS_COM_SERIAL, ep_getTransf());
   const movs = p.movimentacoes.filter(m => [m.tipo, m.item, m.tamanho, m.monitorado, m.processo, m.motivo, m.obs, m.equipe, m.plantonista, m.responsavel, ...(m.seriais || [])].some(v => String(v || '').toLowerCase().includes(ql))).slice(0, 50);
-  let h = onde ? '<div style="border:1px solid #bfdbfe;background:#eff6ff;border-radius:6px;padding:8px 10px;margin-bottom:8px"><b style="font-family:ui-monospace,Consolas,monospace">' + esc(q) + '</b> — ' + esc(onde.item) + ': <b>' + esc(onde.texto) + '</b></div>' : '';
-  h += movs.length ? '<div style="font-size:.8rem;color:#475569;margin-bottom:4px">' + movs.length + ' movimentação(ões) do plantão com "' + esc(q) + '":</div>' + movs.map(m => '<div onclick="ep_verMov(\'' + _jsq(m.id) + '\')" style="cursor:pointer;display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:.82rem"><span class="badge ' + (_EP_BADGE[m.tipo] || '') + '">' + esc(m.tipo) + '</span><span>' + new Date(m.ts).toLocaleString('pt-BR') + '</span><span>' + esc(m.item) + ' \u{00D7}' + esc(m.quantidade) + '</span><span style="color:#64748b">' + esc(m.monitorado || m.motivo || '') + '</span><span style="margin-left:auto;color:#1a4fa3">\u{1F441} detalhe</span></div>').join('')
-    : (onde ? '' : '<div style="color:#888;padding:8px 0">Nada encontrado para "' + esc(q) + '".</div>');
+  let h = onde ? '<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:8px"><span><b class="idv-mono">' + esc(q) + '</b> — ' + esc(onde.item) + ': <b>' + esc(onde.texto) + '</b></span></div>' : '';
+  h += movs.length ? '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:4px">' + movs.length + ' movimentação(ões) do plantão com "' + esc(q) + '":</div>' + movs.map(m => '<div onclick="ep_verMov(\'' + _jsq(m.id) + '\')" style="cursor:pointer;display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--idv-linha);font-size:13px"><span class="idv-etq ' + (_EP_BADGE[m.tipo] || 'ne') + '">' + esc(m.tipo) + '</span><span class="idv-data">' + new Date(m.ts).toLocaleString('pt-BR') + '</span><span>' + esc(m.item) + ' \u{00D7}' + esc(m.quantidade) + '</span><span style="color:var(--idv-sec)">' + esc(m.monitorado || m.motivo || '') + '</span><span style="margin-left:auto;color:var(--idv-in);font-weight:600">\u{1F441} detalhe</span></div>').join('')
+    : (onde ? '' : '<div style="color:var(--idv-sec);padding:8px 0">Nada encontrado para "' + esc(q) + '".</div>');
   el.innerHTML = h;
 }
 
@@ -195,8 +196,8 @@ function _epModal(titulo, corpo, rodape) {
 function _epPodeMinimos() { return ep_podeMover(); }
 function ep_abrirMinimos() {
   if (!_epPodeMinimos()) return;
-  const d = ep_get(), linhas = Object.keys(EST_PADRAO.itens).map(k => '<div style="font-size:.88rem">' + esc(k.replace('Cinta_', 'Cinta ')) + '</div><input type="number" min="0" class="ep-min" data-chave="' + esc(k) + '" value="' + _epMin(d, k) + '" style="padding:5px 8px;border:1px solid #ccc;border-radius:6px;width:100%">').join('');
-  _epModal('\u{2699}\u{FE0F} Mínimos do estoque do Plantão', '<p style="color:#555;font-size:.87rem;margin-bottom:12px">Quando o saldo do plantão ficar igual ou abaixo do mínimo, a linha fica vermelha.</p><div style="display:grid;grid-template-columns:1fr 120px;gap:8px 16px;align-items:center">' + linhas + '</div>',
+  const d = ep_get(), linhas = Object.keys(EST_PADRAO.itens).map(k => '<div style="font-size:14px">' + esc(k.replace('Cinta_', 'Cinta ')) + '</div><input type="number" min="0" class="ep-min" data-chave="' + esc(k) + '" value="' + _epMin(d, k) + '" style="padding:5px 8px;border:1px solid var(--idv-borda);border-radius:6px;width:100%;font-size:14px">').join('');
+  _epModal('\u{2699}\u{FE0F} Mínimos do estoque do Plantão', '<p style="color:var(--idv-sec);font-size:14px;margin-bottom:12px">Quando o saldo do plantão ficar igual ou abaixo do mínimo, a linha fica vermelha.</p><div style="display:grid;grid-template-columns:1fr 120px;gap:8px 16px;align-items:center">' + linhas + '</div>',
     _epBtn('Cancelar', "fecharModal('ep-modal')") + _epBtn('Salvar', 'ep_salvarMinimos()', 'btn-primary'));
 }
 async function ep_salvarMinimos() {
@@ -214,7 +215,7 @@ function ep_abrirMov(tipo) {
   const cats = Object.keys(EST_TIPOS).map(c => '<option value="' + esc(c) + '">' + esc(c) + '</option>').join('');
   const motivos = _EP_MOTIVOS[tipo].map(m => '<option>' + esc(m) + '</option>').join('');
   const campo = (lbl, html, id) => '<div class="form-field"' + (id ? ' id="' + id + '"' : '') + '><label>' + lbl + '</label>' + html + '</div>';
-  const corpo = '<div style="font-size:.8rem;color:#475569;margin-bottom:8px">Plantonista: <b>' + esc(_epQuem()) + '</b> · equipe <b>' + esc(_epEquipeHoje() || '—') + '</b> · ' + new Date().toLocaleString('pt-BR') + '</div>'
+  const corpo = '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:8px">Plantonista: <b>' + esc(_epQuem()) + '</b> · equipe <b>' + esc(_epEquipeHoje() || '—') + '</b> · <span class="idv-data">' + new Date().toLocaleString('pt-BR') + '</span></div>'
     + '<div class="form-grid">' + campo('Categoria *', '<select id="ep-f-cat" onchange="_epAtualizarTipos()"><option value="">Selecione...</option>' + cats + '</select>')
     + campo('Tipo de Item *', '<select id="ep-f-item" onchange="_epAtualizarForm()"><option value="">Selecione a categoria...</option></select>') + '</div>'
     + '<div class="form-grid">' + campo('Tamanho da Cinta *', '<select id="ep-f-tam"><option value="">Selecione...</option>' + EST_TAMANHOS.map(t => '<option>' + t + '</option>').join('') + '</select>', 'ep-row-tam')
@@ -254,16 +255,16 @@ function _epAtualizarUnidades() {
   if (soma) {
     const n = Math.min(50, parseInt(document.getElementById('ep-f-qtd').value, 10) || 0);
     const ja = [...box.querySelectorAll('.ep-u-id')].map(i => i.value);
-    box.innerHTML = n ? '<div class="form-section-title" style="margin-top:8px">' + lbl + ' de cada unidade</div>' + Array.from({ length: n }, (_, i) => '<div class="ep-u" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap"><span style="min-width:22px;font-weight:600;color:#555">' + (i + 1) + '.</span>'
-      + '<input type="text" class="ep-u-id" placeholder="' + lbl + ' ' + (i + 1) + '" value="' + esc(ja[i] || '') + '" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid #ccc;border-radius:6px;font-family:ui-monospace,Consolas,monospace">'
-      + (dpp ? '<label style="font-size:.85rem;white-space:nowrap"><input type="checkbox" class="ep-u-car"> \u{1F50B} Carregador</label><label style="font-size:.85rem;white-space:nowrap"><input type="checkbox" class="ep-u-chip"> \u{1F4F6} Chip</label>' : '') + '</div>').join('') : '';
+    box.innerHTML = n ? '<div class="form-section-title" style="margin-top:8px">' + lbl + ' de cada unidade</div>' + Array.from({ length: n }, (_, i) => '<div class="ep-u" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap"><span style="min-width:22px;font-weight:600;color:var(--idv-sec)">' + (i + 1) + '.</span>'
+      + '<input type="text" class="ep-u-id" placeholder="' + lbl + ' ' + (i + 1) + '" value="' + esc(ja[i] || '') + '" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid var(--idv-borda);border-radius:6px;font-family:var(--idv-mono);font-size:14px">'
+      + (dpp ? '<label style="font-size:13px;white-space:nowrap"><input type="checkbox" class="ep-u-car"> \u{1F50B} Carregador</label><label style="font-size:13px;white-space:nowrap"><input type="checkbox" class="ep-u-chip"> \u{1F4F6} Chip</label>' : '') + '</div>').join('') : '';
     return;
   }
   const us = ep_unidades(ep_get(), item);
   box.innerHTML = '<div class="form-section-title" style="margin-top:8px">Marque o ' + lbl + ' de cada unidade que sai (' + us.length + ' no plantão)</div>'
-    + (us.length ? us.map(u => '<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:.88rem;cursor:pointer"><input type="checkbox" class="ep-u-sel" value="' + esc(u.id) + '"><code>' + esc(u.id) + '</code>'
-      + (u.estado ? ' <span style="font-size:.75rem;color:#64748b">' + esc(u.estado) + '</span>' : '') + (u.temCarregador ? ' \u{1F50B}' : '') + (u.temChip ? ' \u{1F4F6}' : '') + '</label>').join('')
-      : '<p style="color:#b45309;font-size:.85rem">\u{26A0}\u{FE0F} Nenhuma unidade deste item no estoque do Plantão.</p>');
+    + (us.length ? us.map(u => '<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:14px;cursor:pointer"><input type="checkbox" class="ep-u-sel" value="' + esc(u.id) + '"><span class="idv-mono">' + esc(u.id) + '</span>'
+      + (u.estado ? ' <span style="font-size:12px;color:var(--idv-sec)">' + esc(u.estado) + '</span>' : '') + (u.temCarregador ? ' \u{1F50B}' : '') + (u.temChip ? ' \u{1F4F6}' : '') + '</label>').join('')
+      : '<p style="color:var(--idv-at);font-size:13px">\u{26A0}\u{FE0F} Nenhuma unidade deste item no estoque do Plantão.</p>');
 }
 async function ep_confirmarMov() {
   const tipo = _epForm && _epForm.tipo; if (!tipo) return;

@@ -33,8 +33,7 @@ function _uipOrdenarPorData(arqs) {
 /* Selo de data para a linha do documento. */
 function _uipSeloData(arq) {
   const txt = _uipDataEnvio(arq.enviado);
-  const cor = arq.enviado ? '#475569' : '#94a3b8';
-  return `<span title="Anexado à pasta em" style="font-size:.72rem;color:${cor};flex-shrink:0;white-space:nowrap;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace">${txt}</span>`;
+  return `<span class="idv-data" title="Anexado à pasta em" style="font-size:12px;color:var(--idv-sec);flex-shrink:0;white-space:nowrap">${txt}</span>`;
 }
 
 /* ── 2) Imagem de documento → PDF ───────────────────────────────── */

@@ -24,8 +24,8 @@ function _sccFmtTel(d) {
 }
 function _sccLinkTel(d) {
   const wa = d.length === 11 && d[2] === '9'
-    ? ' <a href="https://wa.me/55' + d + '" target="_blank" rel="noopener noreferrer" title="Abrir conversa no WhatsApp" style="color:#16a34a;font-weight:600">WhatsApp</a>' : '';
-  return '<span style="white-space:nowrap"><a href="tel:' + (d.length >= 10 ? '+55' : '') + d + '" title="Ligar" style="font-family:var(--font-mono);color:#2563eb">' + _sccFmtTel(d) + '</a>' + wa + '</span>';
+    ? ' <a href="https://wa.me/55' + d + '" target="_blank" rel="noopener noreferrer" title="Abrir conversa no WhatsApp" style="color:var(--idv-ok);font-weight:600">WhatsApp</a>' : '';
+  return '<span style="white-space:nowrap"><a href="tel:' + (d.length >= 10 ? '+55' : '') + d + '" title="Ligar" class="idv-mono" style="color:var(--idv-in)">' + _sccFmtTel(d) + '</a>' + wa + '</span>';
 }
 
 // ── Leitura da planilha ───────────────────────────────────────────────────────
@@ -100,12 +100,12 @@ async function sc_importarContatos(input) {
   _sccPlanoAtual = plano;
   const falta = plano.faltando.slice(0, 40);
   _sccModal('\u{1F4C7} Contatos do cadastro completo',
-    '<div style="font-size:.9rem;line-height:1.6">Planilha com <b>' + plano.lidos + '</b> monitorados cadastrados.<br>'
+    '<div style="font-size:14px;line-height:1.6">Planilha com <b>' + plano.lidos + '</b> monitorados cadastrados.<br>'
     + 'Sem comunicação agora: <b>' + plano.total + '</b> · encontrados na planilha: <b>' + plano.achados.length + '</b>'
     + ' (' + plano.comTelefone + ' com telefone' + (plano.porNome ? ', ' + plano.porNome + ' pelo nome' : '') + ').</div>'
-    + '<div style="font-size:.8rem;color:#64748b;margin-top:6px">Só o telefone do monitorado, os contatos de referência e a observação de contatos são guardados — e só de quem está sem comunicação. CPF, endereço e o resto da planilha não são salvos.</div>'
-    + (plano.faltando.length ? '<div style="margin-top:10px;font-size:.82rem"><b>Não encontrados no cadastro (' + plano.faltando.length + '):</b><div style="max-height:150px;overflow:auto;color:#475569;margin-top:4px">'
-      + falta.map(m => esc(m.nome) + ' <span style="font-family:var(--font-mono);color:#94a3b8">' + esc(m.registro) + '</span>').join('<br>') + (plano.faltando.length > falta.length ? '<br>… e mais ' + (plano.faltando.length - falta.length) : '') + '</div></div>' : ''),
+    + '<div style="font-size:13px;color:var(--idv-sec);margin-top:8px">Só o telefone do monitorado, os contatos de referência e a observação de contatos são guardados — e só de quem está sem comunicação. CPF, endereço e o resto da planilha não são salvos.</div>'
+    + (plano.faltando.length ? '<div style="margin-top:10px;font-size:13px"><b>Não encontrados no cadastro (' + plano.faltando.length + '):</b><div style="max-height:150px;overflow:auto;color:var(--idv-sec);margin-top:4px">'
+      + falta.map(m => esc(m.nome) + ' <span class="idv-mono" style="color:var(--idv-sec)">' + esc(m.registro) + '</span>').join('<br>') + (plano.faltando.length > falta.length ? '<br>… e mais ' + (plano.faltando.length - falta.length) : '') + '</div></div>' : ''),
     plano.achados.length ? '<button class="btn-primary" id="scc-salvar" onclick="sc_salvarContatos()">Salvar ' + plano.achados.length + ' contato(s)</button>' : '');
 }
 async function sc_salvarContatos() {
@@ -174,12 +174,12 @@ function _sccTipoTel(rotulo) {
   if (/atualiz|\bnov[oa]\b|\batual\b/.test(t)) return 'atual';
   return '';
 }
-const _SCC_TIPO_TEL = { vitima: ['número da VÍTIMA — não é do monitorado', '#b91c1c', '#fef2f2'], errado: ['marcado como errado', '#64748b', '#f1f5f9'],
-  retido: ['aparelho retido/apreendido', '#64748b', '#f1f5f9'], antigo: ['número antigo', '#64748b', '#f1f5f9'], atual: ['atualizado', '#15803d', '#f0fdf4'], '': ['diferente do cadastrado', '#b45309', '#fffbeb'] };
+const _SCC_TIPO_TEL = { vitima: ['número da VÍTIMA — não é do monitorado', 'cr'], errado: ['marcado como errado', 'ne'],
+  retido: ['aparelho retido/apreendido', 'ne'], antigo: ['número antigo', 'ne'], atual: ['atualizado', 'ok'], '': ['diferente do cadastrado', 'at'] };
 const _SCC_TIPOS_INUTEIS = ['vitima', 'errado', 'retido', 'antigo'];
 function _sccSeloTipo(x) {
-  const [txt, cor, fundo] = x.novo ? _SCC_TIPO_TEL[x.tipo] || _SCC_TIPO_TEL[''] : ['já cadastrado', '#94a3b8', '#f8fafc'];
-  return ' <span style="font-size:.68rem;font-weight:600;color:' + cor + ';background:' + fundo + ';border-left:2px solid ' + cor + ';border-radius:3px;padding:1px 5px;white-space:nowrap">' + txt + '</span>';
+  const [txt, cls] = x.novo ? _SCC_TIPO_TEL[x.tipo] || _SCC_TIPO_TEL[''] : ['já cadastrado', 'ne'];
+  return ' <span class="idv-etq ' + cls + '">' + txt + '</span>';
 }
 
 // ── Exibição ──────────────────────────────────────────────────────────────────
@@ -191,27 +191,27 @@ function _scLinhaContato(m) {
   // na lista só entra número que pode ser do monitorado (antigo, errado, retido e da vítima ficam só no detalhe)
   const novos = daObs.filter(x => x.novo && !_SCC_TIPOS_INUTEIS.includes(x.tipo)).sort((a, b) => (b.tipo === 'atual') - (a.tipo === 'atual'));
   const temVitima = daObs.some(x => x.tipo === 'vitima');
-  return '<div style="font-size:.78rem;margin-top:3px;font-weight:400;color:#475569">'
-    + (c.telefone ? '<span style="white-space:nowrap">\u{1F4DE} ' + _sccLinkTel(c.telefone) + '</span>' :'<span style="color:#94a3b8">sem telefone próprio</span>')
-    + (refs.length ? ' <span style="color:#64748b;cursor:help" title="' + esc(refs.map(r => (r.nome || 'Contato') + ': ' + _sccFmtTel(r.telefone)).join(' · ')) + '">· +' + refs.length + ' de referência</span>' : '')
-    + (novos.length ? '<div style="margin-top:2px"><span title="Número escrito na observação de contatos do AKILES, diferente do telefone cadastrado — pode ser o número atualizado" style="font-size:.68rem;font-weight:600;color:#b45309;background:#fffbeb;border-left:2px solid #d97706;border-radius:3px;padding:1px 5px">NA OBSERVAÇÃO</span> '
-      + _sccLinkTel(novos[0].tel) + (novos[0].rotulo ? ' <span style="color:#64748b">' + esc(novos[0].rotulo) + '</span>' : '')
-      + (novos.length > 1 ? ' <span style="color:#64748b">· +' + (novos.length - 1) + '</span>' : '') + '</div>' : '')
-    + (temVitima ? '<div style="margin-top:2px"><span title="A observação de contatos tem o telefone da vítima — abra o detalhe antes de ligar" style="font-size:.68rem;font-weight:600;color:#b91c1c;background:#fef2f2;border-left:2px solid #b91c1c;border-radius:3px;padding:1px 5px">\u{26A0}\u{FE0F} OBSERVAÇÃO TEM Nº DA VÍTIMA</span></div>' : '')
+  return '<div style="font-size:12px;margin-top:3px;font-weight:400;color:var(--idv-sec)">'
+    + (c.telefone ? '<span style="white-space:nowrap">\u{1F4DE} ' + _sccLinkTel(c.telefone) + '</span>' :'<span style="color:var(--idv-sec)">sem telefone próprio</span>')
+    + (refs.length ? ' <span style="color:var(--idv-sec);cursor:help" title="' + esc(refs.map(r => (r.nome || 'Contato') + ': ' + _sccFmtTel(r.telefone)).join(' · ')) + '">· +' + refs.length + ' de referência</span>' : '')
+    + (novos.length ? '<div style="margin-top:2px"><span title="Número escrito na observação de contatos do AKILES, diferente do telefone cadastrado — pode ser o número atualizado" class="idv-etq at">NA OBSERVAÇÃO</span> '
+      + _sccLinkTel(novos[0].tel) + (novos[0].rotulo ? ' <span style="color:var(--idv-sec)">' + esc(novos[0].rotulo) + '</span>' : '')
+      + (novos.length > 1 ? ' <span style="color:var(--idv-sec)">· +' + (novos.length - 1) + '</span>' : '') + '</div>' : '')
+    + (temVitima ? '<div style="margin-top:2px"><span title="A observação de contatos tem o telefone da vítima — abra o detalhe antes de ligar" class="idv-etq cr">\u{26A0}\u{FE0F} OBSERVAÇÃO TEM Nº DA VÍTIMA</span></div>' : '')
     + '</div>';
 }
 // bloco completo (modais de tratativa e de visualização)
 function _scHtmlContatos(m) {
   const c = m && m.contato;
-  if (!c) return '<div style="font-size:.85rem;color:#94a3b8">Sem contato importado. Use "Importar contatos (cadastro)" na aba Sem Comunicação.</div>';
-  const linha = (rot, tel) => '<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-top:1px solid #f1f5f9;font-size:.86rem"><span>' + rot + '</span><span style="white-space:nowrap">' + (tel ? _sccLinkTel(tel) : '<span style="color:#94a3b8">sem número</span>') + '</span></div>';
+  if (!c) return '<div style="font-size:13px;color:var(--idv-sec)">Sem contato importado. Use "Importar contatos (cadastro)" na aba Sem Comunicação.</div>';
+  const linha = (rot, tel) => '<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-top:1px solid var(--idv-linha);font-size:13px"><span>' + rot + '</span><span style="white-space:nowrap">' + (tel ? _sccLinkTel(tel) : '<span style="color:var(--idv-sec)">sem número</span>') + '</span></div>';
   return linha('<b>Monitorado</b>', c.telefone)
     + (c.refs || []).map(r => linha(esc(r.nome || 'Contato de referência'), r.telefone)).join('')
     + (() => {
         const t = _sccTelsDaObs(c); if (!t.length) return '';
-        return '<div style="font-size:.78rem;font-weight:700;color:#b45309;margin-top:8px">Números escritos na observação do AKILES</div>'
+        return '<div style="font-size:13px;font-weight:600;color:var(--idv-at);margin-top:8px">Números escritos na observação do AKILES</div>'
           + t.map(x => linha(esc(x.rotulo || 'sem identificação') + _sccSeloTipo(x), x.tel)).join('');
       })()
-    + (c.obs ? '<div style="font-size:.82rem;color:#334155;margin-top:6px;white-space:pre-wrap"><b>Obs.:</b> ' + esc(_sccFixAcento(c.obs)) + '</div>' : '')
-    + '<div style="font-size:.72rem;color:#94a3b8;margin-top:6px">Do cadastro do AKILES · importado em ' + new Date(c.atualizadoEm).toLocaleString('pt-BR') + (c.por ? ' por ' + esc(c.por) : '') + '</div>';
+    + (c.obs ? '<div style="font-size:13px;color:var(--idv-texto);margin-top:6px;white-space:pre-wrap"><b>Obs.:</b> ' + esc(_sccFixAcento(c.obs)) + '</div>' : '')
+    + '<div style="font-size:12px;color:var(--idv-sec);margin-top:6px">Do cadastro do AKILES · importado em <span class="idv-data">' + new Date(c.atualizadoEm).toLocaleString('pt-BR') + '</span>' + (c.por ? ' por ' + esc(c.por) : '') + '</div>';
 }
