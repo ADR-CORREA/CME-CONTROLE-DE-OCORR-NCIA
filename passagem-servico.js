@@ -127,7 +127,7 @@ function _eppDocumento(d) {
   const assPassa = ass && /^data:image\/(png|jpe?g|webp);base64,/.test(ass) && d.passa === quemGerou ? '<img src="' + esc(ass) + '" alt="Assinatura" style="max-height:52px;max-width:220px">' : '';
   const assinatura = (tit, nome, eq, imgAss) => '<td style="width:50%;vertical-align:top;padding:0 10px">'
     + '<div style="font-size:8pt;font-weight:bold;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">' + tit + '</div>'
-    + '<div style="border:1px solid #000;height:64px;display:flex;align-items:center;justify-content:center">' + (imgAss || '<span style="font-size:7.5pt;color:#888">assinatura</span>') + '</div>'
+    + '<div style="border:1px solid #000;height:64px;display:flex;align-items:center;justify-content:center">' + (imgAss || '') + '</div>' // sem imagem: quadro em branco para assinar à caneta
     + '<div style="text-align:center;margin-top:4px;font-size:9.5pt;font-weight:bold">' + (nome ? esc(nome) : '&nbsp;') + '</div>'
     + '<div style="text-align:center;font-size:8.5pt">Plantão ' + esc(eq || '—') + ' · Central de Monitoramento Eletrônico – CME/IAPEN</div></td>';
   return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>Passagem de serviço - ' + esc(_eppDataBR(d.dia)) + ' - ' + esc(d.eq) + '</title>'
