@@ -171,7 +171,7 @@ function _sprdCabecalho(p) {
   const ger = p.geradoEm || '', h = ger ? (new Date() - new Date(ger)) / 3600e3 : null, hora = new Date().getHours();
   const atrasado = h !== null && h > 2 && hora >= 8 && hora < 21;
   return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;color:var(--idv-sec)">'
-    + '<div>Robô PRODOC: ' + (ger ? 'última leitura <b class="idv-mono" style="color:var(--idv-texto)">' + _sprdBR(ger) + '</b>' : '<b>ainda não rodou</b>')
+    + '<div>Robô PRODOC: ' + (ger ? 'última leitura <b class="idv-data" style="color:var(--idv-texto)">' + _sprdBR(ger) + '</b>' : '<b>ainda não rodou</b>')
     + (atrasado ? ' · <span style="color:var(--idv-cr);font-weight:600">sem ler há ' + Math.floor(h) + ' h — veja o atualizar-prodoc.log</span>' : '')
     + ' · só entra o que já foi aberto no PRODOC</div>'
     + '<button class="idv-btn mini" onclick="sec_prodocAtualizar()">Atualizar</button></div>';
@@ -199,10 +199,10 @@ function _sprdTabela(linhas) {
       return '<tr data-sprd="' + d.id + '" data-faixa="' + faixa + '" style="cursor:pointer;' + (sel ? 'background:var(--idv-in-f);box-shadow:' + _SPRD_SEL_FAIXA : faixa ? 'box-shadow:' + faixa : '') + '" onclick="sec_prodocSel(\'' + _jsq(d.id) + '\')">'
         + '<td onclick="event.stopPropagation()">' + (_SPRD_LOTE_SITS.includes(l.sit) ? '<input type="checkbox"' + (_sprdMarcados.has(d.id) ? ' checked' : '') + ' onclick="sec_prodocMarcarSel(\'' + _jsq(d.id) + '\',event)">' : '') + '</td>'
         + '<td><span class="idv-etq ' + cls + '">' + rot + '</span>' + (l.parado ? '<div style="margin-top:4px"><span class="idv-etq cr">Parado</span></div>' : '') + '</td>'
-        + '<td class="idv-mono" style="white-space:nowrap">' + _sprdBR(d.recebidoEm) + '</td>'
+        + '<td class="idv-data" style="white-space:nowrap">' + _sprdBR(d.recebidoEm) + '</td>'
         + '<td><div style="font-weight:600">' + esc(d.assunto) + '</div><div class="idv-mini">' + esc(l.sug.cat) + ' · <span class="idv-mono">' + esc(d.numero) + '</span> · ' + esc(d.origem) + '</div>'
         + (d.ia && d.ia.providencia ? '<div style="font-size:13px;color:var(--idv-de);margin-top:2px">IA: ' + esc(d.ia.providencia) + (_sprdIaConferida(d.ia) ? ' <span style="color:var(--idv-ok);font-weight:600" title="leitura conferida">\u{2714}</span>' : ' <span style="color:var(--idv-at);font-weight:600" title="confira">?</span>') + '</div>' : '') + '</td>'
-        + '<td class="idv-mono" style="white-space:nowrap;font-weight:600' + (_sprdPrazoPerto(l) ? ';color:var(--idv-cr)' : '') + '">' + prazo + '</td>'
+        + '<td class="idv-data" style="white-space:nowrap;font-weight:600' + (_sprdPrazoPerto(l) ? ';color:var(--idv-cr)' : '') + '">' + prazo + '</td>'
         + '<td style="color:var(--idv-in);font-weight:600">' + esc(para) + (d.ia && l.sit !== 'enc' && _sprdSetorIA(d.ia.responsavel) && !l.sug.setores.includes(_sprdSetorIA(d.ia.responsavel))
           ? '<div style="font-size:12px;font-weight:400;color:var(--idv-de)">IA: ' + esc(_sprdSetorIA(d.ia.responsavel)) + '</div>' : '') + '</td></tr>';
     }).join('') : '<tr><td colspan="6" class="idv-vazio">Nada aqui.</td></tr>')
@@ -213,7 +213,7 @@ function _sprdTabelaCriados(p) {
   const l = _sprdCriadosDoMes(p);
   return '<div style="font-size:14px;color:var(--idv-sec);margin-bottom:8px">Documentos que a própria CME criou e encaminhou neste mês (o robô guarda os últimos 35 dias) — só para consulta.</div>'
     + '<div class="table-scroll" style="max-height:55vh"><table class="data-table idv-tabela"><thead><tr><th>Enviado</th><th>Assunto</th><th>Para</th><th></th></tr></thead><tbody>'
-    + (l.length ? l.map(c => '<tr><td class="idv-mono" style="white-space:nowrap">' + _sprdBR(c.em) + '</td><td style="font-weight:600">' + esc(c.assunto) + '</td><td>' + esc((c.destinos || [c.destino]).map(_sprdSetorCurto).join(', ')) + '</td>'
+    + (l.length ? l.map(c => '<tr><td class="idv-data" style="white-space:nowrap">' + _sprdBR(c.em) + '</td><td style="font-weight:600">' + esc(c.assunto) + '</td><td>' + esc((c.destinos || [c.destino]).map(_sprdSetorCurto).join(', ')) + '</td>'
       + '<td><a class="idv-link" href="' + _SPRD_LINK + encodeURIComponent(c.id) + '" target="_blank" rel="noopener noreferrer">Abrir no PRODOC</a></td></tr>').join('')
       : '<tr><td colspan="4" class="idv-vazio">Nada neste mês.</td></tr>')
     + '</tbody></table></div>';
@@ -227,7 +227,7 @@ function _sprdRenderDetalhe() {
   const d = l.d, s = l.sug, [rot, cls] = _SPRD_SIT[l.sit], m = l.marca;
   const linha = (rotulo, html) => '<div style="margin-top:10px"><span style="' + _SPRD_ROT + '">' + rotulo + '</span><div style="font-size:14px">' + html + '</div></div>';
   let h = '<div class="idv-bloco"><div class="idv-bloco-cab"><span>' + esc(d.tipo) + ' · <span class="idv-mono">' + esc(d.numero) + '</span></span>'
-    + '<span class="idv-mono">recebido ' + _sprdBR(d.recebidoEm) + '</span></div><div style="padding:12px 16px 16px">'
+    + '<span class="idv-data">recebido ' + _sprdBR(d.recebidoEm) + '</span></div><div style="padding:12px 16px 16px">'
     + '<div class="idv-mini">de <b>' + esc(d.origem) + '</b>' + (d.origemNome ? ' (' + esc(d.origemNome) + ')' : '') + '</div>'
     + '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;margin-top:4px">'
     + '<div class="idv-nome" style="font-size:16px;min-width:0">' + esc(d.assunto) + '</div><span class="idv-etq ' + cls + '">' + rot + '</span></div>'
@@ -239,7 +239,7 @@ function _sprdRenderDetalhe() {
       : l.sit === 'aviso' ? 'Aviso da própria equipe da CME sobre o que já foi feito: dar ciência. Encaminhe só se precisar.' : s.fazer) + '</div>'
     + '<div style="font-size:13px;color:var(--idv-sec);margin-top:3px">Regra: ' + esc(s.regra) + '</div>'
     + (l.prazo.data || l.prazo.urgente ? '<div style="font-size:14px;margin-top:4px;color:' + (_sprdPrazoPerto(l) ? 'var(--idv-cr)' : 'var(--idv-texto)') + ';font-weight:600">Prazo: '
-      + (l.prazo.data ? '<span class="idv-mono">' + _sprdBR(l.prazo.data) + '</span>' : '') + (l.prazo.urgente ? (l.prazo.data ? ' · ' : '') + 'pede urgência' : '') + '</div>' : '') + '</div>';
+      + (l.prazo.data ? '<span class="idv-data">' + _sprdBR(l.prazo.data) + '</span>' : '') + (l.prazo.urgente ? (l.prazo.data ? ' · ' : '') + 'pede urgência' : '') + '</div>' : '') + '</div>';
   if (d.sigiloso) h += linha('Texto', 'Documento sigiloso: o robô não traz o texto. Leia no PRODOC.');
   else if (d.texto) h += '<details style="margin-top:10px"' + (l.sit === 'novo' ? ' open' : '') + '><summary style="cursor:pointer;' + _SPRD_ROT + '">Texto do documento (como está no PRODOC)</summary>'
     + '<div style="white-space:pre-wrap;background:var(--idv-zebra);border:1px solid var(--idv-borda);border-radius:6px;padding:10px 12px;margin-top:6px;font-size:14px;line-height:1.5;color:var(--idv-texto);max-height:220px;overflow:auto">' + esc(d.texto) + '</div></details>';
@@ -247,12 +247,12 @@ function _sprdRenderDetalhe() {
   if ((d.envios || []).length) h += linha('Encaminhado no PRODOC', d.envios.map(e => {
     const curto = x => _sprdSetorCurto(x).replace(/\s/g, '').toUpperCase();
     const st = (d.setores || []).find(x => curto(e.destino) === curto(x.para));
-    return esc(_sprdSetorCurto(e.destino)) + ' em <span class="idv-mono">' + _sprdBR(e.em) + '</span>'
-      + (st ? (st.lido ? ' — setor leu em <span class="idv-mono">' + _sprdBR(st.lido) + '</span>' : ' — <b style="color:var(--idv-at)">setor ainda não leu</b>') : '');
+    return esc(_sprdSetorCurto(e.destino)) + ' em <span class="idv-data">' + _sprdBR(e.em) + '</span>'
+      + (st ? (st.lido ? ' — setor leu em <span class="idv-data">' + _sprdBR(st.lido) + '</span>' : ' — <b style="color:var(--idv-at)">setor ainda não leu</b>') : '');
   }).join('<br>'));
   if (l.atendido && l.sit === 'enc' && !(d.envios || []).length) h += linha('Atendido com PRODOC novo da CME', esc(l.atendido.assunto) + ' → ' + esc((l.atendido.destinos || [l.atendido.destino]).map(_sprdSetorCurto).join(', '))
-    + ' em <span class="idv-mono">' + _sprdBR(l.atendido.em) + '</span> <span class="idv-mini">(achado pelo nome — se não for o mesmo caso, marque abaixo)</span>');
-  if (m) h += linha('Marcado na Secretaria', esc(m.st === 'res' ? 'Resolvido' : 'Encaminhado') + ' por ' + esc(m.por || '?') + ' em <span class="idv-mono">' + _sprdBR(String(m.em || '').slice(0, 16)) + '</span>' + (m.nota ? ' · "' + esc(m.nota) + '"' : ''));
+    + ' em <span class="idv-data">' + _sprdBR(l.atendido.em) + '</span> <span class="idv-mini">(achado pelo nome — se não for o mesmo caso, marque abaixo)</span>');
+  if (m) h += linha('Marcado na Secretaria', esc(m.st === 'res' ? 'Resolvido' : 'Encaminhado') + ' por ' + esc(m.por || '?') + ' em <span class="idv-data">' + _sprdBR(String(m.em || '').slice(0, 16)) + '</span>' + (m.nota ? ' · "' + esc(m.nota) + '"' : ''));
   // passo 3: abrir no PRODOC, colar e confirmar aqui mesmo (verde = concluir, como no guia)
   const copiou = l.sit === 'novo' && _sprdRespCopiou(d.id), idq = _jsq(d.id);
   h += _sprdPasso(l, 3, 'Encaminhar no PRODOC e confirmar aqui');

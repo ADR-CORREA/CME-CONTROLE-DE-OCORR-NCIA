@@ -241,7 +241,7 @@ tr[tabindex]:focus-visible { outline-offset: -2px !important; }
 /* números que mudam não "pulam" de largura */
 .idv-num, .kpi-num, .kpi-value, .idv-chip .idv-n, .idv-mono, table.idv-tabela td, .data-table td { font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+  *, *::before, *::after { transition: none !important; animation-duration: 0s !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }
 
 
@@ -379,3 +379,94 @@ tr[tabindex]:focus-visible { outline-offset: -2px !important; }
 /* 4) ícones coloridos (bloco cme-icones) viram ícones de traço na cor do texto, como pede o guia */
 .cme-ic { background: none !important; box-shadow: none; border-radius: 0; width: 1.15em; height: 1.15em; margin-right: .3em; top: 0; vertical-align: -.16em; }
 .cme-ic svg { width: 100%; height: 100%; stroke: currentColor; }
+
+/* ═══════════ FASE 3 do novo visual (20/10/2026): as 5 decisões aprovadas ═══════════ */
+:root { --idv-ativo: #e7ebf0; --idv-lat: 228px; --idv-lat-rec: 60px; --idv-topo: 56px; }
+.idv-data { font-variant-numeric: tabular-nums; }
+
+/* decisão 5 — menu lateral agrupado e recolhível (barra de cima clara) */
+#app[style*="block"] { display: grid !important; grid-template-columns: var(--idv-lat) minmax(0, 1fr); grid-template-rows: var(--idv-topo) minmax(0, 1fr);
+  grid-template-areas: "topo topo" "menu main"; min-height: 100vh; background: var(--idv-fundo); }
+body.menu-recolhido #app[style*="block"] { grid-template-columns: var(--idv-lat-rec) minmax(0, 1fr); }
+#app > .topbar { grid-area: topo; position: sticky; top: 0; z-index: 200; height: var(--idv-topo); background: var(--idv-cartao); color: var(--idv-texto);
+  border-bottom: 1px solid var(--idv-borda); box-shadow: none; padding: 0 16px 0 10px; }
+#app > .topbar .topbar-brand { gap: 10px; }
+#app > .topbar .topbar-brand .name { font-size: 15px; font-weight: 600; letter-spacing: 0; color: var(--idv-texto); }
+#app > .topbar .topbar-brand .sub { font-size: 12px; opacity: 1; color: var(--idv-sec); }
+#topbar-logo { width: 34px !important; height: 34px !important; filter: none !important; }
+.topbar-menu { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 6px;
+  background: transparent; color: var(--idv-texto); cursor: pointer; flex: none; }
+.topbar-menu:hover { background: var(--idv-ativo); }
+#app > .topbar .role-badge { background: #eaeef2; color: var(--idv-sec); border: 0; border-left: 2px solid var(--idv-sec); border-radius: 3px; font-size: 12px; font-weight: 600; letter-spacing: .04em; padding: 3px 8px; }
+#app > .topbar .user-chip { background: transparent; color: var(--idv-texto); border: 0; padding: 0; font-size: 14px; font-weight: 600; }
+#app > .topbar .user-chip .avatar { background: var(--idv-cab); color: #fff; border-radius: 6px; }
+#app > .topbar .btn-logout { background: var(--idv-cartao); color: var(--idv-texto); border: 1px solid var(--idv-borda); border-radius: 6px; height: 32px; padding: 0 12px;
+  font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+#app > .topbar .btn-logout:hover { border-color: var(--idv-in); background: var(--idv-cartao); }
+#app > .nav-tabs { grid-area: menu; position: sticky; top: var(--idv-topo); height: calc(100vh - var(--idv-topo)); overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; flex-wrap: nowrap; gap: 0; padding: 8px 8px 24px; background: var(--idv-fundo); border-right: 1px solid var(--idv-linha); border-bottom: 0; }
+.nav-grupo { display: flex; flex-direction: column; gap: 2px; }
+.nav-grupo:not(:has(.nav-tab:not([style*="none"]))) { display: none; }
+.nav-grupo-tit { font-size: 12px; font-weight: 600; color: var(--idv-sec); padding: 14px 10px 4px; white-space: nowrap; }
+#app > .nav-tabs .nav-tab { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border: 0; border-radius: 6px; color: var(--idv-texto);
+  background: transparent; font-size: 14px; font-weight: 400; letter-spacing: 0; white-space: nowrap; overflow: hidden; }
+#app > .nav-tabs .nav-tab:hover { background: var(--idv-ativo); color: var(--idv-texto); }
+#app > .nav-tabs .nav-tab.active { background: var(--idv-ativo); font-weight: 600; color: var(--idv-texto); box-shadow: inset 3px 0 0 var(--idv-cab); }
+#app > .nav-tabs .nav-tab svg { width: 18px; height: 18px; opacity: .85; flex: none; }
+#app > .nav-tabs .notif-badge { position: static; margin-left: auto; width: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 3px;
+  background: var(--idv-cr); font-size: 12px; font-weight: 600; flex: none; }
+/* recolhido: só os ícones (o nome aparece ao passar o mouse) */
+body.menu-recolhido .nav-grupo-tit { font-size: 0; padding: 6px 0; border-top: 1px solid var(--idv-linha); margin: 6px 6px 0; }
+body.menu-recolhido .nav-grupo:first-child .nav-grupo-tit { border-top: 0; margin-top: 0; }
+body.menu-recolhido #app > .nav-tabs .nav-tab { font-size: 0; justify-content: center; padding: 0; position: relative; }
+body.menu-recolhido #app > .nav-tabs .notif-badge { position: absolute; top: 2px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 11px; }
+#app > .main { grid-area: main; min-width: 0; width: 100%; }
+/* tela estreita: o menu vira gaveta por cima do conteúdo */
+@media (max-width: 900px) {
+  #app[style*="block"], body.menu-recolhido #app[style*="block"] { grid-template-columns: minmax(0, 1fr); grid-template-areas: "topo" "main"; }
+  #app > .nav-tabs { position: fixed; left: 0; top: var(--idv-topo); bottom: 0; height: auto; width: 260px; z-index: 300; transform: translateX(-105%);
+    transition: transform .18s ease-out; box-shadow: 0 8px 24px rgba(31,35,40,.18); background: var(--idv-cartao); }
+  body.menu-aberto-movel #app > .nav-tabs { transform: none; }
+  body.menu-recolhido #app > .nav-tabs .nav-tab { font-size: 14px; justify-content: flex-start; padding: 0 10px; }
+  body.menu-recolhido .nav-grupo-tit { font-size: 12px; padding: 14px 10px 4px; border: 0; margin: 0; }
+  #app > .topbar .topbar-brand .sub, #app > .topbar .user-chip span { display: none; }
+}
+@media print { #app[style*="block"] { display: block !important; } #app > .nav-tabs, .topbar-menu { display: none !important; } }
+
+/* decisão 2 — botão principal em preto (azul fica só para informação e link; verde continua = concluir) */
+.btn-primary, .btn-refresh, .idv-btn.criar { background: var(--idv-cab); border-color: var(--idv-cab); color: #fff; }
+.btn-primary:hover, .btn-refresh:hover, .idv-btn.criar:hover { background: #000; border-color: #000; }
+
+/* decisão 3 — tabela: cabeçalho claro e fixo, sem zebra, uma faixa fina de situação à esquerda */
+table.idv-tabela thead tr, table.idv-tabela th, .data-table th:not([style*="color"]):not([style*="background"]) {
+  background: var(--idv-cartao) !important; color: var(--idv-sec) !important; }
+table.idv-tabela th, .data-table th { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--idv-borda);
+  position: sticky; top: 0; z-index: 1; }
+table.idv-tabela tbody tr:nth-child(even), .data-table tbody tr:nth-child(even) { background: var(--idv-cartao); }
+table.idv-tabela tbody tr:hover, .data-table tbody tr:hover { background: var(--idv-fundo); }
+table.idv-tabela tbody tr.row-vencido, .data-table:not(.idv-tabela) tbody tr.row-vencido { box-shadow: inset 3px 0 0 var(--idv-cr); }
+table.idv-tabela tbody tr.row-vencendo, table.idv-tabela tbody tr.row-atencao,
+.data-table:not(.idv-tabela) tbody tr.row-vencendo, .data-table:not(.idv-tabela) tbody tr.row-atencao { box-shadow: inset 3px 0 0 var(--idv-at); }
+table.idv-tabela tbody tr.row-comunicado, table.idv-tabela tbody tr.row-ok,
+.data-table:not(.idv-tabela) tbody tr.row-ok, .data-table:not(.idv-tabela) tbody tr.row-comunicado { box-shadow: inset 3px 0 0 var(--idv-ok); }
+table.idv-tabela tbody tr.row-protetiva, .data-table:not(.idv-tabela) tbody tr.row-protetiva { box-shadow: inset 3px 0 0 var(--idv-de); }
+
+/* blocos, gráficos e janelas sem faixa preta: título claro em tinta escura */
+.idv-bloco-cab, #panel-dashboard .dchart-title, #panel-dashboard .dsec-head { background: var(--idv-fundo); color: var(--idv-texto);
+  border-bottom: 1px solid var(--idv-borda); text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 600; }
+.idv-bloco.destaque .idv-bloco-cab { background: var(--idv-ok-f); color: var(--idv-ok); }
+.modal-header { background: var(--idv-cartao); color: var(--idv-texto); border-bottom: 1px solid var(--idv-borda); }
+.modal-header h3 { color: var(--idv-texto); }
+.modal-header .modal-close { color: var(--idv-sec); }
+
+/* títulos de seção: 16 px, sem caixa alta */
+.idv-secao, .section-title, .est-section-title, .tri-filtros-title { font-size: 16px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--idv-texto); }
+
+/* indicadores: número em tinta escura; só o que é problema (vermelho) fica colorido */
+.idv-kpi { border-top-width: 3px; }
+.idv-kpi.at .idv-num, .idv-kpi.ok .idv-num, .idv-kpi.in .idv-num, .idv-kpi.de .idv-num { color: var(--idv-texto); }
+
+/* linha do achado embaixo do título da tela */
+.idv-achado { font-size: 14px; color: var(--idv-texto); margin-top: 2px; }
+.idv-achado b.cr { color: var(--idv-cr); font-weight: 600; }
+.idv-achado .idv-sec { color: var(--idv-sec); }

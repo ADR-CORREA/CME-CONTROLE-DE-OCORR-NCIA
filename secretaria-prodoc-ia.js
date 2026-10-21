@@ -66,7 +66,7 @@ function _sprdBlocoIA(l) {
     + '<div style="font-size:12px;font-weight:600;color:var(--idv-de);text-transform:uppercase;letter-spacing:.05em">Leitura da IA — o que fazer</div>'
     + '<div style="font-weight:600;margin-top:2px">' + esc(ia.providencia || '—') + '</div>'
     + lin('Setor', esc(setorIA || '—') + (concorda ? '' : ' <span style="color:var(--idv-at);font-weight:600">· pelo histórico da CME iria para ' + esc(regra) + ' — confira</span>'))
-    + (ia.prazo || ia.urgente ? lin('Prazo', (ia.prazo ? '<span class="idv-mono">' + _sprdBR(ia.prazo) + '</span>' : '') + (ia.prazoTrecho ? ' ("' + esc(ia.prazoTrecho) + '")' : '') + (ia.urgente ? ' <b style="color:var(--idv-cr)">urgente</b>' : '')) : '')
+    + (ia.prazo || ia.urgente ? lin('Prazo', (ia.prazo ? '<span class="idv-data">' + _sprdBR(ia.prazo) + '</span>' : '') + (ia.prazoTrecho ? ' ("' + esc(ia.prazoTrecho) + '")' : '') + (ia.urgente ? ' <b style="color:var(--idv-cr)">urgente</b>' : '')) : '')
     + (ia.determinacao ? lin('O documento determina', esc(ia.determinacao)) : '')
     + (pessoas.length ? lin('Pessoas', pessoas.map(p => esc(p.nome) + (p.papel ? ' (' + esc(p.papel) + ')' : '')).join('; ')) : '')
     + (ia.processo ? lin('Processo', '<span style="font-family:var(--font-mono)">' + esc(ia.processo) + '</span>') : '')
