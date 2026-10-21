@@ -1529,6 +1529,10 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
     <!-- ─── JURÍDICO ─── -->
     <div class="tab-panel" id="panel-juridico">
+      <!-- Identidade visual (20/10/2026): cabeçalho, barra, tabela e indicadores do guia (identidade.css) -->
+      <div class="idv-cab">
+        <div><h1>Jurídico</h1><div class="idv-sub">Casos com PRODOC enviado e controle de OFC / vinculações</div></div>
+      </div>
       <div class="sub-tabs" style="margin-bottom:0">
         <div class="sub-tab active" id="jur-stab-ocorrencias" onclick="mudarSubAbaJur('ocorrencias')">⚖️ Ocorrências Jurídicas</div>
         <div class="sub-tab" id="jur-stab-ofc" onclick="mudarSubAbaJur('ofc')">
@@ -1539,19 +1543,16 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       <!-- Sub-painel: Ocorrências Jurídicas (conteúdo original) -->
       <div class="sub-panel active" id="jur-panel-ocorrencias">
-        <div class="table-wrapper">
-          <div class="table-toolbar">
-            <div class="table-search">
-              <span>🔍</span>
-              <input type="text" placeholder="Buscar monitorado..." oninput="filtrarJuridico(this.value)">
-            </div>
-            <div class="table-actions">
-              <button class="btn-secondary" onclick="renderizarJuridico()">🔄 Atualizar</button>
-              <button class="btn-secondary" onclick="exportarJuridicoExcel()">📥 Exportar Excel</button>
+        <div>
+          <div class="idv-barra" style="margin-top:12px">
+            <label class="idv-busca"><span aria-hidden="true">🔍</span><input type="text" placeholder="Buscar monitorado..." aria-label="Buscar caso jurídico" oninput="filtrarJuridico(this.value)"></label>
+            <div class="idv-acoes">
+              <button type="button" class="idv-btn" onclick="renderizarJuridico()">Atualizar</button>
+              <button type="button" class="idv-btn" onclick="exportarJuridicoExcel()">Exportar Excel</button>
             </div>
           </div>
           <div class="table-scroll">
-            <table class="data-table">
+            <table class="data-table idv-tabela">
               <thead>
                 <tr>
                   <th>ID</th>
@@ -1582,59 +1583,43 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       <div class="sub-panel" id="jur-panel-ofc">
 
         <!-- Toolbar -->
-        <div class="table-toolbar" style="flex-wrap:wrap;gap:8px">
-          <div style="font-weight:600;color:var(--az1);font-size:1rem">📋 Controle de OFC — Vinculações</div>
-          <div class="table-actions" style="flex-wrap:wrap;gap:6px">
-            <label class="btn-secondary" style="cursor:pointer;margin:0" title="Importar planilha DEMANDAS_CME.xlsx">
-              📂 Importar Excel
+        <div class="idv-barra" style="margin-top:12px">
+          <div class="idv-secao" style="margin:0">Controle de OFC — Vinculações</div>
+          <div class="idv-acoes">
+            <label class="idv-btn" style="margin:0" title="Importar planilha DEMANDAS_CME.xlsx">
+              Importar Excel
               <input type="file" id="ofc-file-input" accept=".xlsx,.xls" style="display:none" onchange="importarOFC(this)">
             </label>
-            <button class="btn-secondary" onclick="renderizarOFC()">🔄 Atualizar</button>
-            <button class="btn-secondary" onclick="exportarOFCExcel()">📥 Exportar Excel</button>
-            <button class="btn-primary"   onclick="abrirModalOFC(null)">➕ Nova Demanda</button>
+            <button type="button" class="idv-btn" onclick="renderizarOFC()">Atualizar</button>
+            <button type="button" class="idv-btn" onclick="exportarOFCExcel()">Exportar Excel</button>
+            <button type="button" class="idv-btn criar" onclick="abrirModalOFC(null)">+ Nova demanda</button>
           </div>
         </div>
 
         <!-- Sub-abas Ativos / Arquivados -->
-        <div class="sub-tabs" style="margin:10px 0 0 0;border-bottom:1px solid #e2e8f0">
-          <div class="sub-tab active" id="ofc-stab-ativos" onclick="mudarSubAbaOFC('ativos')" style="font-size:.88rem">📋 Ativos</div>
-          <div class="sub-tab" id="ofc-stab-arquivados" onclick="mudarSubAbaOFC('arquivados')" style="font-size:.88rem">
+        <div class="sub-tabs" style="margin:10px 0 0 0">
+          <div class="sub-tab active" id="ofc-stab-ativos" onclick="mudarSubAbaOFC('ativos')">📋 Ativos</div>
+          <div class="sub-tab" id="ofc-stab-arquivados" onclick="mudarSubAbaOFC('arquivados')">
             📁 Arquivados
-            <span id="ofc-arq-badge" class="notif-badge" style="display:none;background:#16a34a">0</span>
+            <span id="ofc-arq-badge" class="notif-badge" style="display:none;background:var(--idv-ok)">0</span>
           </div>
         </div>
 
         <!-- ── Painel Ativos ── -->
         <div class="sub-panel active" id="ofc-panel-ativos">
 
-        <!-- KPIs -->
-        <div class="kpi-grid" style="margin:12px 0 8px 0;grid-template-columns:repeat(auto-fit,minmax(110px,1fr))">
-          <div class="kpi-card" style="background:#f0f9ff;border-left:4px solid #0284c7">
-            <div class="kpi-icon">📋</div><div class="kpi-value" id="ofc-kpi-total">0</div><div class="kpi-label">Total</div>
-          </div>
-          <div class="kpi-card" style="background:#fef9c3;border-left:4px solid #ca8a04">
-            <div class="kpi-icon">⏳</div><div class="kpi-value" id="ofc-kpi-pend">0</div><div class="kpi-label">Pendentes</div>
-          </div>
-          <div class="kpi-card" style="background:#fef2f2;border-left:4px solid #dc2626">
-            <div class="kpi-icon">🔴</div><div class="kpi-value" id="ofc-kpi-vencido">0</div><div class="kpi-label">Prazo Vencido</div>
-          </div>
-          <div class="kpi-card" style="background:#f0fdf4;border-left:4px solid #16a34a">
-            <div class="kpi-icon">✅</div><div class="kpi-value" id="ofc-kpi-conc">0</div><div class="kpi-label">Concluídos</div>
-          </div>
-          <div class="kpi-card" style="background:#eff6ff;border-left:4px solid #3b82f6">
-            <div class="kpi-icon">🏛️</div><div class="kpi-value" id="ofc-kpi-mcp">0</div><div class="kpi-label">MCP</div>
-          </div>
-          <div class="kpi-card" style="background:#fdf4ff;border-left:4px solid #9333ea">
-            <div class="kpi-icon">🏛️</div><div class="kpi-value" id="ofc-kpi-stn">0</div><div class="kpi-label">STN</div>
-          </div>
-          <div class="kpi-card" style="background:#fff7ed;border-left:4px solid #ea580c">
-            <div class="kpi-icon">🏛️</div><div class="kpi-value" id="ofc-kpi-porto">0</div><div class="kpi-label">Porto Grande</div>
-          </div>
+        <!-- KPIs (por fórum agrupado num indicador só) -->
+        <div class="idv-kpis" style="margin:12px 0 12px 0">
+          <div class="idv-kpi"><span class="idv-num" id="ofc-kpi-total">0</span><span class="idv-rot">Total</span><span class="idv-leg">demandas cadastradas</span></div>
+          <div class="idv-kpi at"><span class="idv-num" id="ofc-kpi-pend">0</span><span class="idv-rot">Pendentes</span><span class="idv-leg">aguardando comparecimento</span></div>
+          <div class="idv-kpi cr"><span class="idv-num" id="ofc-kpi-vencido">0</span><span class="idv-rot">Prazo vencido</span><span class="idv-leg">pendentes com prazo estourado</span></div>
+          <div class="idv-kpi ok"><span class="idv-num" id="ofc-kpi-conc">0</span><span class="idv-rot">Concluídos</span><span class="idv-leg">vão para Arquivados</span></div>
+          <div class="idv-kpi in"><span class="idv-rot">Por fórum</span><span class="idv-mini" style="font-size:14px;color:var(--idv-texto)">MCP <b class="idv-mono" id="ofc-kpi-mcp">0</b> · STN <b class="idv-mono" id="ofc-kpi-stn">0</b> · Porto Grande <b class="idv-mono" id="ofc-kpi-porto">0</b></span></div>
         </div>
 
         <!-- Filtros -->
         <div class="tri-filtros">
-          <div class="tri-filtros-title">🔍 Filtros</div>
+          <div class="tri-filtros-title">Filtros</div>
           <div class="tri-filtros-grid">
             <div class="form-field" style="margin:0">
               <label>Nome / Processo</label>
@@ -1674,14 +1659,14 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               </select>
             </div>
             <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
-              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosOFC()">✕ Limpar</button>
+              <button type="button" class="idv-btn" style="width:100%;justify-content:center" onclick="limparFiltrosOFC()">Limpar</button>
             </div>
           </div>
         </div>
 
-        <div class="est-section-title" id="ofc-count-label">Demandas</div>
+        <div class="idv-secao" id="ofc-count-label">Demandas</div>
         <div class="table-scroll">
-          <table class="data-table" style="font-size:.83rem">
+          <table class="data-table idv-tabela">
             <thead><tr>
               <th>Nº</th>
               <th>Nome</th>
@@ -1706,15 +1691,13 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
         <!-- ── Painel Arquivados (Concluídos) ── -->
         <div class="sub-panel" id="ofc-panel-arquivados">
-          <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
-            <div style="font-weight:600;color:#15803d;font-size:.95rem">📁 Demandas Arquivadas (Concluídas)</div>
-            <div class="table-actions">
-              <input type="text" id="ofc-arq-busca" placeholder="🔍 Buscar..." oninput="renderizarOFCArquivados()" style="padding:5px 10px;border:1px solid #ddd;border-radius:6px;font-size:.85rem">
-            </div>
+          <div class="idv-barra" style="margin-top:12px">
+            <div class="idv-secao" style="margin:0">Demandas arquivadas (concluídas)</div>
+            <label class="idv-busca"><span aria-hidden="true">🔍</span><input type="text" id="ofc-arq-busca" placeholder="Buscar..." aria-label="Buscar demanda arquivada" oninput="renderizarOFCArquivados()"></label>
           </div>
-          <div class="est-section-title" id="ofc-arq-count-label">Arquivados</div>
+          <div class="idv-secao" id="ofc-arq-count-label">Arquivados</div>
           <div class="table-scroll">
-            <table class="data-table" style="font-size:.83rem">
+            <table class="data-table idv-tabela">
               <thead><tr>
                 <th>Nº</th>
                 <th>Nome</th>
@@ -1738,11 +1721,15 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
     <!-- ─── RELATÓRIO ─── -->
     <div class="tab-panel" id="panel-relatorio">
-      <div id="rel-term-aviso" onclick="mudarSubAbaRel('termino')" title="Abrir a lista de término da monitoração" style="display:none;cursor:pointer;margin:0 0 10px 0;padding:10px 14px;border-radius:6px;border:1px solid rgba(248,81,73,.45);border-left:4px solid #f85149;background:rgba(248,81,73,.08);font-size:.88rem"></div>
+      <!-- Identidade visual (20/10/2026): cabeçalho, barras, tabelas e etiquetas do guia (identidade.css) -->
+      <div class="idv-cab">
+        <div><h1>Relatório</h1><div class="idv-sub">Relatórios ao juízo: recebidos, enviados, arquivados, gerador de violações e listas do AKILES</div></div>
+      </div>
+      <div id="rel-term-aviso" onclick="mudarSubAbaRel('termino')" title="Abrir a lista de término da monitoração" style="display:none;cursor:pointer;margin:0 0 10px 0;padding:12px 16px;border-radius:6px;border:1px solid var(--idv-cr);border-left:4px solid var(--idv-cr);background:var(--idv-cr-f);font-size:15px;color:var(--idv-texto)"></div>
       <div class="sub-tabs">
-        <div class="sub-tab"        id="rel-stab-recebidos" onclick="mudarSubAbaRel('recebidos')">📥 Recebidos<span id="rel-rec-count" style="color:#e67e22;font-weight:700"></span></div>
+        <div class="sub-tab"        id="rel-stab-recebidos" onclick="mudarSubAbaRel('recebidos')">📥 Recebidos<span id="rel-rec-count" style="color:var(--idv-at);font-weight:600"></span></div>
         <div class="sub-tab active" id="rel-stab-lista"      onclick="mudarSubAbaRel('lista')">📄 Relatórios</div>
-        <div class="sub-tab"        id="rel-stab-aguardando" onclick="mudarSubAbaRel('aguardando')">⏳ Aguardando<span id="rel-aguard-count" style="color:#e67e22;font-weight:700"></span></div>
+        <div class="sub-tab"        id="rel-stab-aguardando" onclick="mudarSubAbaRel('aguardando')">⏳ Aguardando<span id="rel-aguard-count" style="color:var(--idv-at);font-weight:600"></span></div>
         <div class="sub-tab"        id="rel-stab-arquivadas" onclick="mudarSubAbaRel('arquivadas')">📁 Arquivadas</div>
         <div class="sub-tab"        id="rel-stab-gerador"    onclick="mudarSubAbaRel('gerador')">⚡ Gerador de Violações</div>
         <div class="sub-tab"        id="rel-stab-semcom"     onclick="mudarSubAbaRel('semcom')">📵 Sem Comunicação<span id="rel-semcom-badge" class="notif-badge" style="display:none">0</span></div>
@@ -1751,14 +1738,14 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       </div>
       <!-- ── Sub-painel: Recebidos dos Críticos (fluxo) ── -->
       <div class="sub-panel" id="rel-panel-recebidos">
-        <div class="table-toolbar">
-          <div style="font-weight:600;color:var(--az1)">📥 Casos recebidos dos Críticos — aguardando confecção do relatório</div>
-          <div class="table-actions">
-            <button class="btn-secondary" onclick="renderizarRelRecebidos()">🔄 Atualizar</button>
+        <div class="idv-barra" style="margin-top:12px">
+          <div class="idv-secao" style="margin:0">Casos recebidos dos Críticos — aguardando confecção do relatório</div>
+          <div class="idv-acoes">
+            <button type="button" class="idv-btn" onclick="renderizarRelRecebidos()">Atualizar</button>
           </div>
         </div>
         <div class="table-scroll">
-          <table class="data-table">
+          <table class="data-table idv-tabela">
             <thead><tr>
               <th>ID</th><th>Monitorado</th><th>Medida</th><th>Tipo</th><th>Recebido em</th><th>Relatório</th><th>Ações</th>
             </tr></thead>
@@ -1768,20 +1755,17 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       </div>
 
       <div class="sub-panel active" id="rel-panel-lista">
-        <div class="table-wrapper">
-          <div class="table-toolbar">
-            <div class="table-search">
-              <span>🔍</span>
-              <input type="text" placeholder="Buscar monitorado, servidor..." oninput="filtrarRelatorio(this.value)">
-            </div>
-            <div class="table-actions">
-              <button class="btn-secondary" onclick="renderizarRelatorio()">🔄 Atualizar</button>
-              <button class="btn-secondary" onclick="exportarRelatorioExcel()">📥 Exportar Excel</button>
-              <button class="btn-primary" onclick="abrirModalRelatorio()">➕ Novo Relatório</button>
+        <div>
+          <div class="idv-barra" style="margin-top:12px">
+            <label class="idv-busca"><span aria-hidden="true">🔍</span><input type="text" placeholder="Buscar monitorado, servidor..." aria-label="Buscar relatório" oninput="filtrarRelatorio(this.value)"></label>
+            <div class="idv-acoes">
+              <button type="button" class="idv-btn" onclick="renderizarRelatorio()">Atualizar</button>
+              <button type="button" class="idv-btn" onclick="exportarRelatorioExcel()">Exportar Excel</button>
+              <button type="button" class="idv-btn criar" onclick="abrirModalRelatorio()">+ Novo relatório</button>
             </div>
           </div>
           <div class="table-scroll">
-            <table class="data-table">
+            <table class="data-table idv-tabela">
               <thead><tr>
                 <th>Nº</th>
                 <th>Tipo de Relatório</th>
@@ -1796,16 +1780,16 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               <tbody id="tbody-relatorio"></tbody>
             </table>
           </div>
-          <div style="margin-top:10px;font-size:.85rem;color:#666" id="rel-count-label"></div>
+          <div class="idv-mini" style="margin-top:10px;font-size:14px" id="rel-count-label"></div>
         </div>
       </div>
       <div class="sub-panel" id="rel-panel-aguardando">
-        <div class="table-toolbar">
-          <div style="font-weight:600;color:var(--az1)">⏳ Enviados — aguardando a Comunicação Processual enviar</div>
+        <div class="idv-barra" style="margin-top:12px">
+          <div class="idv-secao" style="margin:0">Enviados — aguardando a Comunicação Processual enviar</div>
         </div>
-        <div class="est-section-title" id="rel-aguard-count-label">Aguardando</div>
+        <div class="idv-secao" id="rel-aguard-count-label">Aguardando</div>
         <div class="table-scroll">
-          <table class="data-table">
+          <table class="data-table idv-tabela">
             <thead><tr>
               <th>Nº</th><th>Tipo</th><th>Monitorado</th><th>Período</th><th>Servidor</th>
               <th>Dt. Recebimento</th><th>Enviado em</th><th>Situação</th>
@@ -1816,17 +1800,17 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       </div>
 
       <div class="sub-panel" id="rel-panel-arquivadas">
-        <div class="table-toolbar">
-          <div style="font-weight:600;color:var(--az1)">📁 Relatórios enviados pela Comunicação Processual</div>
-          <div class="table-actions">
-            <button class="btn-secondary" onclick="renderizarRelArquivadas()">🔄 Atualizar</button>
-            <button class="btn-secondary" onclick="exportarRelArquivadasExcel()">📥 Exportar Excel</button>
+        <div class="idv-barra" style="margin-top:12px">
+          <div class="idv-secao" style="margin:0">Relatórios enviados pela Comunicação Processual</div>
+          <div class="idv-acoes">
+            <button type="button" class="idv-btn" onclick="renderizarRelArquivadas()">Atualizar</button>
+            <button type="button" class="idv-btn" onclick="exportarRelArquivadasExcel()">Exportar Excel</button>
           </div>
         </div>
 
         <!-- Filtros Arquivadas -->
         <div class="tri-filtros">
-          <div class="tri-filtros-title">🔍 Pesquisar</div>
+          <div class="tri-filtros-title">Pesquisar</div>
           <div class="tri-filtros-grid">
             <div class="form-field" style="margin:0">
               <label>Monitorado</label>
@@ -1857,14 +1841,14 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               <input type="date" id="rel-a-fim" onchange="renderizarRelArquivadas()">
             </div>
             <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
-              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosRelArq()">✕ Limpar</button>
+              <button type="button" class="idv-btn" style="width:100%;justify-content:center" onclick="limparFiltrosRelArq()">Limpar</button>
             </div>
           </div>
         </div>
-        <div class="est-section-title" id="rel-arq-count-label">Arquivados</div>
+        <div class="idv-secao" id="rel-arq-count-label">Arquivados</div>
 
         <div class="table-scroll">
-          <table class="data-table">
+          <table class="data-table idv-tabela">
             <thead><tr>
               <th>Nº</th><th>Tipo</th><th>Monitorado</th><th>Período</th><th>Servidor</th>
               <th>Dt. Recebimento</th><th>Dt. Envio Com.</th><th>Arquivado em</th><th>Violações</th><th>Ações</th>
@@ -1876,19 +1860,19 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       <!-- ── Sub-painel: Gerador de Violações ── -->
       <div class="sub-panel" id="rel-panel-gerador">
-        <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin:8px 0">
-          <div style="font-weight:700;color:#1F4E78;font-size:1rem">⚡ Gerador de Relatório de Violações — AKILES</div>
+        <div class="idv-barra" style="margin-top:12px">
+          <div class="idv-secao" style="margin:0">Gerador de relatório de violações — AKILES</div>
         </div>
 
         <!-- Busca direta no banco (mesmos filtros do Metabase) -->
-        <div id="rv-busca" style="background:#f5f3ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:8px;padding:14px 16px;margin-bottom:12px">
-          <div style="font-weight:700;color:#5b21b6;margin-bottom:2px">🔎 Buscar direto no banco (Metabase) — sem baixar planilha</div>
-          <div style="font-size:.78rem;color:#6b7280;margin-bottom:10px">Preencha ao menos <b>nome</b>, CPF, mãe ou pai (aceita parte do nome). Tipo e vara são opcionais e também aceitam parte do texto. Os mapas das violações de zona saem pelo robô.</div>
+        <div id="rv-busca" style="background:var(--idv-cartao);border:1px solid var(--idv-borda);border-left:3px solid var(--idv-de);border-radius:8px;padding:14px 16px;margin-bottom:12px">
+          <div style="font-size:15px;font-weight:600;color:var(--idv-texto);margin-bottom:2px">Buscar direto no banco (Metabase) — sem baixar planilha</div>
+          <div style="font-size:13px;color:var(--idv-sec);margin-bottom:10px">Preencha ao menos <b>nome</b>, CPF, mãe ou pai (aceita parte do nome). Tipo e vara são opcionais e também aceitam parte do texto. Os mapas das violações de zona saem pelo robô.</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 10px" onkeydown="if(event.key==='Enter'){event.preventDefault();rv_buscarBanco();}">
-            <div class="form-field" style="margin:0;grid-column:span 2"><label>Monitorado <span style="font-weight:400;color:#6b7280;text-transform:none;letter-spacing:0">— um por campo; "+" adiciona outro (cada um sai num relatório)</span></label>
+            <div class="form-field" style="margin:0;grid-column:span 2"><label>Monitorado <span style="font-weight:400;color:var(--idv-sec);text-transform:none;letter-spacing:0">— um por campo; "+" adiciona outro (cada um sai num relatório)</span></label>
               <div id="rv-b-nomes" style="display:flex;flex-direction:column;gap:6px">
                 <div style="display:flex;gap:6px"><input type="text" id="rv-b-nome" class="rv-b-nome" placeholder="Nome ou parte do nome" autocomplete="off" style="flex:1;min-width:0">
-                  <button type="button" onclick="rv_addNomeBusca()" title="Adicionar outro monitorado" style="flex:none;width:38px;border:1px solid #7c3aed;background:#7c3aed;color:#fff;border-radius:6px;font-size:1.1rem;font-weight:700;cursor:pointer">+</button></div>
+                  <button type="button" class="idv-btn icone" onclick="rv_addNomeBusca()" title="Adicionar outro monitorado" aria-label="Adicionar outro monitorado" style="flex:none">+</button></div>
               </div></div>
             <div class="form-field" style="margin:0"><label>CPF</label><input type="text" id="rv-b-cpf" placeholder="só números" inputmode="numeric" autocomplete="off"></div>
             <div class="form-field" style="margin:0"><label>Mãe</label><input type="text" id="rv-b-mae" autocomplete="off"></div>
@@ -1901,112 +1885,109 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
             <div class="form-field" style="margin:0"><label>Até</label><input type="date" id="rv-b-fim"></div>
           </div>
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
-            <button type="button" class="btn-secondary" onclick="rv_limparBusca()">✕ Limpar</button>
-            <button type="button" class="btn-primary" style="background:#7c3aed;border-color:#7c3aed" onclick="rv_buscarBanco()">🔎 Buscar e carregar no Gerador</button>
+            <button type="button" class="idv-btn" onclick="rv_limparBusca()">Limpar</button>
+            <button type="button" class="idv-btn criar" onclick="rv_buscarBanco()">Buscar e carregar no Gerador</button>
           </div>
         </div>
 
         <!-- Upload -->
-        <div style="background:#f0f9ff;border:2px dashed #0284c7;border-radius:12px;padding:14px;text-align:center;margin-bottom:16px">
-          <div style="font-weight:600;color:#1F4E78;margin-bottom:6px">📊 Ou importe a planilha exportada do AKILES AP</div>
-          <div style="font-size:.85rem;color:#666;margin-bottom:14px">Formatos aceitos: <strong>.xlsx</strong> ou <strong>.csv</strong></div>
-          <label class="btn-primary" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px">
-            📂 Selecionar planilha do AKILES
+        <div style="background:var(--idv-fundo);border:1px dashed var(--idv-borda);border-radius:8px;padding:14px;text-align:center;margin-bottom:16px">
+          <div style="font-size:15px;font-weight:600;color:var(--idv-texto);margin-bottom:4px">Ou importe a planilha exportada do AKILES AP</div>
+          <div style="font-size:13px;color:var(--idv-sec);margin-bottom:12px">Formatos aceitos: <strong>.xlsx</strong> ou <strong>.csv</strong></div>
+          <label class="idv-btn" style="display:inline-flex">
+            Selecionar planilha do AKILES
             <input type="file" id="rv-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="rv_importarPlanilha(this)">
           </label>
         </div>
 
         <!-- Status / resultado da importação -->
         <div id="rv-status" style="display:none;margin-bottom:14px">
-          <div id="rv-status-msg" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;color:#15803d;font-weight:600;margin-bottom:12px"></div>
+          <div id="rv-status-msg" style="background:var(--idv-ok-f);border:1px solid var(--idv-ok);border-radius:6px;padding:12px 16px;color:var(--idv-ok);font-weight:600;margin-bottom:12px"></div>
 
           <!-- Opções -->
           <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px">
             <div class="form-field" style="margin:0;flex:0 0 auto">
-              <label style="font-size:.85rem">Assinante principal</label>
-              <select id="rv-assinante" style="padding:5px 10px;border:1px solid #ddd;border-radius:6px;font-size:.85rem" onchange="rv_atualizarAssinante()">
+              <label>Assinante principal</label>
+              <select id="rv-assinante" class="idv-select" onchange="rv_atualizarAssinante()">
                 <option value="">-- Selecione o servidor --</option>
               </select>
             </div>
             <div class="form-field" style="margin:0;flex:0 0 auto">
-              <label style="font-size:.85rem">Gerente (opcional)</label>
-              <select id="rv-gerente" style="padding:5px 10px;border:1px solid #ddd;border-radius:6px;font-size:.85rem">
+              <label>Gerente (opcional)</label>
+              <select id="rv-gerente" class="idv-select">
                 <option value="">-- Sem gerente --</option>
               </select>
             </div>
           </div>
 
           <!-- Aviso assinatura -->
-          <div id="rv-aviso-ass" style="display:none;background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:.83rem;color:#92400e;margin-bottom:12px">
-            ⚠️ O servidor selecionado não tem assinatura cadastrada. <a href="#" onclick="mudarAba('admin');return false" style="color:#92400e;font-weight:600">Cadastrar assinatura →</a>
+          <div id="rv-aviso-ass" class="idv-faixa at" style="display:none;margin-bottom:12px">
+            <span class="idv-faixa-ic" aria-hidden="true">!</span><span>O servidor selecionado não tem assinatura cadastrada. <a href="#" class="idv-link" onclick="mudarAba('admin');return false">Cadastrar assinatura →</a></span>
           </div>
 
           <!-- Lista de monitorados -->
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div style="font-weight:600;font-size:.9rem;color:#1F4E78" id="rv-lista-titulo"></div>
-            <div id="rv-lista-controles" style="display:none;gap:6px">
-              <button id="rv-bulk-btn" onclick="rv_botaoLote()" title="Se o robô (motor) estiver ligado, captura os mapas no AKILES automaticamente. Senão, importe os prints de uma pasta — cada um vai pro slot pelo número da ocorrência (idOc) no nome do arquivo" style="font-size:.75rem;padding:3px 10px;border:1px solid #16a34a;border-radius:5px;background:#fff;color:#15803d;cursor:pointer">🗺️ Importar prints (lote)</button>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+            <div style="font-weight:600;font-size:15px;color:var(--idv-texto)" id="rv-lista-titulo"></div>
+            <div id="rv-lista-controles" style="display:none;gap:6px;flex-wrap:wrap">
+              <button type="button" id="rv-bulk-btn" class="idv-btn mini" onclick="rv_botaoLote()" title="Se o robô (motor) estiver ligado, captura os mapas no AKILES automaticamente. Senão, importe os prints de uma pasta — cada um vai pro slot pelo número da ocorrência (idOc) no nome do arquivo">🗺️ Importar prints (lote)</button>
               <input type="file" id="rv-bulk-input" accept="image/*" multiple style="display:none" onchange="rv_importarPrintsLote(this.files); this.value=''">
-              <button onclick="rv_marcarTodos(true)"  style="font-size:.75rem;padding:3px 10px;border:1px solid #1F4E78;border-radius:5px;background:#fff;color:#1F4E78;cursor:pointer">✔ Marcar todos</button>
-              <button onclick="rv_marcarTodos(false)" style="font-size:.75rem;padding:3px 10px;border:1px solid #999;border-radius:5px;background:#fff;color:#555;cursor:pointer">✗ Desmarcar todos</button>
+              <button type="button" class="idv-btn mini" onclick="rv_marcarTodos(true)">Marcar todos</button>
+              <button type="button" class="idv-btn mini" onclick="rv_marcarTodos(false)">Desmarcar todos</button>
             </div>
           </div>
           <!-- Barra de progresso da captura (robô invisível) -->
           <div id="rv-progresso" style="display:none;margin-bottom:8px">
-            <div style="display:flex;justify-content:space-between;font-size:.72rem;color:#15803d;margin-bottom:3px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--idv-ok);margin-bottom:3px">
               <span id="rv-progresso-txt">Capturando…</span>
               <span id="rv-progresso-pct" style="font-variant-numeric:tabular-nums">0%</span>
             </div>
             <div style="display:flex;align-items:center;gap:8px">
-              <div style="flex:1;height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden">
-                <div id="rv-progresso-bar" style="height:100%;width:0%;background:#16a34a;border-radius:999px;transition:width .3s"></div>
+              <div style="flex:1;height:8px;background:var(--idv-linha);border-radius:2px;overflow:hidden">
+                <div id="rv-progresso-bar" style="height:100%;width:0%;background:var(--idv-ok);border-radius:2px;transition:width .3s"></div>
               </div>
-              <button id="rv-cancelar-btn" type="button" onclick="rv_cancelarCaptura()" title="Cancelar a captura em andamento" style="flex:none;font-size:.7rem;padding:2px 10px;border:1px solid #dc2626;border-radius:5px;background:#fff;color:#dc2626;cursor:pointer;white-space:nowrap">&times; Cancelar</button>
+              <button id="rv-cancelar-btn" type="button" class="idv-btn mini perigo" onclick="rv_cancelarCaptura()" title="Cancelar a captura em andamento" style="flex:none">&times; Cancelar</button>
             </div>
           </div>
-          <div id="rv-lista-monitorados" style="max-height:260px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px"></div>
+          <div id="rv-lista-monitorados" style="max-height:260px;overflow-y:auto;border:1px solid var(--idv-borda);border-radius:8px;background:var(--idv-cartao)"></div>
 
           <!-- Botão gerar -->
           <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
             <div style="display:flex;flex-direction:column;gap:6px">
-              <div style="font-size:.75rem;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.05em">📄 HTML (imprimir / PDF)</div>
+              <div style="font-size:13px;font-weight:600;color:var(--idv-sec)">HTML (imprimir / PDF)</div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn-primary" onclick="rv_gerarTodos('html')" style="display:flex;align-items:center;gap:8px">
-                  ⚡ Gerar todos
+                <button type="button" class="idv-btn criar" onclick="rv_gerarTodos('html')">
+                  Gerar todos
                 </button>
-                <button class="btn-secondary" onclick="rv_gerarSelecionados('html')">
-                  ✅ Gerar selecionados
+                <button type="button" class="idv-btn" onclick="rv_gerarSelecionados('html')">
+                  Gerar selecionados
                 </button>
               </div>
             </div>
-            <div style="width:1px;background:#e2e8f0;align-self:stretch;margin:0 4px"></div>
+            <div style="width:1px;background:var(--idv-linha);align-self:stretch;margin:0 4px"></div>
             <div style="display:flex;flex-direction:column;gap:6px">
-              <div style="font-size:.75rem;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.05em">📝 Word (.doc)</div>
+              <div style="font-size:13px;font-weight:600;color:var(--idv-sec)">Word (.doc)</div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn-primary" onclick="rv_gerarTodos('word')" style="background:#1e40af;display:flex;align-items:center;gap:8px">
-                  ⚡ Gerar todos
+                <button type="button" class="idv-btn criar" onclick="rv_gerarTodos('word')">
+                  Gerar todos
                 </button>
-                <button class="btn-secondary" onclick="rv_gerarSelecionados('word')" style="border-color:#1e40af;color:#1e40af">
-                  ✅ Gerar selecionados
+                <button type="button" class="idv-btn" onclick="rv_gerarSelecionados('word')">
+                  Gerar selecionados
                 </button>
               </div>
             </div>
-            <button class="btn-secondary" onclick="rv_limpar()" style="align-self:flex-end">🗑️ Limpar</button>
+            <button type="button" class="idv-btn" onclick="rv_limpar()" style="align-self:flex-end">Limpar</button>
           </div>
         </div>
       </div><!-- /rel-panel-gerador -->
 
       <!-- ── Sub-painel: Sem Comunicação (controle p/ relatório ao juízo) ── -->
       <div class="sub-panel" id="rel-panel-semcom">
-        <div class="table-wrapper">
-          <div class="table-toolbar">
-            <div class="table-search">
-              <span>🔍</span>
-              <input type="text" id="rel-semcom-busca" placeholder="Buscar nome ou registro..." oninput="renderizarRelSemCom()">
-            </div>
-            <div class="table-actions" style="align-items:center;gap:8px">
-              <label style="font-size:.82rem;color:#555">Corte:
-                <select id="rel-semcom-corte" onchange="renderizarRelSemCom()" style="padding:4px 6px;border:1px solid #ccc;border-radius:5px">
+        <div>
+          <div class="idv-barra" style="margin-top:12px">
+            <label class="idv-busca"><span aria-hidden="true">🔍</span><input type="text" id="rel-semcom-busca" placeholder="Buscar nome ou registro..." aria-label="Buscar sem comunicação" oninput="renderizarRelSemCom()"></label>
+            <div class="idv-acoes">
+              <label style="font-size:14px;color:var(--idv-sec);display:inline-flex;align-items:center;gap:6px">Corte:
+                <select id="rel-semcom-corte" class="idv-select" onchange="renderizarRelSemCom()">
                   <option value="7">7 dias+</option>
                   <option value="30" selected>30 dias+</option>
                   <option value="60">60 dias+</option>
@@ -2014,93 +1995,87 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
                   <option value="180">180 dias+</option>
                 </select>
               </label>
-              <select id="rel-semcom-fstatus" onchange="renderizarRelSemCom()" style="padding:4px 6px;border:1px solid #ccc;border-radius:5px">
+              <select id="rel-semcom-fstatus" class="idv-select" onchange="renderizarRelSemCom()">
                 <option value="">Todos os status</option>
                 <option value="pendente">Pendente</option>
                 <option value="feito">Relatório feito</option>
                 <option value="enviado">Enviado</option>
               </select>
-              <button class="btn-secondary" onclick="renderizarRelSemCom()">🔄 Atualizar</button>
+              <button type="button" class="idv-btn" onclick="renderizarRelSemCom()">Atualizar</button>
             </div>
           </div>
-          <div id="rel-semcom-kpis" style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px 0;font-size:.8rem"></div>
+          <div id="rel-semcom-kpis" style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px 0"></div>
           <div class="table-scroll">
-            <table class="data-table">
+            <table class="data-table idv-tabela">
               <thead><tr>
                 <th>Monitorado</th><th>Registro</th><th>Dias s/ com.</th><th>Última comunicação</th><th>Status</th><th>Ações</th>
               </tr></thead>
               <tbody id="tbody-rel-semcom"></tbody>
             </table>
           </div>
-          <div style="margin-top:8px;font-size:.8rem;color:#666" id="rel-semcom-count"></div>
+          <div class="idv-mini" style="margin-top:8px;font-size:13px" id="rel-semcom-count"></div>
         </div>
       </div><!-- /rel-panel-semcom -->
 
       <!-- ── Sub-painel: Término da monitoração (pacote automático do AKILES) ── -->
       <div class="sub-panel" id="rel-panel-termino">
-        <div class="table-wrapper">
-          <div class="table-toolbar">
-            <div class="table-search">
-              <span>🔍</span>
-              <input type="text" id="rel-term-busca" placeholder="Buscar nome, registro ou processo..." oninput="renderizarRelTermino()">
-            </div>
-            <div class="table-actions" style="align-items:center;gap:8px">
-              <label style="font-size:.8rem;color:#64748b">Avisar com</label>
-              <select id="rel-term-antec" onchange="relTermAntecedencia(this.value)" style="padding:4px 6px;border:1px solid #ccc;border-radius:5px">
+        <div>
+          <div class="idv-barra" style="margin-top:12px">
+            <label class="idv-busca"><span aria-hidden="true">🔍</span><input type="text" id="rel-term-busca" placeholder="Buscar nome, registro ou processo..." aria-label="Buscar término da monitoração" oninput="renderizarRelTermino()"></label>
+            <div class="idv-acoes">
+              <label for="rel-term-antec" style="font-size:14px;color:var(--idv-sec)">Avisar com</label>
+              <select id="rel-term-antec" class="idv-select" onchange="relTermAntecedencia(this.value)">
                 <option value="15">15 dias</option>
                 <option value="30">30 dias</option>
                 <option value="45">45 dias</option>
                 <option value="60">60 dias</option>
               </select>
-              <select id="rel-term-fstatus" onchange="renderizarRelTermino()" style="padding:4px 6px;border:1px solid #ccc;border-radius:5px">
+              <select id="rel-term-fstatus" class="idv-select" onchange="renderizarRelTermino()">
                 <option value="">Todos os status</option>
                 <option value="pendente">Pendente</option>
                 <option value="enviado">Relatório enviado</option>
               </select>
-              <button class="btn-secondary" onclick="renderizarRelTermino()">🔄 Atualizar</button>
+              <button type="button" class="idv-btn" onclick="renderizarRelTermino()">Atualizar</button>
             </div>
           </div>
-          <div id="rel-term-info" style="font-size:.78rem;color:#64748b;margin:4px 0"></div>
-          <div id="rel-term-kpis" style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px 0;font-size:.8rem"></div>
+          <div id="rel-term-info" class="idv-mini" style="font-size:13px;margin:4px 0"></div>
+          <div id="rel-term-kpis" style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px 0"></div>
           <div class="table-scroll">
-            <table class="data-table">
+            <table class="data-table idv-tabela">
               <thead><tr>
                 <th>Monitorado</th><th>Registro</th><th>Processo</th><th>Término</th><th>Prazo</th><th>Status</th><th>Ações</th>
               </tr></thead>
               <tbody id="tbody-rel-termino"></tbody>
             </table>
           </div>
-          <div style="margin-top:8px;font-size:.78rem;color:#666">Data de término do processo no cadastro do AKILES (aba Processos). Envie o relatório antes do prazo para o juiz decidir com ele em mãos. Um aviso por processo.</div>
+          <div class="idv-mini" style="margin-top:8px;font-size:13px">Data de término do processo no cadastro do AKILES (aba Processos). Envie o relatório antes do prazo para o juiz decidir com ele em mãos. Um aviso por processo.</div>
         </div>
       </div>
       <!-- ── Sub-painel: Rompimento (pacote automático do AKILES) ── -->
       <div class="sub-panel" id="rel-panel-romp">
-        <div class="table-wrapper">
-          <div class="table-toolbar">
-            <div class="table-search">
-              <span>🔍</span>
-              <input type="text" id="rel-romp-busca" placeholder="Buscar nome, CPF ou nº da ocorrência..." oninput="renderizarAkOc('rompimentos')">
-            </div>
-            <div class="table-actions" style="align-items:center;gap:8px">
-              <select id="rel-romp-fstatus" onchange="renderizarAkOc('rompimentos')" style="padding:4px 6px;border:1px solid #ccc;border-radius:5px">
+        <div>
+          <div class="idv-barra" style="margin-top:12px">
+            <label class="idv-busca"><span aria-hidden="true">🔍</span><input type="text" id="rel-romp-busca" placeholder="Buscar nome, CPF ou nº da ocorrência..." aria-label="Buscar rompimento" oninput="renderizarAkOc('rompimentos')"></label>
+            <div class="idv-acoes">
+              <select id="rel-romp-fstatus" class="idv-select" onchange="renderizarAkOc('rompimentos')">
                 <option value="">Todos os status</option>
                 <option value="pendente">Pendente</option>
                 <option value="enviado">Enviado</option>
               </select>
-              <button class="btn-secondary" onclick="renderizarAkOc('rompimentos')">🔄 Atualizar</button>
+              <button type="button" class="idv-btn" onclick="renderizarAkOc('rompimentos')">Atualizar</button>
             </div>
           </div>
-          <div id="rel-romp-info" style="font-size:.78rem;color:#64748b;margin:4px 0"></div>
-          <div id="rel-romp-kpis" style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px 0;font-size:.8rem"></div>
+          <div id="rel-romp-info" class="idv-mini" style="font-size:13px;margin:4px 0"></div>
+          <div id="rel-romp-kpis" style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px 0"></div>
           <div class="table-scroll">
-            <table class="data-table">
+            <table class="data-table idv-tabela">
               <thead><tr>
                 <th>Monitorado</th><th>Ocorrência</th><th>Início / fim</th><th>Situação no AKILES</th><th>Processo / juízo</th><th>Status</th><th>Ações</th>
               </tr></thead>
               <tbody id="tbody-rel-romp"></tbody>
             </table>
           </div>
-          <div style="margin-top:8px;font-size:.78rem;color:#666">Violência doméstica primeiro; depois ocorrências em andamento e as mais recentes.</div>
+          <div class="idv-mini" style="margin-top:8px;font-size:13px">Violência doméstica primeiro; depois ocorrências em andamento e as mais recentes.</div>
         </div>
       </div>
 
@@ -3363,6 +3338,10 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
     <!-- ─── COMUNICAÇÃO ─── -->
     <div class="tab-panel" id="panel-comunicacao">
+      <!-- Identidade visual (20/10/2026): cabeçalho, barra, tabela e paginação do guia (identidade.css) -->
+      <div class="idv-cab">
+        <div><h1>Comunicação</h1><div class="idv-sub">Ocorrências para envio de PRODOC e itens já enviados</div></div>
+      </div>
       <!-- Sub-tabs da Comunicação -->
       <div class="sub-tabs">
         <div class="sub-tab active" id="com-stab-ocorrencias" onclick="mudarSubAbaCom('ocorrencias')">📋 Ocorrências</div>
@@ -3371,19 +3350,16 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       <!-- SUB-PANEL: OCORRÊNCIAS (conteúdo existente) -->
       <div class="sub-panel active" id="com-panel-ocorrencias">
-        <div class="table-wrapper">
-          <div class="table-toolbar">
-            <div class="table-search">
-              <span>🔍</span>
-              <input type="text" placeholder="Buscar monitorado, ID..." oninput="filtrarComunicacao(this.value)">
-            </div>
-            <div class="table-actions">
-              <button class="btn-secondary" onclick="renderizarComunicacao()">🔄 Atualizar</button>
-              <button class="btn-secondary" onclick="exportarComunicacaoExcel()">📥 Exportar Excel</button>
+        <div>
+          <div class="idv-barra" style="margin-top:12px">
+            <label class="idv-busca"><span aria-hidden="true">🔍</span><input type="text" placeholder="Buscar monitorado, ID..." aria-label="Buscar ocorrência na Comunicação" oninput="filtrarComunicacao(this.value)"></label>
+            <div class="idv-acoes">
+              <button type="button" class="idv-btn" onclick="renderizarComunicacao()">Atualizar</button>
+              <button type="button" class="idv-btn" onclick="exportarComunicacaoExcel()">Exportar Excel</button>
             </div>
           </div>
           <div class="table-scroll">
-            <table class="data-table">
+            <table class="data-table idv-tabela">
               <thead><tr>
                 <th>ID</th>
                 <th>Monitorado</th>
@@ -3400,7 +3376,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               <tbody id="tbody-comunicacao"></tbody>
             </table>
           </div>
-          <div class="pagination">
+          <div class="pagination idv-pag">
             <span id="com-pag-info">0 ocorrências</span>
             <div class="pagination-btns" id="com-pag-btns"></div>
           </div>
@@ -3411,15 +3387,15 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       <!-- SUB-PANEL: ARQUIVADOS -->
       <div class="sub-panel" id="com-panel-arquivados">
-        <div class="table-toolbar">
-          <div style="font-weight:600;color:var(--az1)">📁 Itens arquivados (marcados como enviados)</div>
-          <div class="table-actions">
-            <button class="btn-secondary" onclick="renderizarComArquivados()">🔄 Atualizar</button>
-            <button class="btn-secondary" onclick="exportarComArquivadosExcel()">📥 Exportar Excel</button>
+        <div class="idv-barra" style="margin-top:12px">
+          <div class="idv-secao" style="margin:0">Itens arquivados (marcados como enviados)</div>
+          <div class="idv-acoes">
+            <button type="button" class="idv-btn" onclick="renderizarComArquivados()">Atualizar</button>
+            <button type="button" class="idv-btn" onclick="exportarComArquivadosExcel()">Exportar Excel</button>
           </div>
         </div>
         <div class="table-scroll">
-          <table class="data-table">
+          <table class="data-table idv-tabela">
             <thead><tr>
               <th>Ocorrência</th><th>Tipo Violação</th><th>Enviado em</th><th>Nº PRODOC</th><th>Plantão</th><th>Ações</th>
             </tr></thead>
@@ -3433,16 +3409,17 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
     <!-- ─── ESTOQUE ─── -->
     <div class="tab-panel" id="panel-estoque">
-      <div class="est-header">
-        <div class="est-header-title">📦 Estoque — CME/IAPEN-AP</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn-secondary" onclick="renderizarEstoque()">🔄 Atualizar</button>
-          <div class="est-header-actions" id="est-btns-acao">
-            <button class="btn-secondary" onclick="abrirConfigEstoque()">⚙️ Configurar Mínimos</button>
-            <button class="btn-primary"   onclick="abrirModalEstoque('entrada')">⬆ Entrada</button>
-            <button class="btn-secondary" onclick="abrirModalEstoque('saida')">⬇ Saída</button>
-            <button class="btn-secondary" onclick="abrirModalEstoque('devolucao')">↩ Devolução</button>
-            <button class="btn-danger"    onclick="abrirModalEstoque('baixa')">✕ Baixa</button>
+      <!-- Identidade visual (20/10/2026): cabeçalho, indicadores, tabelas com faixa de situação (identidade.css) -->
+      <div class="idv-cab">
+        <div><h1>Estoque</h1><div class="idv-sub">CME/IAPEN-AP — tornozeleiras, DPP e movimentações</div></div>
+        <div class="idv-acoes">
+          <button type="button" class="idv-btn" onclick="renderizarEstoque()">Atualizar</button>
+          <div class="idv-acoes" id="est-btns-acao">
+            <button type="button" class="idv-btn" onclick="abrirConfigEstoque()">Configurar mínimos</button>
+            <button type="button" class="idv-btn criar" onclick="abrirModalEstoque('entrada')">⬆ Entrada</button>
+            <button type="button" class="idv-btn" onclick="abrirModalEstoque('saida')">⬇ Saída</button>
+            <button type="button" class="idv-btn" onclick="abrirModalEstoque('devolucao')">↩ Devolução</button>
+            <button type="button" class="idv-btn perigo" onclick="abrirModalEstoque('baixa')">✕ Baixa</button>
           </div>
         </div>
       </div>
@@ -3455,49 +3432,52 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       <!-- Sub-panel Estoque -->
       <div id="est-panel-estoque" class="sub-panel" style="display:block">
-        <div id="est-aviso-perm" class="est-aviso-perm" style="display:none">
-          🔒 <strong>Modo visualização:</strong> seu perfil não possui permissão para alterar o estoque.
+        <div id="est-aviso-perm" class="idv-faixa" style="display:none;margin-bottom:12px">
+          <span class="idv-faixa-ic" aria-hidden="true">i</span> <strong>Modo visualização:</strong> seu perfil não possui permissão para alterar o estoque.
         </div>
         <div id="est-alertas"></div>
         <!-- Transferências com o estoque do Plantão (estoque-plantao-tela.js) -->
         <div id="ep-setor-pendentes"></div>
 
-        <!-- KPI Cards -->
-        <div class="est-kpi-grid">
-          <div class="est-kpi"><div class="est-kpi-num" id="est-k-mod">0</div><div class="est-kpi-label">Módulo Eletrônico</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="est-k-cinta">0</div><div class="est-kpi-label">Cintas (total)</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="est-k-trava">0</div><div class="est-kpi-label">Travas</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="est-k-carrtor">0</div><div class="est-kpi-label">Carregadores Tornozeleira</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="est-k-dpp">0</div><div class="est-kpi-label">Dispositivos DPP</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="est-k-novo">0</div><div class="est-kpi-label">Tornozeleiras Novas</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="est-k-reutil">0</div><div class="est-kpi-label">Tornozeleiras Reutilizadas</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="est-k-total">0</div><div class="est-kpi-label">Total Geral</div></div>
-          <div class="est-kpi alerta"><div class="est-kpi-num" id="est-k-baixo">0</div><div class="est-kpi-label">Estoque Baixo</div></div>
-          <div class="est-kpi perigo"><div class="est-kpi-num" id="est-k-zero">0</div><div class="est-kpi-label">Sem Estoque</div></div>
+        <!-- KPI Cards (peças agrupadas num bloco só) -->
+        <div class="idv-kpis" style="margin:12px 0">
+          <div class="idv-kpi"><span class="idv-num" id="est-k-mod">0</span><span class="idv-rot">Módulo eletrônico</span><span class="idv-leg">novas <b class="idv-mono" id="est-k-novo">0</b> · reutilizadas <b class="idv-mono" id="est-k-reutil">0</b></span></div>
+          <div class="idv-kpi"><span class="idv-num" id="est-k-dpp">0</span><span class="idv-rot">Dispositivos DPP</span></div>
+          <div class="idv-kpi"><span class="idv-num" id="est-k-total">0</span><span class="idv-rot">Total geral</span><span class="idv-leg">todas as peças</span></div>
+          <div class="idv-kpi at"><span class="idv-num" id="est-k-baixo">0</span><span class="idv-rot">Estoque baixo</span><span class="idv-leg">no mínimo ou abaixo</span></div>
+          <div class="idv-kpi cr"><span class="idv-num" id="est-k-zero">0</span><span class="idv-rot">Sem estoque</span><span class="idv-leg">itens zerados</span></div>
+        </div>
+        <div class="idv-bloco" style="margin-bottom:16px">
+          <div class="idv-bloco-cab">Peças da tornozeleira</div>
+          <div class="idv-bloco-corpo lado" style="gap:8px 24px;font-size:14px">
+            <span>Cintas (total) <b class="idv-mono" id="est-k-cinta">0</b></span>
+            <span>Travas <b class="idv-mono" id="est-k-trava">0</b></span>
+            <span>Carregadores da tornozeleira <b class="idv-mono" id="est-k-carrtor">0</b></span>
+          </div>
         </div>
 
         <!-- Tabela Tornozeleira -->
-        <div class="est-section-title">Tornozeleira Eletrônica</div>
-        <div class="table-wrapper">
-          <table class="data-table">
-            <thead><tr><th>Item</th><th>Tamanho</th><th style="text-align:center">Total</th><th style="text-align:center">📦 Novos</th><th style="text-align:center">🔄 Reutilizados</th><th style="text-align:center">Mínimo</th><th>Status</th></tr></thead>
+        <div class="idv-secao">Tornozeleira eletrônica</div>
+        <div class="table-scroll">
+          <table class="data-table idv-tabela">
+            <thead><tr><th>Item</th><th>Tamanho</th><th style="text-align:center">Total</th><th style="text-align:center">Novos</th><th style="text-align:center">Reutilizados</th><th style="text-align:center">Mínimo</th><th>Status</th></tr></thead>
             <tbody id="tbody-est-torn"></tbody>
           </table>
         </div>
 
         <!-- Tabela DPP -->
-        <div class="est-section-title">DPP — Dispositivo de Proteção Pessoal</div>
-        <div class="table-wrapper">
-          <table class="data-table">
-            <thead><tr><th>Item</th><th style="text-align:center">Total</th><th style="text-align:center">📦 Novos</th><th style="text-align:center">🔄 Reutilizados</th><th style="text-align:center">Mínimo</th><th>Status</th><th style="text-align:center">Com Carregador</th><th style="text-align:center">Com Chip</th></tr></thead>
+        <div class="idv-secao">DPP — Dispositivo de Proteção Pessoal</div>
+        <div class="table-scroll">
+          <table class="data-table idv-tabela">
+            <thead><tr><th>Item</th><th style="text-align:center">Total</th><th style="text-align:center">Novos</th><th style="text-align:center">Reutilizados</th><th style="text-align:center">Mínimo</th><th>Status</th><th style="text-align:center">Com carregador</th><th style="text-align:center">Com chip</th></tr></thead>
             <tbody id="tbody-est-dpp"></tbody>
           </table>
         </div>
 
         <!-- Histórico -->
-        <div class="est-section-title" style="margin-top:28px">Histórico de Movimentações</div>
-        <div class="table-wrapper" style="overflow-x:auto">
-          <table class="data-table">
+        <div class="idv-secao" style="margin-top:28px">Histórico de movimentações</div>
+        <div class="table-scroll" style="overflow-x:auto">
+          <table class="data-table idv-tabela">
             <thead><tr>
               <th>Data/Hora</th><th>Tipo</th><th>Categoria</th><th>Item</th><th>Tamanho</th>
               <th>Qtd</th><th>Responsável</th><th>Motivo</th><th>Monitorado</th>
@@ -3506,7 +3486,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
             <tbody id="tbody-est-hist"></tbody>
           </table>
         </div>
-        <div class="pagination" id="est-hist-pag" style="display:none">
+        <div class="pagination idv-pag" id="est-hist-pag" style="display:none">
           <span id="est-hist-pag-info"></span>
           <div class="pagination-btns" id="est-hist-pag-btns"></div>
         </div>
@@ -3516,11 +3496,11 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       <div id="est-panel-consultar" class="sub-panel" style="display:none">
         <div style="max-width:600px;margin:24px auto 0">
           <div class="form-field" style="margin-bottom:16px">
-            <label style="font-size:1rem;font-weight:600">🔍 Buscar no Estoque</label>
+            <label for="est-consultar-input" style="font-size:16px;font-weight:600;color:var(--idv-texto);letter-spacing:0">Buscar no estoque</label>
             <input type="text" id="est-consultar-input" placeholder="IMEI, nº de série, nome, responsável, monitorado, plantão, motivo..."
               oninput="consultarSerial(this.value)"
-              style="width:100%;padding:10px 14px;font-size:1rem;border:1px solid #ccc;border-radius:8px;margin-top:6px">
-            <span style="font-size:.78rem;color:#aaa;margin-top:4px;display:block">Pesquisa em todos os campos do estoque e do histórico de movimentações</span>
+              style="width:100%;padding:10px 14px;font-size:15px;margin-top:6px">
+            <span style="font-size:13px;color:var(--idv-sec);margin-top:4px;display:block">Pesquisa em todos os campos do estoque e do histórico de movimentações</span>
           </div>
           <div id="est-consultar-resultado"></div>
         </div>
@@ -3531,6 +3511,10 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
     <!-- ─── TRIAGEM ─── -->
     <div class="tab-panel" id="panel-triagem">
+      <!-- Identidade visual (20/10/2026): cabeçalho, indicadores e tabela do guia (identidade.css) -->
+      <div class="idv-cab">
+        <div><h1>Triagem</h1><div class="idv-sub">Atendimentos do CME (arquivados automaticamente após 7 dias)</div></div>
+      </div>
 
       <!-- Sub-tabs Triagem -->
       <div class="sub-tabs" style="margin-bottom:0">
@@ -3542,37 +3526,42 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       <!-- ── SUB-PANEL: ATIVOS ── -->
       <div class="sub-panel active" id="tri-panel-ativos">
-      <div class="tri-header">
-        <div class="tri-header-title">🗂️ Triagem — Atendimentos CME</div>
-        <div id="tri-btns-acao">
-          <button class="btn-secondary" onclick="renderizarTriagem()">🔄 Atualizar</button>
-          <button class="btn-secondary" onclick="exportarTriagem()">📥 Exportar Excel</button>
-          <button class="btn-primary" onclick="abrirModalTriagem()">➕ Novo Atendimento</button>
+      <div class="idv-barra" style="margin-top:12px">
+        <div class="idv-secao" style="margin:0">Atendimentos</div>
+        <div class="idv-acoes" id="tri-btns-acao">
+          <button type="button" class="idv-btn" onclick="renderizarTriagem()">Atualizar</button>
+          <button type="button" class="idv-btn" onclick="exportarTriagem()">Exportar Excel</button>
+          <button type="button" class="idv-btn criar" onclick="abrirModalTriagem()">+ Novo atendimento</button>
         </div>
       </div>
 
-      <div id="tri-aviso-perm" class="tri-aviso-perm" style="display:none">
-        🔒 <strong>Modo visualização:</strong> você possui acesso somente para visualização da triagem.
+      <div id="tri-aviso-perm" class="idv-faixa" style="display:none;margin-bottom:12px">
+        <span class="idv-faixa-ic" aria-hidden="true">i</span><span><strong>Modo visualização:</strong> você possui acesso somente para visualização da triagem.</span>
       </div>
 
-      <!-- KPI Cards -->
-      <div class="est-kpi-grid" id="tri-kpi-grid">
-        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-hoje">0</div><div class="est-kpi-label">Atendimentos Hoje</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-total">0</div><div class="est-kpi-label">Total Geral</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-endereco">0</div><div class="est-kpi-label">Mudança de Endereço</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-vinc">0</div><div class="est-kpi-label">Vinculações</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-desvinc">0</div><div class="est-kpi-label">Desvinculações</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-justif">0</div><div class="est-kpi-label">Justificativas</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-info">0</div><div class="est-kpi-label">Informações</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-juridico">0</div><div class="est-kpi-label">Setor Jurídico</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-multi">0</div><div class="est-kpi-label">Equipe Multidisciplinar</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-protetiva">0</div><div class="est-kpi-label">Medidas Protetivas</div></div>
-        <div class="est-kpi"><div class="est-kpi-num" id="tri-k-adv">0</div><div class="est-kpi-label">Advogados Atendidos</div></div>
+      <!-- KPI Cards (os tipos de atendimento ficam juntos num bloco só) -->
+      <div class="idv-kpis" id="tri-kpi-grid" style="margin-bottom:12px">
+        <div class="idv-kpi in"><span class="idv-num" id="tri-k-hoje">0</span><span class="idv-rot">Atendimentos hoje</span></div>
+        <div class="idv-kpi"><span class="idv-num" id="tri-k-total">0</span><span class="idv-rot">Total geral</span><span class="idv-leg">atendimentos ativos</span></div>
+        <div class="idv-kpi de"><span class="idv-num" id="tri-k-protetiva">0</span><span class="idv-rot">Medidas protetivas</span></div>
+        <div class="idv-kpi"><span class="idv-num" id="tri-k-adv">0</span><span class="idv-rot">Advogados atendidos</span></div>
+      </div>
+      <div class="idv-bloco" style="margin-bottom:16px">
+        <div class="idv-bloco-cab">Por tipo de atendimento</div>
+        <div class="idv-bloco-corpo lado" style="gap:8px 24px;font-size:14px">
+          <span>Mudança de endereço <b class="idv-mono" id="tri-k-endereco">0</b></span>
+          <span>Vinculações <b class="idv-mono" id="tri-k-vinc">0</b></span>
+          <span>Desvinculações <b class="idv-mono" id="tri-k-desvinc">0</b></span>
+          <span>Justificativas <b class="idv-mono" id="tri-k-justif">0</b></span>
+          <span>Informações <b class="idv-mono" id="tri-k-info">0</b></span>
+          <span>Setor Jurídico <b class="idv-mono" id="tri-k-juridico">0</b></span>
+          <span>Equipe Multidisciplinar <b class="idv-mono" id="tri-k-multi">0</b></span>
+        </div>
       </div>
 
       <!-- Filtros -->
       <div class="tri-filtros">
-        <div class="tri-filtros-title">🔍 Filtros</div>
+        <div class="tri-filtros-title">Filtros</div>
         <div class="tri-filtros-grid">
           <div class="form-field" style="margin:0">
             <label>Nome</label>
@@ -3634,15 +3623,15 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
             <input type="date" id="tri-f-fim" onchange="renderizarTriagem()">
           </div>
           <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
-            <button class="btn-secondary" style="width:100%" onclick="limparFiltrosTriagem()">✕ Limpar Filtros</button>
+            <button type="button" class="idv-btn" style="width:100%;justify-content:center" onclick="limparFiltrosTriagem()">Limpar filtros</button>
           </div>
         </div>
       </div>
 
       <!-- Tabela -->
-      <div class="est-section-title" id="tri-count-label">Atendimentos</div>
-      <div class="table-wrapper" style="overflow-x:auto">
-        <table class="data-table">
+      <div class="idv-secao" id="tri-count-label">Atendimentos</div>
+      <div class="table-scroll" style="overflow-x:auto">
+        <table class="data-table idv-tabela">
           <thead><tr>
             <th>Data/Hora</th>
             <th>Nome</th>
@@ -3664,17 +3653,17 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       <!-- ── SUB-PANEL: ARQUIVADOS ── -->
       <div class="sub-panel" id="tri-panel-arquivados">
 
-        <div class="tri-header">
-          <div class="tri-header-title">📁 Atendimentos Arquivados <small style="font-size:.78rem;color:#888;font-weight:400">(arquivados automaticamente após 7 dias)</small></div>
-          <div>
-            <button class="btn-secondary" onclick="renderizarTriagemArquivados()">🔄 Atualizar</button>
-            <button class="btn-secondary" onclick="exportarTriagemArquivados()">📥 Exportar Excel</button>
+        <div class="idv-barra" style="margin-top:12px">
+          <div><div class="idv-secao" style="margin:0">Atendimentos arquivados</div><div class="idv-mini" style="font-size:13px">arquivados automaticamente após 7 dias</div></div>
+          <div class="idv-acoes">
+            <button type="button" class="idv-btn" onclick="renderizarTriagemArquivados()">Atualizar</button>
+            <button type="button" class="idv-btn" onclick="exportarTriagemArquivados()">Exportar Excel</button>
           </div>
         </div>
 
         <!-- Filtros Arquivados -->
         <div class="tri-filtros">
-          <div class="tri-filtros-title">🔍 Filtros</div>
+          <div class="tri-filtros-title">Filtros</div>
           <div class="tri-filtros-grid">
             <div class="form-field" style="margin:0">
               <label>Nome</label>
@@ -3736,15 +3725,15 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               <input type="date" id="tri-a-fim" onchange="renderizarTriagemArquivados()">
             </div>
             <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
-              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosTriagemArq()">✕ Limpar Filtros</button>
+              <button type="button" class="idv-btn" style="width:100%;justify-content:center" onclick="limparFiltrosTriagemArq()">Limpar filtros</button>
             </div>
           </div>
         </div>
 
         <!-- Tabela Arquivados -->
-        <div class="est-section-title" id="tri-arq-count-label">Arquivados</div>
-        <div class="table-wrapper" style="overflow-x:auto">
-          <table class="data-table">
+        <div class="idv-secao" id="tri-arq-count-label">Arquivados</div>
+        <div class="table-scroll" style="overflow-x:auto">
+          <table class="data-table idv-tabela">
             <thead><tr>
               <th>Data/Hora</th>
               <th>Arquivado em</th>
@@ -3769,6 +3758,10 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
     <!-- ─── PSICOSSOCIAL ─── -->
     <div class="tab-panel" id="panel-psicossocial">
+      <!-- Identidade visual (20/10/2026): cabeçalho, indicadores e tabela do guia (identidade.css) -->
+      <div class="idv-cab">
+        <div><h1>Psicossocial</h1><div class="idv-sub">Equipe Multidisciplinar — CME/IAPEN-AP</div></div>
+      </div>
 
       <!-- Sub-tabs -->
       <div class="sub-tabs" style="margin-bottom:0">
@@ -3787,36 +3780,41 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       <!-- ── ATIVOS ── -->
       <div class="sub-panel active" id="psi-panel-ativos">
 
-        <div class="tri-header">
-          <div class="tri-header-title">🧠 Equipe Multidisciplinar — CME/IAPEN-AP</div>
-          <div id="psi-btns-acao">
-            <button class="btn-secondary" onclick="renderizarPsi()">🔄 Atualizar</button>
-            <button class="btn-secondary" onclick="exportarPsi()">📥 Exportar Excel</button>
-            <button class="btn-primary"   onclick="abrirModalPsi()">➕ Novo Registro</button>
+        <div class="idv-barra" style="margin-top:12px">
+          <div class="idv-secao" style="margin:0">Atendimentos</div>
+          <div class="idv-acoes" id="psi-btns-acao">
+            <button type="button" class="idv-btn" onclick="renderizarPsi()">Atualizar</button>
+            <button type="button" class="idv-btn" onclick="exportarPsi()">Exportar Excel</button>
+            <button type="button" class="idv-btn criar" onclick="abrirModalPsi()">+ Novo registro</button>
           </div>
         </div>
 
-        <div id="psi-aviso-perm" class="tri-aviso-perm" style="display:none">
-          🔒 <strong>Modo visualização:</strong> você possui acesso somente para visualização.
+        <div id="psi-aviso-perm" class="idv-faixa" style="display:none;margin-bottom:12px">
+          <span class="idv-faixa-ic" aria-hidden="true">i</span><span><strong>Modo visualização:</strong> você possui acesso somente para visualização.</span>
         </div>
 
-        <!-- KPI Cards -->
-        <div class="est-kpi-grid" id="psi-kpi-grid">
-          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-hoje">0</div><div class="est-kpi-label">Hoje</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-semana">0</div><div class="est-kpi-label">Esta Semana</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-total">0</div><div class="est-kpi-label">Total Ativo</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-vitima">0</div><div class="est-kpi-label">Vítimas</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-monitorado">0</div><div class="est-kpi-label">Monitorados</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-judicial">0</div><div class="est-kpi-label">Req. Judicial</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-urgencia">0</div><div class="est-kpi-label">Urgências</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-risco-alto">0</div><div class="est-kpi-label">Risco Alto</div></div>
-          <div class="est-kpi"><div class="est-kpi-num" id="psi-k-proximo">0</div><div class="est-kpi-label">C/ Próx. Atend.</div></div>
-          <div class="est-kpi" style="border-left-color:#16a34a"><div class="est-kpi-num" id="psi-est-dpp" style="color:#16a34a">—</div><div class="est-kpi-label">📟 DPP disponíveis</div></div>
+        <!-- KPI Cards (público, caráter e próximos ficam juntos num bloco só) -->
+        <div class="idv-kpis" id="psi-kpi-grid" style="margin-bottom:12px">
+          <div class="idv-kpi in"><span class="idv-num" id="psi-k-hoje">0</span><span class="idv-rot">Hoje</span><span class="idv-leg">atendimentos do dia</span></div>
+          <div class="idv-kpi"><span class="idv-num" id="psi-k-semana">0</span><span class="idv-rot">Esta semana</span><span class="idv-leg">últimos 7 dias</span></div>
+          <div class="idv-kpi"><span class="idv-num" id="psi-k-total">0</span><span class="idv-rot">Total ativo</span><span class="idv-leg">arquiva após 90 dias</span></div>
+          <div class="idv-kpi at"><span class="idv-num" id="psi-k-urgencia">0</span><span class="idv-rot">Urgências</span></div>
+          <div class="idv-kpi cr"><span class="idv-num" id="psi-k-risco-alto">0</span><span class="idv-rot">Risco alto</span></div>
+          <div class="idv-kpi ok"><span class="idv-num" id="psi-est-dpp">—</span><span class="idv-rot">DPP disponíveis</span><span class="idv-leg">no estoque</span></div>
+        </div>
+        <div class="idv-bloco" style="margin-bottom:16px">
+          <div class="idv-bloco-cab">Público e caráter</div>
+          <div class="idv-bloco-corpo lado" style="gap:8px 24px;font-size:14px">
+            <span>Vítimas <b class="idv-mono" id="psi-k-vitima">0</b></span>
+            <span>Monitorados <b class="idv-mono" id="psi-k-monitorado">0</b></span>
+            <span>Requisição judicial <b class="idv-mono" id="psi-k-judicial">0</b></span>
+            <span>Com próximo atendimento marcado <b class="idv-mono" id="psi-k-proximo">0</b></span>
+          </div>
         </div>
 
         <!-- Filtros -->
         <div class="tri-filtros">
-          <div class="tri-filtros-title">🔍 Filtros</div>
+          <div class="tri-filtros-title">Filtros</div>
           <div class="tri-filtros-grid">
             <div class="form-field" style="margin:0">
               <label>Nome</label>
@@ -3900,15 +3898,15 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               <input type="date" id="psi-f-fim" onchange="renderizarPsi()">
             </div>
             <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
-              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosPsi()">✕ Limpar</button>
+              <button type="button" class="idv-btn" style="width:100%;justify-content:center" onclick="limparFiltrosPsi()">Limpar</button>
             </div>
           </div>
         </div>
 
         <!-- Tabela -->
-        <div class="est-section-title" id="psi-count-label">Atendimentos</div>
-        <div class="table-wrapper" style="overflow-x:auto">
-          <table class="data-table" style="min-width:1100px">
+        <div class="idv-secao" id="psi-count-label">Atendimentos</div>
+        <div class="table-scroll" style="overflow-x:auto">
+          <table class="data-table idv-tabela" style="min-width:1100px">
             <thead><tr>
               <th>Data/Hora</th>
               <th>Público</th>
@@ -3933,17 +3931,17 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       <!-- ── ARQUIVADOS ── -->
       <div class="sub-panel" id="psi-panel-arquivados">
 
-        <div class="tri-header">
-          <div class="tri-header-title">📁 Registros Arquivados <small style="font-size:.78rem;color:#888;font-weight:400">(arquivados automaticamente após 90 dias)</small></div>
-          <div>
-            <button class="btn-secondary" onclick="renderizarPsiArquivados()">🔄 Atualizar</button>
-            <button class="btn-secondary" onclick="exportarPsiArquivados()">📥 Exportar Excel</button>
+        <div class="idv-barra" style="margin-top:12px">
+          <div><div class="idv-secao" style="margin:0">Registros arquivados</div><div class="idv-mini" style="font-size:13px">arquivados automaticamente após 90 dias</div></div>
+          <div class="idv-acoes">
+            <button type="button" class="idv-btn" onclick="renderizarPsiArquivados()">Atualizar</button>
+            <button type="button" class="idv-btn" onclick="exportarPsiArquivados()">Exportar Excel</button>
           </div>
         </div>
 
         <!-- Filtros Arquivados -->
         <div class="tri-filtros">
-          <div class="tri-filtros-title">🔍 Pesquisar</div>
+          <div class="tri-filtros-title">Pesquisar</div>
           <div class="tri-filtros-grid">
             <div class="form-field" style="margin:0">
               <label>Nome</label>
@@ -4005,14 +4003,14 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               <input type="date" id="psi-a-fim" onchange="renderizarPsiArquivados()">
             </div>
             <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
-              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosPsiArq()">✕ Limpar</button>
+              <button type="button" class="idv-btn" style="width:100%;justify-content:center" onclick="limparFiltrosPsiArq()">Limpar</button>
             </div>
           </div>
         </div>
 
-        <div class="est-section-title" id="psi-arq-count-label">Arquivados</div>
-        <div class="table-wrapper" style="overflow-x:auto">
-          <table class="data-table" style="min-width:1000px">
+        <div class="idv-secao" id="psi-arq-count-label">Arquivados</div>
+        <div class="table-scroll" style="overflow-x:auto">
+          <table class="data-table idv-tabela" style="min-width:1000px">
             <thead><tr>
               <th>Data</th><th>Arquivado em</th><th>Público</th><th>Nome</th><th>Processo</th>
               <th>Tipo Atendimento</th><th>Área</th><th>Situação</th><th>Profissional</th><th>Ações</th>
@@ -4280,32 +4278,29 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       </div><!-- /psi-panel-semcom -->
       <!-- ── Sub-painel: Botão de segurança (DPP) (pacote automático do AKILES) ── -->
       <div class="sub-panel" id="psi-panel-botao">
-        <div class="table-wrapper">
-          <div class="table-toolbar">
-            <div class="table-search">
-              <span>🔍</span>
-              <input type="text" id="psi-botao-busca" placeholder="Buscar nome, CPF ou nº da ocorrência..." oninput="renderizarAkOc('botoes')">
-            </div>
-            <div class="table-actions" style="align-items:center;gap:8px">
-              <select id="psi-botao-fstatus" onchange="renderizarAkOc('botoes')" style="padding:4px 6px;border:1px solid #ccc;border-radius:5px">
+        <div>
+          <div class="idv-barra" style="margin-top:12px">
+            <label class="idv-busca"><span aria-hidden="true">🔍</span><input type="text" id="psi-botao-busca" placeholder="Buscar nome, CPF ou nº da ocorrência..." aria-label="Buscar botão de segurança" oninput="renderizarAkOc('botoes')"></label>
+            <div class="idv-acoes">
+              <select id="psi-botao-fstatus" class="idv-select" onchange="renderizarAkOc('botoes')">
                 <option value="">Todos os status</option>
                 <option value="pendente">Pendente</option>
                 <option value="tratado">Atendido</option>
               </select>
-              <button class="btn-secondary" onclick="renderizarAkOc('botoes')">🔄 Atualizar</button>
+              <button type="button" class="idv-btn" onclick="renderizarAkOc('botoes')">Atualizar</button>
             </div>
           </div>
-          <div id="psi-botao-info" style="font-size:.78rem;color:#64748b;margin:4px 0"></div>
-          <div id="psi-botao-kpis" style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px 0;font-size:.8rem"></div>
+          <div id="psi-botao-info" class="idv-mini" style="font-size:13px;margin:4px 0"></div>
+          <div id="psi-botao-kpis" style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px 0"></div>
           <div class="table-scroll">
-            <table class="data-table">
+            <table class="data-table idv-tabela">
               <thead><tr>
                 <th>Monitorado</th><th>Ocorrência</th><th>Início / fim</th><th>Situação no AKILES</th><th>Processo / juízo</th><th>Status</th><th>Ações</th>
               </tr></thead>
               <tbody id="tbody-psi-botao"></tbody>
             </table>
           </div>
-          <div style="margin-top:8px;font-size:.78rem;color:#666">Violência doméstica primeiro; depois ocorrências em andamento e as mais recentes.</div>
+          <div class="idv-mini" style="margin-top:8px;font-size:13px">Violência doméstica primeiro; depois ocorrências em andamento e as mais recentes.</div>
         </div>
       </div>
 
@@ -6796,10 +6791,10 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-body">
       <input type="hidden" id="com-edit-idx">
-      <div style="margin-bottom:14px;padding:10px;background:#f0f4ff;border-radius:8px">
-        <div style="font-size:.82rem;color:#666">Ocorrência</div>
-        <div style="font-weight:700;font-size:1rem" id="com-id-display"></div>
-        <div style="color:#444;margin-top:2px" id="com-monitorado-display"></div>
+      <div style="margin-bottom:14px;padding:10px 12px;background:var(--idv-fundo);border:1px solid var(--idv-linha);border-radius:6px">
+        <div style="font-size:13px;color:var(--idv-sec)">Ocorrência</div>
+        <div class="idv-mono" style="font-weight:600;font-size:15px" id="com-id-display"></div>
+        <div style="color:var(--idv-texto);margin-top:2px" id="com-monitorado-display"></div>
       </div>
       <div class="form-grid">
         <div class="form-field">
@@ -6882,8 +6877,8 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               <input type="date" id="rel-periodo-fim">
             </div>
           </div>
-          <div class="form-field" style="background:#f0f7ff;border:1px solid #dbeafe;border-radius:8px;padding:8px 12px;font-size:.8rem;color:#1e40af;margin-bottom:4px">
-            ℹ️ O período é usado para alertar quando já existe relatório do mesmo monitorado cobrindo o mesmo intervalo (evita relatório duplicado).
+          <div class="form-field" style="background:var(--idv-in-f);border:1px solid var(--idv-in);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--idv-texto);margin-bottom:4px">
+            O período é usado para alertar quando já existe relatório do mesmo monitorado cobrindo o mesmo intervalo (evita relatório duplicado).
           </div>
           <div class="form-field">
             <label>Observação</label>
@@ -7210,10 +7205,10 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-body">
       <input type="hidden" id="com-oc-edit-id">
-      <div style="margin-bottom:14px;padding:10px;background:#f0f4ff;border-radius:8px">
-        <div style="font-size:.82rem;color:#666">Ocorrência</div>
-        <div style="font-weight:700" id="com-oc-id-display"></div>
-        <div style="color:#444;margin-top:2px" id="com-oc-monitorado-display"></div>
+      <div style="margin-bottom:14px;padding:10px 12px;background:var(--idv-fundo);border:1px solid var(--idv-linha);border-radius:6px">
+        <div style="font-size:13px;color:var(--idv-sec)">Ocorrência</div>
+        <div class="idv-mono" style="font-weight:600" id="com-oc-id-display"></div>
+        <div style="color:var(--idv-texto);margin-top:2px" id="com-oc-monitorado-display"></div>
       </div>
       <div class="form-field">
         <label>Nº do PRODOC (opcional)</label>
@@ -8944,7 +8939,7 @@ function renderizarJuridico() {
   }
   const tbody = document.getElementById("tbody-juridico");
   if (!ocs.length) {
-    tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:32px;color:var(--cz2)">
+    tbody.innerHTML = `<tr><td colspan="14" class="idv-vazio">
       Nenhum caso com PRODOC enviado ainda.</td></tr>`;
     return;
   }
@@ -8962,20 +8957,20 @@ function renderizarJuridico() {
     if (oc.medida === "Protetiva") rowBg = "row-protetiva";
     if (sc === "DESVINCULADO") rowBg = "row-comunicado";
     return `<tr class="${rowBg}">
-      <td style="font-family:var(--font-mono);font-weight:700">${oc.id}</td>
-      <td><strong>${esc(oc.monitorado) || "—"}</strong></td>
+      <td class="idv-mono">${oc.id}</td>
+      <td><div class="idv-nome">${esc(oc.monitorado) || "—"}</div></td>
       <td>${esc(oc.medida) || "—"}</td>
       <td>${esc(oc.tipo) || "—"}</td>
-      <td style="font-family:var(--font-mono);font-size:.78rem">${formatDate(oc.dataAlerta)}</td>
-      <td style="font-family:var(--font-mono);font-size:.78rem">${esc(oc.prodocData) || "—"}</td>
-      <td style="font-family:var(--font-mono)">${esc(oc.prodocNum) || "—"}</td>
-      <td style="text-align:center;font-family:var(--font-mono)">${diasViol !== "" ? diasViol : "—"}</td>
-      <td style="text-align:center;font-family:var(--font-mono)">${diasProd !== "" ? diasProd : "—"}</td>
+      <td class="idv-data" style="font-size:13px;white-space:nowrap">${formatDate(oc.dataAlerta)}</td>
+      <td class="idv-data" style="font-size:13px;white-space:nowrap">${esc(oc.prodocData) || "—"}</td>
+      <td class="idv-mono">${esc(oc.prodocNum) || "—"}</td>
+      <td class="idv-data" style="text-align:center">${diasViol !== "" ? diasViol : "—"}</td>
+      <td class="idv-data" style="text-align:center">${diasProd !== "" ? diasProd : "—"}</td>
       <td>${v60}</td>
       <td>${v180}</td>
-      <td style="font-weight:700">${aut}</td>
-      <td><span class="badge ${sc==='AUTORIZADO'?'badge-ok':sc==='DESVINCULADO'?'badge-comunicado':'badge-neutro'}">${sc}</span></td>
-      <td>${usuarioAtual?.nivel !== 'plantao' ? `<button class="btn-edit" onclick="abrirModalJuridico(${idx})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Atualizar</button> <button class="btn-danger" onclick="removerDoJuridico(${idx})" title="Remover desta aba (mantém em Ocorrências)" style="margin-left:4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg>Excluir</button>` : '—'}</td>
+      <td style="font-weight:600">${aut}</td>
+      <td><span class="idv-etq ${sc==='AUTORIZADO'?'ok':sc==='DESVINCULADO'?'in':'ne'}">${sc}</span></td>
+      <td style="white-space:nowrap">${usuarioAtual?.nivel !== 'plantao' ? `<button type="button" class="idv-btn mini" onclick="abrirModalJuridico(${idx})">Atualizar</button> <button type="button" class="idv-btn mini perigo" onclick="removerDoJuridico(${idx})" title="Remover desta aba (mantém em Ocorrências)">Excluir</button>` : '—'}</td>
     </tr>`;
   }).join("");
 }
@@ -9282,7 +9277,7 @@ function renderizarOFC() {
   const tbody = document.getElementById('tbody-ofc');
   if (!tbody) return;
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:32px;color:#888">Nenhuma demanda encontrada. Importe o Excel ou cadastre manualmente.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14" class="idv-vazio">Nenhuma demanda encontrada. Importe o Excel ou cadastre manualmente.</td></tr>';
     return;
   }
 
@@ -9292,48 +9287,49 @@ function renderizarOFC() {
     const vencido = isPend && diasR !== null && diasR < 0;
     const urgente = isPend && diasR !== null && diasR >= 0 && diasR <= 2;
 
+    // situação na faixa à esquerda (a linha não é pintada)
     let rowStyle = '';
-    if (r.status === 'Concluído') rowStyle = 'background:#f0fdf4';
-    else if (vencido)             rowStyle = 'background:#fef2f2';
-    else if (urgente)             rowStyle = 'background:#fefce8';
+    if (r.status === 'Concluído') rowStyle = 'box-shadow:inset 3px 0 0 var(--idv-ok)';
+    else if (vencido)             rowStyle = 'box-shadow:inset 3px 0 0 var(--idv-cr)';
+    else if (urgente)             rowStyle = 'box-shadow:inset 3px 0 0 var(--idv-at)';
 
     const statusBadge = r.status === 'Concluído'
-      ? '<span style="background:#dcfce7;color:#15803d;border-radius:4px;padding:1px 7px;font-size:.78rem;white-space:nowrap">\u{2705} Concluído</span>'
+      ? '<span class="idv-etq ok">Concluído</span>'
       : vencido
-        ? '<span style="background:#fee2e2;color:#dc2626;border-radius:4px;padding:1px 7px;font-size:.78rem;white-space:nowrap">\u{1F534} Vencido</span>'
-        : '<span style="background:#fef9c3;color:#854d0e;border-radius:4px;padding:1px 7px;font-size:.78rem;white-space:nowrap">\u{23F3} Pendente</span>';
+        ? '<span class="idv-etq cr">Vencido</span>'
+        : '<span class="idv-etq at">Pendente</span>';
 
     const diasLabel = diasR === null ? '—'
-      : diasR < 0  ? `<span style="color:#dc2626;font-weight:bold">${diasR}d</span>`
-      : diasR <= 2 ? `<span style="color:#d97706;font-weight:bold">${diasR}d</span>`
-      : `<span style="color:#16a34a">${diasR}d</span>`;
+      : diasR < 0  ? `<span class="idv-data" style="color:var(--idv-cr);font-weight:600">${diasR}d</span>`
+      : diasR <= 2 ? `<span class="idv-data" style="color:var(--idv-at);font-weight:600">${diasR}d</span>`
+      : `<span class="idv-data" style="color:var(--idv-ok)">${diasR}d</span>`;
 
     const comLabel = (!r.enviadoCOM || r.enviadoCOM === 'Não')
-      ? '<span style="color:#6b7280">Não</span>'
-      : `<span style="color:#2563eb;font-size:.78rem">${_ofcFmtData(r.enviadoCOM)}</span>`;
+      ? '<span style="color:var(--idv-sec)">Não</span>'
+      : `<span class="idv-data" style="color:var(--idv-in);font-size:13px">${_ofcFmtData(r.enviadoCOM)}</span>`;
 
     const tratTrunc = r.tratativa
       ? (r.tratativa.length > 50 ? r.tratativa.slice(0,50) + '…' : r.tratativa)
       : '—';
 
     return `<tr style="${rowStyle}">
-      <td style="font-family:var(--font-mono);color:#6b7280">${i+1}</td>
-      <td><strong>${esc(r.nome)}</strong></td>
+      <td class="idv-data" style="color:var(--idv-sec)">${i+1}</td>
+      <td><div class="idv-nome">${esc(r.nome)}</div></td>
       <td>${statusBadge}</td>
-      <td style="font-size:.8rem">${esc(r.acaoPenal)||'—'}</td>
-      <td style="font-family:var(--font-mono);font-size:.77rem">${esc(r.numProcesso)||'—'}</td>
-      <td style="font-size:.79rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.varaOrigem||'')}">${esc(r.varaOrigem)||'—'}</td>
-      <td style="text-align:center"><strong>${esc(r.forum)||'—'}</strong></td>
-      <td style="font-family:var(--font-mono);font-size:.8rem">${_ofcFmtData(r.dataRecebOFC)}</td>
-      <td style="text-align:center;font-weight:bold">${esc(r.prazoEmDias)||'—'}</td>
-      <td style="font-family:var(--font-mono);font-size:.8rem">${_ofcFmtData(r.prazoFinal)}</td>
+      <td style="font-size:13px">${esc(r.acaoPenal)||'—'}</td>
+      <td class="idv-mono" style="font-size:13px">${esc(r.numProcesso)||'—'}</td>
+      <td style="font-size:13px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.varaOrigem||'')}">${esc(r.varaOrigem)||'—'}</td>
+      <td style="text-align:center;font-weight:600">${esc(r.forum)||'—'}</td>
+      <td class="idv-data" style="font-size:13px;white-space:nowrap">${_ofcFmtData(r.dataRecebOFC)}</td>
+      <td class="idv-data" style="text-align:center;font-weight:600">${esc(r.prazoEmDias)||'—'}</td>
+      <td class="idv-data" style="font-size:13px;white-space:nowrap">${_ofcFmtData(r.prazoFinal)}</td>
       <td style="text-align:center">${diasLabel}</td>
       <td style="text-align:center">${comLabel}</td>
-      <td style="font-size:.79rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.tratativa||'')}">${esc(tratTrunc)}</td>
-      <td style="white-space:nowrap;display:flex;gap:4px">
-        <button class="btn-sm btn-outline" onclick="verOFC('${r.id}')" title="Visualizar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
-        <button class="btn-sm btn-outline" style="color:#2563eb;border-color:#2563eb" onclick="abrirModalOFC('${r.id}')" title="Editar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="btn-sm btn-danger" onclick="excluirOFC('${r.id}')" title="Excluir"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>
+      <td style="font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.tratativa||'')}">${esc(tratTrunc)}</td>
+      <td style="white-space:nowrap">
+        <button type="button" class="idv-btn mini" onclick="verOFC('${r.id}')" title="Visualizar">Abrir</button>
+        <button type="button" class="idv-btn mini" onclick="abrirModalOFC('${r.id}')" title="Editar" aria-label="Editar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button type="button" class="idv-btn mini perigo" onclick="excluirOFC('${r.id}')" title="Excluir" aria-label="Excluir"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>
       </td>
     </tr>`;
   }).join('');
@@ -9438,7 +9434,7 @@ function verOFC(id) {
   document.getElementById('vof-nome').value     = r.nome;
   document.getElementById('vof-acao').value     = r.acaoPenal || '—';
   document.getElementById('vof-status').value   = r.status;
-  document.getElementById('vof-status').style.color = r.status === 'Concluído' ? '#16a34a' : '#dc2626';
+  document.getElementById('vof-status').style.color = r.status === 'Concluído' ? 'var(--idv-ok)' : 'var(--idv-cr)';
   document.getElementById('vof-processo').value = r.numProcesso || '—';
   document.getElementById('vof-vara').value     = r.varaOrigem || '—';
   document.getElementById('vof-forum').value    = r.forum || '—';
@@ -9446,7 +9442,7 @@ function verOFC(id) {
   document.getElementById('vof-prazo-d').value  = r.prazoEmDias ? r.prazoEmDias + ' dias' : '—';
   document.getElementById('vof-prazo-f').value  = _ofcFmtData(r.prazoFinal);
   document.getElementById('vof-dias-rest').value = diasLabel;
-  document.getElementById('vof-dias-rest').style.color = diasR !== null && diasR < 0 ? '#dc2626' : '#16a34a';
+  document.getElementById('vof-dias-rest').style.color = diasR !== null && diasR < 0 ? 'var(--idv-cr)' : 'var(--idv-ok)';
   document.getElementById('vof-com').value      = r.enviadoCOM === 'Não' ? 'Não enviado' : _ofcFmtData(r.enviadoCOM);
   document.getElementById('vof-tratativa').value = r.tratativa || 'Sem tratativa registrada.';
   document.getElementById('vof-btn-editar').onclick = () => { fecharModal('modal-ofc-ver'); abrirModalOFC(id); };
@@ -9486,27 +9482,27 @@ function renderizarOFCArquivados() {
   if (countEl) countEl.textContent = `${lista.length} demanda${lista.length !== 1 ? 's' : ''} arquivada${lista.length !== 1 ? 's' : ''}`;
 
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:#888">Nenhuma demanda arquivada.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="idv-vazio">Nenhuma demanda arquivada.</td></tr>';
     return;
   }
   tbody.innerHTML = lista.map((r, i) => {
     const ek = (r.id || i).toString().replace(/"/g,'&quot;');
     const comBadge = r.enviadoCOM && r.enviadoCOM !== 'Não'
-      ? `<span style="background:#dcfce7;color:#15803d;border-radius:4px;padding:1px 6px;font-size:.75rem">${esc(r.enviadoCOM)}</span>`
-      : `<span style="background:#fee2e2;color:#dc2626;border-radius:4px;padding:1px 6px;font-size:.75rem">Não</span>`;
-    return `<tr style="background:#f0fdf4">
-      <td>${esc(r.id)||'—'}</td>
-      <td style="font-weight:500">${esc(r.nome)||'—'}</td>
+      ? `<span class="idv-etq ok">${esc(r.enviadoCOM)}</span>`
+      : `<span class="idv-etq cr">Não</span>`;
+    return `<tr style="box-shadow:inset 3px 0 0 var(--idv-ok)">
+      <td class="idv-mono" style="font-size:13px">${esc(r.id)||'—'}</td>
+      <td><div class="idv-nome">${esc(r.nome)||'—'}</div></td>
       <td>${esc(r.acaoPenal)||'—'}</td>
-      <td style="font-size:.78rem">${esc(r.numProcesso)||'—'}</td>
+      <td class="idv-mono" style="font-size:13px">${esc(r.numProcesso)||'—'}</td>
       <td>${esc(r.varaOrigem)||'—'}</td>
-      <td><span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 6px;font-size:.78rem">${esc(r.forum)||'—'}</span></td>
-      <td>${esc(r.dtReceOFC)||'—'}</td>
-      <td>${esc(r.prazoFinal)||'—'}</td>
+      <td style="font-weight:600">${esc(r.forum)||'—'}</td>
+      <td class="idv-data">${esc(r.dtReceOFC)||'—'}</td>
+      <td class="idv-data">${esc(r.prazoFinal)||'—'}</td>
       <td>${comBadge}</td>
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.tratativa)}">${esc(r.tratativa)||'—'}</td>
       <td>
-        <button class="btn-secondary" style="padding:2px 8px;font-size:.78rem" onclick="abrirModalOFC('${ek}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button type="button" class="idv-btn mini" title="Editar" aria-label="Editar" onclick="abrirModalOFC('${ek}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
       </td>
     </tr>`;
   }).join('');
@@ -9924,7 +9920,7 @@ function renderizarRelTermino() {
     const pv = base.filter(t => t.dias < 0 && stDe(t) === 'pendente').length;
     const p15 = base.filter(t => t.dias >= 0 && t.dias <= 15 && stDe(t) === 'pendente').length;
     av.style.display = pend ? 'block' : 'none';
-    av.innerHTML = `\u{23F3} <b>Término da monitoração:</b> ${pv ? `<b style="color:#dc2626">${pv} vencido(s)</b> com tornozeleira ainda ativa, ` : ''}${p15 ? `<b style="color:#c2410c">${p15} vencendo em até 15 dias</b>, ` : ''}${pend} relatório(s) pendente(s) no total. <u>Ver lista</u>`;
+    av.innerHTML = `<b>Término da monitoração:</b> ${pv ? `<b style="color:var(--idv-cr)">${pv} vencido(s)</b> com tornozeleira ainda ativa, ` : ''}${p15 ? `<b style="color:var(--idv-at)">${p15} vencendo em até 15 dias</b>, ` : ''}${pend} relatório(s) pendente(s) no total. <span class="idv-link">Ver lista</span>`;
   }
   const tbody = document.getElementById('tbody-rel-termino');
   if (!tbody) return;
@@ -9941,31 +9937,32 @@ function renderizarRelTermino() {
     ? 'Atualizado automaticamente do AKILES em ' + new Date(pk.terminosEm || pk.geradoEm).toLocaleString('pt-BR') + ' (todo dia às 10h)'
     : 'Aguardando a 1ª atualização automática do AKILES (todo dia às 10h).';
   const kp = document.getElementById('rel-term-kpis');
-  if (kp) kp.innerHTML = `<span style="background:#fef2f2;padding:3px 10px;border-radius:3px;color:#b91c1c">Vencidos: <b>${base.filter(t => t.dias < 0).length}</b></span>`
-    + `<span style="background:#fff7ed;padding:3px 10px;border-radius:3px;color:#c2410c">Até 15 dias: <b>${base.filter(t => t.dias >= 0 && t.dias <= 15).length}</b></span>`
-    + `<span style="background:#eef2ff;padding:3px 10px;border-radius:3px">Total na antecedência: <b>${base.length}</b></span>`
-    + `<span style="background:#fef2f2;padding:3px 10px;border-radius:3px;color:#b91c1c">Relatório pendente: <b>${pend}</b></span>`;
+  if (kp) kp.innerHTML = `<span class="idv-etq cr">Vencidos: <b class="idv-mono">${base.filter(t => t.dias < 0).length}</b></span>`
+    + `<span class="idv-etq at">Até 15 dias: <b class="idv-mono">${base.filter(t => t.dias >= 0 && t.dias <= 15).length}</b></span>`
+    + `<span class="idv-etq ne">Total na antecedência: <b class="idv-mono">${base.length}</b></span>`
+    + `<span class="idv-etq cr">Relatório pendente: <b class="idv-mono">${pend}</b></span>`;
   const fmtD = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : '—'; };
   tbody.innerHTML = !lista.length
-    ? `<tr><td colspan="7" style="text-align:center;padding:28px;color:#888">Nenhum término de monitoração dentro de ${_relTermAntec()} dias.</td></tr>`
+    ? `<tr><td colspan="7" class="idv-vazio">Nenhum término de monitoração dentro de ${_relTermAntec()} dias.</td></tr>`
     : lista.map(t => {
       const s = stDe(t), si = st[_relTermChave(t)] || {};
-      const cor = t.dias < 0 ? 'color:#b91c1c;font-weight:600' : t.dias <= 15 ? 'color:#c2410c;font-weight:600' : '';
+      const cor = t.dias < 0 ? 'color:var(--idv-cr);font-weight:600' : t.dias <= 15 ? 'color:var(--idv-at);font-weight:600' : '';
+      const faixa = s !== 'pendente' ? '' : t.dias < 0 ? 'row-vencido' : t.dias <= 15 ? 'row-vencendo' : '';
       const prazo = t.dias < 0 ? `venceu há ${-t.dias} dia(s)` : t.dias === 0 ? 'vence HOJE' : `faltam ${t.dias} dia(s)`;
       const selo = s === 'pendente'
-        ? '<span style="background:rgba(248,81,73,.15);color:#b91c1c;padding:2px 8px;border-radius:3px;font-size:.72rem">Pendente</span>'
-        : `<span style="background:rgba(63,185,80,.15);color:#15803d;padding:2px 8px;border-radius:3px;font-size:.72rem">Relatório enviado</span><div style="font-size:.66rem;color:#999">${esc(si.por || '')}${si.por ? ' · ' : ''}${esc(si.em ? new Date(si.em).toLocaleString('pt-BR') : '')}</div>`;
+        ? '<span class="idv-etq cr">Pendente</span>'
+        : `<span class="idv-etq ok">Relatório enviado</span><div class="idv-mini">${esc(si.por || '')}${si.por ? ' · ' : ''}${esc(si.em ? new Date(si.em).toLocaleString('pt-BR') : '')}</div>`;
       const ch = _relSemComEsc(_relTermChave(t));
-      return `<tr>
-        <td><strong>${esc(t.nome || '—')}</strong>${_scSeloVDNeutro(t)}<div style="font-size:.72rem;color:#888">${esc(t.grupo || '')}</div></td>
-        <td style="font-family:var(--font-mono)">${esc(t.registro)}</td>
-        <td style="font-family:var(--font-mono);font-size:.8rem">${esc(t.processo || '—')}${t.principal ? ' <span style="font-size:.66rem;color:#888">(principal)</span>' : ''}</td>
-        <td style="font-family:var(--font-mono)">${fmtD(t.termino)}</td>
-        <td style="font-family:var(--font-mono);${cor}">${prazo}</td>
+      return `<tr class="${faixa}">
+        <td><div class="idv-nome">${esc(t.nome || '—')}${_scSeloVDNeutro(t)}</div><div class="idv-mini">${esc(t.grupo || '')}</div></td>
+        <td class="idv-mono">${esc(t.registro)}</td>
+        <td><span class="idv-mono" style="font-size:13px">${esc(t.processo || '—')}</span>${t.principal ? ' <span class="idv-mini">(principal)</span>' : ''}</td>
+        <td class="idv-data" style="white-space:nowrap">${fmtD(t.termino)}</td>
+        <td class="idv-data" style="${cor}">${prazo}</td>
         <td>${selo}</td>
         <td style="white-space:nowrap">${s === 'pendente'
-          ? `<button class="btn-sm btn-outline" onclick="relTerm_marcar('${ch}','enviado')">\u{2713} Relatório enviado</button>`
-          : `<button class="btn-sm btn-outline" onclick="relTerm_marcar('${ch}','pendente')" title="Voltar para pendente">\u{21A9}</button>`}</td>
+          ? `<button type="button" class="idv-btn mini" onclick="relTerm_marcar('${ch}','enviado')">\u{2713} Relatório enviado</button>`
+          : `<button type="button" class="idv-btn mini" onclick="relTerm_marcar('${ch}','pendente')" title="Voltar para pendente" aria-label="Voltar para pendente">\u{21A9}</button>`}</td>
       </tr>`;
     }).join('');
 }
@@ -10002,26 +9999,26 @@ function renderizarAkOc(tipo) {
   if (info) info.textContent = pk && pk.geradoEm ? 'Atualizado automaticamente do AKILES em ' + new Date(pk.geradoEm).toLocaleString('pt-BR') + ' (todo dia às 10h)' : 'Aguardando a 1ª atualização automática do AKILES (todo dia às 10h).';
   const pend = base.filter(o => _akOcStatusDe(tipo, o.idOc) === 'pendente').length;
   const kp = document.getElementById(pfx + '-kpis');
-  if (kp) kp.innerHTML = `<span style="background:#eef2ff;padding:3px 10px;border-radius:3px">Total: <b>${base.length}</b></span>`
-    + `<span style="background:#f5f3ff;padding:3px 10px;border-radius:3px;color:#6d28d9">Violência doméstica: <b>${base.filter(o => o.vd).length}</b></span>`
-    + `<span style="background:#fef2f2;padding:3px 10px;border-radius:3px;color:#b91c1c">Pendentes: <b>${pend}</b></span>`;
+  if (kp) kp.innerHTML = `<span class="idv-etq ne">Total: <b class="idv-mono">${base.length}</b></span>`
+    + `<span class="idv-etq de">Violência doméstica: <b class="idv-mono">${base.filter(o => o.vd).length}</b></span>`
+    + `<span class="idv-etq cr">Pendentes: <b class="idv-mono">${pend}</b></span>`;
   const acaoFinal = tipo === 'botoes' ? ['tratado', '\u{2713} Atendido'] : ['enviado', '\u{2713} Enviado'];
   tbody.innerHTML = !lista.length
-    ? `<tr><td colspan="7" style="text-align:center;padding:28px;color:#888">Nenhuma ocorrência ${tipo === 'botoes' ? 'de botão de segurança' : 'de rompimento'} registrada.</td></tr>`
+    ? `<tr><td colspan="7" class="idv-vazio">Nenhuma ocorrência ${tipo === 'botoes' ? 'de botão de segurança' : 'de rompimento'} registrada.</td></tr>`
     : lista.map(o => {
       const st = _akOcStatusDe(tipo, o.idOc), si = _akOcStatus(tipo)[o.idOc] || {};
-      const selo = st === 'pendente' ? '<span style="background:rgba(248,81,73,.15);color:#b91c1c;padding:2px 8px;border-radius:3px;font-size:.72rem">Pendente</span>'
-        : `<span style="background:rgba(63,185,80,.15);color:#15803d;padding:2px 8px;border-radius:3px;font-size:.72rem">${st === 'tratado' ? 'Atendido' : 'Enviado'}</span><div style="font-size:.66rem;color:#999">${esc(si.por || '')}${si.por ? ' · ' : ''}${esc(si.em ? new Date(si.em).toLocaleString('pt-BR') : '')}</div>`;
-      const andamento = o.situacao === 'Em andamento' ? 'color:#b91c1c;font-weight:600' : '';
+      const selo = st === 'pendente' ? '<span class="idv-etq cr">Pendente</span>'
+        : `<span class="idv-etq ok">${st === 'tratado' ? 'Atendido' : 'Enviado'}</span><div class="idv-mini">${esc(si.por || '')}${si.por ? ' · ' : ''}${esc(si.em ? new Date(si.em).toLocaleString('pt-BR') : '')}</div>`;
+      const andamento = o.situacao === 'Em andamento' ? 'color:var(--idv-cr);font-weight:600' : '';
       const id = _relSemComEsc(o.idOc);
-      return `<tr>
-        <td><strong>${esc(o.nome || '—')}</strong>${o.vd ? (tipo === 'botoes' ? _scSeloVDNeutro({ grupo: '9.' }) : _scSeloVD({ grupo: '9.' })) : ''}<div style="font-size:.72rem;color:#888">${esc(o.grupo || '')}</div></td>
-        <td style="font-family:var(--font-mono)">${esc(o.idOc)}</td>
-        <td style="font-family:var(--font-mono);font-size:.8rem">${esc(o.inicio)}${o.fim ? '<br>→ ' + esc(o.fim) : ''}<div style="font-size:.7rem;color:#888">${esc(o.duracao || '')}</div></td>
-        <td style="font-size:.8rem;${andamento}">${esc(o.situacao || '—')}<div style="font-size:.7rem;color:#888">${esc(o.atendimento || '')}</div></td>
-        <td style="font-size:.75rem">${esc(o.processo || '—')}<div style="color:#888">${esc(o.juizo || '')}</div></td>
+      return `<tr class="${st === 'pendente' && o.situacao === 'Em andamento' ? 'row-vencido' : ''}">
+        <td><div class="idv-nome">${esc(o.nome || '—')}${o.vd ? (tipo === 'botoes' ? _scSeloVDNeutro({ grupo: '9.' }) : _scSeloVD({ grupo: '9.' })) : ''}</div><div class="idv-mini">${esc(o.grupo || '')}</div></td>
+        <td class="idv-mono">${esc(o.idOc)}</td>
+        <td class="idv-data" style="font-size:13px">${esc(o.inicio)}${o.fim ? '<br>→ ' + esc(o.fim) : ''}<div class="idv-mini">${esc(o.duracao || '')}</div></td>
+        <td style="font-size:13px;${andamento}">${esc(o.situacao || '—')}<div class="idv-mini">${esc(o.atendimento || '')}</div></td>
+        <td style="font-size:13px"><span class="idv-mono">${esc(o.processo || '—')}</span><div class="idv-mini">${esc(o.juizo || '')}</div></td>
         <td>${selo}</td>
-        <td style="white-space:nowrap">${st === 'pendente' ? `<button class="btn-sm btn-outline" onclick="akOc_marcar('${tipo}','${id}','${acaoFinal[0]}')">${acaoFinal[1]}</button>` : `<button class="btn-sm btn-outline" onclick="akOc_marcar('${tipo}','${id}','pendente')" title="Voltar para pendente">\u{21A9}</button>`}</td>
+        <td style="white-space:nowrap">${st === 'pendente' ? `<button type="button" class="idv-btn mini" onclick="akOc_marcar('${tipo}','${id}','${acaoFinal[0]}')">${acaoFinal[1]}</button>` : `<button type="button" class="idv-btn mini" onclick="akOc_marcar('${tipo}','${id}','pendente')" title="Voltar para pendente" aria-label="Voltar para pendente">\u{21A9}</button>`}</td>
       </tr>`;
     }).join('');
   const b = document.getElementById(pfx + '-badge');
@@ -12828,7 +12825,7 @@ function renderizarRelatorio() {
   if (!tbody) return;
 
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:#888">Nenhum relatório registrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="idv-vazio">Nenhum relatório registrado.</td></tr>';
     return;
   }
 
@@ -12839,19 +12836,19 @@ function renderizarRelatorio() {
       ? `${(r.periodoInicio||'').split('-').reverse().join('/')} a ${(r.periodoFim||'').split('-').reverse().join('/')}`
       : '—';
     return `<tr>
-      <td style="text-align:center;font-weight:700">${lista.length - i}</td>
+      <td class="idv-data" style="text-align:center;font-weight:600">${lista.length - i}</td>
       <td>${esc(r.tipo)||''}</td>
-      <td>${esc(r.monitorado)||''}</td>
-      <td style="white-space:nowrap;font-size:.82rem">${perFmt}</td>
-      <td>${recFmt||'—'}</td>
-      <td>${envFmt||'—'}</td>
+      <td><div class="idv-nome">${esc(r.monitorado)||''}</div></td>
+      <td class="idv-data" style="white-space:nowrap;font-size:13px">${perFmt}</td>
+      <td class="idv-data" style="white-space:nowrap">${recFmt||'—'}</td>
+      <td class="idv-data" style="white-space:nowrap">${envFmt||'—'}</td>
       <td>${esc(r.servidor)||''}</td>
       <td>${esc(r.obs)||'—'}</td>
       <td style="white-space:nowrap">
-        <button class="btn-sm" onclick="marcarRelatorioEnviado('${r.id}')" title="Marcar como enviado — vai para Arquivadas" style="background:#16A34A;color:#fff;border:none;border-radius:5px;padding:4px 9px;cursor:pointer;font-size:.78rem;font-weight:600">\u{1F4E4} Enviado</button>
-        <button class="btn-sm btn-outline" onclick="verRelatorio('${r.id}')" title="Visualizar" style="margin-left:4px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
-        <button class="btn-sm btn-outline" onclick="abrirModalRelatorio('${r.id}')" style="margin-left:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="btn-sm btn-danger"  onclick="excluirRelatorio('${r.id}')" style="margin-left:4px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>
+        <button type="button" class="idv-btn mini concluir" onclick="marcarRelatorioEnviado('${r.id}')" title="Marcar como enviado — vai para Arquivadas">Enviado</button>
+        <button type="button" class="idv-btn mini" onclick="verRelatorio('${r.id}')" title="Visualizar">Abrir</button>
+        <button type="button" class="idv-btn mini" onclick="abrirModalRelatorio('${r.id}')" title="Editar" aria-label="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button type="button" class="idv-btn mini perigo" onclick="excluirRelatorio('${r.id}')" title="Excluir" aria-label="Excluir"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>
       </td>
     </tr>`;
   }).join('');
@@ -12984,22 +12981,22 @@ function renderizarRelRecebidos() {
   const tbody = document.getElementById('tbody-rel-recebidos');
   if (!tbody) return;
   if (!recebidos.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#888">Nenhum caso aguardando confecção de relatório.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="idv-vazio">Nenhum caso aguardando confecção de relatório.</td></tr>';
     return;
   }
   tbody.innerHTML = recebidos.map(o => {
     const idx   = findIdx(o.id);
     const feito = _relTemRelatorio(o.id);
-    return `<tr>
-      <td style="font-family:var(--font-mono)">${o.id}</td>
-      <td><strong>${esc(o.monitorado) || '-'}</strong></td>
+    return `<tr class="${feito ? '' : 'row-atencao'}">
+      <td class="idv-mono">${o.id}</td>
+      <td><div class="idv-nome">${esc(o.monitorado) || '-'}</div></td>
       <td>${esc(o.medida) || '-'}</td>
       <td>${esc(o.tipo) || '-'}</td>
-      <td style="font-size:.8rem">${formatDate(o.encRelEm)}</td>
-      <td style="text-align:center">${feito ? '<span style="color:#27ae60;font-weight:600">\u{2705} Feito</span>' : '<span style="color:#e67e22;font-weight:600">\u{23F3} Pendente</span>'}</td>
+      <td class="idv-data" style="font-size:13px;white-space:nowrap">${formatDate(o.encRelEm)}</td>
+      <td style="text-align:center">${feito ? '<span class="idv-etq ok">Feito</span>' : '<span class="idv-etq at">Pendente</span>'}</td>
       <td style="white-space:nowrap">
-        <button class="btn-sm btn-outline" onclick="confeccionarRelatorioDeOc(${idx})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Confeccionar</button>
-        <button class="btn-sm btn-primary" onclick="enviarRelParaCom(${idx})" style="margin-left:4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M20 6 9 17l-5-5"/></svg>Enviar p/ Comunicação</button>
+        <button type="button" class="idv-btn mini" onclick="confeccionarRelatorioDeOc(${idx})">Confeccionar</button>
+        <button type="button" class="idv-btn mini criar" onclick="enviarRelParaCom(${idx})">Enviar p/ Comunicação</button>
       </td>
     </tr>`;
   }).join('');
@@ -13148,34 +13145,34 @@ function renderizarRelSemCom() {
   base.forEach(m => { cont[_relSemComStatusDe(m.registro)]++; });
   const kpis = document.getElementById('rel-semcom-kpis');
   if (kpis) kpis.innerHTML =
-    `<span style="background:#eef2ff;padding:3px 10px;border-radius:6px">Total: <b>${base.length}</b></span>` +
-    `<span style="background:#fef2f2;padding:3px 10px;border-radius:6px;color:#b91c1c">Pendentes: <b>${cont.pendente}</b></span>` +
-    `<span style="background:#eff6ff;padding:3px 10px;border-radius:6px;color:#1d4ed8">Relatório feito: <b>${cont.feito}</b></span>` +
-    `<span style="background:#f0fdf4;padding:3px 10px;border-radius:6px;color:#15803d">Enviados: <b>${cont.enviado}</b></span>`;
+    `<span class="idv-etq ne">Total: <b class="idv-mono">${base.length}</b></span>` +
+    `<span class="idv-etq cr">Pendentes: <b class="idv-mono">${cont.pendente}</b></span>` +
+    `<span class="idv-etq in">Relatório feito: <b class="idv-mono">${cont.feito}</b></span>` +
+    `<span class="idv-etq ok">Enviados: <b class="idv-mono">${cont.enviado}</b></span>`;
 
   if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:28px;color:#888">Nenhum monitorado sem comunicação acima de ${_relSemComCorte()} dias.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="idv-vazio">Nenhum monitorado sem comunicação acima de ${_relSemComCorte()} dias.</td></tr>`;
   } else {
     tbody.innerHTML = lista.map(m => {
       const dias = _diasSemComAtual(m);
       const st   = _relSemComStatusDe(m.registro);
       const info = _relSemComInfo(m.registro) || {};
-      const badge = st === 'enviado' ? `<span style="background:rgba(63,185,80,.15);color:#15803d;padding:2px 8px;border-radius:2em;font-size:.72rem">Enviado</span>`
-        : st === 'feito' ? `<span style="background:rgba(56,139,253,.15);color:#1d4ed8;padding:2px 8px;border-radius:2em;font-size:.72rem">Relatório feito</span>`
-        : `<span style="background:rgba(248,81,73,.15);color:#b91c1c;padding:2px 8px;border-radius:2em;font-size:.72rem">Pendente</span>`;
-      const corDias = dias >= 180 ? 'color:#dc2626;font-weight:bold' : dias >= 60 ? 'color:#b45309;font-weight:600' : '';
-      const subData = info.em ? `<div style="font-size:.66rem;color:#999">${esc(info.por||'')}${info.por?' · ':''}${esc(_relSemComDataHora(info.enviadoEm || info.em))}</div>` : '';
+      const badge = st === 'enviado' ? `<span class="idv-etq ok">Enviado</span>`
+        : st === 'feito' ? `<span class="idv-etq in">Relatório feito</span>`
+        : `<span class="idv-etq cr">Pendente</span>`;
+      const corDias = dias >= 180 ? 'color:var(--idv-cr);font-weight:600' : dias >= 60 ? 'color:var(--idv-at);font-weight:600' : '';
+      const subData = info.em ? `<div class="idv-mini">${esc(info.por||'')}${info.por?' · ':''}${esc(_relSemComDataHora(info.enviadoEm || info.em))}</div>` : '';
       const reg = _relSemComEsc(m.registro);
-      return `<tr>
-        <td><strong>${esc(m.nome||'—')}</strong>${_scSeloVD(m)}</td>
-        <td style="font-family:var(--font-mono)">${esc(m.registro||'—')}</td>
-        <td style="font-family:var(--font-mono);${corDias}">${dias}</td>
-        <td style="font-family:var(--font-mono);font-size:.8rem">${esc(m.ultimaComunicacao||'—')}</td>
+      return `<tr class="${st === 'pendente' && dias >= 180 ? 'row-vencido' : ''}">
+        <td><div class="idv-nome">${esc(m.nome||'—')}${_scSeloVD(m)}</div></td>
+        <td class="idv-mono">${esc(m.registro||'—')}</td>
+        <td class="idv-data" style="${corDias}">${dias}</td>
+        <td class="idv-data" style="font-size:13px;white-space:nowrap">${esc(m.ultimaComunicacao||'—')}</td>
         <td>${badge}${subData}</td>
         <td style="white-space:nowrap">
-          <button class="btn-sm btn-outline" onclick="relSemCom_gerar('${reg}','pdf')" title="Gerar relatório (PDF)">\u{1F4C4} PDF</button>
-          <button class="btn-sm btn-outline" onclick="relSemCom_gerar('${reg}','word')" title="Gerar relatório (Word)" style="margin-left:3px">\u{1F4DD} Word</button>
-          ${st !== 'enviado' ? `<button class="btn-sm btn-outline" onclick="relSemCom_marcarEnviado('${reg}')" title="Marcar como enviado ao juízo" style="margin-left:3px">\u{2713} Enviado</button>` : ''}
+          <button type="button" class="idv-btn mini" onclick="relSemCom_gerar('${reg}','pdf')" title="Gerar relatório (PDF)">PDF</button>
+          <button type="button" class="idv-btn mini" onclick="relSemCom_gerar('${reg}','word')" title="Gerar relatório (Word)">Word</button>
+          ${st !== 'enviado' ? `<button type="button" class="idv-btn mini concluir" onclick="relSemCom_marcarEnviado('${reg}')" title="Marcar como enviado ao juízo">\u{2713} Enviado</button>` : ''}
         </td>
       </tr>`;
     }).join('');
@@ -13479,19 +13476,19 @@ function renderizarComArquivados() {
     .sort((a,b) => (b.enviadoEm||'').localeCompare(a.enviadoEm||''));
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#888">Nenhuma ocorrência arquivada.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="idv-vazio">Nenhuma ocorrência arquivada.</td></tr>';
     return;
   }
 
   tbody.innerHTML = rows.map(r => `<tr>
-    <td>${esc(r.desc)}</td>
+    <td><div class="idv-nome">${esc(r.desc)}</div></td>
     <td>${esc(r.tipo)}</td>
-    <td style="white-space:nowrap">${r.enviadoEm ? new Date(r.enviadoEm).toLocaleString('pt-BR') : '—'}</td>
-    <td>${esc(r.prodoc)}</td>
+    <td class="idv-data" style="white-space:nowrap">${r.enviadoEm ? new Date(r.enviadoEm).toLocaleString('pt-BR') : '—'}</td>
+    <td class="idv-mono">${esc(r.prodoc)}</td>
     <td>${esc(r.plantao)}</td>
     <td style="white-space:nowrap">
-      <button class="btn-sm btn-outline" onclick="desarquivarComItem('${r.chave}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg>Desarquivar</button>
-      <button class="btn-sm btn-danger"  onclick="excluirComItem('${r.chave}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>
+      <button type="button" class="idv-btn mini" onclick="desarquivarComItem('${r.chave}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg>Desarquivar</button>
+      <button type="button" class="idv-btn mini perigo" title="Excluir" aria-label="Excluir" onclick="excluirComItem('${r.chave}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>
     </td>
   </tr>`).join('');
 }
@@ -13554,7 +13551,7 @@ function renderizarRelAguardando() {
   const tbody = document.getElementById('tbody-rel-aguardando');
   if (!tbody) return;
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#888">Nenhum relatório aguardando a Comunicação.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="idv-vazio">Nenhum relatório aguardando a Comunicação.</td></tr>';
     return;
   }
   const ocs = getOcorrencias();
@@ -13562,16 +13559,17 @@ function renderizarRelAguardando() {
     const per = (r.periodoInicio && r.periodoFim)
       ? `${(r.periodoInicio||'').split('-').reverse().join('/')} a ${(r.periodoFim||'').split('-').reverse().join('/')}` : '—';
     const oc = r.ocorrenciaId != null ? ocs.find(o => String(o.id)===String(r.ocorrenciaId)) : null;
-    const sit = oc ? (_etapaOc(oc)==='arquivado' ? '\u{2705} COM enviou' : '\u{23F3} Na Comunicação') : '\u{23F3} Aguardando';
+    const sit = oc ? (_etapaOc(oc)==='arquivado' ? 'COM enviou' : 'Na Comunicação') : 'Aguardando';
+    const sitC = oc && _etapaOc(oc)==='arquivado' ? 'ok' : 'at';
     return `<tr>
-      <td>${i+1}</td>
+      <td class="idv-data">${i+1}</td>
       <td>${esc(r.tipo)||''}</td>
-      <td>${esc(r.monitorado)||''}</td>
-      <td style="white-space:nowrap;font-size:.82rem">${per}</td>
+      <td><div class="idv-nome">${esc(r.monitorado)||''}</div></td>
+      <td class="idv-data" style="white-space:nowrap;font-size:13px">${per}</td>
       <td>${esc(r.servidor)||''}</td>
-      <td>${(r.dataRecebimento||'').split('-').reverse().join('/')}</td>
-      <td>${(r.aguardandoCom||'').replace('T',' ').slice(0,16)}</td>
-      <td style="color:#e67e22;font-weight:600">${sit}</td>
+      <td class="idv-data" style="white-space:nowrap">${(r.dataRecebimento||'').split('-').reverse().join('/')}</td>
+      <td class="idv-data" style="white-space:nowrap">${(r.aguardandoCom||'').replace('T',' ').slice(0,16)}</td>
+      <td><span class="idv-etq ${sitC}">${sit}</span></td>
     </tr>`;
   }).join('');
 }
@@ -13599,22 +13597,22 @@ function renderizarRelArquivadas() {
   const tbody = document.getElementById('tbody-rel-arquivadas');
   if (!tbody) return;
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:#888">Nenhum relatório encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="idv-vazio">Nenhum relatório encontrado.</td></tr>';
     return;
   }
   tbody.innerHTML = lista.map((r,i) => `<tr>
-    <td>${i+1}</td>
+    <td class="idv-data">${i+1}</td>
     <td>${esc(r.tipo)||''}</td>
-    <td>${esc(r.monitorado)||''}</td>
-    <td style="white-space:nowrap;font-size:.82rem">${(r.periodoInicio && r.periodoFim) ? ((r.periodoInicio||'').split('-').reverse().join('/')+' a '+(r.periodoFim||'').split('-').reverse().join('/')) : '—'}</td>
+    <td><div class="idv-nome">${esc(r.monitorado)||''}</div></td>
+    <td class="idv-data" style="white-space:nowrap;font-size:13px">${(r.periodoInicio && r.periodoFim) ? ((r.periodoInicio||'').split('-').reverse().join('/')+' a '+(r.periodoFim||'').split('-').reverse().join('/')) : '—'}</td>
     <td>${esc(r.servidor)||''}</td>
-    <td>${(r.dataRecebimento||'').split('-').reverse().join('/')}</td>
-    <td>${(r.dataEnvio||'').split('-').reverse().join('/')}</td>
-    <td><strong>${(r.comEnviadoEm||'').replace('T',' ').slice(0,16)}</strong></td>
+    <td class="idv-data" style="white-space:nowrap">${(r.dataRecebimento||'').split('-').reverse().join('/')}</td>
+    <td class="idv-data" style="white-space:nowrap">${(r.dataEnvio||'').split('-').reverse().join('/')}</td>
+    <td class="idv-data" style="white-space:nowrap;font-weight:600">${(r.comEnviadoEm||'').replace('T',' ').slice(0,16)}</td>
     ${_relCelViolacoes(r)}
     <td style="white-space:nowrap">
-      <button class="btn-sm btn-outline" onclick="desarquivarRelatorio('${r.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg>Desarquivar</button>
-      <button class="btn-sm btn-danger"  onclick="excluirRelatorioArq('${r.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>
+      <button type="button" class="idv-btn mini" onclick="desarquivarRelatorio('${r.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg>Desarquivar</button>
+      <button type="button" class="idv-btn mini perigo" title="Excluir" aria-label="Excluir" onclick="excluirRelatorioArq('${r.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>
     </td>
   </tr>`).join('');
 }
@@ -14078,7 +14076,7 @@ function renderizarTriagem() {
 
   const colCount = podeMod ? 11 : 10;
   if (filtrados.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center;padding:20px;color:#888">Nenhum atendimento encontrado.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${colCount}" class="idv-vazio">Nenhum atendimento encontrado.</td></tr>`;
     return;
   }
 
@@ -14086,14 +14084,14 @@ function renderizarTriagem() {
     const dataFmt = (a.data||'').split('-').reverse().join('/');
     const hora    = a.criadoEm ? new Date(a.criadoEm).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '';
     const btns    = podeMod
-      ? `<button class="btn-sm btn-outline" onclick="verTriagem('${a.id}')" title="Visualizar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
-         <button class="btn-sm btn-outline" onclick="abrirModalTriagem('${a.id}')" style="margin-left:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-         <button class="btn-sm btn-danger"  onclick="excluirAtendimentoTriagem('${a.id}')" style="margin-left:4px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>`
-      : `<button class="btn-sm btn-outline" onclick="verTriagem('${a.id}')" title="Visualizar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>`;
+      ? `<button type="button" class="idv-btn mini" onclick="verTriagem('${a.id}')" title="Visualizar" aria-label="Visualizar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
+         <button type="button" class="idv-btn mini" onclick="abrirModalTriagem('${a.id}')" title="Editar" aria-label="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+         <button type="button" class="idv-btn mini perigo" onclick="excluirAtendimentoTriagem('${a.id}')" title="Excluir" aria-label="Excluir"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>`
+      : `<button type="button" class="idv-btn mini" onclick="verTriagem('${a.id}')" title="Visualizar" aria-label="Visualizar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>`;
     return `<tr>
-      <td>${dataFmt}${hora ? ' ' + hora : ''}</td>
-      <td>${esc(a.nome)||''}</td>
-      <td>${esc(a.cpf)||''}</td>
+      <td class="idv-data" style="white-space:nowrap">${dataFmt}${hora ? ' ' + hora : ''}</td>
+      <td><div class="idv-nome">${esc(a.nome)||''}</div></td>
+      <td class="idv-mono" style="white-space:nowrap">${esc(a.cpf)||''}</td>
       <td>${esc(a.tipo)||''}</td>
       <td>${esc(a.medida)||''}</td>
       <td>${esc(a.condicao)||''}</td>
@@ -14101,7 +14099,7 @@ function renderizarTriagem() {
       <td>${esc(a.clienteMonitorado)||''}</td>
       <td>${esc(a.responsavel)||''}</td>
       <td>${esc(a.obs)||''}</td>
-      ${podeMod ? `<td>${btns}</td>` : ''}
+      ${podeMod ? `<td style="white-space:nowrap">${btns}</td>` : ''}
     </tr>`;
   }).join('');
 
@@ -14315,7 +14313,7 @@ function renderizarTriagemArquivados() {
   if (label) label.textContent = 'Arquivados (' + lista.length + ' de ' + totalArq + ')';
 
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:24px;color:#888">Nenhum atendimento arquivado encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="idv-vazio">Nenhum atendimento arquivado encontrado.</td></tr>';
     return;
   }
 
@@ -14325,13 +14323,13 @@ function renderizarTriagemArquivados() {
     const dataFmt = partes.length === 3 ? partes[2]+'/'+partes[1]+'/'+partes[0] : (a.data||'');
     const hora    = a.criadoEm ? new Date(a.criadoEm).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '';
     const arqFmt  = a.arquivadoEm ? new Date(a.arquivadoEm).toLocaleDateString('pt-BR') : '—';
-    const btnDesarq = podeMod ? '<button class="btn-sm btn-outline" onclick="desarquivarAtendimento(\''+a.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg>Desarquivar</button>' : '';
-    const btnExcl   = podeMod ? '<button class="btn-sm btn-danger"  onclick="excluirAtendimentoArquivado(\''+a.id+'\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>' : '';
+    const btnDesarq = podeMod ? '<button type="button" class="idv-btn mini" onclick="desarquivarAtendimento(\''+a.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg>Desarquivar</button>' : '';
+    const btnExcl   = podeMod ? '<button type="button" class="idv-btn mini perigo" title="Excluir" aria-label="Excluir" onclick="excluirAtendimentoArquivado(\''+a.id+'\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>' : '';
     return '<tr>'
-      + '<td style="white-space:nowrap">' + dataFmt + (hora ? ' ' + hora : '') + '</td>'
-      + '<td style="white-space:nowrap;color:#888;font-size:.82rem">' + arqFmt + '</td>'
-      + '<td>' + (a.nome||'') + '</td>'
-      + '<td>' + (a.cpf||'') + '</td>'
+      + '<td class="idv-data" style="white-space:nowrap">' + dataFmt + (hora ? ' ' + hora : '') + '</td>'
+      + '<td class="idv-data" style="white-space:nowrap;color:var(--idv-sec);font-size:13px">' + arqFmt + '</td>'
+      + '<td><div class="idv-nome">' + (a.nome||'') + '</div></td>'
+      + '<td class="idv-mono" style="white-space:nowrap">' + (a.cpf||'') + '</td>'
       + '<td>' + (a.tipo||'') + '</td>'
       + '<td>' + (a.medida||'') + '</td>'
       + '<td>' + (a.condicao||'') + '</td>'
@@ -14564,35 +14562,36 @@ function renderizarPsi() {
   const tbody = el('tbody-psi');
   if (!tbody) return;
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:24px;color:#888">Nenhum registro encontrado. Clique em "+ Novo Registro" para adicionar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" class="idv-vazio">Nenhum registro encontrado. Clique em "+ Novo Registro" para adicionar.</td></tr>';
     return;
   }
 
-  const RISCO_COR = { 'Alto':'background:#ffeaea;color:#c0392b;font-weight:700;border-radius:4px;padding:2px 7px', 'Médio':'background:#fff8e1;color:#b7770d;font-weight:700;border-radius:4px;padding:2px 7px', 'Baixo':'background:#f0fff4;color:#27ae60;font-weight:700;border-radius:4px;padding:2px 7px' };
-  const CAR_COR  = { 'Urgência':'color:#c0392b;font-weight:700', 'Requisição judicial':'color:#8e44ad;font-weight:700' };
-  const PUB_COR  = { 'Vítima':'background:#fff0f0;color:#c0392b;border-radius:4px;padding:2px 7px;font-weight:600', 'Monitorado':'background:#eaf0ff;color:#2563eb;border-radius:4px;padding:2px 7px;font-weight:600' };
+  // cores do guia: etiqueta quadrada (risco/público) e texto colorido só no que pede atenção
+  const RISCO_COR = { 'Alto':'cr', 'Médio':'at', 'Baixo':'ok' };
+  const CAR_COR  = { 'Urgência':'color:var(--idv-cr);font-weight:600', 'Requisição judicial':'color:var(--idv-de);font-weight:600' };
+  const PUB_COR  = { 'Vítima':'de', 'Monitorado':'ne' };
 
   tbody.innerHTML = lista.map(a => {
     const dataFmt = (() => { const d=_psiDataDe(a).split('-'); return d.length===3?d[2]+'/'+d[1]+'/'+d[0]:(a.dataHora||a.data||''); })();
     const hora    = a.dataHora ? a.dataHora.slice(11,16) : '';
     const proxFmt = a.proximoAtend ? (() => { const p=a.proximoAtend.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; })() : '—';
-    const risco   = a.risco ? '<span style="'+( RISCO_COR[a.risco]||'')+'">'+a.risco+'</span>' : '—';
-    const btnVer  = '<button class="btn-sm btn-outline" onclick="verPsi(\''+a.id+'\')" title="Visualizar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button> ';
-    const btnEd   = podeMod ? '<button class="btn-sm btn-outline" onclick="abrirModalPsi(\''+a.id+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button> ' : '';
-    const btnEx   = podeMod ? '<button class="btn-sm btn-danger"  onclick="excluirAtendimentoPsi(\''+a.id+'\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>' : '';
-    return '<tr>'
-      +'<td style="white-space:nowrap">'+dataFmt+(hora?' '+hora:'')+'</td>'
-      +'<td><span style="'+(PUB_COR[a.publico]||'')+'">'+esc(a.publico||'—')+'</span></td>'
-      +'<td><strong>'+esc(a.nome||'')+'</strong></td>'
-      +'<td style="font-size:.82rem">'+esc(a.processo||'—')+'</td>'
+    const risco   = a.risco ? '<span class="idv-etq '+(RISCO_COR[a.risco]||'ne')+'">'+a.risco+'</span>' : '—';
+    const btnVer  = '<button type="button" class="idv-btn mini" onclick="verPsi(\''+a.id+'\')" title="Visualizar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button> ';
+    const btnEd   = podeMod ? '<button type="button" class="idv-btn mini" title="Editar" aria-label="Editar" onclick="abrirModalPsi(\''+a.id+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button> ' : '';
+    const btnEx   = podeMod ? '<button type="button" class="idv-btn mini perigo" title="Excluir" aria-label="Excluir" onclick="excluirAtendimentoPsi(\''+a.id+'\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>' : '';
+    return '<tr'+(a.risco==='Alto'?' class="row-vencido"':'')+'>'
+      +'<td class="idv-data" style="white-space:nowrap">'+dataFmt+(hora?' '+hora:'')+'</td>'
+      +'<td>'+(a.publico?'<span class="idv-etq '+(PUB_COR[a.publico]||'ne')+'">'+esc(a.publico)+'</span>':'—')+'</td>'
+      +'<td><div class="idv-nome">'+esc(a.nome||'')+'</div></td>'
+      +'<td class="idv-mono" style="font-size:13px">'+esc(a.processo||'—')+'</td>'
       +'<td>'+esc(a.medida||'—')+'</td>'
       +'<td>'+esc(a.tipo||'')+'</td>'
       +'<td>'+esc(a.area||'')+'</td>'
       +'<td style="'+(CAR_COR[a.carater]||'')+'">'+esc(a.carater||'')+'</td>'
-      +'<td style="font-size:.82rem">'+esc(a.situacao||'—')+'</td>'
+      +'<td style="font-size:13px">'+esc(a.situacao||'—')+'</td>'
       +'<td>'+risco+'</td>'
       +'<td>'+esc(a.profissional||'')+'</td>'
-      +'<td style="white-space:nowrap">'+proxFmt+'</td>'
+      +'<td class="idv-data" style="white-space:nowrap">'+proxFmt+'</td>'
       +'<td style="white-space:nowrap">'+btnVer+btnEd+btnEx+'</td>'
       +'</tr>';
   }).join('');
@@ -14853,22 +14852,22 @@ function renderizarPsiArquivados() {
   if (lbl) lbl.textContent='Arquivados ('+lista.length+' de '+totalArq+')';
 
   if (!lista.length) {
-    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:24px;color:#888">Nenhum registro arquivado encontrado.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="10" class="idv-vazio">Nenhum registro arquivado encontrado.</td></tr>';
     return;
   }
-  const PUB_COR  = { 'Vítima':'color:#c0392b;font-weight:600', 'Monitorado':'color:#2563eb;font-weight:600' };
+  const PUB_COR  = { 'Vítima':'color:var(--idv-de);font-weight:600', 'Monitorado':'color:var(--idv-sec);font-weight:600' };
   const podeMod = podeAlterarPsi();
   tbody.innerHTML = lista.map(a=>{
     const dataFmt = (() => { const d=_psiDataDe(a).split('-'); return d.length===3?d[2]+'/'+d[1]+'/'+d[0]:(a.dataHora||a.data||''); })();
     const arqFmt  = a.arquivadoEm ? new Date(a.arquivadoEm).toLocaleDateString('pt-BR') : '—';
-    const btnD    = podeMod ? '<button class="btn-sm btn-outline" onclick="desarquivarPsi(\''+a.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg>Desarquivar</button> ' : '';
-    const btnE    = podeMod ? '<button class="btn-sm btn-danger"  onclick="excluirPsiArquivado(\''+a.id+'\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>' : '';
+    const btnD    = podeMod ? '<button type="button" class="idv-btn mini" onclick="desarquivarPsi(\''+a.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg>Desarquivar</button> ' : '';
+    const btnE    = podeMod ? '<button type="button" class="idv-btn mini perigo" title="Excluir" aria-label="Excluir" onclick="excluirPsiArquivado(\''+a.id+'\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>' : '';
     return '<tr>'
-      +'<td style="white-space:nowrap">'+dataFmt+'</td>'
-      +'<td style="white-space:nowrap;color:#888;font-size:.82rem">'+arqFmt+'</td>'
+      +'<td class="idv-data" style="white-space:nowrap">'+dataFmt+'</td>'
+      +'<td class="idv-data" style="white-space:nowrap;color:var(--idv-sec);font-size:13px">'+arqFmt+'</td>'
       +'<td style="'+(PUB_COR[a.publico]||'')+'">'+(a.publico||'—')+'</td>'
-      +'<td><strong>'+(a.nome||'')+'</strong></td>'
-      +'<td style="font-size:.82rem">'+(a.processo||'—')+'</td>'
+      +'<td><div class="idv-nome">'+(a.nome||'')+'</div></td>'
+      +'<td class="idv-mono" style="font-size:13px">'+(a.processo||'—')+'</td>'
       +'<td>'+(a.tipo||'')+'</td>'
       +'<td>'+(a.area||'')+'</td>'
       +'<td>'+(a.situacao||'')+'</td>'
@@ -15082,7 +15081,7 @@ function renderizarComunicacao() {
   if (btnsEl) {
     let html = '';
     for (let i = 1; i <= totalPags; i++) {
-      html += `<button class="btn-sm ${i===_comPagAtual?'btn-primary':'btn-outline'}" onclick="_comPagAtual=${i};renderizarComunicacao()">${i}</button>`;
+      html += `<button type="button" class="${i===_comPagAtual?'active':''}" ${i===_comPagAtual?'aria-current="page"':''} onclick="_comPagAtual=${i};renderizarComunicacao()">${i}</button>`;
     }
     btnsEl.innerHTML = html;
   }
@@ -15091,7 +15090,7 @@ function renderizarComunicacao() {
   if (!tbody) return;
 
   if (!pagina.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:#888">Nenhuma ocorrência encontrada.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="idv-vazio">Nenhuma ocorrência encontrada.</td></tr>';
     return;
   }
 
@@ -15099,28 +15098,28 @@ function renderizarComunicacao() {
   tbody.innerHTML = pagina.map((o) => {
     const idx = findIdx(o.id);  // índice correto no array completo
     const badgeProdoc = o.prodoc === 'SIM'
-      ? '<span class="badge badge-ok">SIM</span>'
-      : '<span class="badge badge-vencido">NÃO</span>';
+      ? '<span class="idv-etq ok">SIM</span>'
+      : '<span class="idv-etq cr">NÃO</span>';
     const badgeCrit = (_etapaOc(o) === 'comunicacao')
-      ? '<span style="background:#8e44ad;color:#fff;font-size:.68rem;border-radius:3px;padding:1px 5px;font-weight:700;margin-left:4px">\u{1F4CB} DO RELATÓRIO</span>'
+      ? '<span class="idv-etq de" style="margin-left:6px">Do relatório</span>'
       : '';
     const btnEdit = podeEdit
-      ? `<button class="btn-sm btn-outline" onclick="verComunicacao(${idx})" title="Visualizar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
-         <button class="btn-sm btn-outline" onclick="abrirModalComunicacao(${idx})" style="margin-left:4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>PRODOC</button>
-         <button class="btn-sm btn-primary" onclick="abrirModalComOcorrencia(${idx})" style="margin-left:4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M20 6 9 17l-5-5"/></svg>Enviado</button>`
-      : `<button class="btn-sm btn-outline" onclick="verComunicacao(${idx})" title="Visualizar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>`;
+      ? `<button type="button" class="idv-btn mini" onclick="verComunicacao(${idx})" title="Visualizar">Abrir</button>
+         <button type="button" class="idv-btn mini" onclick="abrirModalComunicacao(${idx})">PRODOC</button>
+         <button type="button" class="idv-btn mini concluir" onclick="abrirModalComOcorrencia(${idx})">Enviado</button>`
+      : `<button type="button" class="idv-btn mini" onclick="verComunicacao(${idx})" title="Visualizar">Abrir</button>`;
     return `<tr>
-      <td>${o.id}</td>
-      <td>${esc(o.monitorado)||''}${badgeCrit}</td>
+      <td class="idv-mono">${o.id}</td>
+      <td><div class="idv-nome">${esc(o.monitorado)||''}${badgeCrit}</div></td>
       <td>${esc(o.medida)||''}</td>
       <td>${esc(o.tipo)||''}</td>
-      <td style="white-space:nowrap">${o.dataAlerta ? new Date(o.dataAlerta).toLocaleString('pt-BR') : ''}</td>
+      <td class="idv-data" style="white-space:nowrap;font-size:13px">${o.dataAlerta ? new Date(o.dataAlerta).toLocaleString('pt-BR') : ''}</td>
       <td>${esc(o._status)||''}</td>
       <td>${badgeProdoc}</td>
-      <td>${esc(o.prodocNum)||'—'}</td>
-      <td>${o.prodocData ? _dataLocal(o.prodocData).toLocaleDateString('pt-BR') : '—'}</td>
-      <td>${esc(o.plantao)||''}</td>
-      <td>${btnEdit}</td>
+      <td class="idv-mono">${esc(o.prodocNum)||'—'}</td>
+      <td class="idv-data" style="white-space:nowrap">${o.prodocData ? _dataLocal(o.prodocData).toLocaleDateString('pt-BR') : '—'}</td>
+      <td style="font-weight:600">${esc(o.plantao)||''}</td>
+      <td style="white-space:nowrap">${btnEdit}</td>
     </tr>`;
   }).join('');
 }
@@ -15253,15 +15252,15 @@ function abrirConfigEstoque() {
   });
   const body = document.getElementById('est-config-body');
   body.innerHTML = `
-    <p style="color:#555;font-size:.87rem;margin-bottom:16px">Defina a quantidade mínima de cada item. Quando o estoque atingir ou ficar abaixo do mínimo, a linha ficará vermelha.</p>
+    <p style="color:var(--idv-sec);font-size:14px;margin-bottom:16px">Defina a quantidade mínima de cada item. Quando o estoque atingir ou ficar abaixo do mínimo, a linha ganha uma faixa de alerta à esquerda.</p>
     <div style="display:grid;grid-template-columns:1fr 120px;gap:8px 16px;align-items:center">
-      <div style="font-weight:600;color:#444;font-size:.83rem">Item</div>
-      <div style="font-weight:600;color:#444;font-size:.83rem">Qtd Mínima</div>
+      <div style="font-weight:600;color:var(--idv-sec);font-size:13px">Item</div>
+      <div style="font-weight:600;color:var(--idv-sec);font-size:13px">Qtd Mínima</div>
       ${itens.map(it => `
-        <div style="font-size:.88rem">${it.label}</div>
+        <div style="font-size:14px">${it.label}</div>
         <input type="number" min="0" class="est-config-input" data-chave="${it.chave}"
           value="${minimos[it.chave] ?? EST_MINIMO[it.label] ?? 0}"
-          style="padding:5px 8px;border:1px solid #ccc;border-radius:6px;width:100%">
+          style="padding:5px 8px;border:1px solid var(--idv-borda);border-radius:6px;width:100%;font-size:14px">
       `).join('')}
     </div>
   `;
@@ -15443,10 +15442,10 @@ function renderizarEstoque() {
     k.startsWith('Cinta_') ? 'Cinta ' + k.replace('Cinta_', '') : k
   );
   const avisoRec = est.recontagemEm
-    ? `<div class="est-alerta-box" style="background:#eef4ff;border-color:#b6cdf7;color:#1a4fa3">\u{1F9EE} <strong>Recontagem em ${new Date(est.recontagemEm).toLocaleString('pt-BR')}:</strong> o saldo abaixo conta apenas as movimentações a partir dessa data. O histórico anterior continua registrado, mas não entra no saldo.</div>`
+    ? `<div class="idv-faixa" style="margin-bottom:12px"><span class="idv-faixa-ic" aria-hidden="true">i</span><span><strong>Recontagem em ${new Date(est.recontagemEm).toLocaleString('pt-BR')}:</strong> o saldo abaixo conta apenas as movimentações a partir dessa data. O histórico anterior continua registrado, mas não entra no saldo.</span></div>`
     : '';
   document.getElementById('est-alertas').innerHTML = avisoRec + (semEst.length
-    ? `<div class="est-alerta-box">\u{26A0}\u{FE0F} <strong>Itens SEM estoque (${semEst.length}):</strong> ${semEst.join(', ')}</div>`
+    ? `<div class="idv-faixa cr" style="margin-bottom:12px"><span class="idv-faixa-ic" aria-hidden="true">!</span><span><strong>Itens SEM estoque (${semEst.length}):</strong> ${semEst.join(', ')}</span></div>`
     : '');
 
   /* Tabela Tornozeleira */
@@ -15460,14 +15459,14 @@ function renderizarEstoque() {
     const cls   = estStatusCls(qtd, min);
     const nv    = ipe.novo[tipo] || 0;
     const re    = ipe.reutilizado[tipo] || 0;
-    const rowStyle = qtd <= min ? ' style="background:#ffeaea"' : '';
+    const rowStyle = qtd <= min ? (qtd <= 0 ? ' style="box-shadow:inset 3px 0 0 var(--idv-cr)"' : ' style="box-shadow:inset 3px 0 0 var(--idv-at)"') : '';
     rowsTorn.push(`<tr${rowStyle}>
-      <td>${tipo}</td><td style="color:var(--cz2)">—</td>
-      <td style="text-align:center"><strong>${qtd}</strong></td>
-      <td style="text-align:center">${nv > 0 ? `<span style="color:#1a7f37;font-weight:600">\u{1F4E6} ${nv}</span>` : '<span style="color:#aaa">—</span>'}</td>
-      <td style="text-align:center">${re > 0 ? `<span style="color:#b45309;font-weight:600">\u{1F504} ${re}</span>` : '<span style="color:#aaa">—</span>'}</td>
+      <td style="font-weight:600">${tipo}</td><td style="color:var(--idv-sec)">—</td>
+      <td class="idv-data" style="text-align:center;font-weight:600">${qtd}</td>
+      <td style="text-align:center">${nv > 0 ? `<span class="idv-data" style="color:var(--idv-ok);font-weight:600">${nv}</span>` : '<span style="color:var(--idv-sec)">—</span>'}</td>
+      <td style="text-align:center">${re > 0 ? `<span class="idv-data" style="color:var(--idv-at);font-weight:600">${re}</span>` : '<span style="color:var(--idv-sec)">—</span>'}</td>
       <td style="text-align:center">${min}</td>
-      <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
+      <td><span class="idv-etq ${cls === 'zero' ? 'cr' : cls === 'baixo' ? 'at' : 'ok'}">${estStatusLabel(cls)}</span></td>
     </tr>`);
     if (ITENS_COM_SERIAL.includes(tipo)) {
       // Monta mapa serial\u{2192}estado (suporta formato novo e antigo via movimentações)
@@ -15478,17 +15477,17 @@ function renderizarEstoque() {
         const reutilIds  = todosSeriais.filter(s => serialMap[s].estado === 'Reutilizado');
         const outrosIds  = todosSeriais.filter(s => serialMap[s].estado !== 'Novo' && serialMap[s].estado !== 'Reutilizado');
         let partes = [];
-        if (novosIds.length)   partes.push(`<span style="color:#1a7f37">\u{1F4E6} <strong>Novos (${novosIds.length}):</strong> ${novosIds.join(' · ')}</span>`);
-        if (reutilIds.length)  partes.push(`<span style="color:#b45309">\u{1F504} <strong>Reutilizados (${reutilIds.length}):</strong> ${reutilIds.join(' · ')}</span>`);
-        if (outrosIds.length)  partes.push(`<span style="color:#888">\u{1F4CB} <strong>Sem estado (${outrosIds.length}):</strong> ${outrosIds.map(s => `${s}${podeAlterarEstoque() ? ` <button onclick="removerSerialEstoque('${s}','${tipo}')" title="Remover serial" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:.85rem;padding:0 2px;line-height:1">×</button>` : ''}`).join(' · ')}</span>`);
-        rowsTorn.push(`<tr style="background:#f8f9ff">
-          <td colspan="7" style="font-size:.78rem;padding:4px 12px;line-height:1.8">${partes.join('<br>')}</td>
+        if (novosIds.length)   partes.push(`<span style="color:var(--idv-ok)"><strong>Novos (${novosIds.length}):</strong> ${novosIds.join(' · ')}</span>`);
+        if (reutilIds.length)  partes.push(`<span style="color:var(--idv-at)"><strong>Reutilizados (${reutilIds.length}):</strong> ${reutilIds.join(' · ')}</span>`);
+        if (outrosIds.length)  partes.push(`<span style="color:var(--idv-sec)"><strong>Sem estado (${outrosIds.length}):</strong> ${outrosIds.map(s => `${s}${podeAlterarEstoque() ? ` <button onclick="removerSerialEstoque('${s}','${tipo}')" title="Remover serial" aria-label="Remover serial" type="button" style="background:none;border:none;color:var(--idv-cr);cursor:pointer;font-size:14px;padding:0 2px;line-height:1">×</button>` : ''}`).join(' · ')}</span>`);
+        rowsTorn.push(`<tr style="background:var(--idv-fundo)">
+          <td colspan="7" style="font-size:13px;padding:6px 14px;line-height:1.8">${partes.join('<br>')}</td>
         </tr>`);
       } else {
         const seriais = (est.seriais || {})[tipo] || [];
         if (seriais.length > 0) {
-          rowsTorn.push(`<tr style="background:#f8f9ff">
-            <td colspan="7" style="font-size:.78rem;color:#555;padding:4px 12px">
+          rowsTorn.push(`<tr style="background:var(--idv-fundo)">
+            <td colspan="7" style="font-size:13px;color:var(--idv-sec);padding:6px 14px">
               \u{1F4CB} <strong>Nºs de série em estoque:</strong> ${seriais.join(' · ')}
             </td>
           </tr>`);
@@ -15503,14 +15502,14 @@ function renderizarEstoque() {
     const cls = estStatusCls(qtd, min);
     const nv  = ipe.novo[k] || 0;
     const re  = ipe.reutilizado[k] || 0;
-    const rowStyle = qtd <= min ? ' style="background:#ffeaea"' : '';
+    const rowStyle = qtd <= min ? (qtd <= 0 ? ' style="box-shadow:inset 3px 0 0 var(--idv-cr)"' : ' style="box-shadow:inset 3px 0 0 var(--idv-at)"') : '';
     rowsTorn.push(`<tr${rowStyle}>
       <td>Cinta</td><td>${tam}</td>
-      <td style="text-align:center"><strong>${qtd}</strong></td>
-      <td style="text-align:center">${nv > 0 ? `<span style="color:#1a7f37;font-weight:600">\u{1F4E6} ${nv}</span>` : '<span style="color:#aaa">—</span>'}</td>
-      <td style="text-align:center">${re > 0 ? `<span style="color:#b45309;font-weight:600">\u{1F504} ${re}</span>` : '<span style="color:#aaa">—</span>'}</td>
+      <td class="idv-data" style="text-align:center;font-weight:600">${qtd}</td>
+      <td style="text-align:center">${nv > 0 ? `<span class="idv-data" style="color:var(--idv-ok);font-weight:600">${nv}</span>` : '<span style="color:var(--idv-sec)">—</span>'}</td>
+      <td style="text-align:center">${re > 0 ? `<span class="idv-data" style="color:var(--idv-at);font-weight:600">${re}</span>` : '<span style="color:var(--idv-sec)">—</span>'}</td>
       <td style="text-align:center">${min}</td>
-      <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
+      <td><span class="idv-etq ${cls === 'zero' ? 'cr' : cls === 'baixo' ? 'at' : 'ok'}">${estStatusLabel(cls)}</span></td>
     </tr>`);
   });
   tbTorn.innerHTML = rowsTorn.join('');
@@ -15522,7 +15521,7 @@ function renderizarEstoque() {
   const qtd = itens[tipo] || 0;
   const min = _getMin(chave, EST_MINIMO[tipo]);
   const cls = estStatusCls(qtd, min);
-  const rowStyle = qtd <= min ? ' style="background:#ffeaea"' : '';
+  const rowStyle = qtd <= min ? (qtd <= 0 ? ' style="box-shadow:inset 3px 0 0 var(--idv-cr)"' : ' style="box-shadow:inset 3px 0 0 var(--idv-at)"') : '';
   const dppRegs       = (regs[tipo] || []);
   const comCarregador = dppRegs.filter(r => r.temCarregador).length;
   const comChip       = dppRegs.filter(r => r.temChip).length;
@@ -15530,11 +15529,11 @@ function renderizarEstoque() {
   const dppReutil  = ipe.reutilizado[tipo] || 0;
   rowsDpp.push(`<tr${rowStyle}>
     <td>${tipo}</td>
-    <td style="text-align:center"><strong>${qtd}</strong></td>
-    <td style="text-align:center">${dppNovo > 0 ? `<span style="color:#1a7f37;font-weight:600">\u{1F4E6} ${dppNovo}</span>` : '<span style="color:#aaa">—</span>'}</td>
-    <td style="text-align:center">${dppReutil > 0 ? `<span style="color:#b45309;font-weight:600">\u{1F504} ${dppReutil}</span>` : '<span style="color:#aaa">—</span>'}</td>
+    <td class="idv-data" style="text-align:center;font-weight:600">${qtd}</td>
+    <td style="text-align:center">${dppNovo > 0 ? `<span class="idv-data" style="color:var(--idv-ok);font-weight:600">${dppNovo}</span>` : '<span style="color:var(--idv-sec)">—</span>'}</td>
+    <td style="text-align:center">${dppReutil > 0 ? `<span class="idv-data" style="color:var(--idv-at);font-weight:600">${dppReutil}</span>` : '<span style="color:var(--idv-sec)">—</span>'}</td>
     <td style="text-align:center">${min}</td>
-    <td><span class="est-badge ${cls}">${estStatusLabel(cls)}</span></td>
+    <td><span class="idv-etq ${cls === 'zero' ? 'cr' : cls === 'baixo' ? 'at' : 'ok'}">${estStatusLabel(cls)}</span></td>
     <td style="text-align:center">${comCarregador > 0 ? `\u{1F50B} ${comCarregador}` : '—'}</td>
     <td style="text-align:center">${comChip > 0 ? `\u{1F4F6} ${comChip}` : '—'}</td>
   </tr>`);
@@ -15546,17 +15545,17 @@ function renderizarEstoque() {
       const reutilIds = dppTodos.filter(s => dppSerialMap[s].estado === 'Reutilizado');
       const outrosIds = dppTodos.filter(s => dppSerialMap[s].estado !== 'Novo' && dppSerialMap[s].estado !== 'Reutilizado');
       let partes = [];
-      if (novosIds.length)   partes.push(`<span style="color:#1a7f37">\u{1F4E6} <strong>Novos (${novosIds.length}):</strong> ${novosIds.join(' · ')}</span>`);
-      if (reutilIds.length)  partes.push(`<span style="color:#b45309">\u{1F504} <strong>Reutilizados (${reutilIds.length}):</strong> ${reutilIds.join(' · ')}</span>`);
-      if (outrosIds.length)  partes.push(`<span style="color:#888">\u{1F4CB} <strong>Sem estado (${outrosIds.length}):</strong> ${outrosIds.map(s => `${s}${podeAlterarEstoque() ? ` <button onclick="removerSerialEstoque('${s}','${tipo}')" title="Remover serial" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:.85rem;padding:0 2px;line-height:1">×</button>` : ''}`).join(' · ')}</span>`);
-      rowsDpp.push(`<tr style="background:#f8f9ff">
-        <td colspan="8" style="font-size:.78rem;padding:4px 12px;line-height:1.8">${partes.join('<br>')}</td>
+      if (novosIds.length)   partes.push(`<span style="color:var(--idv-ok)"><strong>Novos (${novosIds.length}):</strong> ${novosIds.join(' · ')}</span>`);
+      if (reutilIds.length)  partes.push(`<span style="color:var(--idv-at)"><strong>Reutilizados (${reutilIds.length}):</strong> ${reutilIds.join(' · ')}</span>`);
+      if (outrosIds.length)  partes.push(`<span style="color:var(--idv-sec)"><strong>Sem estado (${outrosIds.length}):</strong> ${outrosIds.map(s => `${s}${podeAlterarEstoque() ? ` <button onclick="removerSerialEstoque('${s}','${tipo}')" title="Remover serial" aria-label="Remover serial" type="button" style="background:none;border:none;color:var(--idv-cr);cursor:pointer;font-size:14px;padding:0 2px;line-height:1">×</button>` : ''}`).join(' · ')}</span>`);
+      rowsDpp.push(`<tr style="background:var(--idv-fundo)">
+        <td colspan="8" style="font-size:13px;padding:6px 14px;line-height:1.8">${partes.join('<br>')}</td>
       </tr>`);
     } else {
       const seriais = (est.seriais || {})[tipo] || [];
       if (seriais.length > 0) {
-        rowsDpp.push(`<tr style="background:#f8f9ff">
-          <td colspan="8" style="font-size:.78rem;color:#555;padding:4px 12px">
+        rowsDpp.push(`<tr style="background:var(--idv-fundo)">
+          <td colspan="8" style="font-size:13px;color:var(--idv-sec);padding:6px 14px">
             \u{1F4CB} <strong>IMEIs em estoque:</strong> ${seriais.join(' · ')}
           </td>
         </tr>`);
@@ -15596,7 +15595,7 @@ function _estHistDesenhar(est) {
     ${fim < totalPag ? (fim < totalPag - 2 ? reti : fim === totalPag - 2 ? btnPag(totalPag - 1) : '') + btnPag(totalPag) : ''}
     <button onclick="_estHistIr(${_estHistPag + 1})" ${_estHistPag >= totalPag ? 'disabled' : ''}>Próxima \u{203A}</button>`;
   if (!movs.length) {
-    tbH.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--cz2)">Nenhuma movimentação registrada ainda.</td></tr>`;
+    tbH.innerHTML = `<tr><td colspan="14" class="idv-vazio">Nenhuma movimentação registrada ainda.</td></tr>`;
     return;
   }
   const badgeMov = { 'Entrada':'badge-ok', 'Saída':'badge-vencido', 'Devolução':'badge-atencao', 'Baixa':'badge-vencendo' };
@@ -15604,20 +15603,20 @@ function _estHistDesenhar(est) {
     const isSaida = m.tipo === 'Saída';
     const dtEntrega = m.dataEntrega ? m.dataEntrega.split('-').reverse().join('/') : '—';
     const btnVer = podVerEst
-      ? `<button class="btn-sm" style="background:#e8f0ff;color:#1a4fa3" onclick="verDetalheMovEstoque('${m.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>`
+      ? `<button type="button" class="idv-btn mini" title="Ver detalhes" aria-label="Ver detalhes" onclick="verDetalheMovEstoque('${m.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>`
       : '';
     const btnDel = isAdmin
-      ? `<button class="btn-sm btn-danger" onclick="excluirMovEstoque('${m.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>`
+      ? `<button type="button" class="idv-btn mini perigo" title="Excluir" aria-label="Excluir" onclick="excluirMovEstoque('${m.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>`
       : '';
     const acoes = (btnVer || btnDel) ? `${btnVer}${btnDel}` : '—';
     const antesRec = est.recontagemEm && (m.ts || '') < est.recontagemEm;
-    return `<tr${antesRec ? ' style="background:#fafafa;color:#8b949e" title="Anterior à recontagem — não entra no saldo atual"' : ''}>
-      <td style="white-space:nowrap;font-size:.8rem">${new Date(m.ts).toLocaleString('pt-BR')}</td>
+    return `<tr${antesRec ? ' style="background:var(--idv-fundo);color:var(--idv-sec)" title="Anterior à recontagem — não entra no saldo atual"' : ''}>
+      <td class="idv-data" style="white-space:nowrap;font-size:13px">${new Date(m.ts).toLocaleString('pt-BR')}</td>
       <td><span class="badge ${badgeMov[m.tipo]||''}">${esc(m.tipo)}</span></td>
       <td>${esc(m.categoria||'')}</td>
       <td>${esc(m.item||'')}</td>
       <td>${esc(m.tamanho||'—')}</td>
-      <td style="text-align:center">${m.quantidade}</td>
+      <td class="idv-data" style="text-align:center;font-weight:600">${m.quantidade}</td>
       <td>${esc(m.responsavel||'')}</td>
       <td>${esc(m.motivo||'—')}</td>
       <td>${esc(m.monitorado||'—')}</td>
@@ -15639,14 +15638,14 @@ function verDetalheMovEstoque(id) {
   const isEntrada = m.tipo === 'Entrada' || m.tipo === 'Devolução';
   const dtFormatada = new Date(m.ts).toLocaleString('pt-BR');
   const dtEntrega = m.dataEntrega ? m.dataEntrega.split('-').reverse().join('/') : '—';
-  const badgeColor = { 'Entrada':'#1a7f37', 'Saída':'#c0392b', 'Devolução':'#b45309', 'Baixa':'#7f5800' }[m.tipo] || '#555';
+  const badgeColor = { 'Entrada':'ok', 'Saída':'cr', 'Devolução':'at', 'Baixa':'at' }[m.tipo] || 'ne';  // etiqueta do guia
 
   // Seriais / IMEIs registrados no movimento
   let serialHtml = '';
   if ((m.seriais || []).length > 0) {
     serialHtml = _vsec('Números de Série / IMEI registrados',
-      `<div style="grid-column:1/-1;padding:8px;background:#f8f9ff;border-radius:6px;font-family:monospace;font-size:.88rem;line-height:1.9">
-        ${m.seriais.map(s => `<span style="display:inline-block;background:#e8f0ff;border-radius:4px;padding:2px 8px;margin:2px">${s}</span>`).join('')}
+      `<div class="idv-mono" style="grid-column:1/-1;padding:8px;background:var(--idv-fundo);border:1px solid var(--idv-linha);border-radius:6px;font-size:14px;line-height:1.9">
+        ${m.seriais.map(s => `<span style="display:inline-block;background:var(--idv-cartao);border:1px solid var(--idv-borda);border-radius:3px;padding:2px 8px;margin:2px">${s}</span>`).join('')}
       </div>`
     );
   } else if (m.numSerie) {
@@ -15655,9 +15654,9 @@ function verDetalheMovEstoque(id) {
 
   const html = `
     <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
-      <span style="background:${badgeColor};color:#fff;padding:4px 14px;border-radius:20px;font-weight:700;font-size:.9rem">${esc(m.tipo)}</span>
-      <span style="color:#888;font-size:.85rem">${dtFormatada}</span>
-      <span style="margin-left:auto;font-size:.82rem;color:#aaa">ID: ${m.id}</span>
+      <span class="idv-etq ${badgeColor}">${esc(m.tipo)}</span>
+      <span class="idv-data" style="color:var(--idv-sec);font-size:14px">${dtFormatada}</span>
+      <span style="margin-left:auto;font-size:13px;color:var(--idv-sec)">ID: <span class="idv-mono">${m.id}</span></span>
     </div>
     ${_vsec('Item', `
       ${_vf('Categoria', m.categoria || '—')}
@@ -15775,9 +15774,9 @@ function consultarSerial(valor) {
 
   // ── 3. Montar resultado ──────────────────────────────────────────────────
   if (unidadesEncontradas.length === 0 && movsEncontrados.length === 0) {
-    resultado.innerHTML = `<div style="color:#888;text-align:center;padding:28px">
+    resultado.innerHTML = `<div class="idv-vazio">
       Nenhum resultado encontrado para "<strong>${_escHtml(valor)}</strong>".<br>
-      <span style="font-size:.82rem">Tente buscar por IMEI, série, nome do responsável, monitorado, plantão, motivo...</span>
+      <span style="font-size:13px">Tente buscar por IMEI, série, nome do responsável, monitorado, plantão, motivo...</span>
     </div>`;
     return;
   }
@@ -15786,39 +15785,38 @@ function consultarSerial(valor) {
 
   // Bloco de unidades físicas
   if (unidadesEncontradas.length > 0) {
-    html += `<div class="est-section-title">\u{1F4CB} Unidades encontradas (${unidadesEncontradas.length})</div>`;
+    html += `<div class="idv-secao">Unidades encontradas (${unidadesEncontradas.length})</div>`;
     unidadesEncontradas.forEach(({ tipo, reg, id, emEstoque, simples }) => {
       const isDpp = tipo === 'Dispositivo DPP';
       const labelId = isDpp ? 'IMEI' : 'Nº de Série';
-      const statusColor = emEstoque ? '#1a7f37' : '#c0392b';
-      const statusLabel = emEstoque ? '\u{2705} Em estoque' : '\u{1F4E4} Fora do estoque';
+      const statusColor = emEstoque ? 'ok' : 'cr';  // etiqueta do guia
+      const statusLabel = emEstoque ? 'Em estoque' : 'Fora do estoque';
       const extraDpp = isDpp && !simples
         ? `<span style="margin-left:12px">\u{1F50B} ${reg.temCarregador ? 'Com carregador' : 'Sem carregador'} &nbsp; \u{1F4F6} ${reg.temChip ? 'Com chip' : 'Sem chip'}</span>`
         : '';
       const historicoUnidade = movs.filter(m => (m.seriais || []).includes(id));
       html += `
-        <div style="background:#f0f4ff;border:1px solid #d0deff;border-radius:10px;padding:14px 16px;margin-bottom:10px">
+        <div style="background:var(--idv-cartao);border:1px solid var(--idv-borda);border-radius:8px;padding:14px 16px;margin-bottom:10px">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
-            <span style="font-weight:700;font-size:.95rem">${tipo}</span>
-            <span style="font-size:.8rem;background:${reg.estado==='Novo'?'#e8f5e9':reg.estado==='Reutilizado'?'#fff3e0':'#f5f5f5'};
-              color:#333;padding:2px 8px;border-radius:4px">${reg.estado||'—'}</span>
-            <span style="font-size:.82rem;color:${statusColor};font-weight:600">${statusLabel}</span>
+            <span style="font-weight:600;font-size:15px">${tipo}</span>
+            <span class="idv-etq ${reg.estado==='Novo'?'ok':reg.estado==='Reutilizado'?'at':'ne'}">${reg.estado||'—'}</span>
+            <span class="idv-etq ${statusColor}">${statusLabel}</span>
           </div>
-          <div style="font-family:monospace;font-size:.95rem;margin-bottom:4px">
-            <strong>${labelId}:</strong> <code style="background:#e8f0ff;padding:2px 8px;border-radius:4px">${id}</code>${extraDpp}
+          <div style="font-size:14px;margin-bottom:4px">
+            <strong>${labelId}:</strong> <code class="idv-mono" style="background:var(--idv-fundo);border:1px solid var(--idv-linha);padding:2px 8px;border-radius:3px">${id}</code>${extraDpp}
           </div>
-          ${simples ? `<div style="font-size:.78rem;color:#aaa;margin-top:4px">\u{26A0}\u{FE0F} Cadastrado no formato antigo — detalhes limitados.</div>` : ''}
+          ${simples ? `<div style="font-size:13px;color:var(--idv-at);margin-top:4px">Cadastrado no formato antigo — detalhes limitados.</div>` : ''}
           ${historicoUnidade.length > 0 ? `
-          <div style="margin-top:10px;font-size:.82rem;color:#555;border-top:1px solid #dde6ff;padding-top:8px">
+          <div style="margin-top:10px;font-size:13px;color:var(--idv-sec);border-top:1px solid var(--idv-linha);padding-top:8px">
             <strong>Movimentações (${historicoUnidade.length}):</strong><br>
             ${historicoUnidade.map(m=>`
-              <div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #eef1ff;cursor:pointer"
+              <div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--idv-linha);cursor:pointer"
                    onclick="verDetalheMovEstoque('${m.id}')" title="Ver detalhes">
-                <span class="badge ${badgeMov[m.tipo]||''}" style="font-size:.72rem;padding:1px 6px">${esc(m.tipo)}</span>
-                <span>${new Date(m.ts).toLocaleString('pt-BR')}</span>
-                <span style="color:#777">${esc(m.responsavel||'')}</span>
-                ${m.plantao ? `<span style="color:#555">\u{1F3E2} ${esc(m.plantao)}</span>` : ''}
-                <span style="margin-left:auto;color:#1a4fa3;font-size:.8rem">\u{1F441} detalhe</span>
+                <span class="badge ${badgeMov[m.tipo]||''}">${esc(m.tipo)}</span>
+                <span class="idv-data" style="color:var(--idv-texto)">${new Date(m.ts).toLocaleString('pt-BR')}</span>
+                <span>${esc(m.responsavel||'')}</span>
+                ${m.plantao ? `<span>${esc(m.plantao)}</span>` : ''}
+                <span class="idv-link" style="margin-left:auto;font-size:13px">ver detalhe</span>
               </div>`).join('')}
           </div>` : ''}
         </div>`;
@@ -15828,10 +15826,10 @@ function consultarSerial(valor) {
   // Bloco de movimentações encontradas
   if (movsEncontrados.length > 0) {
     // Remove movimentos já listados como historico de unidades para evitar repetição? Não - o usuário pode querer ver
-    html += `<div class="est-section-title" style="margin-top:${unidadesEncontradas.length?'16px':'0'}">
-      \u{1F4D1} Movimentações encontradas (${movsEncontrados.length})
+    html += `<div class="idv-secao" style="margin-top:${unidadesEncontradas.length?'16px':'0'}">
+      Movimentações encontradas (${movsEncontrados.length})
     </div>
-    <div class="table-wrapper"><table class="data-table">
+    <div class="table-scroll"><table class="data-table idv-tabela">
       <thead><tr>
         <th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Estado</th>
         <th>Responsável</th><th>Monitorado</th><th>Plantão</th><th>Motivo</th><th>Série/IMEI</th><th></th>
@@ -15840,16 +15838,16 @@ function consultarSerial(valor) {
         ${movsEncontrados.map(m => {
           const series = (m.seriais || []).join(', ') || m.numSerie || '—';
           return `<tr style="cursor:pointer" onclick="verDetalheMovEstoque('${m.id}')" title="Clique para ver detalhes">
-            <td style="white-space:nowrap;font-size:.78rem">${new Date(m.ts).toLocaleString('pt-BR')}</td>
+            <td class="idv-data" style="white-space:nowrap;font-size:13px">${new Date(m.ts).toLocaleString('pt-BR')}</td>
             <td><span class="badge ${badgeMov[m.tipo]||''}">${esc(m.tipo)}</span></td>
-            <td style="font-size:.82rem">${esc(m.item||'')}</td>
-            <td style="font-size:.82rem">${esc(m.estado||'—')}</td>
-            <td style="font-size:.82rem">${esc(m.responsavel||'—')}</td>
-            <td style="font-size:.82rem">${esc(m.monitorado||'—')}</td>
-            <td style="font-size:.82rem">${esc(m.plantao||'—')}</td>
-            <td style="font-size:.82rem;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.motivo||'—')}</td>
-            <td style="font-family:monospace;font-size:.78rem;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(series)}</td>
-            <td><button class="btn-sm" style="background:#e8f0ff;color:#1a4fa3" onclick="event.stopPropagation();verDetalheMovEstoque('${m.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></td>
+            <td style="font-size:13px">${esc(m.item||'')}</td>
+            <td style="font-size:13px">${esc(m.estado||'—')}</td>
+            <td style="font-size:13px">${esc(m.responsavel||'—')}</td>
+            <td style="font-size:13px">${esc(m.monitorado||'—')}</td>
+            <td style="font-size:13px">${esc(m.plantao||'—')}</td>
+            <td style="font-size:13px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.motivo||'—')}</td>
+            <td class="idv-mono" style="font-size:13px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(series)}</td>
+            <td><button type="button" class="idv-btn mini" title="Ver detalhes" aria-label="Ver detalhes" onclick="event.stopPropagation();verDetalheMovEstoque('${m.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></td>
           </tr>`;
         }).join('')}
       </tbody>
@@ -20297,12 +20295,12 @@ function _relCnjValido(p) {
 
 /* Célula "Violações" da tabela Arquivadas. */
 function _relCelViolacoes(r) {
-  if (r.violacoesSoma == null && !(r.violacoesPorTipo||[]).length) return '<td style="color:#bbb">\u{2014}</td>';
+  if (r.violacoesSoma == null && !(r.violacoesPorTipo||[]).length) return '<td style="color:var(--idv-sec)">\u{2014}</td>';
   const tipos = (r.violacoesPorTipo||[]).map(v => esc(v.tipo) + ': ' + v.qtd).join(', ');
   const diverge = (r.violacoesDeclarado != null && r.violacoesSoma != null && r.violacoesDeclarado !== r.violacoesSoma)
-    ? ` <span title="Total declarado na capa (${r.violacoesDeclarado}) diverge da soma dos tipos (${r.violacoesSoma})" style="color:#d29922;cursor:help">\u{26A0}\u{FE0F}</span>`
-    : (r.avisosLeitura || []).length ? ` <span title="Confira: ${esc(r.avisosLeitura.join('; '))}" style="color:#d29922;cursor:help">\u{26A0}\u{FE0F}</span>` : '';
-  return `<td style="font-size:.8rem;max-width:240px"><strong>${r.violacoesSoma != null ? r.violacoesSoma : ''}</strong>${diverge}${tipos ? `<div style="color:#888;font-size:.74rem;white-space:normal">${tipos}</div>` : ''}</td>`;
+    ? ` <span title="Total declarado na capa (${r.violacoesDeclarado}) diverge da soma dos tipos (${r.violacoesSoma})" style="color:var(--idv-at);cursor:help">\u{26A0}\u{FE0F}</span>`
+    : (r.avisosLeitura || []).length ? ` <span title="Confira: ${esc(r.avisosLeitura.join('; '))}" style="color:var(--idv-at);cursor:help">\u{26A0}\u{FE0F}</span>` : '';
+  return `<td style="font-size:13px;max-width:240px"><span class="idv-data" style="font-weight:600">${r.violacoesSoma != null ? r.violacoesSoma : ''}</span>${diverge}${tipos ? `<div class="idv-mini" style="white-space:normal">${tipos}</div>` : ''}</td>`;
 }
 
 /* ── Download ─────────────────────────────────────────────────── */
@@ -20762,7 +20760,7 @@ function rv_addNomeBusca(valor){
   const box=document.getElementById('rv-b-nomes'); if(!box) return;
   const lin=document.createElement('div'); lin.style.cssText='display:flex;gap:6px';
   lin.innerHTML='<input type="text" class="rv-b-nome" placeholder="Outro monitorado" autocomplete="off" style="flex:1;min-width:0">'
-    +'<button type="button" title="Tirar este monitorado" style="flex:none;width:38px;border:1px solid #cbd5e1;background:#fff;color:#64748b;border-radius:6px;font-size:1rem;cursor:pointer">\u{2715}</button>';
+    +'<button type="button" class="idv-btn icone" title="Tirar este monitorado" aria-label="Tirar este monitorado" style="flex:none;color:var(--idv-sec)">\u{2715}</button>';
   lin.querySelector('button').onclick=()=>lin.remove();
   if(valor) lin.querySelector('input').value=valor;
   box.appendChild(lin); lin.querySelector('input').focus();
@@ -20981,19 +20979,19 @@ function rv_renderizarLista() {
     const nZ = zonas.length;
     const f  = zonas.filter(x => _rv_imagens[String(x.idOc || '')]).length;
     const mapsBtn = nZ
-      ? `<button type="button" id="rv-mapbtn-${i}" onclick="rv_toggleMapas(${i})" style="font-size:.72rem;padding:3px 9px;border:1px solid ${f?'#16a34a':'#1F4E78'};border-radius:5px;background:${f?'#dcfce7':'#fff'};color:${f?'#15803d':'#1F4E78'};cursor:pointer;white-space:nowrap">\u{1F5FA}\u{FE0F} Mapas ${f}/${nZ}</button>`
+      ? `<button type="button" id="rv-mapbtn-${i}" onclick="rv_toggleMapas(${i})" style="font-size:13px;font-weight:600;padding:4px 10px;border:1px solid ${f?'var(--idv-ok)':'var(--idv-borda)'};border-radius:6px;background:${f?'var(--idv-ok-f)':'var(--idv-cartao)'};color:${f?'var(--idv-ok)':'var(--idv-texto)'};cursor:pointer;white-space:nowrap">\u{1F5FA}\u{FE0F} Mapas ${f}/${nZ}</button>`
       : '';
     const mapsPanel = nZ
-      ? `<div id="rv-maps-${i}" style="display:${_rv_mapsAbertos[i]?'':'none'};background:#fafbfc;border-bottom:1px solid #f0f0f0">${zonas.map(_rvSlotHtml).join('')}</div>`
+      ? `<div id="rv-maps-${i}" style="display:${_rv_mapsAbertos[i]?'':'none'};background:var(--idv-fundo);border-bottom:1px solid var(--idv-linha)">${zonas.map(_rvSlotHtml).join('')}</div>`
       : '';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #f0f0f0;font-size:.85rem">
-      <input type="checkbox" id="rv-chk-${i}" checked style="accent-color:#1F4E78;width:16px;height:16px">
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--idv-linha);font-size:14px">
+      <input type="checkbox" id="rv-chk-${i}" checked style="accent-color:var(--idv-cab);width:16px;height:16px">
       <label for="rv-chk-${i}" style="flex:1;cursor:pointer">
-        <span style="font-weight:600">${r0.nome}</span>
-        <span style="color:#888;margin-left:6px;font-size:.78rem">${r0.processo}</span>
+        <span class="idv-nome">${r0.nome}</span>
+        <span class="idv-mono" style="color:var(--idv-sec);margin-left:6px;font-size:13px">${r0.processo}</span>
       </label>
       ${mapsBtn}
-      <span style="color:#1F4E78;font-size:.78rem;white-space:nowrap">${total} ocorrência${total!==1?'s':''} · ${tipos} tipo${tipos!==1?'s':''}</span>
+      <span class="idv-data" style="color:var(--idv-sec);font-size:13px;white-space:nowrap">${total} ocorrência${total!==1?'s':''} · ${tipos} tipo${tipos!==1?'s':''}</span>
     </div>${mapsPanel}`;
   }).join('');
 }
@@ -21005,14 +21003,14 @@ function _rvSlotHtml(z) {
   const corpo = img
     ? `<img src="${img}" style="max-width:100%;max-height:100%;object-fit:cover">`
       + `<span onclick="event.stopPropagation();rv_removerImg('${id}')" title="Remover" style="position:absolute;top:2px;right:2px;background:rgba(220,38,38,.92);color:#fff;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;cursor:pointer;line-height:1">\u{00D7}</span>`
-    : `<span style="font-size:.68rem;color:#94a3b8;text-align:center;padding:0 4px">\u{1F4CB} clique e Ctrl+V<br>ou arraste</span>`;
-  return `<div style="display:flex;gap:10px;align-items:center;padding:8px 14px;border-top:1px dashed #e2e8f0">
-    <div style="flex:1;min-width:0;font-size:.8rem">
+    : `<span style="font-size:12px;color:var(--idv-sec);text-align:center;padding:0 4px">\u{1F4CB} clique e Ctrl+V<br>ou arraste</span>`;
+  return `<div style="display:flex;gap:10px;align-items:center;padding:8px 14px;border-top:1px dashed var(--idv-linha)">
+    <div style="flex:1;min-width:0;font-size:13px">
       <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_rvEscAttr(z.tipo)}</div>
-      <div style="color:#888;font-size:.72rem">ID ${_rvEscAttr(id)}${_rvDataCurta(z.ocorreu)?' · '+_rvDataCurta(z.ocorreu):''}</div>
+      <div style="color:var(--idv-sec);font-size:12px">ID <span class="idv-mono">${_rvEscAttr(id)}</span>${_rvDataCurta(z.ocorreu)?' · '+_rvDataCurta(z.ocorreu):''}</div>
     </div>
     <div id="rv-slot-${id}" onclick="rv_focarSlot('${id}')" ondragover="event.preventDefault()" ondrop="rv_dropImg(event,'${id}')"
-         style="cursor:pointer;border:2px dashed ${img?'#16a34a':'#cbd5e1'};border-radius:6px;width:124px;height:72px;flex:0 0 124px;display:flex;align-items:center;justify-content:center;background:#f8fafc;overflow:hidden;position:relative">${corpo}</div>
+         style="cursor:pointer;border:2px dashed ${img?'var(--idv-ok)':'var(--idv-borda)'};border-radius:6px;width:124px;height:72px;flex:0 0 124px;display:flex;align-items:center;justify-content:center;background:var(--idv-cartao);overflow:hidden;position:relative">${corpo}</div>
   </div>`;
 }
 
@@ -21035,10 +21033,10 @@ function rv_toggleMapas(i) {
 function rv_focarSlot(id) {
   _rv_pasteAlvo = id;
   document.querySelectorAll('[id^="rv-slot-"]').forEach(s => {
-    if (!_rv_imagens[s.id.replace('rv-slot-','')]) s.style.borderColor = '#cbd5e1';
+    if (!_rv_imagens[s.id.replace('rv-slot-','')]) s.style.borderColor = 'var(--idv-borda)';
   });
   const s = document.getElementById('rv-slot-' + id);
-  if (s) s.style.borderColor = '#2563eb';
+  if (s) s.style.borderColor = 'var(--idv-in)';
   _mostrarToast('\u{1F4CB} Agora aperte Ctrl+V para colar o print do mapa');
 }
 
@@ -21343,10 +21341,10 @@ function _rvAtualizarSlot(id) {
   const slot = document.getElementById('rv-slot-' + id);
   if (slot) {
     const img = _rv_imagens[id];
-    slot.style.borderColor = img ? '#16a34a' : '#cbd5e1';
+    slot.style.borderColor = img ? 'var(--idv-ok)' : 'var(--idv-borda)';
     slot.innerHTML = img
       ? `<img src="${img}" style="max-width:100%;max-height:100%;object-fit:cover"><span onclick="event.stopPropagation();rv_removerImg('${id}')" title="Remover" style="position:absolute;top:2px;right:2px;background:rgba(220,38,38,.92);color:#fff;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;cursor:pointer;line-height:1">\u{00D7}</span>`
-      : `<span style="font-size:.68rem;color:#94a3b8;text-align:center;padding:0 4px">\u{1F4CB} clique e Ctrl+V<br>ou arraste</span>`;
+      : `<span style="font-size:12px;color:var(--idv-sec);text-align:center;padding:0 4px">\u{1F4CB} clique e Ctrl+V<br>ou arraste</span>`;
   }
   // o idOc pode estar em vários grupos → atualiza o contador de TODOS.
   (_rv_idGrupo[id] || []).forEach(gi => _rvAtualizarContadorGrupo(gi));
@@ -21358,9 +21356,9 @@ function _rvAtualizarContadorGrupo(i) {
   const zonas = _rv_grupos[i].filter(x => /zona/i.test(x.tipo || ''));
   const n = zonas.length, f = zonas.filter(x => _rv_imagens[String(x.idOc || '')]).length;
   btn.textContent = `\u{1F5FA}\u{FE0F} Mapas ${f}/${n}`;
-  btn.style.background  = f ? '#dcfce7' : '#fff';
-  btn.style.borderColor = f ? '#16a34a' : '#1F4E78';
-  btn.style.color       = f ? '#15803d' : '#1F4E78';
+  btn.style.background  = f ? 'var(--idv-ok-f)' : 'var(--idv-cartao)';
+  btn.style.borderColor = f ? 'var(--idv-ok)' : 'var(--idv-borda)';
+  btn.style.color       = f ? 'var(--idv-ok)' : 'var(--idv-texto)';
 }
 
 function _rvOnPaste(e) {
