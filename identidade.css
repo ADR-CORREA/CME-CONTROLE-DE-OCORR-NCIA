@@ -757,3 +757,7 @@ b, strong { font-weight: 600; }                                       /* pesos d
 /* tabela dentro de tabela (linha aberta) e tabelas de janela: cabeçalho de dentro não gruda */
 table table th, .idv-tabela .idv-tabela th { position: static; }
 table table td { font-size: inherit; }
+
+/* faixa preta que restava: título dos cartões da Administração (decisão de 20/10: blocos com título claro) */
+.admin-card-header { background: var(--idv-fundo); color: var(--idv-texto); border-bottom: 1px solid var(--idv-borda); }
+.admin-card-header * { color: inherit; }
