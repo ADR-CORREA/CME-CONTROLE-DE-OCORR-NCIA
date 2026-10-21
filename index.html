@@ -7423,7 +7423,9 @@ function _upsertStoreDireto(chave, valor) {
     .then(({ error }) => {
       if (error) {
         console.error('[CME] Erro ao salvar no Supabase:', chave, error);
-        _mostrarToast('\u{26A0}\u{FE0F} Erro ao salvar no banco: ' + error.message, 'erro');
+        _mostrarToast(_dbEstourouTempo(error)
+          ? '\u{26A0}\u{FE0F} O banco demorou demais para responder (tentei 3 vezes) e a última alteração NÃO foi salva. Aguarde alguns segundos e faça de novo.'
+          : '\u{26A0}\u{FE0F} Erro ao salvar no banco: ' + error.message, 'erro');
       }
     });
 }
@@ -29827,7 +29829,7 @@ function estat_exportarResultado() {
 <script src="vd-zonas.js?v=20261020f4"></script>
 <script src="radar-mandado.js?v=20261020f4"></script>
 <script src="rv-justificativas.js?v=20261020f4"></script>
-<script src="estoque-plantao.js?v=20261021a"></script>
+<script src="estoque-plantao.js?v=20261021b"></script>
 <script src="estoque-plantao-tela.js?v=20261021c"></script>
 <script src="passagem-servico.js?v=20261021a"></script>
 <script src="upload-imagem-pdf.js?v=20261020f4"></script>

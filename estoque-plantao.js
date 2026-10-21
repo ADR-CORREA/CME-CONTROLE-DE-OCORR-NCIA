@@ -202,7 +202,13 @@ async function _epGravar(chave, valor) {
   if (!window._db || typeof _dbGravar !== 'function') { salvarStore(chave, valor); return true; }
   let erro = null;
   try { erro = (await _dbGravar('cme_' + chave, valor)).error; } catch (e) { erro = e; }
-  if (erro) { _cache[chave] = anterior; _mostrarToast('\u{26A0}\u{FE0F} Erro ao salvar no banco: ' + (erro.message || erro) + ' — nada foi salvo.', 'erro'); return false; }
+  if (erro) {
+    _cache[chave] = anterior;
+    _mostrarToast(typeof _dbEstourouTempo === 'function' && _dbEstourouTempo(erro)
+      ? '\u{26A0}\u{FE0F} O banco demorou demais para responder (tentei 3 vezes) — nada foi salvo. Aguarde alguns segundos e faça de novo.'
+      : '\u{26A0}\u{FE0F} Erro ao salvar no banco: ' + (erro.message || erro) + ' — nada foi salvo.', 'erro');
+    return false;
+  }
   return true;
 }
 // fila: duas gravações do mesmo computador nunca leem a mesma base (a 2ª apagaria a 1ª)
