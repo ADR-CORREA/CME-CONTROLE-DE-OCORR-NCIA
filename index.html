@@ -14282,20 +14282,20 @@ function renderizarTriagemArquivados() {
     const dataFmt = partes.length === 3 ? partes[2]+'/'+partes[1]+'/'+partes[0] : (a.data||'');
     const hora    = a.criadoEm ? new Date(a.criadoEm).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '';
     const arqFmt  = a.arquivadoEm ? new Date(a.arquivadoEm).toLocaleDateString('pt-BR') : '—';
-    const btnDesarq = podeMod ? '<button type="button" class="idv-btn mini" onclick="desarquivarAtendimento(\''+a.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg>Desarquivar</button>' : '';
-    const btnExcl   = podeMod ? '<button type="button" class="idv-btn mini perigo" title="Excluir" aria-label="Excluir" onclick="excluirAtendimentoArquivado(\''+a.id+'\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>' : '';
+    const btnDesarq = podeMod ? '<button type="button" class="idv-btn mini" onclick="desarquivarAtendimento(\''+_jsq(a.id)+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg>Desarquivar</button>' : '';
+    const btnExcl   = podeMod ? '<button type="button" class="idv-btn mini perigo" title="Excluir" aria-label="Excluir" onclick="excluirAtendimentoArquivado(\''+_jsq(a.id)+'\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>' : '';
     return '<tr>'
-      + '<td class="idv-data" style="white-space:nowrap">' + dataFmt + (hora ? ' ' + hora : '') + '</td>'
+      + '<td class="idv-data" style="white-space:nowrap">' + esc(dataFmt) + (hora ? ' ' + hora : '') + '</td>' // (20/10/2026) tudo o que vem do banco passa por esc()
       + '<td class="idv-data" style="white-space:nowrap;color:var(--idv-sec);font-size:13px">' + arqFmt + '</td>'
-      + '<td><div class="idv-nome">' + (a.nome||'') + '</div></td>'
-      + '<td class="idv-mono" style="white-space:nowrap">' + (a.cpf||'') + '</td>'
-      + '<td>' + (a.tipo||'') + '</td>'
-      + '<td>' + (a.medida||'') + '</td>'
-      + '<td>' + (a.condicao||'') + '</td>'
-      + '<td>' + (a.adv||'') + '</td>'
-      + '<td>' + (a.clienteMonitorado||'') + '</td>'
-      + '<td>' + (a.responsavel||'') + '</td>'
-      + '<td>' + (a.obs||'') + '</td>'
+      + '<td><div class="idv-nome">' + esc(a.nome||'') + '</div></td>'
+      + '<td class="idv-mono" style="white-space:nowrap">' + esc(a.cpf||'') + '</td>'
+      + '<td>' + esc(a.tipo||'') + '</td>'
+      + '<td>' + esc(a.medida||'') + '</td>'
+      + '<td>' + esc(a.condicao||'') + '</td>'
+      + '<td>' + esc(a.adv||'') + '</td>'
+      + '<td>' + esc(a.clienteMonitorado||'') + '</td>'
+      + '<td>' + esc(a.responsavel||'') + '</td>'
+      + '<td>' + esc(a.obs||'') + '</td>'
       + '<td style="white-space:nowrap">' + btnDesarq + ' ' + btnExcl + '</td>'
       + '</tr>';
   }).join('');
@@ -14819,18 +14819,18 @@ function renderizarPsiArquivados() {
   tbody.innerHTML = lista.map(a=>{
     const dataFmt = (() => { const d=_psiDataDe(a).split('-'); return d.length===3?d[2]+'/'+d[1]+'/'+d[0]:(a.dataHora||a.data||''); })();
     const arqFmt  = a.arquivadoEm ? new Date(a.arquivadoEm).toLocaleDateString('pt-BR') : '—';
-    const btnD    = podeMod ? '<button type="button" class="idv-btn mini" onclick="desarquivarPsi(\''+a.id+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg>Desarquivar</button> ' : '';
-    const btnE    = podeMod ? '<button type="button" class="idv-btn mini perigo" title="Excluir" aria-label="Excluir" onclick="excluirPsiArquivado(\''+a.id+'\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>' : '';
+    const btnD    = podeMod ? '<button type="button" class="idv-btn mini" onclick="desarquivarPsi(\''+_jsq(a.id)+'\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg>Desarquivar</button> ' : '';
+    const btnE    = podeMod ? '<button type="button" class="idv-btn mini perigo" title="Excluir" aria-label="Excluir" onclick="excluirPsiArquivado(\''+_jsq(a.id)+'\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;display:inline-block"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>' : '';
     return '<tr>'
-      +'<td class="idv-data" style="white-space:nowrap">'+dataFmt+'</td>'
+      +'<td class="idv-data" style="white-space:nowrap">'+esc(dataFmt)+'</td>' // (20/10/2026) tudo o que vem do banco passa por esc()
       +'<td class="idv-data" style="white-space:nowrap;color:var(--idv-sec);font-size:13px">'+arqFmt+'</td>'
-      +'<td style="'+(PUB_COR[a.publico]||'')+'">'+(a.publico||'—')+'</td>'
-      +'<td><div class="idv-nome">'+(a.nome||'')+'</div></td>'
-      +'<td class="idv-mono" style="font-size:13px">'+(a.processo||'—')+'</td>'
-      +'<td>'+(a.tipo||'')+'</td>'
-      +'<td>'+(a.area||'')+'</td>'
-      +'<td>'+(a.situacao||'')+'</td>'
-      +'<td>'+(a.profissional||'')+'</td>'
+      +'<td style="'+(PUB_COR[a.publico]||'')+'">'+esc(a.publico||'—')+'</td>'
+      +'<td><div class="idv-nome">'+esc(a.nome||'')+'</div></td>'
+      +'<td class="idv-mono" style="font-size:13px">'+esc(a.processo||'—')+'</td>'
+      +'<td>'+esc(a.tipo||'')+'</td>'
+      +'<td>'+esc(a.area||'')+'</td>'
+      +'<td>'+esc(a.situacao||'')+'</td>'
+      +'<td>'+esc(a.profissional||'')+'</td>'
       +'<td style="white-space:nowrap">'+btnD+btnE+'</td>'
       +'</tr>';
   }).join('');
@@ -18815,7 +18815,7 @@ function r2_renderizarListaMon(lista, busca, total) {
     return `<div class="r2-mon-item ${m.nome === r2_state.monitorado ? 'active' : ''}"
       style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer"
       onclick="r2_selecionarMonitorado('${nomeEsc}')">
-      <span style="white-space:nowrap" title="${nomeEsc}">\u{1F4C1} ${m.nome}</span>
+      <span style="white-space:nowrap" title="${nomeEsc}">\u{1F4C1} ${esc(m.nome)}</span>
       <span style="display:flex;gap:2px;flex-shrink:0">
         <button onclick="event.stopPropagation();r2_renomearMonitoradoDialog('${nomeEsc}')"
           title="Renomear pasta"
@@ -24433,7 +24433,7 @@ function com_renderizarAnexos() {
               border-radius:7px;border:1px solid #e2e8f0;margin-bottom:5px">
       <span style="font-size:1.15rem">${icon}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:.8rem;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${a.nome}">${a.nome}</div>
+        <div style="font-weight:600;font-size:.8rem;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(a.nome)}">${esc(a.nome)}</div>
         <div style="font-size:.7rem;color:#64748b">${kb} KB &nbsp;·&nbsp; ${badge}${pgInfo}</div>
       </div>
       ${btnOrg}
@@ -24486,7 +24486,7 @@ async function _bmonPesquisar(pref, modoSugestao = false) {
     `<div onclick="_bmonSelecionarMon('${pref}',${JSON.stringify(m.nome).replace(/"/g,'&quot;')});document.getElementById('${pref}-busca-sugestoes').style.display='none'"
       style="padding:8px 12px;cursor:pointer;font-size:.84rem;color:#1e293b;border-bottom:1px solid #f1f5f9;transition:background .12s"
       onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
-      \u{1F464} ${m.nome}
+      \u{1F464} ${esc(m.nome)}
     </div>`;
 
   try {
@@ -25213,7 +25213,7 @@ async function com_buscarMonitorado(modoSugestao = false) {
         `<div onclick="com_selecionarMonitorado(${JSON.stringify(m.nome).replace(/"/g,'&quot;')});document.getElementById('com-busca-sugestoes').style.display='none';_comBuscaSetStatus(null)"
           style="padding:8px 12px;cursor:pointer;font-size:.84rem;color:#1e293b;border-bottom:1px solid #f1f5f9;transition:background .12s"
           onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
-          \u{1F464} ${m.nome}
+          \u{1F464} ${esc(m.nome)}
         </div>`
       ).join('');
       sugestoesEl.style.display = 'block';
@@ -25230,7 +25230,7 @@ async function com_buscarMonitorado(modoSugestao = false) {
           `<div onclick="com_selecionarMonitorado(${JSON.stringify(m.nome).replace(/"/g,'&quot;')});document.getElementById('com-busca-sugestoes').style.display='none'"
             style="padding:8px 12px;cursor:pointer;font-size:.84rem;color:#1e293b;border-bottom:1px solid #f1f5f9;transition:background .12s"
             onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
-            \u{1F464} ${m.nome}
+            \u{1F464} ${esc(m.nome)}
           </div>`
         ).join('');
         sugestoesEl.style.display = 'block';
