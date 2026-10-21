@@ -7367,10 +7367,28 @@ function _dbSemPermissao(err) {
   const c = String((err && err.code) || ''), m = String((err && err.message) || '');
   return c === '28000' || /nao autorizado|não autorizado/i.test(m);
 }
+// (21/10/2026) O banco (plano gratuito) cancela a consulta que passa de 3 s ("statement timeout", 57014) quando
+// fica lento por um instante. Ler ou gravar o valor inteiro de uma chave pode ser repetido sem risco (a consulta
+// cancelada não grava nada), então tenta de novo antes de desistir.
+const _DB_ESPERAS_TIMEOUT = [1500, 4000];
+function _dbEstourouTempo(err) {
+  const c = String((err && err.code) || ''), m = String((err && err.message) || '');
+  return c === '57014' || /statement timeout/i.test(m);
+}
+async function _dbRpcComRetentativa(fn, args) {
+  let r = await window._db.rpc(fn, args);
+  for (const ms of _DB_ESPERAS_TIMEOUT) {
+    if (!r.error || !_dbEstourouTempo(r.error)) break;
+    console.warn('[CME] banco demorou (' + fn + '), tentando de novo em ' + ms + ' ms');
+    await new Promise(res => setTimeout(res, ms));
+    r = await window._db.rpc(fn, args);
+  }
+  return r;
+}
 // chaves: lista de 'cme_x' ou null (tudo). Retorna { data:[{key,value,updated_at}], error }
 async function _dbLer(chaves) {
   if (_dbModoRpc !== false) {
-    const r = await window._db.rpc('cme_store_ler', { p_username: _sessionUser || '', p_hash: _sessionHash || '', p_keys: chaves || null });
+    const r = await _dbRpcComRetentativa('cme_store_ler', { p_username: _sessionUser || '', p_hash: _sessionHash || '', p_keys: chaves || null });
     if (!r.error) { _dbModoRpc = true; return { data: r.data || [], error: null }; }
     if (!_dbRpcAusente(r.error)) return { data: null, error: r.error };
     _dbModoRpc = false;
@@ -7389,7 +7407,7 @@ async function _dbLerChave(k) {
 // soCriar = true: grava só se a chave NÃO existir (nunca sobrescreve dado existente)
 async function _dbGravar(k, valor, soCriar) {
   if (_dbModoRpc !== false) {
-    const r = await window._db.rpc('cme_store_gravar', { p_username: _sessionUser || '', p_hash: _sessionHash || '', p_key: k, p_value: valor, p_so_criar: !!soCriar });
+    const r = await _dbRpcComRetentativa('cme_store_gravar', { p_username: _sessionUser || '', p_hash: _sessionHash || '', p_key: k, p_value: valor, p_so_criar: !!soCriar });
     if (!r.error) { _dbModoRpc = true; return { error: null }; }
     if (!_dbRpcAusente(r.error)) return { error: r.error };
     _dbModoRpc = false;
@@ -29794,11 +29812,12 @@ function estat_exportarResultado() {
 <script src="secretaria-prodoc.js?v=20261021a"></script>
 <script src="secretaria-prodoc-ia.js?v=20261020h"></script>
 <script src="secretaria-prodoc-responder.js?v=20261020b"></script>
+<script src="secretaria-email.js?v=20261021a"></script>
 <script src="logo-policia-penal.js?v=20261014h"></script>
 <script src="secretaria-escala.js?v=20261016a"></script>
 <script src="secretaria-escserv.js?v=20261016a"></script>
 <script src="secretaria-faltas.js?v=20261020f4"></script>
-<script src="secretaria-atencao.js?v=20261020f4"></script>
+<script src="secretaria-atencao.js?v=20261021a"></script>
 <script src="semcom-contatos.js?v=20261020f4"></script>
 <script src="produtividade.js?v=20261020f4"></script>
 <script src="inconsistencias.js?v=20261020f4"></script>

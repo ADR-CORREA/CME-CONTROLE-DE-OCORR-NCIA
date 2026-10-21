@@ -29,9 +29,12 @@ function _secCartaoAtencao() {
   const atras = d.compromissos.filter(c => !c.concluido && c.data < hoje);
   if (atras.length) itens.push(linha('var(--idv-cr)', '<b>' + atras.length + '</b> compromisso(s) atrasado(s): ' + atras.slice(0, 3).map(c => esc(c.titulo)).join(' · ') + (atras.length > 3 ? '…' : ''), bt('Abrir agenda', 'sec_mudarAba(\'agenda\')')));
   // férias/licenças sem portaria
-  const semPort = typeof _secSemPortaria === 'function' ? _secSemPortaria(d) : [];
+  // em ordem de início (as que já estão em curso primeiro); as que não cabem viram uma linha com os nomes (21/10: o RONALDO sumia da lista)
+  const semPort = (typeof _secSemPortaria === 'function' ? _secSemPortaria(d) : []).slice().sort((x, y) => String(x.inicio).localeCompare(String(y.inicio)));
   semPort.slice(0, _SEC_AT_MAX).forEach(a => itens.push(linha('var(--idv-cr)', esc(a.tipo) + ' de <b>' + esc(_secNomeServ(a.servidorId, d)) + '</b> (' + _secBRc(a.inicio) + ' a ' + _secBRc(a.fim || a.inicio) + ') — sem portaria anexada',
     bt('Anexar portaria', '_secPerfilId=\'' + a.servidorId + '\';_secPerfilAba=\'afastamentos\';sec_render()'))));
+  if (semPort.length > _SEC_AT_MAX) { const outros = semPort.slice(_SEC_AT_MAX).map(a => esc(_secNomeServ(a.servidorId, d).split(' ')[0]));
+    itens.push(linha('var(--idv-cr)', '+ <b>' + outros.length + '</b> férias/licença(s) sem portaria: ' + outros.slice(0, 10).join(', ') + (outros.length > 10 ? '…' : ''), bt('Ver todas', 'sec_mudarAba(\'ferias\')'))); }
   // fechamento do mês
   const fechar = _secAtMesAFechar(hoje);
   if (fechar) itens.push(linha('var(--idv-in)', 'Fechamento de <b style="text-transform:capitalize">' + esc(_secEscMesTxt(fechar)) + '</b>: folhas de ponto e escalas', bt('\u{1F4E6} Fechar o mês', 'sec_fecharMes(\'' + fechar + '\')', 'var(--idv-in)')));
