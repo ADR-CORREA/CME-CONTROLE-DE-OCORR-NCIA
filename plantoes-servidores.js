@@ -66,9 +66,9 @@ function _plsMediaEquipe(lista, eq) {
 function _plsComp(v, ref, maiorMelhor, fmt) {
   if (v == null || ref == null) return '';
   const dif = v - ref, igual = Math.abs(dif) <= (maiorMelhor === 'pct' ? 3 : Math.max(5, ref * 0.15));
-  if (igual) return '<div style="font-size:.7rem;color:#64748b">igual à equipe (' + fmt(ref) + ')</div>';
+  if (igual) return '<div style="font-size:12px;color:var(--idv-sec)">igual à equipe (' + fmt(ref) + ')</div>';
   const bom = maiorMelhor === 'menor' ? dif < 0 : dif > 0;
-  return '<div style="font-size:.7rem;color:' + (bom ? '#15803d' : '#b91c1c') + '">' + (dif > 0 ? '\u{2191}' : '\u{2193}') + ' equipe: ' + fmt(ref) + '</div>';
+  return '<div style="font-size:12px;color:' + (bom ? 'var(--idv-ok)' : 'var(--idv-cr)') + '">' + (dif > 0 ? '\u{2191}' : '\u{2193}') + ' equipe: ' + fmt(ref) + '</div>';
 }
 
 function _plsRender(d, nd) {
@@ -78,34 +78,34 @@ function _plsRender(d, nd) {
   const ordem = _PLS_EQUIPES.concat(['EXPEDIENTE', '']);
   const lista = todos.filter(l => !_plsEquipe || (_plsEquipe === '-' ? !l.equipe : l.equipe === _plsEquipe))
     .sort((a, b) => ordem.indexOf(a.equipe) - ordem.indexOf(b.equipe) || b.n - a.n);
-  const chip = (v, r) => '<button type="button" onclick="_plsEquipe=\'' + v + '\';pl_renderizar()" style="padding:4px 12px;border-radius:4px;cursor:pointer;font-size:.8rem;border:1px solid '
-    + (v === _plsEquipe ? '#2563eb;background:#dbeafe;font-weight:600;box-shadow:inset 2px 0 0 #2563eb' : '#cbd5e1;background:#fff') + ';color:' + (PLANTAO_CORES[v] || '#334155') + '">' + r + '</button>';
-  const th = h => '<th style="padding:5px 6px;font-weight:600;text-align:left">' + h + '</th>';
-  const td = (v, s) => '<td style="padding:6px;vertical-align:top;' + (s || '') + '">' + v + '</td>';
-  box.innerHTML = '<div style="font-size:.85rem;color:#475569;margin-bottom:8px">Trabalho de cada servidor nos últimos ' + nd + ' dias, comparado com a média da própria equipe. <b>Sem nota e sem ranking</b>: as funções são diferentes (monitoramento × instalação). Clique no nome para ver a ficha.</div>'
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' + chip('', 'Todas as equipes') + _PLS_EQUIPES.concat(['EXPEDIENTE']).map(eq => chip(eq, eq === 'EXPEDIENTE' ? 'Expediente' : eq)).join('') + (todos.some(l => !l.equipe) ? chip('-', 'Fora da folha de ponto') : '') + '</div>'
-    + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr style="color:#64748b">'
+  const chip = (v, r) => '<button type="button" class="idv-chip' + (v === _plsEquipe ? ' ativo' : '') + '" onclick="_plsEquipe=\'' + v + '\';pl_renderizar()"'
+    + (v === _plsEquipe ? '' : ' style="color:' + (PLANTAO_CORES[v] || 'var(--idv-texto)') + '"') + '>' + r + '</button>';
+  const th = h => '<th>' + h + '</th>';
+  const td = (v, s) => '<td style="vertical-align:top;' + (s || '') + '">' + v + '</td>';
+  box.innerHTML = '<div style="font-size:14px;color:var(--idv-sec);margin-bottom:8px">Trabalho de cada servidor nos últimos ' + nd + ' dias, comparado com a média da própria equipe. <b>Sem nota e sem ranking</b>: as funções são diferentes (monitoramento × instalação). Clique no nome para ver a ficha.</div>'
+    + '<div class="idv-chips" style="margin-bottom:12px">' + chip('', 'Todas as equipes') + _PLS_EQUIPES.concat(['EXPEDIENTE']).map(eq => chip(eq, eq === 'EXPEDIENTE' ? 'Expediente' : eq)).join('') + (todos.some(l => !l.equipe) ? chip('-', 'Fora da folha de ponto') : '') + '</div>'
+    + '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr>'
     + ['Servidor', 'Equipe', 'Plantões', 'Atendeu primeiro', 'No prazo', 'Tempo típico', 'Violência doméstica', 'Violações avaliadas', 'Instal. / desinst.', 'Ações sensíveis'].map(th).join('') + '</tr></thead><tbody>'
     + (lista.length ? lista.map((l, i) => { const m = medias[l.equipe] || {}, porPl = l.nPl ? l.n / l.nPl : 0;
       const novoGrupo = i === 0 || lista[i - 1].equipe !== l.equipe, qtd = lista.filter(x => x.equipe === l.equipe).length;
-      const cab = !novoGrupo ? '' : '<tr><td colspan="10" style="padding:10px 6px 4px;border-bottom:2px solid ' + (PLANTAO_CORES[l.equipe] || '#94a3b8') + '">'
-        + '<b style="font-size:.95rem;color:' + (PLANTAO_CORES[l.equipe] || '#475569') + '">' + (l.equipe === 'EXPEDIENTE' ? 'Expediente' : l.equipe ? 'Plantão ' + l.equipe : 'Fora da folha de ponto') + '</b>'
-        + ' <span style="color:#64748b;font-size:.78rem">' + qtd + ' servidor(es)' + (l.equipe ? '' : ' — o nome não confere com a lista de servidores da Secretaria; confira o cadastro') + '</span></td></tr>';
-      return cab + '<tr style="border-top:1px solid #f1f5f9">'
-        + td('<a href="#" onclick="pl_fichaServidor(\'' + l.op + '\');return false" style="color:#1d4ed8;font-weight:600">' + esc(l.nome) + '</a><div style="font-size:.7rem;color:#94a3b8">' + l.funcao + '</div>')
-        + td(l.equipe ? '<b style="color:' + (PLANTAO_CORES[l.equipe] || '#64748b') + '">' + esc(l.equipe) + '</b>' : '<span style="color:#94a3b8">— <span style="font-size:.7rem">(AKILES: ' + esc(l.equipeRobo || '?') + ')</span></span>')
-        + td(l.nPl + (l.nOutros ? '<div style="font-size:.7rem;color:#64748b">+' + l.nOutros + ' em outra equipe</div>' : ''), 'font-family:var(--font-mono)')
-        + td('<b>' + l.n + '</b> <span style="color:#64748b;font-size:.75rem">(' + (Math.round(porPl * 10) / 10).toString().replace('.', ',') + ' por plantão)</span>' + _plsComp(porPl, m.nPorPl, 'maior', v => (Math.round(v * 10) / 10).toString().replace('.', ',')))
-        + td(l.pct != null ? '<b style="color:' + _plrCorBarra(l.pct / 100) + '">' + l.pct + '%</b>' + _plsComp(l.pct, m.pct, 'pct', v => v + '%') : '—')
+      const cab = !novoGrupo ? '' : '<tr><td colspan="10" style="padding:12px 14px 4px;border-bottom:2px solid ' + (PLANTAO_CORES[l.equipe] || 'var(--idv-borda)') + '">'
+        + '<b style="font-size:15px;font-weight:600;color:' + (PLANTAO_CORES[l.equipe] || 'var(--idv-texto)') + '">' + (l.equipe === 'EXPEDIENTE' ? 'Expediente' : l.equipe ? 'Plantão ' + l.equipe : 'Fora da folha de ponto') + '</b>'
+        + ' <span style="color:var(--idv-sec);font-size:13px">' + qtd + ' servidor(es)' + (l.equipe ? '' : ' — o nome não confere com a lista de servidores da Secretaria; confira o cadastro') + '</span></td></tr>';
+      return cab + '<tr>'
+        + td('<a href="#" onclick="pl_fichaServidor(\'' + l.op + '\');return false" style="color:var(--idv-in);font-weight:600">' + esc(l.nome) + '</a><div class="idv-mini">' + l.funcao + '</div>')
+        + td(l.equipe ? '<b style="font-weight:600;color:' + (PLANTAO_CORES[l.equipe] || 'var(--idv-sec)') + '">' + esc(l.equipe) + '</b>' : '<span style="color:var(--idv-sec)">— <span style="font-size:12px">(AKILES: ' + esc(l.equipeRobo || '?') + ')</span></span>')
+        + td(l.nPl + (l.nOutros ? '<div style="font-size:12px;color:var(--idv-sec)">+' + l.nOutros + ' em outra equipe</div>' : ''), 'font-variant-numeric:tabular-nums')
+        + td('<b style="font-weight:600">' + l.n + '</b> <span style="color:var(--idv-sec);font-size:12px">(' + (Math.round(porPl * 10) / 10).toString().replace('.', ',') + ' por plantão)</span>' + _plsComp(porPl, m.nPorPl, 'maior', v => (Math.round(v * 10) / 10).toString().replace('.', ',')))
+        + td(l.pct != null ? '<b style="font-weight:600;color:' + _plrCorBarra(l.pct / 100) + '">' + l.pct + '%</b>' + _plsComp(l.pct, m.pct, 'pct', v => v + '%') : '—')
         + td(l.med != null ? _plrMin(l.med) + _plsComp(l.med, m.med, 'menor', _plrMin) : '—')
-        + td(l.vdDec ? '<b>' + l.vdDec + '</b> decidida(s) · <b style="color:' + _plrCorBarra(l.vdDecOk / l.vdDec) + '">' + Math.round(l.vdDecOk / l.vdDec * 100) + '% no prazo</b>' + (l.vdDecMed != null ? '<div style="font-size:.72rem;color:#64748b">tempo típico até decidir: ' + _plrMin(l.vdDecMed) + '</div>' : '') : l.vd ? l.vd + ' atendida(s)' : '—')
-        + (l.vdP ? '<div style="font-size:.72rem;color:#b91c1c">' + l.vdP + ' com pendência</div>' : '')
-        + td(l.conf + l.nconf ? l.conf + ' \u{2714} · ' + l.nconf + ' \u{2718}' : '—', 'font-family:var(--font-mono)')
-        + td(l.inst + l.desinst ? l.inst + ' / ' + l.desinst : '—', 'font-family:var(--font-mono)')
-        + td(l.sens || '—', 'font-family:var(--font-mono)') + '</tr>'; }).join('')
-      : '<tr><td colspan="10" style="padding:20px;text-align:center;color:#94a3b8">Nenhum servidor com trabalho no período.</td></tr>')
+        + td(l.vdDec ? '<b style="font-weight:600">' + l.vdDec + '</b> decidida(s) · <b style="font-weight:600;color:' + _plrCorBarra(l.vdDecOk / l.vdDec) + '">' + Math.round(l.vdDecOk / l.vdDec * 100) + '% no prazo</b>' + (l.vdDecMed != null ? '<div style="font-size:12px;color:var(--idv-sec)">tempo típico até decidir: ' + _plrMin(l.vdDecMed) + '</div>' : '') : l.vd ? l.vd + ' atendida(s)' : '—')
+        + (l.vdP ? '<div style="font-size:12px;color:var(--idv-cr)">' + l.vdP + ' com pendência</div>' : '')
+        + td(l.conf + l.nconf ? l.conf + ' \u{2714} · ' + l.nconf + ' \u{2718}' : '—', 'font-variant-numeric:tabular-nums')
+        + td(l.inst + l.desinst ? l.inst + ' / ' + l.desinst : '—', 'font-variant-numeric:tabular-nums')
+        + td(l.sens || '—', 'font-variant-numeric:tabular-nums') + '</tr>'; }).join('')
+      : '<tr><td colspan="10" class="idv-vazio">Nenhum servidor com trabalho no período.</td></tr>')
     + '</tbody></table></div>'
-    + '<div style="font-size:.72rem;color:#94a3b8;margin-top:6px">Atendeu primeiro = ocorrências em que foi o 1º operador a agir. No prazo = dessas, quantas dentro do prazo do POP. Tempo típico = mediana do tempo até a 1ª ação. Equipe = a da folha de ponto (Secretaria). Quem começa antes da troca das 08h ou fica depois (até 2 h) conta no plantão da PRÓPRIA equipe; "+N em outra equipe" = plantões de outra equipe em que agiu (apoio).</div>';
+    + '<div style="font-size:12px;color:var(--idv-sec);margin-top:8px">Atendeu primeiro = ocorrências em que foi o 1º operador a agir. No prazo = dessas, quantas dentro do prazo do POP. Tempo típico = mediana do tempo até a 1ª ação. Equipe = a da folha de ponto (Secretaria). Quem começa antes da troca das 08h ou fica depois (até 2 h) conta no plantão da PRÓPRIA equipe; "+N em outra equipe" = plantões de outra equipe em que agiu (apoio).</div>';
 }
 
 // ── Ficha do servidor: evolução plantão a plantão ─────────────────────────────
@@ -115,29 +115,29 @@ function pl_fichaServidor(op) {
   const todos = _plsAgregar(d, nd), l = todos.find(x => x.op === op); if (!l) return;
   const m = _plsMediaEquipe(todos, l.equipe), porPl = l.nPl ? l.n / l.nPl : 0, num = v => (Math.round(v * 10) / 10).toString().replace('.', ',');
   const frases = [
-    'Trabalhou em <b>' + l.nPl + '</b> plantão(ões) nos últimos ' + nd + ' dias' + (l.equipe ? ', equipe <b style="color:' + (PLANTAO_CORES[l.equipe] || '#334155') + '">' + esc(l.equipe) + '</b> (folha de ponto)' : ' <span style="color:#b45309">(não está na folha de ponto da Secretaria)</span>')
+    'Trabalhou em <b>' + l.nPl + '</b> plantão(ões) nos últimos ' + nd + ' dias' + (l.equipe ? ', equipe <b style="color:' + (PLANTAO_CORES[l.equipe] || 'var(--idv-texto)') + '">' + esc(l.equipe) + '</b> (folha de ponto)' : ' <span style="color:var(--idv-at)">(não está na folha de ponto da Secretaria)</span>')
       + (l.nOutros ? ', e agiu em mais <b>' + l.nOutros + '</b> plantão(ões) de outra equipe (apoio)' : '') + '. Função principal: ' + l.funcao.toLowerCase() + '.',
     'Foi o primeiro a agir em <b>' + l.n + '</b> ocorrências (' + num(porPl) + ' por plantão' + (m.nPorPl != null ? '; média da equipe: ' + num(m.nPorPl) : '') + ').',
     l.pct != null ? 'Respondeu <b>dentro do prazo do POP em ' + l.pct + '%</b> das vezes' + (m.pct != null ? ' (equipe: ' + m.pct + '%)' : '') + (l.med != null ? '; tempo típico de ' + _plrMin(l.med) + (m.med != null ? ' (equipe: ' + _plrMin(m.med) + ')' : '') : '') + '.' : 'Não deu a 1ª resposta em ocorrências com prazo no período.',
-    l.vdDec ? 'Decidiu (confirmou ou não confirmou) <b>' + l.vdDec + '</b> violação(ões) de violência doméstica, <b>' + Math.round(l.vdDecOk / l.vdDec * 100) + '% dentro do prazo do POP</b>' + (l.vdDecMed != null ? ' (tempo típico: ' + _plrMin(l.vdDecMed) + ')' : '') + (l.vdP ? '; <b style="color:#b91c1c">' + l.vdP + ' com pendência</b>' : '') + '.'
-      : l.vd ? 'Atendeu <b>' + l.vd + '</b> caso(s) de violência doméstica' + (l.vdP ? ', <b style="color:#b91c1c">' + l.vdP + ' com pendência</b>' : ', todos em dia') + '.' : '',
+    l.vdDec ? 'Decidiu (confirmou ou não confirmou) <b>' + l.vdDec + '</b> violação(ões) de violência doméstica, <b>' + Math.round(l.vdDecOk / l.vdDec * 100) + '% dentro do prazo do POP</b>' + (l.vdDecMed != null ? ' (tempo típico: ' + _plrMin(l.vdDecMed) + ')' : '') + (l.vdP ? '; <b style="color:var(--idv-cr)">' + l.vdP + ' com pendência</b>' : '') + '.'
+      : l.vd ? 'Atendeu <b>' + l.vd + '</b> caso(s) de violência doméstica' + (l.vdP ? ', <b style="color:var(--idv-cr)">' + l.vdP + ' com pendência</b>' : ', todos em dia') + '.' : '',
     (l.conf + l.nconf ? 'Avaliou ' + (l.conf + l.nconf) + ' violação(ões): ' + l.conf + ' confirmada(s) e ' + l.nconf + ' não confirmada(s). ' : '') + (l.inst + l.desinst ? 'Fez ' + l.inst + ' instalação(ões) e ' + l.desinst + ' desinstalação(ões). ' : '') + (l.registro ? 'Salvou ' + l.registro + ' registro(s) no perfil de monitorados. ' : '') + (l.sms ? l.sms + ' SMS/alertas enviados.' : ''),
     l.sens ? 'Fez <b>' + l.sens + '</b> ação(ões) sensível(is) (reabertura, zona, cadastro, desvínculo) — veja em cada plantão.' : '',
   ].filter(Boolean);
-  const td = (v, s) => '<td style="padding:5px 6px;' + (s || '') + '">' + v + '</td>';
-  const html = '<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px"><b style="font-size:1.1rem">' + esc(l.nome) + '</b><span style="color:#64748b;font-size:.85rem">' + l.funcao + '</span>'
-    + (l.secId ? '<a href="#" onclick="document.getElementById(\'pl-modal\').remove();mudarAba(\'secretaria\');sec_abrirPerfil(\'' + l.secId + '\');return false" style="font-size:.8rem;color:#1d4ed8">abrir perfil na Secretaria</a>' : '') + '</div>'
-    + '<ul style="margin:0 0 14px 18px;padding:0;font-size:.88rem;line-height:1.6">' + frases.map(t => '<li>' + t + '</li>').join('') + '</ul>'
-    + '<div style="font-weight:700;margin-bottom:4px">Plantão a plantão <span style="font-weight:400;font-size:.75rem;color:#64748b">— clique na data para ver cada ocorrência que ele atendeu</span></div>'
-    + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr style="color:#64748b;text-align:left">'
-    + ['Plantão', 'Equipe', 'Atendeu primeiro', 'No prazo', 'Tempo típico', 'VD', 'Violações avaliadas', 'Instal./desinst.', 'Sensíveis'].map(h => '<th style="padding:4px 6px;font-weight:600">' + h + '</th>').join('') + '</tr></thead><tbody>'
-    + l.plantoes.slice().reverse().map(p => '<tr style="border-top:1px solid #f1f5f9">'
-      + td('<a href="#" onclick="pl_servidor(\'' + p.eq + '\', \'' + p.dia + '\', \'' + op + '\');return false" style="color:#1d4ed8;font-family:var(--font-mono)">' + _plDataBR(p.dia) + '</a>')
-      + td('<span style="color:' + (PLANTAO_CORES[p.eq] || '#64748b') + ';font-weight:600">' + esc(p.eq) + '</span>') + td(p.n, 'font-family:var(--font-mono)')
-      + td(p.pct != null ? '<b style="color:' + _plrCorBarra(p.pct / 100) + '">' + p.pct + '%</b>' : '—') + td(p.med != null ? _plrMin(p.med) : '—')
-      + td(p.vdDec ? p.vdDec + ' decid. · ' + Math.round(p.vdDecOk / p.vdDec * 100) + '% no prazo' + (p.vdP ? ' <span style="color:#b91c1c">(' + p.vdP + ' pend.)</span>' : '') : p.vd ? p.vd + (p.vdP ? ' <span style="color:#b91c1c">(' + p.vdP + ' pend.)</span>' : '') : '—') + td(p.conf || '—', 'font-family:var(--font-mono)') + td(p.inst || '—', 'font-family:var(--font-mono)') + td(p.sens || '—', 'font-family:var(--font-mono)') + '</tr>').join('')
-    + '</tbody></table></div><div style="font-size:.72rem;color:#94a3b8;margin-top:8px">Fonte: auditoria do AKILES (só leitura). Sem nota: os números servem para conversar com o servidor, comparando com a própria equipe.</div>';
+  const td = (v, s) => '<td style="' + (s || '') + '">' + v + '</td>';
+  const html = '<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px"><b style="font-size:20px;font-weight:600">' + esc(l.nome) + '</b><span style="color:var(--idv-sec);font-size:14px">' + l.funcao + '</span>'
+    + (l.secId ? '<a href="#" onclick="document.getElementById(\'pl-modal\').remove();mudarAba(\'secretaria\');sec_abrirPerfil(\'' + l.secId + '\');return false" style="font-size:13px;font-weight:600;color:var(--idv-in)">abrir perfil na Secretaria</a>' : '') + '</div>'
+    + '<ul style="margin:0 0 16px 18px;padding:0;font-size:14px;line-height:1.6">' + frases.map(t => '<li>' + t + '</li>').join('') + '</ul>'
+    + '<div style="font-size:16px;font-weight:600;margin-bottom:6px">Plantão a plantão <span style="font-weight:400;font-size:12px;color:var(--idv-sec)">— clique na data para ver cada ocorrência que ele atendeu</span></div>'
+    + '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr>'
+    + ['Plantão', 'Equipe', 'Atendeu primeiro', 'No prazo', 'Tempo típico', 'VD', 'Violações avaliadas', 'Instal./desinst.', 'Sensíveis'].map(h => '<th>' + h + '</th>').join('') + '</tr></thead><tbody>'
+    + l.plantoes.slice().reverse().map(p => '<tr>'
+      + td('<a href="#" onclick="pl_servidor(\'' + p.eq + '\', \'' + p.dia + '\', \'' + op + '\');return false" class="idv-data" style="color:var(--idv-in);font-weight:600">' + _plDataBR(p.dia) + '</a>')
+      + td('<span style="color:' + (PLANTAO_CORES[p.eq] || 'var(--idv-sec)') + ';font-weight:600">' + esc(p.eq) + '</span>') + td(p.n, 'font-variant-numeric:tabular-nums')
+      + td(p.pct != null ? '<b style="font-weight:600;color:' + _plrCorBarra(p.pct / 100) + '">' + p.pct + '%</b>' : '—') + td(p.med != null ? _plrMin(p.med) : '—')
+      + td(p.vdDec ? p.vdDec + ' decid. · ' + Math.round(p.vdDecOk / p.vdDec * 100) + '% no prazo' + (p.vdP ? ' <span style="color:var(--idv-cr)">(' + p.vdP + ' pend.)</span>' : '') : p.vd ? p.vd + (p.vdP ? ' <span style="color:var(--idv-cr)">(' + p.vdP + ' pend.)</span>' : '') : '—') + td(p.conf || '—', 'font-variant-numeric:tabular-nums') + td(p.inst || '—', 'font-variant-numeric:tabular-nums') + td(p.sens || '—', 'font-variant-numeric:tabular-nums') + '</tr>').join('')
+    + '</tbody></table></div><div style="font-size:12px;color:var(--idv-sec);margin-top:8px">Fonte: auditoria do AKILES (só leitura). Sem nota: os números servem para conversar com o servidor, comparando com a própria equipe.</div>';
   let ov = document.getElementById('pl-modal');
-  if (!ov) { ov = document.createElement('div'); ov.id = 'pl-modal'; ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow:auto'; ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); }); document.body.appendChild(ov); }
-  ov.innerHTML = '<div style="background:#fff;border-radius:8px;max-width:980px;width:100%;padding:16px 20px;box-shadow:0 10px 40px rgba(0,0,0,.3)"><div style="display:flex;justify-content:flex-end"><button type="button" onclick="document.getElementById(\'pl-modal\').remove()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:4px 12px;cursor:pointer">Fechar \u{2715}</button></div>' + html + '</div>';
+  if (!ov) { ov = document.createElement('div'); ov.id = 'pl-modal'; ov.style.cssText = 'position:fixed;inset:0;background:rgba(31,35,40,.5);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow:auto'; ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); }); document.body.appendChild(ov); }
+  ov.innerHTML = '<div style="background:var(--idv-cartao);border:1px solid var(--idv-borda);border-radius:6px;max-width:980px;width:100%;padding:16px 20px;box-shadow:0 8px 24px rgba(31,35,40,.18)"><div style="display:flex;justify-content:flex-end"><button type="button" class="idv-btn mini" onclick="document.getElementById(\'pl-modal\').remove()">Fechar \u{2715}</button></div>' + html + '</div>';
 }

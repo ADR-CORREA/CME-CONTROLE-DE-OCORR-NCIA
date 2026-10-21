@@ -45,12 +45,13 @@ function _plrNota(ind) {
   return pesos ? Math.round(soma / pesos * 100) / 10 : null;
 }
 function _plrFaixa(nota) {
-  if (nota == null) return { rot: 'Sem dados', cor: '#94a3b8', fundo: '#f8fafc' };
-  if (nota >= 8) return { rot: 'Bom', cor: '#15803d', fundo: '#f0fdf4' };
-  if (nota >= 6) return { rot: 'Regular', cor: '#b45309', fundo: '#fffbeb' };
-  return { rot: 'Precisa melhorar', cor: '#b91c1c', fundo: '#fef2f2' };
+  // cores do guia (identidade.css); cls = sufixo da etiqueta idv-etq
+  if (nota == null) return { rot: 'Sem dados', cor: 'var(--idv-sec)', fundo: '#eaeef2', cls: 'ne' };
+  if (nota >= 8) return { rot: 'Bom', cor: 'var(--idv-ok)', fundo: 'var(--idv-ok-f)', cls: 'ok' };
+  if (nota >= 6) return { rot: 'Regular', cor: 'var(--idv-at)', fundo: 'var(--idv-at-f)', cls: 'at' };
+  return { rot: 'Precisa melhorar', cor: 'var(--idv-cr)', fundo: 'var(--idv-cr-f)', cls: 'cr' };
 }
-function _plrCorBarra(s) { return s >= 0.8 ? '#16a34a' : s >= 0.6 ? '#d97706' : '#dc2626'; }
+function _plrCorBarra(s) { return s >= 0.8 ? 'var(--idv-ok)' : s >= 0.6 ? 'var(--idv-at)' : 'var(--idv-cr)'; }
 const _PLR_FRASE = {
   vdPrazo: x => 'demorou para confirmar ou não confirmar as violações de violência doméstica (só ' + x.txt + ' no prazo do POP' + (x.det ? '; ' + x.det : '') + ')',
   vdSem: x => 'deixou violações de violência doméstica sem decisão (' + x.txt + ')',
@@ -69,40 +70,39 @@ function _plrRender(d, lin, nd) {
     .sort((a, b) => (b.nota ?? -1) - (a.nota ?? -1));
   cards.style.display = comp.style.display = _plrVerTudo && _plrVisao === 'equipes' ? '' : 'none';
   if (!eqs.length) { box.innerHTML = ''; return; }
-  const aba = (k, r) => '<button type="button" onclick="_plrVisao=\'' + k + '\';pl_renderizar()" style="padding:6px 16px;border:1px solid #cbd5e1;cursor:pointer;font-size:.85rem;font-weight:600;'
-    + (k === _plrVisao ? 'background:#1e3a8a;color:#fff;border-color:#1e3a8a' : 'background:#fff;color:#334155') + (k === 'equipes' ? ';border-radius:4px 0 0 4px' : ';border-radius:0 4px 4px 0;margin-left:-1px') + '">' + r + '</button>';
-  const abas = '<div style="display:flex;margin-bottom:12px">' + aba('equipes', '\u{1F6E1}\u{FE0F} Equipes') + aba('servidores', '\u{1F464} Servidores (individual)') + '</div>';
+  const aba = (k, r) => '<button type="button" class="idv-chip' + (k === _plrVisao ? ' ativo' : '') + '" onclick="_plrVisao=\'' + k + '\';pl_renderizar()">' + r + '</button>';
+  const abas = '<div class="idv-chips" style="margin-bottom:12px">' + aba('equipes', '\u{1F6E1}\u{FE0F} Equipes') + aba('servidores', '\u{1F464} Servidores (individual)') + '</div>';
   if (_plrVisao === 'servidores' && typeof _plsRender === 'function') { box.innerHTML = abas + _plrHtmlStatusTroca(d) + '<div id="pls-corpo"></div>'; _plsRender(d, nd); return; }
   const melhor = eqs[0], pior = eqs[eqs.length - 1], piorInd = _plrPior(pior.ind);
-  const nome = eq => '<b style="color:' + (PLANTAO_CORES[eq] || '#1d4ed8') + '">' + eq + '</b>';
+  const nome = eq => '<b style="color:' + (PLANTAO_CORES[eq] || 'var(--idv-in)') + '">' + eq + '</b>';
   const fmtNota = n => n == null ? '—' : n.toFixed(1).replace('.', ',');
   const frase = 'Nos últimos ' + nd + ' dias, o melhor plantão foi ' + nome(melhor.eq) + ' (nota ' + fmtNota(melhor.nota) + ').'
     + (eqs.length > 1 && piorInd && pior.ind[piorInd.k].s < 0.8 ? ' Precisa de mais atenção: ' + nome(pior.eq) + ', que ' + _PLR_FRASE[piorInd.k](pior.ind[piorInd.k]) + '.' : '');
-  box.innerHTML = abas + '<div style="font-size:.95rem;line-height:1.5;padding:10px 14px;background:#f8fafc;border-left:4px solid #2563eb;border-radius:4px;margin-bottom:12px">' + frase + '</div>'
+  box.innerHTML = abas + '<div class="idv-faixa" style="display:block;line-height:1.5;margin-bottom:12px">' + frase + '</div>'
     + _plrHtmlStatusTroca(d)
     + (_plrVerTudo ? _plrHtmlPassivo(d) : '')
-    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">'
     + eqs.map((l, i) => _plrCartao(l, i + 1, fmtNota)).join('') + '</div>'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px">'
-    + '<div style="font-size:.72rem;color:#94a3b8">Nota de 0 a 10 = violência doméstica decidida (confirmada ou não confirmada) no prazo do POP (40%) + VD sem decisão (20%; ' + _PLR_VDSEM_ZERO + ' por plantão zeram) + restabelecidas fora do limite das 04h (25%; ' + _PLR_REST_ZERO + ' por plantão zeram) + agiu no prazo do POP em todas as ocorrências (15%). A hora da decisão é medida desde 01/10/2026; a foto das 04h começa no plantão de 16/10/2026 (antes, vale a da troca das 08h). Clique num plantão para ver o detalhe.</div>'
-    + '<button class="btn-secondary" style="font-size:.8rem" onclick="_plrVerTudo=!_plrVerTudo;pl_renderizar()">' + (_plrVerTudo ? 'Esconder os números' : '\u{1F4CA} Ver todos os números') + '</button></div>';
+    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px">'
+    + '<div style="font-size:12px;color:var(--idv-sec)">Nota de 0 a 10 = violência doméstica decidida (confirmada ou não confirmada) no prazo do POP (40%) + VD sem decisão (20%; ' + _PLR_VDSEM_ZERO + ' por plantão zeram) + restabelecidas fora do limite das 04h (25%; ' + _PLR_REST_ZERO + ' por plantão zeram) + agiu no prazo do POP em todas as ocorrências (15%). A hora da decisão é medida desde 01/10/2026; a foto das 04h começa no plantão de 16/10/2026 (antes, vale a da troca das 08h). Clique num plantão para ver o detalhe.</div>'
+    + '<button class="btn-secondary btn-sm" onclick="_plrVerTudo=!_plrVerTudo;pl_renderizar()">' + (_plrVerTudo ? 'Esconder os números' : '\u{1F4CA} Ver todos os números') + '</button></div>';
 }
 function _plrCartao(l, pos, fmtNota) {
-  const f = _plrFaixa(l.nota), cor = PLANTAO_CORES[l.eq] || '#1d4ed8', pior = _plrPior(l.ind);
+  const f = _plrFaixa(l.nota), cor = PLANTAO_CORES[l.eq] || 'var(--idv-in)', pior = _plrPior(l.ind);
   const barra = i => {
     const x = l.ind[i.k];
     if (!x) return '';
-    return '<div title="' + esc(i.dica) + '" style="margin-top:6px"><div style="display:flex;justify-content:space-between;font-size:.76rem"><span style="color:#475569">' + i.rot + '</span><b style="color:' + _plrCorBarra(x.s) + '">' + esc(x.txt) + '</b></div>'
-      + '<div style="height:6px;background:#f1f5f9;border-radius:2px;overflow:hidden;margin-top:2px"><div style="height:100%;width:' + Math.round(x.s * 100) + '%;background:' + _plrCorBarra(x.s) + '"></div></div>'
-      + (x.det ? '<div style="font-size:.68rem;color:#94a3b8;margin-top:1px">' + esc(x.det) + '</div>' : '') + '</div>';
+    return '<div title="' + esc(i.dica) + '" style="margin-top:8px"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px"><span style="color:var(--idv-sec)">' + i.rot + '</span><b class="idv-data" style="font-weight:600;color:' + _plrCorBarra(x.s) + '">' + esc(x.txt) + '</b></div>'
+      + '<div style="height:6px;background:var(--idv-zebra);border-radius:2px;overflow:hidden;margin-top:2px"><div style="height:100%;width:' + Math.round(x.s * 100) + '%;background:' + _plrCorBarra(x.s) + '"></div></div>'
+      + (x.det ? '<div style="font-size:12px;color:var(--idv-sec);margin-top:1px">' + esc(x.det) + '</div>' : '') + '</div>';
   };
-  return '<div onclick="pl_detalhe(\'' + l.eq + '\')" title="Ver o detalhe do último plantão" style="cursor:pointer;border:1px solid #e2e8f0;border-top:4px solid ' + cor + ';border-radius:8px;padding:10px 12px;background:#fff">'
-    + '<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:.78rem;color:#94a3b8">' + pos + 'º</span><span style="font-size:.72rem;color:#94a3b8">' + l.n + ' plantão(ões)</span></div>'
-    + '<div style="font-weight:700;font-size:1.05rem;color:' + cor + '">' + l.eq + '</div>'
-    + '<div style="display:flex;align-items:baseline;gap:8px;margin:4px 0 2px"><span style="font-size:2rem;font-weight:700;color:' + f.cor + ';line-height:1">' + fmtNota(l.nota) + '</span>'
-    + '<span style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:3px;border-left:2px solid ' + f.cor + ';background:' + f.fundo + ';color:' + f.cor + '">' + f.rot + '</span></div>'
+  return '<div onclick="pl_detalhe(\'' + l.eq + '\')" title="Ver o detalhe do último plantão" style="cursor:pointer;border:1px solid var(--idv-borda);border-top:3px solid ' + cor + ';border-radius:6px;padding:12px 16px;background:var(--idv-cartao)">'
+    + '<div style="display:flex;justify-content:space-between;align-items:baseline"><span class="idv-data" style="font-size:13px;color:var(--idv-sec)">' + pos + 'º</span><span style="font-size:12px;color:var(--idv-sec)">' + l.n + ' plantão(ões)</span></div>'
+    + '<div style="font-weight:600;font-size:16px;color:' + cor + '">' + l.eq + '</div>'
+    + '<div style="display:flex;align-items:center;gap:8px;margin:4px 0 2px"><span class="idv-data" style="font-size:28px;font-weight:600;color:' + f.cor + ';line-height:1">' + fmtNota(l.nota) + '</span>'
+    + '<span class="idv-etq ' + f.cls + '">' + f.rot + '</span></div>'
     + _PLR_IND.map(barra).join('')
-    + '<div style="font-size:.74rem;margin-top:8px;color:' + (pior && l.ind[pior.k].s < 0.8 ? '#b45309' : '#15803d') + '">'
+    + '<div style="font-size:13px;margin-top:8px;color:' + (pior && l.ind[pior.k].s < 0.8 ? 'var(--idv-at)' : 'var(--idv-ok)') + '">'
     + (pior && l.ind[pior.k].s < 0.8 ? 'A melhorar: ' + pior.rot.replace(/^(?!VD)./, c => c.toLowerCase()) : 'Tudo dentro do esperado') + '</div></div>';
 }
 
@@ -112,25 +112,25 @@ function _plrHtmlPassivo(d) {
   const ps = ((d && d.restabelecidas) || {}).passivo || []; if (!ps.length) return '';
   const p = ps[ps.length - 1], ref = _plrMaisDias(p.dia, -7), antes = ps.find(x => x.dia >= ref && x.dia < p.dia) || null;
   const dif = antes ? p.total - antes.total : null;
-  return '<div style="font-size:.85rem;line-height:1.5;padding:8px 14px;background:#fff7ed;border-left:4px solid #ea580c;border-radius:4px;margin-bottom:12px">'
-    + '\u{1F4E6} <b>Passivo no AKILES:</b> <b style="color:#c2410c">' + p.total + '</b> ocorrências já restabelecidas continuam abertas'
-    + ' <span style="color:#64748b">(' + p.mais30 + ' há mais de 30 dias · ' + p.ate30 + ' de 7 a 30 dias · ' + (p.ate7 + p.ate1) + ' da última semana; ' + p.nuncaPegas + ' nunca foram pegas por operador)</span>.'
-    + (dif != null ? ' <b style="color:' + (dif > 0 ? '#b91c1c' : '#15803d') + '">' + (dif > 0 ? '\u{2191} ' + dif + ' a mais' : dif < 0 ? '\u{2193} ' + (-dif) + ' a menos' : 'Igual') + '</b> desde ' + antes.dia.slice(8, 10) + '/' + antes.dia.slice(5, 7) + '.' : '')
-    + ' <span style="color:#64748b">Precisam ser arquivadas.</span></div>';
+  return '<div class="idv-faixa at" style="display:block;font-size:14px;line-height:1.5;margin-bottom:12px">'
+    + '\u{1F4E6} <b style="font-weight:600">Passivo no AKILES:</b> <b class="idv-data" style="font-weight:600;color:var(--idv-at)">' + p.total + '</b> ocorrências já restabelecidas continuam abertas'
+    + ' <span style="color:var(--idv-sec)">(' + p.mais30 + ' há mais de 30 dias · ' + p.ate30 + ' de 7 a 30 dias · ' + (p.ate7 + p.ate1) + ' da última semana; ' + p.nuncaPegas + ' nunca foram pegas por operador)</span>.'
+    + (dif != null ? ' <b style="font-weight:600;color:' + (dif > 0 ? 'var(--idv-cr)' : 'var(--idv-ok)') + '">' + (dif > 0 ? '\u{2191} ' + dif + ' a mais' : dif < 0 ? '\u{2193} ' + (-dif) + ' a menos' : 'Igual') + '</b> desde ' + antes.dia.slice(8, 10) + '/' + antes.dia.slice(5, 7) + '.' : '')
+    + ' <span style="color:var(--idv-sec)">Precisam ser arquivadas.</span></div>';
 }
 // Detalhe do plantão: quais restabelecidas ele deixou abertas na troca
 function _plrHtmlRestDetalhe(x) {
   const r = x && x.restDeixadas;
-  if (!r) return '<div style="border:1px solid #e2e8f0;border-left:4px solid #94a3b8;border-radius:6px;padding:8px 10px;margin-bottom:12px;font-size:.78rem;color:#64748b">\u{21AA} Restabelecidas deixadas: não medido neste plantão (a contagem começou em 14/10/2026 e só é feita quando o robô roda até 4 h depois da troca).</div>';
-  const cor = r.n ? '#c2410c' : '#15803d';
-  return '<div style="border:1px solid #fed7aa;border-left:4px solid ' + cor + ';border-radius:6px;padding:8px 10px;margin-bottom:12px">'
-    + '<div style="font-weight:700;font-size:.85rem;color:' + cor + ';margin-bottom:4px">\u{21AA} Restabelecidas deixadas para o próximo plantão: ' + (r.n || 'nenhuma') + '</div>'
-    + '<div style="font-size:.72rem;color:#64748b;margin-bottom:6px">Ocorrências que começaram neste plantão, já com andamento "Restabelecido", e que ainda estavam abertas na troca (conferido às ' + new Date(r.medidoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '). As "em andamento" podem passar e não contam.</div>'
-    + (r.lista && r.lista.length ? '<div style="max-height:260px;overflow-y:auto"><table style="width:100%;border-collapse:collapse;font-size:.75rem"><thead><tr>'
-      + ['Início', 'Ocorrência', 'Registro', 'Tipo', 'Estado', 'Criticidade'].map(h => '<th style="text-align:left;padding:4px 6px;color:#64748b;font-weight:600">' + h + '</th>').join('') + '</tr></thead><tbody>'
-      + r.lista.map(o => '<tr style="border-top:1px solid #f1f5f9"><td style="padding:4px 6px;font-family:var(--font-mono)">' + new Date(o.d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '</td>'
-        + '<td style="padding:4px 6px;font-family:var(--font-mono)">' + esc(o.id) + '</td><td style="padding:4px 6px;font-family:var(--font-mono)">' + esc(o.reg || '') + '</td><td style="padding:4px 6px">' + esc(o.t) + '</td>'
-        + '<td style="padding:4px 6px;color:' + (o.est === 'Aberto' ? '#b91c1c' : '#b45309') + '">' + esc(o.est) + (o.est === 'Aberto' ? ' (ninguém pegou)' : '') + '</td><td style="padding:4px 6px">' + esc(o.c) + '</td></tr>').join('')
+  if (!r) return '<div class="idv-faixa" style="display:block;font-size:13px;color:var(--idv-sec);margin-bottom:12px">\u{21AA} Restabelecidas deixadas: não medido neste plantão (a contagem começou em 14/10/2026 e só é feita quando o robô roda até 4 h depois da troca).</div>';
+  const cor = r.n ? 'var(--idv-at)' : 'var(--idv-ok)';
+  return '<div class="idv-faixa ' + (r.n ? 'at' : 'ok') + '" style="display:block;margin-bottom:12px">'
+    + '<div style="font-weight:600;font-size:14px;color:' + cor + ';margin-bottom:4px">\u{21AA} Restabelecidas deixadas para o próximo plantão: ' + (r.n || 'nenhuma') + '</div>'
+    + '<div style="font-size:12px;color:var(--idv-sec);margin-bottom:6px">Ocorrências que começaram neste plantão, já com andamento "Restabelecido", e que ainda estavam abertas na troca (conferido às ' + new Date(r.medidoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '). As "em andamento" podem passar e não contam.</div>'
+    + (r.lista && r.lista.length ? '<div class="table-scroll" style="max-height:260px;overflow-y:auto"><table class="data-table idv-tabela"><thead><tr>'
+      + ['Início', 'Ocorrência', 'Registro', 'Tipo', 'Estado', 'Criticidade'].map(h => '<th>' + h + '</th>').join('') + '</tr></thead><tbody>'
+      + r.lista.map(o => '<tr><td class="idv-data" style="white-space:nowrap">' + new Date(o.d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '</td>'
+        + '<td class="idv-mono">' + esc(o.id) + '</td><td class="idv-mono">' + esc(o.reg || '') + '</td><td>' + esc(o.t) + '</td>'
+        + '<td style="color:' + (o.est === 'Aberto' ? 'var(--idv-cr)' : 'var(--idv-at)') + '">' + esc(o.est) + (o.est === 'Aberto' ? ' (ninguém pegou)' : '') + '</td><td>' + esc(o.c) + '</td></tr>').join('')
       + '</tbody></table></div>' : '') + '</div>';
 }
 // A análise tem que acontecer em TODA troca (08h). Mostra se a de hoje foi feita — e avisa quando não.
@@ -138,8 +138,8 @@ function _plrHtmlStatusTroca(d) {
   const agora = new Date(), troca = new Date(agora); troca.setHours(8, 0, 0, 0);
   if (agora < troca) troca.setDate(troca.getDate() - 1);
   const ger = new Date(d && d.geradoEm), dm = x => x.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), hm = x => x.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  if (!isNaN(ger) && ger >= troca) return '<div style="font-size:.78rem;color:#15803d;margin:-6px 0 10px">\u{2705} Troca de ' + dm(troca) + ' às 08h analisada (' + dm(ger) + ' às ' + hm(ger) + ').</div>';
-  return '<div style="font-size:.85rem;line-height:1.5;padding:8px 14px;background:#fef2f2;border-left:4px solid #dc2626;border-radius:4px;margin-bottom:12px">'
-    + '\u{26A0}\u{FE0F} <b>A troca de ' + dm(troca) + ' às 08h ainda não foi analisada.</b> Última análise: ' + (isNaN(ger) ? '—' : dm(ger) + ' às ' + hm(ger)) + '. '
-    + '<span style="color:#64748b">O robô tenta das 08h10 às 11h50 no computador que está de vez. Se nenhum estiver ligado, a análise fica para o dia seguinte (os números do plantão são recuperados; as restabelecidas deixadas na troca, não).</span></div>';
+  if (!isNaN(ger) && ger >= troca) return '<div style="font-size:13px;color:var(--idv-ok);margin:-6px 0 12px">\u{2705} Troca de ' + dm(troca) + ' às 08h analisada (' + dm(ger) + ' às ' + hm(ger) + ').</div>';
+  return '<div class="idv-faixa cr" style="display:block;font-size:14px;line-height:1.5;margin-bottom:12px">'
+    + '\u{26A0}\u{FE0F} <b style="font-weight:600">A troca de ' + dm(troca) + ' às 08h ainda não foi analisada.</b> Última análise: ' + (isNaN(ger) ? '—' : dm(ger) + ' às ' + hm(ger)) + '. '
+    + '<span style="color:var(--idv-sec)">O robô tenta das 08h10 às 11h50 no computador que está de vez. Se nenhum estiver ligado, a análise fica para o dia seguinte (os números do plantão são recuperados; as restabelecidas deixadas na troca, não).</span></div>';
 }
