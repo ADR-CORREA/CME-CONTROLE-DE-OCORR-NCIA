@@ -41,6 +41,7 @@ function ep_renderizar() {
   html.push('<div class="idv-cab"><div><h1>\u{1F6E1}\u{FE0F} Estoque do Plantão</h1>'
     + '<div class="idv-sub">Um estoque só para as equipes ALFA a ECHO, separado do Estoque do CME. Lance na hora tudo que entra e sai. Equipe de hoje: <b>' + esc(equipe || '—') + '</b></div></div>'
     + '<div class="idv-acoes">' + _epBtn('\u{1F504} Atualizar', 'ep_renderizar()', '', 'Recarrega a tela com os números mais recentes')
+    + (typeof ep_abrirPassagem === 'function' ? _epBtn('\u{1F5A8}\u{FE0F} Passagem de serviço', 'ep_abrirPassagem()', '', 'Folha da troca de plantão para imprimir: material, viaturas e as assinaturas de quem passa e de quem recebe') : '')
     + (pode && !d.inventarioEncerradoEm ? _epBtn('\u{2B06} Inventário inicial', "ep_abrirMov('entrada')", 'btn-primary', 'Cadastra o que o plantão já tem na sala (só no começo)') + _epBtn('\u{2714} Encerrar inventário', 'ep_encerrarInventario()', '', 'Termina o cadastro inicial; depois disso, item novo só chega pelo Estoque do CME') : '')
     + (pode ? _epBtn('\u{2B07} Saída', "ep_abrirMov('saida')", '', 'Instalação de tornozeleira ou entrega de equipamento ao monitorado')
       + _epBtn('\u{21A9} Devolução', "ep_abrirMov('devolucao')", '', 'Equipamento retirado do monitorado que volta para o plantão')
