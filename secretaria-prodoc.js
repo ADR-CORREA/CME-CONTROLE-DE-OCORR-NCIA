@@ -258,8 +258,10 @@ function _sprdRenderDetalhe() {
   h += _sprdPasso(l, 3, 'Encaminhar no PRODOC e confirmar aqui');
   if (copiou) h += '<div id="sprd-r-copiado" class="idv-faixa ok" style="margin:8px 0 0;padding:8px 12px;font-size:14px"><span class="idv-faixa-ic">\u{2714}</span><span>Texto copiado. Abra no PRODOC, cole (Ctrl+V), encaminhe e depois clique em <b>Já encaminhei no PRODOC</b>.</span></div>';
   h += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:' + (l.sit === 'novo' ? 8 : 12) + 'px">'
-    + '<a class="idv-btn mini" style="text-decoration:none" href="' + _SPRD_LINK + encodeURIComponent(d.id) + '" target="_blank" rel="noopener noreferrer"'
-    + (d.lido !== true ? ' onclick="return confirm(\'Abrir no PRODOC marca este documento como LIDO no seu nome. Abrir mesmo assim?\')"' : '') + '>Abrir no PRODOC \u{2197}</a>';
+    // documento ainda não aberto no PRODOC NUNCA abre daqui (abrir marcaria "Lido por" no histórico) — pedido de 21/10/2026
+    + (d.lido === true
+      ? '<a class="idv-btn mini" style="text-decoration:none" href="' + _SPRD_LINK + encodeURIComponent(d.id) + '" target="_blank" rel="noopener noreferrer">Abrir no PRODOC \u{2197}</a>'
+      : '<span class="idv-etq ne" title="Ainda não foi aberto no PRODOC: abra pelo próprio PRODOC">Não aberto no PRODOC</span>');
   if (l.sit === 'aviso') h += '<button class="idv-btn mini concluir" onclick="sec_prodocMarcarCiencia(\'' + idq + '\')">Dar ciência</button>';
   if (l.sit === 'novo' || l.sit === 'aviso') h += '<button class="idv-btn mini' + (l.sit === 'novo' ? ' concluir' : '') + '"' + (l.sit === 'novo' ? ' id="sprd-r-jaenc"' : '') + (copiou ? ' style="box-shadow:0 0 0 3px var(--idv-ok-f)"' : '') + ' onclick="sec_prodocMarcar(\'' + idq + '\',\'enc\')">Já encaminhei no PRODOC</button>';
   if (l.sit !== 'res') h += '<input id="sprd-nota" placeholder="O que foi feito (opcional)" maxlength="300" value="' + esc(_sprdRespEstado(d.id).nota || '') + '" oninput="_sprdRespEstado(\'' + idq + '\').nota=this.value" style="flex:1;min-width:180px;height:32px;padding:0 10px;border:1px solid var(--idv-borda);border-radius:6px;font-size:14px"><button class="idv-btn mini' + (l.sit === 'novo' ? '' : ' concluir') + '" onclick="sec_prodocMarcar(\'' + idq + '\',\'res\')">Confirmar resolvido</button>';
