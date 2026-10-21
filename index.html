@@ -5972,7 +5972,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       <!-- Painel: Upload -->
       <div id="ass-panel-upload" style="display:none">
-        <p style="font-size:.82rem;color:#888;margin:0 0 8px 0">Tire uma <b>foto da sua assinatura no papel</b> ou selecione uma imagem. O sistema remove o fundo automaticamente.</p>
+        <p style="font-size:13px;color:var(--idv-sec);margin:0 0 8px 0">Assine numa <b>folha branca</b> com caneta escura (preta ou azul) e tire uma <b>foto de perto, com boa luz</b>. O sistema acha a assinatura, tira a sombra, o fundo e as sujeiras e recorta sozinho.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <label class="btn-secondary" style="cursor:pointer;display:inline-block">
             📷 Selecionar / tirar foto
@@ -11779,7 +11779,8 @@ function editUser_previewAss(input) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
-    _normalizarAssinatura(e.target.result).then(function(jpeg) {
+    const tratar = typeof assFoto_tratar === 'function' ? assFoto_tratar(e.target.result) : Promise.resolve({ ok: false, dataUrl: e.target.result });
+    tratar.then(r => _normalizarAssinatura(r.ok ? r.dataUrl : e.target.result)).then(function(jpeg) {
       _editAssNovaBase64 = jpeg;
       _editAssRemover    = false;
       _editUser_atualizarPreviewAss(_editAssNovaBase64);
@@ -11985,8 +11986,10 @@ function ass_limparFoto() {
   const src = el && el.src;
   if (!src || src === window.location.href) { _mostrarToast('Selecione ou tire uma foto primeiro.', 'erro'); return; }
   _mostrarToast('\u{1F9FD} Limpando a foto...', 'sucesso');
-  _limparFotoAssinatura(src).then(function (limpa) {
-    el.src = limpa;
+  const tratar = typeof assFoto_tratar === 'function' ? assFoto_tratar(src) : _limparFotoAssinatura(src).then(limpa => ({ ok: true, dataUrl: limpa }));
+  tratar.then(function (r) {
+    if (!r.ok) { _mostrarToast(r.motivo || 'Não consegui tratar a foto.', 'erro'); return; }
+    el.src = r.dataUrl;
     document.getElementById('ass-preview-wrap').style.display = 'block';
     _mostrarToast('\u{2705} Foto limpa. Confira o preview e salve.', 'sucesso');
   });
@@ -12098,10 +12101,19 @@ function ass_carregarImagem(input) {
   document.getElementById('ass-preview-wrap').style.display = 'none';
   const reader = new FileReader();
   reader.onload = e => {
-    _limparFotoAssinatura(e.target.result).then(limpa => {
-      document.getElementById('ass-preview-img').src = limpa;
+    // assinatura-foto.js: acha a folha, tira sombra/mesa/sujeira e recorta só o traço
+    const tratar = typeof assFoto_tratar === 'function'
+      ? assFoto_tratar(e.target.result)
+      : _limparFotoAssinatura(e.target.result).then(limpa => ({ ok: true, dataUrl: limpa }));
+    tratar.then(r => {
+      if (!r.ok) {
+        msg.innerHTML = '<div class="idv-faixa cr" style="font-size:13px">' + esc(r.motivo || 'Não consegui tratar a foto.') + '</div>';
+        input.value = '';
+        return;
+      }
+      document.getElementById('ass-preview-img').src = r.dataUrl;
       document.getElementById('ass-preview-wrap').style.display = 'block';
-      msg.innerHTML = '<div style="color:var(--idv-ok);font-size:13px">✅ Foto processada. Confira o preview e clique em Salvar.</div>';
+      msg.innerHTML = '<div style="color:var(--idv-ok);font-size:13px">\u{2705} Assinatura recortada e limpa. Confira o preview e clique em Salvar. Se não ficou boa, tire outra foto mais de perto.</div>';
     });
   };
   reader.readAsDataURL(file);
@@ -29833,5 +29845,6 @@ function estat_exportarResultado() {
 <script src="estoque-plantao-tela.js?v=20261021e"></script>
 <script src="passagem-servico.js?v=20261021b"></script>
 <script src="upload-imagem-pdf.js?v=20261020f4"></script>
+<script src="assinatura-foto.js?v=20261021a"></script>
 </body>
 </html>
