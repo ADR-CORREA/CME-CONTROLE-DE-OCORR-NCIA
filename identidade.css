@@ -740,3 +740,20 @@ table.idv-tabela tbody tr.row-protetiva, .data-table:not(.idv-tabela) tbody tr.r
 [style*="border-radius:100px"],
 [style*="border-radius: 100px"] { border-radius: 4px !important; }
 .user-chip, .badge, .est-badge, .tri-badge { border-radius: 3px !important; }
+
+/* ═══════════ FASE 4b (20/10/2026): peças que as telas antigas pediram ═══════════ */
+b, strong { font-weight: 600; }                                       /* pesos do guia: só 400 e 600 */
+.idv-faixa.in { border-color: var(--idv-in); background: var(--idv-in-f); } .idv-faixa.in .idv-faixa-ic { background: var(--idv-in); }
+.idv-faixa.de { border-color: var(--idv-de); background: var(--idv-de-f); } .idv-faixa.de .idv-faixa-ic { background: var(--idv-de); }
+.idv-faixa.bloco { display: block; }                                  /* frase corrida com <b> dentro */
+.idv-chip:disabled { opacity: .45; cursor: default; }
+/* escolha dentro de formulário (6/12/24 h, gênero, tipo): marcada com borda, sem o preto pesado do filtro */
+.idv-chip.opcao.ativo { background: var(--idv-in-f); border: 2px solid var(--idv-in); color: var(--idv-texto); padding: 0 11px; }
+/* indicador menor (dentro de blocos e janelas) */
+.idv-kpi.mini { padding: 8px 12px; } .idv-kpi.mini .idv-num { font-size: 20px; } .idv-kpi.mini .idv-rot { font-size: 13px; }
+/* campo de texto do guia */
+.idv-input { height: 36px; padding: 0 10px; border: 1px solid var(--idv-borda); border-radius: 6px; background: var(--idv-cartao); color: var(--idv-texto); font: 14px inherit; }
+.idv-input:focus { border-color: var(--idv-in); outline: none; box-shadow: 0 0 0 1px var(--idv-in); }
+/* tabela dentro de tabela (linha aberta) e tabelas de janela: cabeçalho de dentro não gruda */
+table table th, .idv-tabela .idv-tabela th { position: static; }
+table table td { font-size: inherit; }
