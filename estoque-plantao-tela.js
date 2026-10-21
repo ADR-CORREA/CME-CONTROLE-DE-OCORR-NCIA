@@ -35,15 +35,18 @@ function ep_renderizar() {
   let baixo = 0, zero = 0;
   Object.keys(EST_PADRAO.itens).filter(k => _epControla(d, k)).forEach(k => { const s = estStatusCls(it[k] || 0, _epMin(d, k)); if (s === 'zero') zero++; else if (s === 'baixo') baixo++; });
   const total = Object.keys(EST_PADRAO.itens).reduce((s, k) => s + (it[k] || 0), 0);
-  const kpi = (n, l, cls) => '<div class="idv-kpi' + (cls ? ' ' + cls : '') + '"><div class="idv-num">' + n + '</div><div class="idv-rot">' + l + '</div></div>';
+  const kpi = (n, l, cls, dica) => '<div class="idv-kpi' + (cls ? ' ' + cls : '') + '"' + (dica ? ' title="' + esc(dica) + '"' : '') + '><div class="idv-num">' + n + '</div><div class="idv-rot">' + l + '</div></div>';
   const equipe = _epEquipeHoje();
   const html = [];
   html.push('<div class="idv-cab"><div><h1>\u{1F6E1}\u{FE0F} Estoque do Plantão</h1>'
     + '<div class="idv-sub">Um estoque só para as equipes ALFA a ECHO, separado do Estoque do CME. Lance na hora tudo que entra e sai. Equipe de hoje: <b>' + esc(equipe || '—') + '</b></div></div>'
-    + '<div class="idv-acoes">' + _epBtn('\u{1F504} Atualizar', 'ep_renderizar()')
-    + (pode && !d.inventarioEncerradoEm ? _epBtn('\u{2B06} Inventário inicial', "ep_abrirMov('entrada')", 'btn-primary') + _epBtn('\u{2714} Encerrar inventário', 'ep_encerrarInventario()') : '')
-    + (pode ? _epBtn('\u{2B07} Saída', "ep_abrirMov('saida')") + _epBtn('\u{21A9} Devolução', "ep_abrirMov('devolucao')")
-      + _epBtn('\u{1F4E6} Enviar ao Estoque', "ep_abrirMov('envio')") + _epBtn('\u{2715} Baixa', "ep_abrirMov('baixa')", 'btn-danger') + _epBtn('\u{2699}\u{FE0F} Mínimos', 'ep_abrirMinimos()') : '')
+    + '<div class="idv-acoes">' + _epBtn('\u{1F504} Atualizar', 'ep_renderizar()', '', 'Recarrega a tela com os números mais recentes')
+    + (pode && !d.inventarioEncerradoEm ? _epBtn('\u{2B06} Inventário inicial', "ep_abrirMov('entrada')", 'btn-primary', 'Cadastra o que o plantão já tem na sala (só no começo)') + _epBtn('\u{2714} Encerrar inventário', 'ep_encerrarInventario()', '', 'Termina o cadastro inicial; depois disso, item novo só chega pelo Estoque do CME') : '')
+    + (pode ? _epBtn('\u{2B07} Saída', "ep_abrirMov('saida')", '', 'Instalação de tornozeleira ou entrega de equipamento ao monitorado')
+      + _epBtn('\u{21A9} Devolução', "ep_abrirMov('devolucao')", '', 'Equipamento retirado do monitorado que volta para o plantão')
+      + _epBtn('\u{1F4E6} Enviar ao Estoque', "ep_abrirMov('envio')", '', 'Manda o item para o setor de Estoque do CME (conserto, troca ou devolução); o Estoque precisa receber')
+      + _epBtn('\u{2715} Baixa', "ep_abrirMov('baixa')", 'btn-danger', 'Item perdido, quebrado ou inutilizado que sai de vez do estoque')
+      + _epBtn('\u{2699}\u{FE0F} Mínimos', 'ep_abrirMinimos()', '', 'Quantidade mínima de cada item; abaixo disso aparece o alerta de estoque baixo') : '')
     + (admin && d.inventarioEncerradoEm ? _epBtn('Reabrir inventário', 'ep_reabrirInventario()', 'btn-secondary', 'Libera de novo o cadastro de inventário pelo plantão') : '')
     + '</div></div>');
   if (!pode) html.push('<div class="idv-faixa at" style="margin-bottom:12px"><span>\u{1F512} <strong>Modo visualização:</strong> só o plantão lança movimentações aqui.</span></div>');
@@ -53,9 +56,14 @@ function ep_renderizar() {
     : '<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:12px"><span>\u{1F4CB} <strong>Primeiro passo — inventário inicial:</strong> cadastre em "Inventário inicial" tudo que o plantão já tem na sala (com o IMEI/nº de série de cada DPP e módulo). Quando terminar, clique em <b>Encerrar inventário</b>. Depois disso, item novo só entra pelo que o Estoque do CME enviar ("A receber").</span></div>');
   if (d.recontagemEm) html.push('<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:12px"><span>\u{1F9EE} <strong>Recontagem em <span class="idv-data">' + new Date(d.recontagemEm).toLocaleString('pt-BR') + '</span>:</strong> o saldo conta só o que foi lançado a partir dessa data.</span></div>');
   html.push(_epHtmlPendencias('plantao', pode));
-  html.push('<div class="idv-kpis" style="margin-bottom:16px">' + kpi(it[M] || 0, 'Módulo Eletrônico') + kpi(cinta, 'Cintas (total)') + kpi(it['Trava'] || 0, 'Travas') + kpi(it['Carregador da tornozeleira'] || 0, 'Carregadores Tornozeleira')
-    + kpi(it[D] || 0, 'Dispositivos DPP') + kpi(pe.novo[M] || 0, 'Tornozeleiras Novas') + kpi(pe.reutilizado[M] || 0, 'Tornozeleiras Reutilizadas') + kpi(total, 'Total Geral')
-    + kpi(baixo, 'Estoque Baixo', 'at') + kpi(zero, 'Sem Estoque', 'cr') + '</div>');
+  html.push('<div class="idv-kpis" style="margin-bottom:16px">' + kpi(it[M] || 0, 'Módulo Eletrônico', '', 'Tornozeleiras (o aparelho) na sala do plantão')
+    + kpi(cinta, 'Cintas (total)', '', 'Cintas de todos os tamanhos somadas') + kpi(it['Trava'] || 0, 'Travas', '', 'Travas para fechar a cinta na instalação')
+    + kpi(it['Carregador da tornozeleira'] || 0, 'Carregadores Tornozeleira', '', 'Carregadores da tornozeleira disponíveis')
+    + kpi(it[D] || 0, 'Dispositivos DPP', '', 'Aparelhos de botão do pânico para a vítima (DPP)')
+    + kpi(pe.novo[M] || 0, 'Tornozeleiras Novas', '', 'Tornozeleiras que nunca foram usadas')
+    + kpi(pe.reutilizado[M] || 0, 'Tornozeleiras Reutilizadas', '', 'Tornozeleiras que já foram usadas e voltaram para o estoque')
+    + kpi(total, 'Total Geral', '', 'Soma de todos os itens do estoque do plantão')
+    + kpi(baixo, 'Estoque Baixo', 'at', 'Itens abaixo da quantidade mínima definida em Mínimos') + kpi(zero, 'Sem Estoque', 'cr', 'Itens que acabaram (quantidade zero)') + '</div>');
   html.push(_epHtmlTabelas(d, pe));
   html.push('<div class="idv-secao">\u{1F50D} Onde está? (nº de série, IMEI, monitorado, plantonista)</div>'
     + '<input type="text" id="ep-busca" placeholder="Digite o IMEI, nº de série, nome do monitorado..." oninput="ep_consultar(this.value)" style="width:100%;max-width:560px;height:38px;padding:0 12px;border:1px solid var(--idv-borda);border-radius:6px;font-size:14px;background:var(--idv-cartao);color:var(--idv-texto)">'
