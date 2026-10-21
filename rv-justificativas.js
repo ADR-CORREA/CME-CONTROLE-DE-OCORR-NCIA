@@ -333,10 +333,10 @@ async function rvj_antesDeGerar(modo, selecionados) {
   _rvj_parar = false;
   const rodada = ++_rvj_rodada, ov = _rvjOverlay();
   const prog = msg => { const el = document.getElementById('rvj-prog'); if (el) el.textContent = msg; };
-  ov.innerHTML = '<div style="background:#fff;border-radius:8px;max-width:460px;width:100%;padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.3);font-size:.88rem">'
-    + '<div style="font-weight:700;font-size:1rem;color:#0f172a;margin-bottom:6px">\u{1F4CE} Conferindo justificativas no CME…</div>'
-    + '<div id="rvj-prog" style="color:#475569;min-height:2.4em">Abrindo as pastas dos monitorados…</div>'
-    + '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button type="button" id="rvj-cancelar" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.8rem">Cancelar</button><button type="button" id="rvj-parar" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.8rem">Pular a leitura dos documentos</button></div></div>';
+  ov.innerHTML = '<div style="background:var(--idv-cartao);border:1px solid var(--idv-borda);border-radius:8px;max-width:460px;width:100%;padding:18px 20px;box-shadow:0 8px 24px rgba(31,35,40,.18);font-size:14px;color:var(--idv-texto)">'
+    + '<div style="font-weight:600;font-size:16px;color:var(--idv-texto);margin-bottom:6px">\u{1F4CE} Conferindo justificativas no CME…</div>'
+    + '<div id="rvj-prog" style="color:var(--idv-sec);min-height:2.4em">Abrindo as pastas dos monitorados…</div>'
+    + '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button type="button" id="rvj-cancelar" class="idv-btn mini">Cancelar</button><button type="button" id="rvj-parar" class="idv-btn mini">Pular a leitura dos documentos</button></div></div>';
   document.getElementById('rvj-cancelar').onclick = () => { _rvj_rodada++; _rvj_parar = true; ov.remove(); _mostrarToast('Geração cancelada — nenhum relatório foi gerado.'); };
   document.getElementById('rvj-parar').onclick = () => { _rvj_parar = true; prog('Pulando a leitura dos documentos — conferindo só os nomes e as datas de envio…'); };
   const orcamento = { n: _RVJ_LER_TOTAL, naoLidos: 0, pastas: {} }, res = [];
@@ -383,11 +383,11 @@ function _rvjHtmlAchado(a) {
   const onde = ev.origem === 'triagem' ? 'Triagem' : 'pasta ' + esc(ev.pasta || '');
   const datas = ev.dias.length ? (ev.dias.length > 3 ? fmt(ev.dias[0]) + ' a ' + fmt(ev.dias[ev.dias.length - 1]) : ev.dias.map(fmt).join(', ')) : '';
   const titulo = ev.key
-    ? '<a href="#" onclick="r2_visualizarArquivo(\'' + _jsq(ev.key) + '\',\'' + _jsq(ev.nome) + '\');return false" style="color:#1d4ed8;font-weight:600">' + esc(ev.nome) + '</a>'
+    ? '<a href="#" onclick="r2_visualizarArquivo(\'' + _jsq(ev.key) + '\',\'' + _jsq(ev.nome) + '\');return false" style="color:var(--idv-in);font-weight:600">' + esc(ev.nome) + '</a>'
     : '<b>' + esc(ev.nome) + '</b>' + (ev.obs ? ' — <i>' + esc(String(ev.obs).slice(0, 160)) + '</i>' : '');
   return '<li style="margin:2px 0">' + (a.nivel === 'compativel' ? '\u{1F7E5}' : '\u{1F7E8}') + ' ' + titulo
-    + ' <span style="color:#64748b">(' + onde + ' · ' + esc(_RVJ_ROTULO[ev.tipoDoc] || ev.tipoDoc) + (datas ? ' · ' + datas : '') + ')</span>'
-    + '<div style="color:#475569;font-size:.76rem">' + esc(a.motivo) + '</div></li>';
+    + ' <span style="color:var(--idv-sec)">(' + onde + ' · ' + esc(_RVJ_ROTULO[ev.tipoDoc] || ev.tipoDoc) + (datas ? ' · ' + datas : '') + ')</span>'
+    + '<div style="color:var(--idv-sec);font-size:12px">' + esc(a.motivo) + '</div></li>';
 }
 
 function _rvjMostrarDecisao(ov, modo, res, avisos) {
@@ -398,34 +398,34 @@ function _rvjMostrarDecisao(ov, modo, res, avisos) {
       const k = itens.push(Object.assign({ nome: g0.nome }, it)) - 1;
       const id = String(it.v.idOc || ''), dec = (id && _rvj_decisoes[id]) || (it.nivel === 'compativel' ? { acao: 'retirar', motivo: '' } : null);
       const forte = it.nivel === 'compativel';
-      return '<div class="rvj-item" data-k="' + k + '" data-nivel="' + it.nivel + '" style="border:1px solid ' + (forte ? '#fca5a5' : '#fcd34d') + ';border-left:4px solid ' + (forte ? '#dc2626' : '#d97706') + ';background:' + (forte ? '#fef2f2' : '#fffbeb') + ';border-radius:6px;padding:8px 10px;margin:6px 0">'
-        + '<div style="font-weight:700;color:' + (forte ? '#b91c1c' : '#b45309') + '">' + (forte ? '\u{26D4} Possui justificativa compatível na pasta — não enviar' : '\u{26A0}\u{FE0F} Possível justificativa — decida antes de enviar') + '</div>'
-        + '<div style="font-size:.8rem;color:#0f172a;margin:2px 0">' + esc(it.v.tipo) + ' · ID <span style="font-family:ui-monospace,Consolas,monospace">' + esc(id) + '</span> · ' + esc(it.v.ocorreu) + (it.v.duracao ? ' · ' + esc(it.v.duracao) : '') + '</div>'
-        + '<ul style="margin:4px 0 6px 0;padding-left:16px;list-style:none;font-size:.8rem">' + it.achados.slice(0, 4).map(_rvjHtmlAchado).join('') + (it.achados.length > 4 ? '<li style="color:#64748b">… e mais ' + (it.achados.length - 4) + '</li>' : '') + '</ul>'
-        + '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:.8rem">'
+      return '<div class="rvj-item" data-k="' + k + '" data-nivel="' + it.nivel + '" style="border:1px solid var(--idv-borda);border-left:3px solid ' + (forte ? 'var(--idv-cr)' : 'var(--idv-at)') + ';background:var(--idv-cartao);border-radius:6px;padding:8px 12px;margin:6px 0">'
+        + '<div style="font-weight:600;color:' + (forte ? 'var(--idv-cr)' : 'var(--idv-at)') + '">' + (forte ? '\u{26D4} Possui justificativa compatível na pasta — não enviar' : '\u{26A0}\u{FE0F} Possível justificativa — decida antes de enviar') + '</div>'
+        + '<div style="font-size:13px;color:var(--idv-texto);margin:2px 0">' + esc(it.v.tipo) + ' · ID <span class="idv-mono">' + esc(id) + '</span> · <span class="idv-data">' + esc(it.v.ocorreu) + '</span>' + (it.v.duracao ? ' · ' + esc(it.v.duracao) : '') + '</div>'
+        + '<ul style="margin:4px 0 6px 0;padding-left:16px;list-style:none;font-size:13px">' + it.achados.slice(0, 4).map(_rvjHtmlAchado).join('') + (it.achados.length > 4 ? '<li style="color:var(--idv-sec)">… e mais ' + (it.achados.length - 4) + '</li>' : '') + '</ul>'
+        + '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:13px">'
         + '<label style="cursor:pointer"><input type="radio" name="rvj-' + k + '" value="retirar"' + (dec && dec.acao === 'retirar' ? ' checked' : '') + ' onchange="_rvjAtualizar()"> Retirar do relatório</label>'
         + '<label style="cursor:pointer"><input type="radio" name="rvj-' + k + '" value="manter"' + (dec && dec.acao === 'manter' ? ' checked' : '') + ' onchange="_rvjAtualizar()"> Manter (a justificativa não se aplica)</label>'
-        + '<input type="text" class="rvj-motivo" placeholder="Por que manter? (obrigatório)" value="' + esc(dec && dec.motivo || '') + '" oninput="_rvjAtualizar()" style="flex:1;min-width:180px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.8rem;display:' + (dec && dec.acao === 'manter' ? '' : 'none') + '">'
+        + '<input type="text" class="rvj-motivo" placeholder="Por que manter? (obrigatório)" value="' + esc(dec && dec.motivo || '') + '" oninput="_rvjAtualizar()" style="flex:1;min-width:180px;padding:4px 8px;border:1px solid var(--idv-borda);border-radius:6px;font-size:13px;display:' + (dec && dec.acao === 'manter' ? '' : 'none') + '">'
         + '</div></div>';
     }).join('');
-    return '<div style="margin-bottom:10px"><div style="font-weight:700;color:#1F4E78">' + esc(g0.nome) + ' <span style="color:#888;font-weight:400;font-size:.78rem">' + esc(g0.processo) + '</span></div>' + linhas + '</div>';
+    return '<div style="margin-bottom:12px"><div class="idv-nome">' + esc(g0.nome) + ' <span class="idv-mono" style="color:var(--idv-sec);font-weight:400;font-size:12px">' + esc(g0.processo) + '</span></div>' + linhas + '</div>';
   }).join('');
   const continuas = res.filter(r => r.base.continuas.length);
-  const htmlAvisos = (avisos.length || continuas.length) ? '<div style="border:1px solid #cbd5e1;background:#f8fafc;border-left:4px solid #64748b;border-radius:6px;padding:8px 10px;margin-top:6px;font-size:.8rem;color:#334155">'
-    + '<div style="font-weight:700;margin-bottom:2px">\u{2139}\u{FE0F} Confira também</div><ul style="margin:0;padding-left:18px">'
+  const htmlAvisos = (avisos.length || continuas.length) ? '<div style="border:1px solid var(--idv-borda);background:var(--idv-fundo);border-left:3px solid var(--idv-sec);border-radius:6px;padding:8px 12px;margin-top:6px;font-size:13px;color:var(--idv-texto)">'
+    + '<div style="font-weight:600;margin-bottom:2px">\u{2139}\u{FE0F} Confira também</div><ul style="margin:0;padding-left:18px">'
     + avisos.map(a => '<li>' + esc(a) + '</li>').join('')
     + continuas.map(r => '<li>' + esc(r.grupo[0].nome) + ' tem autorização/declaração contínua (trabalho, estudo) na pasta: '
-      + r.base.continuas.slice(0, 3).map(a => '<a href="#" onclick="r2_visualizarArquivo(\'' + _jsq(a.key) + '\',\'' + _jsq(a.nome) + '\');return false" style="color:#1d4ed8">' + esc(a.nome) + '</a>').join(', ')
+      + r.base.continuas.slice(0, 3).map(a => '<a href="#" onclick="r2_visualizarArquivo(\'' + _jsq(a.key) + '\',\'' + _jsq(a.nome) + '\');return false" style="color:var(--idv-in)">' + esc(a.nome) + '</a>').join(', ')
       + ' — veja se o horário dela cobre alguma violação.</li>').join('')
     + '</ul></div>' : '';
-  ov.innerHTML = '<div style="background:#fff;border-radius:8px;max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.3);font-size:.86rem">'
-    + '<div style="padding:14px 18px 8px;border-bottom:1px solid #e2e8f0"><div style="font-weight:700;font-size:1rem;color:#0f172a">\u{1F4CE} Cruzamento com as justificativas do CME</div>'
-    + '<div style="color:#475569;font-size:.8rem;margin-top:2px">Conferimos as pastas dos monitorados em Arquivos e os atendimentos de Justificativa da Triagem. Violação com justificativa não vai ao Judiciário sem a sua decisão: as <b>compatíveis</b> já estão marcadas para sair; as <b>possíveis</b> precisam que você escolha.</div></div>'
-    + '<div style="padding:8px 18px;overflow-y:auto;flex:1">' + (blocos || '<div style="color:#15803d;font-weight:600;margin:6px 0">\u{2705} Nenhuma justificativa encontrada para estas violações.</div>') + htmlAvisos + '</div>'
-    + '<div style="padding:10px 18px;border-top:1px solid #e2e8f0;display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap">'
-    + '<span id="rvj-contagem" style="flex:1;font-size:.78rem;color:#475569"></span>'
-    + '<button type="button" onclick="document.getElementById(\'rvj-modal\').remove()" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:6px 14px;cursor:pointer">Cancelar</button>'
-    + '<button type="button" id="rvj-ok" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-weight:700;cursor:pointer">Gerar relatório</button></div></div>';
+  ov.innerHTML = '<div style="background:var(--idv-cartao);border:1px solid var(--idv-borda);border-radius:8px;max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(31,35,40,.18);font-size:14px;color:var(--idv-texto)">'
+    + '<div style="padding:14px 18px 10px;border-bottom:1px solid var(--idv-borda)"><div style="font-weight:600;font-size:16px;color:var(--idv-texto)">\u{1F4CE} Cruzamento com as justificativas do CME</div>'
+    + '<div style="color:var(--idv-sec);font-size:13px;margin-top:2px">Conferimos as pastas dos monitorados em Arquivos e os atendimentos de Justificativa da Triagem. Violação com justificativa não vai ao Judiciário sem a sua decisão: as <b>compatíveis</b> já estão marcadas para sair; as <b>possíveis</b> precisam que você escolha.</div></div>'
+    + '<div style="padding:8px 18px;overflow-y:auto;flex:1">' + (blocos || '<div style="color:var(--idv-ok);font-weight:600;margin:6px 0">\u{2705} Nenhuma justificativa encontrada para estas violações.</div>') + htmlAvisos + '</div>'
+    + '<div style="padding:10px 18px;border-top:1px solid var(--idv-linha);display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap">'
+    + '<span id="rvj-contagem" style="flex:1;font-size:13px;color:var(--idv-sec)"></span>'
+    + '<button type="button" class="idv-btn mini" onclick="document.getElementById(\'rvj-modal\').remove()">Cancelar</button>'
+    + '<button type="button" id="rvj-ok" class="idv-btn mini criar">Gerar relatório</button></div></div>';
   document.getElementById('rvj-ok').onclick = () => _rvjConfirmar(modo, res, itens);
   _rvjAtualizar();
 }
