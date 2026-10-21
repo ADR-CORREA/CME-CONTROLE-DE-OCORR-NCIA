@@ -243,3 +243,139 @@ tr[tabindex]:focus-visible { outline-offset: -2px !important; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }
+
+
+/* ═══════════ FASE 2 do novo visual (20/10/2026): base única do guia ═══════════
+   Sem tocar nos modelos de impressão (que abrem em janela própria, sem este arquivo).
+   1) nenhuma letra abaixo de 12 px na tela (rem do CME = 15 px; .72rem = 10,8 px ficava ilegível) */
+.role-badge, .notif-badge, .form-section-title, .topbar-brand .sub, .est-badge, .tri-badge, .est-kpi-label, .user-role,
+.dchart-title, .login-footer, .badge { font-size: 12px; }
+.pagination-btns button, .role-select { font-size: 14px; }
+[style*="font-size:.6rem"],
+[style*="font-size: .6rem"],
+[style*="font-size:.62rem"],
+[style*="font-size: .62rem"],
+[style*="font-size:.65rem"],
+[style*="font-size: .65rem"],
+[style*="font-size:.66rem"],
+[style*="font-size: .66rem"],
+[style*="font-size:.67rem"],
+[style*="font-size: .67rem"],
+[style*="font-size:.68rem"],
+[style*="font-size: .68rem"],
+[style*="font-size:.7rem"],
+[style*="font-size: .7rem"],
+[style*="font-size:.71rem"],
+[style*="font-size: .71rem"],
+[style*="font-size:.72rem"],
+[style*="font-size: .72rem"],
+[style*="font-size:.73rem"],
+[style*="font-size: .73rem"],
+[style*="font-size:.74rem"],
+[style*="font-size: .74rem"],
+[style*="font-size:.75rem"],
+[style*="font-size: .75rem"],
+[style*="font-size:.76rem"],
+[style*="font-size: .76rem"],
+[style*="font-size:.77rem"],
+[style*="font-size: .77rem"],
+[style*="font-size:.78rem"],
+[style*="font-size: .78rem"],
+[style*="font-size:.79rem"],
+[style*="font-size: .79rem"],
+[style*="font-size:8px"],
+[style*="font-size: 8px"],
+[style*="font-size:9px"],
+[style*="font-size: 9px"],
+[style*="font-size:10px"],
+[style*="font-size: 10px"],
+[style*="font-size:10.5px"],
+[style*="font-size: 10.5px"],
+[style*="font-size:11px"],
+[style*="font-size: 11px"],
+[style*="font-size:11.5px"],
+[style*="font-size: 11.5px"] { font-size: 12px !important; }
+
+/* 2) cinzas claros demais para ler (escritos direto no elemento) → cinza do guia; fundo escuro fica de fora */
+[style^="color:#94a3b8" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color:#94a3b8" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color:#94a3b8" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color: #94a3b8" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color: #94a3b8" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color: #94a3b8" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color:#9ca3af" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color:#9ca3af" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color:#9ca3af" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color: #9ca3af" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color: #9ca3af" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color: #9ca3af" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color:#888" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color:#888" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color:#888" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color: #888" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color: #888" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color: #888" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color:#888888" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color:#888888" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color:#888888" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color: #888888" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color: #888888" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color: #888888" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color:#999" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color:#999" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color:#999" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color: #999" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color: #999" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color: #999" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color:#999999" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color:#999999" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color:#999999" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color: #999999" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color: #999999" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color: #999999" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color:#aaa" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color:#aaa" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color:#aaa" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color: #aaa" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color: #aaa" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color: #aaa" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color:#aaaaaa" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color:#aaaaaa" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color:#aaaaaa" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color: #aaaaaa" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color: #aaaaaa" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color: #aaaaaa" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color:#a0aec0" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color:#a0aec0" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color:#a0aec0" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color: #a0aec0" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color: #a0aec0" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color: #a0aec0" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color:#bbb" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color:#bbb" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color:#bbb" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color: #bbb" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color: #bbb" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color: #bbb" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color:#b0b0b0" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color:#b0b0b0" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color:#b0b0b0" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style^="color: #b0b0b0" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*=";color: #b0b0b0" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *),
+[style*="; color: #b0b0b0" i]:not(.modal-header *):not(.topbar *):not(.idv-bloco-cab *):not(.idv-chip.ativo *):not([style*="background:#1"] *):not([style*="background:#0"] *) { color: var(--idv-sec) !important; }
+
+/* 3) peças que tinham ficado de fora da camada comum */
+.btn-outline { background: var(--idv-cartao); color: var(--idv-texto); border: 1px solid var(--idv-borda); border-radius: 6px; font-weight: 600; font-size: 13px; }
+.btn-outline:hover { border-color: var(--idv-in); }
+.est-kpi { background: var(--idv-cartao); border: 1px solid var(--idv-borda); border-top: 4px solid var(--idv-sec); border-left: 1px solid var(--idv-borda); border-radius: 8px; box-shadow: none; }
+.est-kpi.alerta { border-top-color: var(--idv-at); border-left-color: var(--idv-borda); }
+.est-kpi.perigo { border-top-color: var(--idv-cr); border-left-color: var(--idv-borda); }
+.est-kpi-num { font-size: 28px; font-weight: 600; color: var(--idv-texto); font-variant-numeric: tabular-nums; }
+.est-kpi.perigo .est-kpi-num { color: var(--idv-cr); }
+.est-kpi-label { font-size: 13px; font-weight: 600; color: var(--idv-texto); }
+.user-chip { border-radius: 6px; }
+.est-badge, .tri-badge { border-radius: 3px; border-left: 2px solid currentColor; font-weight: 600; letter-spacing: .04em; }
+
+/* 4) ícones coloridos (bloco cme-icones) viram ícones de traço na cor do texto, como pede o guia */
+.cme-ic { background: none !important; box-shadow: none; border-radius: 0; width: 1.15em; height: 1.15em; margin-right: .3em; top: 0; vertical-align: -.16em; }
+.cme-ic svg { width: 100%; height: 100%; stroke: currentColor; }
