@@ -274,14 +274,14 @@ function _epHtmlKit() {
   const tams = EST_TAMANHOS.filter(t => saldo('Cinta_' + t) > 0), cinza = 'font-size:13px;color:var(--idv-sec)';
   const linha = (id, rot, resto) => '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 0 4px;border-top:1px solid var(--idv-linha)">'
     + '<label style="display:flex;gap:8px;align-items:center;min-width:130px;font-weight:600;font-size:14px;cursor:pointer"><input type="checkbox" id="' + id + '" checked> ' + rot + '</label>' + resto + '</div>';
-  const qtd = (id, k) => '<input type="number" id="' + id + '" min="1" value="1" style="width:80px;padding:5px 8px;border:1px solid var(--idv-borda);border-radius:6px;font-size:14px"><span style="' + cinza + '">' + saldo(k) + ' no plantão</span>';
+  const qtd = (id, k, unid) => '<input type="number" id="' + id + '" min="1" value="1" style="width:80px;padding:5px 8px;border:1px solid var(--idv-borda);border-radius:6px;font-size:14px"><span style="' + cinza + '">' + saldo(k) + (unid ? ' ' + unid : '') + ' no plantão</span>';
   return '<div class="form-section-title" style="margin-top:8px">Kit de instalação — desmarque o que não vai para este monitorado</div>'
     + linha('ep-k-usa-mod', 'Módulo', '<span style="' + cinza + '">marque o nº de série (' + mods.length + ' no plantão)</span>')
     + _epHtmlListaUnid(mods, 'radio', 'ep-k-mod', 'nº de série')
     + linha('ep-k-usa-cinta', 'Cinta', tams.length
       ? '<select id="ep-k-tam" style="padding:5px 8px;border:1px solid var(--idv-borda);border-radius:6px;font-size:14px"><option value="">Tamanho...</option>' + tams.map(t => '<option value="' + t + '">' + t + ' (' + saldo('Cinta_' + t) + ' no plantão)</option>').join('') + '</select>'
       : '<span style="color:var(--idv-at);font-size:13px">Nenhuma cinta no plantão</span>')
-    + linha('ep-k-usa-trava', 'Trava', qtd('ep-k-qtd-trava', 'Trava'))
+    + linha('ep-k-usa-trava', 'Pares de travas', qtd('ep-k-qtd-trava', 'Trava', 'pares'))
     + linha('ep-k-usa-carr', 'Carregador', qtd('ep-k-qtd-carr', _EP_CARR));
 }
 // monta as saídas do kit (uma por item marcado); null = avisou e parou
@@ -296,7 +296,7 @@ function _epOpsKit(v) {
     if (!v('ep-k-tam')) { alert('Escolha o tamanho da cinta (ou desmarque "Cinta").'); return null; }
     ops.push({ categoria: cat, item: 'Cinta', tamanho: v('ep-k-tam'), estado: '', qtd: 1 });
   }
-  for (const [usa, campo, item, rot] of [['ep-k-usa-trava', 'ep-k-qtd-trava', 'Trava', 'Trava'], ['ep-k-usa-carr', 'ep-k-qtd-carr', _EP_CARR, 'Carregador']]) {
+  for (const [usa, campo, item, rot] of [['ep-k-usa-trava', 'ep-k-qtd-trava', 'Trava', 'Pares de travas'], ['ep-k-usa-carr', 'ep-k-qtd-carr', _EP_CARR, 'Carregador']]) {
     if (!marcado(usa)) continue;
     if (!(parseInt(v(campo), 10) >= 1)) { alert('Informe a quantidade de ' + rot + ' (mínimo 1) ou desmarque.'); return null; }
     ops.push({ categoria: cat, item, tamanho: '', estado: '', qtd: v(campo) });
@@ -368,7 +368,7 @@ async function ep_confirmarMov() {
   const ok = kit ? await ep_salvarKit(ops, extra) : await ep_salvarMov(tipo, op, extra);
   if (!ok) return;
   fecharModal('ep-modal');
-  _mostrarToast(kit ? '\u{2713} Saída do kit registrada para ' + mon + ': ' + ops.map(o => o.item === _EP_MOD ? 'módulo ' + o.seriais[0] : o.item === 'Cinta' ? 'cinta ' + o.tamanho : (o.item === 'Trava' ? 'trava' : 'carregador') + ' ×' + o.qtd).join(', ') + '.'
+  _mostrarToast(kit ? '\u{2713} Saída do kit registrada para ' + mon + ': ' + ops.map(o => o.item === _EP_MOD ? 'módulo ' + o.seriais[0] : o.item === 'Cinta' ? 'cinta ' + o.tamanho : (o.item === 'Trava' ? 'pares de travas' : 'carregador') + ' ×' + o.qtd).join(', ') + '.'
     : '\u{2713} ' + EP_TIPO[tipo] + ' registrada no estoque do Plantão.' + (tipo === 'envio' ? ' Fica "a receber" no Estoque do CME.' : ''), 'ok');
   ep_renderizar(); try { _dashEstoqueDisp(); } catch (e) {}
 }
