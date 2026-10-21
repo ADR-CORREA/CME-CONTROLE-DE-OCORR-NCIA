@@ -58,7 +58,7 @@ function ep_renderizar() {
   if (d.recontagemEm) html.push('<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:12px"><span>\u{1F9EE} <strong>Recontagem em <span class="idv-data">' + new Date(d.recontagemEm).toLocaleString('pt-BR') + '</span>:</strong> o saldo conta só o que foi lançado a partir dessa data.</span></div>');
   html.push(_epHtmlPendencias('plantao', pode));
   html.push('<div class="idv-kpis" style="margin-bottom:16px">' + kpi(it[M] || 0, 'Módulo Eletrônico', '', 'Tornozeleiras (o aparelho) na sala do plantão')
-    + kpi(cinta, 'Cintas (total)', '', 'Cintas de todos os tamanhos somadas') + kpi(it['Trava'] || 0, 'Travas', '', 'Travas para fechar a cinta na instalação')
+    + kpi(cinta, 'Cintas (total)', '', 'Cintas de todos os tamanhos somadas') + kpi(it['Trava'] || 0, 'Pares de travas', '', 'Pares de travas para fechar a cinta na instalação')
     + kpi(it['Carregador da tornozeleira'] || 0, 'Carregadores Tornozeleira', '', 'Carregadores da tornozeleira disponíveis')
     + kpi(it[D] || 0, 'Dispositivos DPP', '', 'Aparelhos de botão do pânico para a vítima (DPP)')
     + kpi(pe.novo[M] || 0, 'Tornozeleiras Novas', '', 'Tornozeleiras que nunca foram usadas')
