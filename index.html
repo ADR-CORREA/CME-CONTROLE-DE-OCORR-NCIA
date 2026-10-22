@@ -20821,6 +20821,8 @@ async function rv_gerarAutomatico(nomeOuFiltros, ini, fim, opts){
     tipo:t(r.tipo_ocorrencia), idOc:t(r.id_ocorrencia), ocorreu:_rvOcorreuNorm(r.data_ocorrencia_inicio,null,colUS),
     duracao:t(r.duracao_formatada), disp:t(r.id_dispositivo_usuario).replace(/\D/g,''),
     fim:r.data_ocorrencia_fim?_rvOcorreuNorm(r.data_ocorrencia_fim,null,colUS):'', endereco:'', contato:'',
+    // tratamento no AKILES — usado pela conferência antes de gerar (rv-conferencia.js)
+    situacao:t(r.ocorrencia_situacao_ocorrencia), atendimento:t(r.ocorrencia_situacao_atendimento), comentario:t(r.comentario),
   })).filter(r=>r.nome);
   const mapa={};
   linhas.forEach(r=>{ const k=r.nome+'|||'+r.processo; if(!mapa[k]) mapa[k]=[]; if(r.idOc && mapa[k].some(o=>o.idOc===r.idOc)) return; mapa[k].push(r); });
@@ -20893,6 +20895,10 @@ function rv_importarPlanilha(input) {
     const cFim     = pick(['Data Final','Data de Fim','Data de Termino']);
     const cEndereco= pick(['Endereço','Endereco']);
     const cContato = pick(['Contato','Telefone','Celular','Fone']);
+    // tratamento do operador (conferência antes de gerar); planilha sem a coluna → fica undefined e a regra não se aplica
+    const cCom     = pick(['Comentario','Comentário']);
+    const cAtend   = pick(['Tipo Atendimento','Situacao Atendimento','Situação Atendimento']);
+    const cSit     = cols.find(c => /^situa[cç][aã]o( (da )?ocorr[eê]ncia)?$/i.test(String(c).trim())) || null;
 
     // Detecta se a COLUNA de data está em US (MM/DD) ou BR (DD/MM), olhando TODAS
     // as datas do texto original. Resolve a ambiguidade de datas com dia <=12 (que
@@ -20925,6 +20931,9 @@ function rv_importarPlanilha(input) {
       fim:         cFim ? _rvOcorreuNorm(r[cFim], rowsData[i] ? rowsData[i][cFim] : null, _colDataUS) : '',
       endereco:    cEndereco ? fixEnc(r[cEndereco]) : '',
       contato:     cContato  ? fixEnc(r[cContato])  : '',
+      situacao:    cSit   ? fixEnc(r[cSit])   : undefined,
+      atendimento: cAtend ? fixEnc(r[cAtend]) : undefined,
+      comentario:  cCom   ? fixEnc(r[cCom])   : undefined,
     })).filter(r => r.nome);
 
     // Agrupar por nome+processo
@@ -21395,6 +21404,8 @@ function rv_gerarSelecionados(modo = 'html', gruposConferidos) {
   if (!infoAss) { _mostrarToast('Selecione o servidor assinante.', 'erro'); return; }
   // Antes de gerar: violação com justificativa no CME não vai ao Judiciário sem decisão do servidor.
   if (!gruposConferidos) {
+    // 1º a conferência das violações (registro do AKILES, tratamento, GPS); ela segue para as justificativas
+    if (typeof rvc_antesDeGerar === 'function') { rvc_antesDeGerar(modo, selecionados); return; }
     if (typeof rvj_antesDeGerar === 'function') { rvj_antesDeGerar(modo, selecionados); return; }
     // o módulo não carregou (rede/cache): nunca gerar calado sem o cruzamento
     if (!confirm('O cruzamento com as justificativas do CME não carregou (recarregue a página com Ctrl+F5).\n\nGerar o relatório mesmo assim, SEM conferir as justificativas da pasta?')) return;
@@ -29853,5 +29864,6 @@ function estat_exportarResultado() {
 <script src="passagem-servico.js?v=20261021b"></script>
 <script src="upload-imagem-pdf.js?v=20261020f4"></script>
 <script src="assinatura-foto.js?v=20261021a"></script>
+<script src="rv-conferencia.js?v=20261022a"></script>
 </body>
 </html>
