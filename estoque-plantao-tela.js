@@ -102,7 +102,32 @@ function _epHtmlPendencias(lado, pode) {
     + sec('\u{1F69A} Enviado ao ' + outro + ' — aguardando receber', p.aguardando, t => _epHtmlTransf(t, ''))
     + sec('\u{23F3} Você recusou — aguardando o ' + outro + ' receber de volta', p.recuseiAguardando, t => _epHtmlTransf(t, ''));
 }
-// dentro da aba Estoque do CME: só as transferências (o estoque do plantão em si não aparece lá)
+/* Aba Estoque do CME › sub-aba "Estoque do Plantão" (pedido de 22/10/2026): o setor VÊ o estoque do plantão,
+   sem nenhum botão de alterar. Relê do banco ao abrir (o cache pode estar velho); sem conexão, mostra o que tem. */
+async function ep_renderizarVisaoCme() {
+  const el = document.getElementById('est-panel-plantao-ver'); if (!el) return;
+  el.innerHTML = '<div class="idv-vazio">Carregando o estoque do Plantão...</div>';
+  let base = null, aoVivo = true;
+  try { base = await _epLerFresco(EP_STORE); } catch (e) { aoVivo = false; base = carregarStore(EP_STORE, null); }
+  const d = ep_normalizar(base, EST_PADRAO.itens), it = d.itens, pe = ep_porEstado(d, EST_PADRAO.itens, ITENS_COM_SERIAL);
+  const M = 'Módulo eletrônico de monitoração', D = 'Dispositivo DPP';
+  const cinta = EST_TAMANHOS.reduce((s, t) => s + (it['Cinta_' + t] || 0), 0);
+  const total = Object.keys(EST_PADRAO.itens).reduce((s, k) => s + (it[k] || 0), 0);
+  const aCaminho = ep_pendentes(ep_getTransf(), EP_SETOR_PARA_PLANTAO);
+  const kpi = (n, l, leg) => '<div class="idv-kpi"><span class="idv-num">' + n + '</span><span class="idv-rot">' + l + '</span>' + (leg ? '<span class="idv-leg">' + leg + '</span>' : '') + '</div>';
+  const ult = d.movimentacoes[0];
+  el.innerHTML = '<div class="idv-faixa" style="margin:12px 0"><span>\u{1F441}\u{FE0F} <strong>Somente visualização:</strong> o que está hoje na sala do Plantão. Quem lança é o próprio Plantão.'
+      + (ult ? ' Último lançamento em <span class="idv-data">' + new Date(ult.ts).toLocaleString('pt-BR') + '</span>' + (ult.responsavel ? ' por ' + esc(ult.responsavel) : '') + '.' : ' Nenhum lançamento ainda.')
+      + (aoVivo ? '' : ' <b>Sem conexão com o banco agora — números do último carregamento.</b>') + '</span>'
+      + _epBtn('\u{1F504} Atualizar', 'ep_renderizarVisaoCme()', '', 'Busca os números mais recentes do Plantão') + '</div>'
+    + (aCaminho.length ? '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:8px">\u{1F69A} ' + aCaminho.length + ' envio(s) do CME ainda não recebido(s) pelo Plantão — não entram nos números abaixo.</div>' : '')
+    + '<div class="idv-kpis" style="margin-bottom:16px">' + kpi(it[M] || 0, 'Módulo eletrônico', 'novas <b class="idv-mono">' + (pe.novo[M] || 0) + '</b> · reutilizadas <b class="idv-mono">' + (pe.reutilizado[M] || 0) + '</b>')
+    + kpi(cinta, 'Cintas (total)') + kpi(it['Trava'] || 0, 'Pares de travas') + kpi(it['Carregador da tornozeleira'] || 0, 'Carregadores')
+    + kpi(it[D] || 0, 'Dispositivos DPP') + kpi(total, 'Total geral', 'todas as peças') + '</div>'
+    + _epHtmlTabelas(d, pe);
+}
+
+// dentro da aba Estoque do CME: as transferências (o estoque do plantão em si fica na sub-aba "Estoque do Plantão", só leitura)
 function _epRenderSetorPendentes() {
   const el = document.getElementById('ep-setor-pendentes'); if (!el) return;
   el.innerHTML = ep_podeVerCme() ? _epHtmlPendencias('setor', podeAlterarEstoque()) : '';

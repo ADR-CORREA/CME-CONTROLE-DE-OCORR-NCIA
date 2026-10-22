@@ -3424,6 +3424,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       <div class="sub-tabs" style="margin-bottom:0">
         <div class="sub-tab active" id="est-stab-estoque"  onclick="mudarSubAbaEstoque('estoque')">📦 Estoque</div>
         <div class="sub-tab"       id="est-stab-consultar" onclick="mudarSubAbaEstoque('consultar')">🔍 Consultar</div>
+        <div class="sub-tab"       id="est-stab-plantao"   onclick="mudarSubAbaEstoque('plantao')">🛡️ Estoque do Plantão</div>
       </div>
 
       <!-- Sub-panel Estoque -->
@@ -3487,6 +3488,9 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           <div class="pagination-btns" id="est-hist-pag-btns"></div>
         </div>
       </div><!-- /est-panel-estoque -->
+
+      <!-- Sub-panel Estoque do Plantão: só visualização (estoque-plantao-tela.js) -->
+      <div id="est-panel-plantao-ver" class="sub-panel" style="display:none"></div>
 
       <!-- Sub-panel Consultar -->
       <div id="est-panel-consultar" class="sub-panel" style="display:none">
@@ -15711,6 +15715,9 @@ function mudarSubAbaEstoque(aba) {
   document.getElementById('est-panel-consultar').style.display = aba === 'consultar' ? 'block' : 'none';
   document.getElementById('est-stab-estoque').classList.toggle('active',  aba === 'estoque');
   document.getElementById('est-stab-consultar').classList.toggle('active', aba === 'consultar');
+  document.getElementById('est-panel-plantao-ver').style.display = aba === 'plantao' ? 'block' : 'none';
+  document.getElementById('est-stab-plantao').classList.toggle('active', aba === 'plantao');
+  if (aba === 'plantao' && typeof ep_renderizarVisaoCme === 'function') ep_renderizarVisaoCme();
   if (aba === 'consultar') {
     const inp = document.getElementById('est-consultar-input');
     if (inp) { inp.value = ''; inp.focus(); }
@@ -29842,7 +29849,7 @@ function estat_exportarResultado() {
 <script src="radar-mandado.js?v=20261020f4"></script>
 <script src="rv-justificativas.js?v=20261020f4"></script>
 <script src="estoque-plantao.js?v=20261021b"></script>
-<script src="estoque-plantao-tela.js?v=20261021e"></script>
+<script src="estoque-plantao-tela.js?v=20261022a"></script>
 <script src="passagem-servico.js?v=20261021b"></script>
 <script src="upload-imagem-pdf.js?v=20261020f4"></script>
 <script src="assinatura-foto.js?v=20261021a"></script>
