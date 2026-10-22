@@ -786,7 +786,7 @@ body { background: var(--idv-quadro); }
 .topbar-menu:hover { background: var(--idv-ativo); }
 .btn-primary:hover, .btn-refresh:hover, .idv-btn.criar:hover { background: #142b47; border-color: #142b47; }
 /* cabeçalho da tabela um tom acima das linhas (continua claro, sem caixa alta) */
-table.idv-tabela thead tr, table.idv-tabela th, .data-table th:not([style*="color"]):not([style*="background"]) { background: var(--idv-th) !important; }
+table.idv-tabela thead tr, table.idv-tabela th, .data-table thead tr, .data-table th:not([style*="color"]):not([style*="background"]) { background: var(--idv-th) !important; }
 /* campos de digitar um pouco mais claros que o cartão: se veem como "lugar de escrever" */
 .form-field input, .form-field select, .form-field textarea, .idv-busca, .idv-select, .form-group input,
 input:not([type]), input[type="text"], input[type="search"], input[type="number"], input[type="date"], input[type="datetime-local"], input[type="time"],
@@ -795,7 +795,12 @@ input[type="email"], input[type="password"], select, textarea { background-color
 :is(.admin-card, .dash-card, .dchart-card, .dsec-card, .est-kpi, .kpi-card, .modal-box, .tri-filtros, .r2-pasta-card,
   .pagination-btns button, .btn-secondary, .dalert-pill),
 [style*="background:#fff;"], [style$="background:#fff"], [style*="background: #fff;"], [style*="background:#ffffff"], [style*="background: #ffffff"],
-[style*="background:white"], [style*="background: white"] { background: var(--idv-cartao) !important; }
+[style*="background:white"], [style*="background: white"],
+[style*="background: rgb(255, 255, 255)"], [style*="background-color: rgb(255, 255, 255)"] { background: var(--idv-cartao) !important; }
+/* faixas "quase brancas" das telas antigas (cabeçalho/rodapé de janela, campo só de leitura) → um degrau abaixo do cartão.
+   O rgb(...) é como o navegador regrava a cor posta por código (el.style.background / cssText). */
+[style*="background:#f8fafc"], [style*="background: #f8fafc"], [style*="background:#fafafa"],
+[style*="background: rgb(248, 250, 252)"] { background: var(--idv-th) !important; }
 .escx { --bg: var(--idv-cartao) !important; --el: var(--idv-cartao) !important; --sf: var(--idv-fundo) !important; --bd: var(--idv-borda) !important; }
 @media (max-width: 900px) {
   #app > .main { margin: 0; border: 0; border-radius: 0; }
