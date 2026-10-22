@@ -21421,9 +21421,11 @@ function rv_gerarTodos(modo) {
 
 // gruposConferidos: vem do cruzamento com as justificativas (rv-justificativas.js), já sem as violações retiradas.
 function rv_gerarSelecionados(modo = 'html', gruposConferidos) {
-  const selecionados = gruposConferidos || _rv_grupos.filter((_, i) =>
+  // os "sem violação" (tudo retirado) chegam pela fila _rv_semViolPend, junto com os conferidos
+  const selecionados = gruposConferidos ? gruposConferidos.concat(_rv_semViolPend) : _rv_grupos.filter((_, i) =>
     document.getElementById(`rv-chk-${i}`)?.checked
   );
+  _rv_semViolPend = [];
   if (!selecionados.length) { _mostrarToast('Selecione ao menos um monitorado.', 'erro'); return; }
 
   // Obter info de assinantes (mesma lista do dropdown — inclui o logado)
@@ -21470,7 +21472,7 @@ function rv_gerarSelecionados(modo = 'html', gruposConferidos) {
           const a    = document.createElement('a');
           const nome = _safe(grupo[0]?.nome || 'monitorado').slice(0,60);
           const proc = _safe(grupo[0]?.processo || '').slice(0,40);
-          a.href = url; a.download = `${nome}${proc ? ' - ' + proc : ''}.docx`;
+          a.href = url; a.download = `${nome}${proc ? ' - ' + proc : ''}${_rvSemViolacao(grupo) ? ' - SEM VIOLAÇÃO' : ''}.docx`;
           document.body.appendChild(a); a.click(); document.body.removeChild(a);
           setTimeout(()=>URL.revokeObjectURL(url), 4000);
           ok++;
@@ -21631,6 +21633,21 @@ function _rvCapa(r0){
   return { endereco:t(r0.endereco), contato:t(r0.contato), inicio:t(r0.dataInicio), termino:t(r0.dataTermino),
     periodo: t(r0.periodoIni)&&t(r0.periodoFim) ? t(r0.periodoIni)+' a '+t(r0.periodoFim) : '' };
 }
+// Monitorado com TODAS as violações retiradas na conferência (espelhamento, horário da decisão…) ou nas
+// justificativas: sai o relatório "sem violação" (capa + aviso + síntese), sem a página de violações.
+let _rv_semViolPend = [];
+function _rvSemViolacao(g){ return !!(g && g.length && g.every(x => x._retirada)); }
+function _rvAdiarSemViolacao(grupos){ _rv_semViolPend = _rv_semViolPend.concat(grupos.map(g => g.map(v => Object.assign({}, v, { _retirada: true })))); }
+function _rvSemViolTextos(capa, nome){
+  const per = capa.periodo || '___ a ___';
+  return {
+    intro: 'Este relatório apresenta o resultado da análise dos registros do sistema de monitoração eletrônica no período de ' + per + '.',
+    destaque: 'NO PERÍODO, NÃO HOUVE VIOLAÇÃO DAS CONDIÇÕES DA MONITORAÇÃO ELETRÔNICA.',
+    fonte: 'As informações contidas neste relatório foram extraídas diretamente do Sistema AKILES AP, plataforma oficial de monitoramento eletrônico adotada pela Central de Monitoramento Eletrônico (CME/IAPEN-AP), e analisadas por esta Central.',
+    sintese: 'Da análise dos registros do período de ' + per + ', verifica-se que não houve violação das condições da monitoração eletrônica pelo monitorado ' + (nome || 'XXX') + '.',
+    ressalva: 'Ressalta-se que o presente relatório possui finalidade técnica e informativa. A análise jurídica quanto às consequências processuais e executórias compete ao Juízo competente, permanecendo esta Central à disposição para eventuais esclarecimentos complementares.',
+  };
+}
 // Ficha do AKILES (robô, pedido "F_") → endereço, contato e datas da monitoração em todas as linhas do grupo.
 // Só aplica se o processo do relatório estiver entre os processos da ficha (evita dado de homônimo).
 function _rvAplicarFicha(grupo, f){
@@ -21677,6 +21694,17 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
   body.push(dado('PROCESSO Nº',proc||'XXX')); body.push(dado('VARA',vara||'XXX')); body.push(dado('COMARCA',comarca||'XXX'));
   body.push(secao('DADOS DA MONITORAÇÃO'));
   body.push(_rvPara([_ar('DATA DE INÍCIO: ',{b:true}),_ar((capa.inicio||'XXX')+'          '),_ar('DATA DE TÉRMINO: ',{b:true}),_ar(capa.termino||'XXX')],{after:8,line:16.5}));
+  if(_rvSemViolacao(grupo)){
+    // relatório "sem violação": capa + aviso + resumo zerado + síntese, sem a página de violações
+    const tx=_rvSemViolTextos(capa,nome), _p=(t,o)=>_rvPara([_ar(t)],Object.assign({jc:'both',before:6,after:6,line:16.5,indent:1.25},o||{}));
+    body.push(_rvPara([_ar(tx.intro)],{jc:'both',after:8,line:16.5}));
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>${_RV_TBLBORDERS}</w:tblPr><w:tblGrid><w:gridCol w:w="9638"/></w:tblGrid><w:tr>${_rvTcTxt(tx.destaque,{b:true,jc:'center',font:A,size:SZ})}</w:tr></w:tbl>`);
+    body.push(_rvPara([_ar('RESUMO QUANTITATIVO DE VIOLAÇÕES:',{b:true})],{before:10,after:4,line:16.5}));
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>${_RV_TBLBORDERS}</w:tblPr><w:tblGrid><w:gridCol w:w="6500"/><w:gridCol w:w="1200"/></w:tblGrid><w:tr>${_rvTcTxt('Tipo de Violação',{b:true,font:A,size:10})}${_rvTcTxt('Qtd.',{b:true,jc:'center',font:A,size:10})}</w:tr><w:tr>${_rvTcTxt('TOTAL',{b:true,font:A,size:10})}${_rvTcTxt('0',{b:true,jc:'center',font:A,size:10})}</w:tr></w:tbl>`);
+    body.push(_p(tx.fonte,{before:10}));
+    body.push(secao('SÍNTESE TÉCNICA'));
+    body.push(_p(tx.sintese)); body.push(_p(tx.ressalva));
+  } else {
   body.push(_rvPara([_ar('Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos dos deveres e obrigações do monitorado, gerados pelo sistema de monitoração eletrônica no período de '+(capa.periodo||'___ a ___')+'.')],{jc:'both',after:0,line:16.5}));
   // Resumo quantitativo
   const cont={}; grupo.forEach(x=>{const t=String(x.tipo||''); cont[t]=(cont[t]||0)+1;});
@@ -21726,6 +21754,7 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
   }
   body.push(_st('Ressalta-se que o presente relatório possui finalidade técnica e informativa, limitando-se a apresentar os registros constantes no sistema oficial de monitoração eletrônica utilizado pela Central de Monitoramento Eletrônico — CME/IAPEN/AP, bem como a contextualizar tecnicamente as ocorrências identificadas. A análise jurídica quanto às consequências processuais, executórias ou administrativas decorrentes dos fatos comunicados compete ao Juízo competente.'));
   body.push(_st('Dessa forma, encaminham-se as informações para conhecimento e deliberação da autoridade judicial, permanecendo esta Central à disposição para eventuais esclarecimentos complementares.'));
+  } // fim do relatório com violações
   // ───────── ASSINATURA(S) ─────────
   function blocoAss(info,antes){ for(let i=0;i<antes;i++) body.push(_rvEmpty()); if(info&&info.assinatura){ const a=addBodyImg(info.assinatura); if(a)body.push(_rvPara([_rvImgRun(a.rid,_rvEmuW(a.im,2))],{jc:'center'})); }
     const l3 = info&&info.decreto ? _fmtDecreto(info.decreto) : (info&&info.cress?info.cress:'');
@@ -22067,6 +22096,8 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
   // Montar conteúdo de cada grupo
   const docs = grupos.map(grupo => {
     const r0 = grupo[0];
+    // tudo retirado na conferência/justificativas → relatório "sem violação" (só a capa, com síntese e assinatura)
+    const semV = _rvSemViolacao(grupo), tx = semV ? _rvSemViolTextos(_rvCapa(r0), r0.nome) : null;
 
     // Formatar CPF
     function fmtCpf(c) {
@@ -22096,9 +22127,9 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
     // Resumo por tipo de violação
     const contagem = {};
     grupo.forEach(r => { contagem[r.tipo] = (contagem[r.tipo]||0) + 1; });
-    const totalViol = grupo.length;
+    const totalViol = semV ? 0 : grupo.length;
 
-    const resumoRows = Object.entries(contagem).map(([tipo, qtd]) =>
+    const resumoRows = semV ? '' : Object.entries(contagem).map(([tipo, qtd]) =>
       `<tr><td>${esc(tipo)}</td><td style="text-align:center">${qtd}</td></tr>`
     ).join('');
 
@@ -22162,10 +22193,11 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
         <p class="dado"><strong>DATA DE INÍCIO:</strong> ${esc(_rvCapa(r0).inicio) || 'XXX'}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>DATA DE TÉRMINO:</strong> ${esc(_rvCapa(r0).termino) || 'XXX'}</p>
 
         <p class="corpo" style="margin-top:12px">
-          Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos
+          ${semV ? esc(tx.intro) : `Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos
           dos deveres e obrigações do monitorado, gerados pelo sistema de monitoração eletrônica
-          no período de ${esc(_rvCapa(r0).periodo)||'___ a ___'}.
+          no período de ${esc(_rvCapa(r0).periodo)||'___ a ___'}.`}
         </p>
+        ${semV ? `<p class="corpo" style="border:1px solid #000;padding:6px 10px;margin:8px 0;font-weight:bold;text-align:center">${esc(tx.destaque)}</p>` : ''}
 
         <div class="secao-tit">RESUMO QUANTITATIVO DE VIOLAÇÕES</div>
         <table class="tabela-dados">
@@ -22175,10 +22207,19 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
             <tr style="font-weight:bold"><td>TOTAL</td><td style="text-align:center">${totalViol}</td></tr>
           </tbody>
         </table>
-
+${semV ? `
+        <p class="corpo" style="margin-top:12px;text-indent:1.25cm">${esc(tx.fonte)}</p>
+        <div class="secao-tit">SÍNTESE TÉCNICA</div>
+        <p class="corpo" style="text-indent:1.25cm">${esc(tx.sintese)}</p>
+        <p class="corpo" style="text-indent:1.25cm">${esc(tx.ressalva)}</p>
+        <div style="text-align:right;margin-top:18px;font-size:10pt">${dataExtenso}</div>
+        <div style="display:flex;justify-content:${infoGer ? 'space-around' : 'center'};margin-top:18px;flex-wrap:wrap;gap:20px">
+          ${blocoAssinatura(infoAss)}
+          ${infoGer ? blocoAssinatura(infoGer) : ''}
+        </div>` : ''}
         ${rodape}
       </div>
-
+${semV ? '' : `
       <!-- ═══ RELATÓRIO ═══ -->
       <div class="pagina quebra-antes">
         ${cabecalho}
@@ -22246,7 +22287,7 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
         </div>
 
         ${rodape}
-      </div>`;
+      </div>`}`;
   }).join('\n');
 
   const wordNs = isWord
@@ -29925,13 +29966,13 @@ function estat_exportarResultado() {
 <script src="saida-temp.js?v=20261022a"></script>
 <script src="violacoes-graves.js?v=20261022a"></script>
 <script src="radar-mandado.js?v=20261020f4"></script>
-<script src="rv-justificativas.js?v=20261022a"></script>
+<script src="rv-justificativas.js?v=20261022b"></script>
 <script src="estoque-plantao.js?v=20261021b"></script>
 <script src="estoque-plantao-tela.js?v=20261022a"></script>
 <script src="passagem-servico.js?v=20261021b"></script>
 <script src="upload-imagem-pdf.js?v=20261020f4"></script>
 <script src="assinatura-foto.js?v=20261021a"></script>
-<script src="rv-conferencia.js?v=20261022e"></script>
+<script src="rv-conferencia.js?v=20261022f"></script>
 <script src="rv-conferencia-horario.js?v=20261022a"></script>
 </body>
 </html>

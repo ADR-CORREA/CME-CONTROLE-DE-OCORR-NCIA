@@ -464,7 +464,11 @@ function _rvjConfirmar(modo, res, itens) {
   const grupos = res.map(r => r.grupo.filter(v => !retirar.has(v)));
   const vazios = res.filter((r, i) => !grupos[i].length).map(r => r.grupo[0].nome);
   document.getElementById('rvj-modal').remove();
-  if (vazios.length) _mostrarToast('Sem violações a enviar (todas retiradas): ' + vazios.join(', ') + '. Esse(s) relatório(s) não foi(ram) gerado(s).', 'sucesso');
+  if (vazios.length) {
+    _rvAdiarSemViolacao(res.filter((r, i) => !grupos[i].length).map(r => r.grupo));
+    _mostrarToast('Todas as violações retiradas: ' + vazios.join(', ') + '. Sai o relatório SEM VIOLAÇÃO.', 'sucesso');
+  }
   const restantes = grupos.filter(g => g.length);
-  if (restantes.length) rv_gerarSelecionados(modo, restantes);
+  // os "sem violação" vão na fila do rv_gerarSelecionados, então gera mesmo com restantes vazio
+  if (restantes.length || vazios.length) rv_gerarSelecionados(modo, restantes);
 }

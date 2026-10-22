@@ -287,7 +287,12 @@ function _rvcConfirmar() {
   const grupos = st.res.map(r => r.grupo.filter(v => !retirar.has(v)));
   const vazios = st.res.filter((r, i) => !grupos[i].length).map(r => r.grupo[0].nome);
   ov.remove();
-  if (vazios.length) _mostrarToast('Sem violações a enviar (todas retiradas): ' + vazios.join(', ') + '. Esse(s) relatório(s) não será(ão) gerado(s).', 'sucesso');
+  // tudo retirado (ex.: só espelhamento): sai o relatório "sem violação", sem passar pelas justificativas
+  if (vazios.length) {
+    _rvAdiarSemViolacao(st.res.filter((r, i) => !grupos[i].length).map(r => r.grupo));
+    _mostrarToast('Todas as violações retiradas: ' + vazios.join(', ') + '. Sai o relatório SEM VIOLAÇÃO.', 'sucesso');
+  }
   const restantes = grupos.filter(g => g.length);
   if (restantes.length) _rvcSeguir(st.modo, restantes);
+  else if (vazios.length) rv_gerarSelecionados(st.modo, []);
 }
