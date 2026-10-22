@@ -21213,7 +21213,7 @@ async function rv_capturarViaCloud(ids) {
     const d = await r.json().catch(() => ({}));
     if (!r.ok || !d.jobId) { _mostrarToast(d.erro || d.error || 'Erro ao enviar o pedido ao servidor.', 'erro'); return; }
     jobId = d.jobId;
-    const inseridos = new Set();
+    const inseridos = new Set(), gpsLidos = new Set();
     let ultProg = -1, semProg = 0, voltas = 0, naFila = 0, avisouFila = false, jaAvisou = false;
     for (;;) {
       await new Promise(res => setTimeout(res, 1500));
@@ -21233,7 +21233,12 @@ async function rv_capturarViaCloud(ids) {
         continue;
       }
       for (const idOc of (j.prontos || [])) {
-        if (inseridos.has(idOc)) continue;
+        if (inseridos.has(idOc) || gpsLidos.has(idOc)) continue;
+        // "G_<idOc>" = veredito do GPS que o robô manda junto com o mapa (usado pela conferência antes de gerar)
+        if (/^G_/.test(idOc)) {
+          try { const gr = await fetch(base + '/robo/img?id=' + encodeURIComponent(jobId) + '&idOc=' + encodeURIComponent(idOc), { headers: H }); if (gr.ok) { (window._rv_gps = window._rv_gps || {})[idOc.slice(2)] = JSON.parse(await gr.text()); gpsLidos.add(idOc); } } catch (e) {}
+          continue;
+        }
         try { const ir = await fetch(base + '/robo/img?id=' + encodeURIComponent(jobId) + '&idOc=' + encodeURIComponent(idOc), { headers: H }); if (ir.ok) { _rvSetImg(idOc, await _rvMapaJpeg(await _blobToDataURL(await ir.blob()))); inseridos.add(idOc); } } catch (e) {}
       }
       if (j.status === 'concluido') break;
@@ -29864,6 +29869,6 @@ function estat_exportarResultado() {
 <script src="passagem-servico.js?v=20261021b"></script>
 <script src="upload-imagem-pdf.js?v=20261020f4"></script>
 <script src="assinatura-foto.js?v=20261021a"></script>
-<script src="rv-conferencia.js?v=20261022a"></script>
+<script src="rv-conferencia.js?v=20261022b"></script>
 </body>
 </html>

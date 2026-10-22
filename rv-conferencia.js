@@ -121,11 +121,16 @@ function rvc_conferir(v) {
       + ' — padrão de saída temporária. Confira no SEEU se havia autorização antes de enviar.');
   }
 
-  // 4) GPS × ocorrência (preenchido pelo robô junto com o mapa)
-  if (v.gps && v.gps.verificado) {
-    if (v.gps.bate === false) add('trava', 'gps-diverge', 'O GPS não confirma o horário registrado: ' + (v.gps.resumo || 'leituras fora do período da ocorrência') + '.');
-    else if (exclusao && v.gps.dentro === false) add('trava', 'gps-fora', 'Nenhuma leitura do GPS dentro da zona de exclusão no período' + (v.gps.maisProximo ? ' (mais próxima: ' + v.gps.maisProximo + ')' : '') + '.');
-    else if (v.gps.bate === true) add('ok', 'gps-ok', 'GPS compatível com a ocorrência' + (v.gps.resumo ? ': ' + v.gps.resumo : '') + '.');
+  // 4) GPS × ocorrência (o robô devolve junto com o mapa — só nas violações de zona)
+  const g = v.gps;
+  if (g && g.semLeitura) add('aviso', 'gps-sem-leitura', 'Sem leituras do GPS no período da ocorrência — o mapa não confirma nem desmente a violação.');
+  else if (g && g.verificado) {
+    if (exclusao && g.dentro === false) {
+      if (g.travessia) add('aviso', 'gps-travessia', 'Nenhuma leitura do GPS dentro da zona de exclusão, mas a linha entre duas leituras cruza a zona — confira o mapa.');
+      else add('trava', 'gps-fora', 'Nenhuma leitura do GPS dentro da zona de exclusão no período' + (g.maisProximo ? ' (mais próxima: ' + g.maisProximo + ')' : '') + '.');
+    } else if (g.bate === false) {
+      add('trava', 'gps-diverge', 'O GPS não confirma o horário registrado no AKILES: ' + (g.resumo || 'leituras fora do período da ocorrência') + '.');
+    } else if (g.bate === true) add('ok', 'gps-ok', 'GPS compatível com a ocorrência' + (g.resumo ? ': ' + g.resumo : '') + '.');
   }
 
   const nivel = achados.some(a => a.nivel === 'trava') ? 'trava' : achados.some(a => a.nivel === 'aviso') ? 'aviso' : 'ok';
@@ -143,7 +148,11 @@ function _rvcSeguir(modo, grupos) {
 }
 
 function rvc_antesDeGerar(modo, selecionados) {
-  const res = selecionados.map(g => ({ grupo: g, itens: g.map(v => ({ v, c: rvc_conferir(v) })) }));
+  // veredito do GPS que veio do robô junto com os mapas (rv_capturarViaCloud → window._rv_gps)
+  const gps = window._rv_gps || {};
+  const comGps = v => { const g = gps[String(v.idOc || '').replace(/\D/g, '')]; return g ? Object.assign({}, v, { gps: g }) : v; };
+  // it.v fica sendo o objeto ORIGINAL do grupo (o "Retirar" filtra por identidade)
+  const res = selecionados.map(g => ({ grupo: g, itens: g.map(v => { const vg = comGps(v); return { v, temGps: !!vg.gps, c: rvc_conferir(vg) }; }) }));
   const comAchado = res.some(r => r.itens.some(it => it.c.nivel !== 'ok'));
   if (!comAchado) {
     _mostrarToast('\u{2705} Conferência das violações: nenhum problema encontrado.', 'sucesso');
@@ -181,7 +190,7 @@ function _rvcMostrar(modo, res) {
   }).join('');
   ov.innerHTML = '<div style="background:var(--idv-cartao);border:1px solid var(--idv-borda);border-radius:8px;max-width:780px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(31,35,40,.18);font-size:14px;color:var(--idv-texto)">'
     + '<div style="padding:14px 18px 10px;border-bottom:1px solid var(--idv-borda)"><div style="font-weight:600;font-size:16px">\u{1F50E} Conferência das violações</div>'
-    + '<div style="color:var(--idv-sec);font-size:13px;margin-top:2px">Antes de ir ao Judiciário, cada violação foi conferida pelo registro do AKILES' + (res.some(r => r.itens.some(it => it.v.gps)) ? ', pelo tratamento do operador e pelo GPS' : ' e pelo tratamento do operador') + '. As marcadas em <b style="color:var(--idv-cr)">vermelho</b> só seguem com a sua decisão; as <b style="color:var(--idv-at)">amarelas</b> são para conferir.</div></div>'
+    + '<div style="color:var(--idv-sec);font-size:13px;margin-top:2px">Antes de ir ao Judiciário, cada violação foi conferida pelo registro do AKILES' + (res.some(r => r.itens.some(it => it.temGps)) ? ', pelo tratamento do operador e pelo GPS' : ' e pelo tratamento do operador') + '. As marcadas em <b style="color:var(--idv-cr)">vermelho</b> só seguem com a sua decisão; as <b style="color:var(--idv-at)">amarelas</b> são para conferir.</div></div>'
     + '<div style="padding:8px 18px;overflow-y:auto;flex:1">' + blocos + '</div>'
     + '<div style="padding:10px 18px;border-top:1px solid var(--idv-linha);display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap">'
     + '<span id="rvc-contagem" style="flex:1;font-size:13px;color:var(--idv-sec)"></span>'
