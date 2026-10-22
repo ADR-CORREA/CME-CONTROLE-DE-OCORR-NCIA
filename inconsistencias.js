@@ -65,12 +65,12 @@ function _incDesenhar(box) {
   let corpo;
   if (_incCarregando) corpo = '<div style="padding:16px 0;font-size:14px;color:var(--idv-sec)">Carregando…</div>';
   else if (_incErro) corpo = '<div class="idv-faixa cr">' + esc(_incErro) + '</div>';
-  else if (!_incIndice || !Object.keys(_incIndice).length) corpo = '<div style="padding:16px 0;font-size:14px;color:var(--idv-sec)">Ainda não há análise publicada. O robô roda todo dia 1 e analisa o mês anterior.</div>';
+  else if (!_incIndice || !Object.keys(_incIndice).length) corpo = '<div style="padding:16px 0;font-size:14px;color:var(--idv-sec)">Ainda não há análise publicada. O robô roda todo dia às 13h30: refaz o mês corrente até ontem e, no dia 1, fecha o mês anterior.</div>';
   else if (!d) corpo = '<div style="padding:16px 0;font-size:14px;color:var(--idv-sec)">Escolha um mês.</div>';
   else corpo = _incDashboard(d) + _incConsulta(d);
   box.innerHTML = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">'
     + '<div class="idv-secao" style="margin:0">\u{1F9ED} Inconsistências no tratamento de ocorrências</div>'
-    + '<span style="font-size:13px;color:var(--idv-sec)">zona de exclusão e bateria · robô do AKILES (só leitura) · todo dia 1 analisa o mês anterior</span></div>'
+    + '<span style="font-size:13px;color:var(--idv-sec)">zona de exclusão e bateria · robô do AKILES (só leitura) · todo dia às 13h30 refaz o mês corrente até ontem; no dia 1 fecha o mês anterior</span></div>'
     + '<div class="idv-chips" style="margin-bottom:12px">' + chips + '</div>' + corpo;
 }
 
@@ -100,7 +100,8 @@ function _incDashboard(d) {
     return '<div style="flex:1;text-align:center;min-width:0"><div style="height:60px;display:flex;align-items:flex-end;justify-content:center"><div title="' + m + ': ' + (t == null ? 'sem análise' : t + ' apontamentos') + '" style="width:70%;height:' + (t == null ? 2 : Math.max(3, t / maxT * 60)) + 'px;background:' + (k === _incMes ? 'var(--idv-in)' : t == null ? 'var(--idv-linha)' : '#8c959f') + ';border-radius:2px 2px 0 0"></div></div>'
       + '<div style="font-size:12px;color:' + (k === _incMes ? 'var(--idv-in)' : 'var(--idv-sec)') + (k === _incMes ? ';font-weight:600' : '') + '">' + m + '</div><div class="idv-data" style="font-size:12px;color:var(--idv-texto)">' + (t == null ? '' : t) + '</div></div>'; }).join('');
   const per = d.periodo ? d.periodo.de + ' a ' + d.periodo.ate : '';
-  return kpis + '<div style="font-size:13px;color:var(--idv-sec);margin:-4px 0 12px">Período: <span class="idv-data">' + esc(per) + '</span> · gerado em <span class="idv-data">' + esc(new Date(d.geradoEm).toLocaleString('pt-BR')) + '</span> · guarnição pela escala do CME</div>'
+  const emAndamento = _incMes === _isoLocal().slice(0, 7).replace('-', '_');
+  return kpis + '<div style="font-size:13px;color:var(--idv-sec);margin:-4px 0 12px">Período: <span class="idv-data">' + esc(per) + '</span>' + (emAndamento ? ' · <b>mês em andamento</b>, refeito todo dia às 13h30 (até ontem)' : '') + ' · gerado em <span class="idv-data">' + esc(new Date(d.geradoEm).toLocaleString('pt-BR')) + '</span> · guarnição pela escala do CME</div>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px;margin-bottom:12px">'
     + '<div class="idv-bloco" style="min-width:0"><div class="idv-bloco-cab"><span>Por guarnição</span></div><div class="idv-bloco-corpo">'
     + '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Guarnição</th><th>Serv.</th>' + Object.values(_INC_CAT).map(c => '<th title="' + esc(c.dica) + '">' + c.rot + '</th>').join('') + '<th>Total</th><th></th><th></th></tr></thead><tbody>' + guar + '</tbody></table></div></div></div>'
