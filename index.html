@@ -21640,7 +21640,10 @@ function _rvAplicarFicha(grupo, f){
   const mf=fim.match(/^(\d{2})\/(\d{2})\/(\d{4})$/), hoje=new Date(); hoje.setHours(0,0,0,0);
   // data de término já passada com o monitorado ainda no relatório = cadastro desatualizado: não vai ao juízo
   const termino=!fim||(mf&&new Date(+mf[3],+mf[2]-1,+mf[1])<hoje)?'sem data vigente no sistema':fim;
-  grupo.forEach(x=>{ if(!x.endereco) x.endereco=String(q.endereco||'').trim(); if(!x.contato) x.contato=contatos.join('; '); x.dataInicio=inicio; x.dataTermino=termino; });
+  const iso=s=>String(s||'').split('/').reverse().join('-');
+  grupo.forEach(x=>{ if(!x.endereco) x.endereco=String(q.endereco||'').trim(); if(!x.contato) x.contato=contatos.join('; '); x.dataInicio=inicio; x.dataTermino=termino;
+    // monitoração começou depois do início da busca: o período do relatório começa no início da monitoração
+    if(/^\d{2}\/\d{2}\/\d{4}$/.test(inicio) && x.periodoIni && iso(inicio)>iso(x.periodoIni)) x.periodoIni=inicio; });
   return true;
 }
 async function rv_gerarDocx(grupo, infoAss, infoGer){
