@@ -20838,6 +20838,17 @@ async function rv_gerarAutomatico(nomeOuFiltros, ini, fim, opts){
   _rv_grupos.forEach(g=>g.filter(x=>/zona/i.test(x.tipo||'')).forEach(x=>{ const id=String(x.idOc||'').trim(); if(id&&!pedidos.has(id)) pedidos.set(id,_rvPedidoRobo(x)); }));
   const faltam=[...pedidos.keys()].filter(id=>!_rv_imagens[id]);
   if(faltam.length) await rv_capturarViaCloud(faltam.map(id=>pedidos.get(id)));
+  // capa: período da busca + endereço, contato e datas da ficha do AKILES (robô, só leitura)
+  _rv_grupos.forEach(g=>g.forEach(x=>{ x.periodoIni=fmtBR(ini); x.periodoFim=fmtBR(fim); }));
+  if(typeof _mpFichasRobo==='function'){
+    try{
+      const nomes=[...new Set(_rv_grupos.map(g=>g[0].nome))];
+      _mostrarToast('\u{1F4C7} Buscando no AKILES os dados da capa (endereço, contato, datas)…');
+      const fichas=await _mpFichasRobo(nomes);
+      const sem=_rv_grupos.filter(g=>!_rvAplicarFicha(g,fichas[g[0].nome])).map(g=>g[0].nome);
+      if(sem.length) _mostrarToast('Capa sem os dados do AKILES para: '+sem.join(', ')+' (ficha não encontrada ou processo diferente) — preencha à mão.','erro');
+    }catch(e){ _mostrarToast('Não consegui buscar os dados da capa no AKILES ('+(e.message||e)+') — a capa sai com os campos para preencher.','erro'); }
+  }
   if(opts.gerarWord===false){
     const pessoas=_rv_grupos.length;
     _mostrarToast('\u{2705} '+rows.length+' violação(ões) de '+pessoas+' monitorado(s)/processo(s) carregada(s). Confira, escolha o assinante e clique em "Gerar Word".','sucesso');
@@ -21598,6 +21609,32 @@ function _rvCoassinar(infoAss, us){
   return ger;                                                // demais: leva o gerente junto (null se não houver)
 }
 
+// Capa: período da busca + dados da ficha do AKILES (preenchidos por _rvAplicarFicha). Sem dado, fica o espaço para preencher à mão.
+function _rvCapa(r0){
+  r0=r0||{}; const t=v=>String(v||'').trim();
+  return { endereco:t(r0.endereco), contato:t(r0.contato), inicio:t(r0.dataInicio), termino:t(r0.dataTermino),
+    periodo: t(r0.periodoIni)&&t(r0.periodoFim) ? t(r0.periodoIni)+' a '+t(r0.periodoFim) : '' };
+}
+// Ficha do AKILES (robô, pedido "F_") → endereço, contato e datas da monitoração em todas as linhas do grupo.
+// Só aplica se o processo do relatório estiver entre os processos da ficha (evita dado de homônimo).
+function _rvAplicarFicha(grupo, f){
+  if(!f||!f.encontrado||!grupo||!grupo.length) return false;
+  const dig=s=>String(s||'').replace(/\D/g,''), procG=dig(grupo[0].processo).slice(0,20);
+  const ps=Array.isArray(f.processos)?f.processos:[];
+  const p=ps.find(x=>dig(x.processo).slice(0,20)===procG);
+  if(!p && (ps.length||!procG)) return false;
+  const q=f.qualificacao||{};
+  const br=s=>{ s=String(s||'').trim(); const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); return m?m[3]+'/'+m[2]+'/'+m[1]:s; };
+  const tel=s=>{ const d=dig(s); return d.length===11?'('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7):d.length===10?'('+d.slice(0,2)+') '+d.slice(2,6)+'-'+d.slice(6):String(s||'').trim(); };
+  const contatos=[]; if(q.telefone) contatos.push(tel(q.telefone)+' (monitorado)');
+  (q.contatos||[]).forEach(c=>{ if(c&&(c.telefone||c.nome)) contatos.push(((c.telefone?tel(c.telefone):'')+(c.nome?' ('+String(c.nome).trim()+')':'')).trim()); });
+  const inicio=br((p&&p.inicio)||q.inicioMonitoracao), fim=br((p&&(p.prorrogacao||p.termino))||q.terminoMonitoracao);
+  const mf=fim.match(/^(\d{2})\/(\d{2})\/(\d{4})$/), hoje=new Date(); hoje.setHours(0,0,0,0);
+  // data de término já passada com o monitorado ainda no relatório = cadastro desatualizado: não vai ao juízo
+  const termino=!fim||(mf&&new Date(+mf[3],+mf[2]-1,+mf[1])<hoje)?'sem data vigente no sistema':fim;
+  grupo.forEach(x=>{ if(!x.endereco) x.endereco=String(q.endereco||'').trim(); if(!x.contato) x.contato=contatos.join('; '); x.dataInicio=inicio; x.dataTermino=termino; });
+  return true;
+}
 async function rv_gerarDocx(grupo, infoAss, infoGer){
   const Z=window.JSZip; if(!Z) throw new Error('JSZip não carregado');
   _rvDrawId=1;
@@ -21615,12 +21652,13 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
   const secao=t=>_rvPara([_ar(t,{b:true,u:true})],{before:10,after:4,line:16.5});
   const dado=(l,v)=>_rvPara([_ar(l+': ',{b:true}),_ar(v||'XXX')],{after:4,line:16.5});
   body.push(secao('DADOS PESSOAIS'));
-  body.push(dado('MONITORADO',nome||'XXX')); body.push(dado('CPF',cpf||'XXX')); body.push(dado('ENDEREÇO','XXX')); body.push(dado('CONTATO','XXX'));
+  const capa=_rvCapa(r0);
+  body.push(dado('MONITORADO',nome||'XXX')); body.push(dado('CPF',cpf||'XXX')); body.push(dado('ENDEREÇO',capa.endereco||'XXX')); body.push(dado('CONTATO',capa.contato||'XXX'));
   body.push(secao('DADOS PROCESSUAIS'));
   body.push(dado('PROCESSO Nº',proc||'XXX')); body.push(dado('VARA',vara||'XXX')); body.push(dado('COMARCA',comarca||'XXX'));
   body.push(secao('DADOS DA MONITORAÇÃO'));
-  body.push(_rvPara([_ar('DATA DE INÍCIO: ',{b:true}),_ar('XXX          '),_ar('DATA DE TÉRMINO: ',{b:true}),_ar('XXX')],{after:8,line:16.5}));
-  body.push(_rvPara([_ar('Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos dos deveres e obrigações do monitorado, gerados pelo sistema de monitoração eletrônica no período de ___ a ___.')],{jc:'both',after:0,line:16.5}));
+  body.push(_rvPara([_ar('DATA DE INÍCIO: ',{b:true}),_ar((capa.inicio||'XXX')+'          '),_ar('DATA DE TÉRMINO: ',{b:true}),_ar(capa.termino||'XXX')],{after:8,line:16.5}));
+  body.push(_rvPara([_ar('Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos dos deveres e obrigações do monitorado, gerados pelo sistema de monitoração eletrônica no período de '+(capa.periodo||'___ a ___')+'.')],{jc:'both',after:0,line:16.5}));
   // Resumo quantitativo
   const cont={}; grupo.forEach(x=>{const t=String(x.tipo||''); cont[t]=(cont[t]||0)+1;});
   const contArr=Object.entries(cont).sort((a,b)=>b[1]-a[1]); const totalV=contArr.reduce((s,e)=>s+e[1],0);
@@ -21672,8 +21710,9 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
   // ───────── ASSINATURA(S) ─────────
   function blocoAss(info,antes){ for(let i=0;i<antes;i++) body.push(_rvEmpty()); if(info&&info.assinatura){ const a=addBodyImg(info.assinatura); if(a)body.push(_rvPara([_rvImgRun(a.rid,_rvEmuW(a.im,2))],{jc:'center'})); }
     const l3 = info&&info.decreto ? _fmtDecreto(info.decreto) : (info&&info.cress?info.cress:'');
-    const linhas=[info&&info.nome,info&&info.cargo,l3].filter(Boolean);
-    if(linhas.length){const runs=[];linhas.forEach((l,i)=>{if(i>0)runs.push('<w:r><w:br/></w:r>');runs.push(_rvRun(String(l),{b:true}));});body.push(_rvPara(runs,{jc:'center',after:0,before:0}));} }
+    // padrão oficial CME/IAPEN: só o nome em negrito; cargo, decreto e a linha da Central sem negrito
+    const linhas=[info&&info.nome,info&&info.cargo,l3,info&&info.nome?'Central de Monitoramento Eletrônico – CME/IAPEN':''].filter(Boolean);
+    if(linhas.length){const runs=[];linhas.forEach((l,i)=>{if(i>0)runs.push('<w:r><w:br/></w:r>');runs.push(_rvRun(String(l),{b:i===0}));});body.push(_rvPara(runs,{jc:'center',after:0,before:0}));} }
   blocoAss(infoAss,2);
   if(infoGer) blocoAss(infoGer,2);
 
@@ -21821,8 +21860,9 @@ function rv_montarWordDoc(grupo, infoAss, infoGer) {
   function blocoAss(info) {
     const img = info?.assinatura
       ? `<p style="text-align:center;margin:0 0 6pt 0"><img src="${info.assinatura}" width="144" style="display:block;margin:0 auto"></p>` : '';
-    const linhas = [info?.nome, info?.cargo, info?.cress].filter(Boolean).map(l =>
-      `<p style="text-align:center;font-weight:bold;margin:2pt 0">${esc(l)}</p>`).join('');
+    // padrão oficial CME/IAPEN: só o nome em negrito
+    const linhas = [info?.nome, info?.cargo, info?.decreto ? _fmtDecreto(info.decreto) : info?.cress, info?.nome ? 'Central de Monitoramento Eletrônico – CME/IAPEN' : ''].filter(Boolean).map((l, i) =>
+      `<p style="text-align:center;font-weight:${i === 0 ? 'bold' : 'normal'};margin:2pt 0">${esc(l)}</p>`).join('');
     return `<div style="text-align:center;display:inline-block;vertical-align:top;margin:0 20pt">
       ${img}${linhas}
     </div>`;
@@ -21884,8 +21924,8 @@ table{border-collapse:collapse}
 <p class="secao">DADOS PESSOAIS</p>
 <p><b>MONITORADO:</b> ${nome}</p>
 <p><b>CPF:</b> ${cpf}</p>
-<p><b>ENDEREÇO:</b> ___</p>
-<p><b>CONTATO:</b> ___</p>
+<p><b>ENDEREÇO:</b> ${esc(_rvCapa(r0).endereco)||'___'}</p>
+<p><b>CONTATO:</b> ${esc(_rvCapa(r0).contato)||'___'}</p>
 
 <p class="secao">DADOS PROCESSUAIS</p>
 <p><b>PROCESSO Nº:</b> ${proc}</p>
@@ -21893,9 +21933,9 @@ table{border-collapse:collapse}
 <p><b>COMARCA:</b> ${comarca}</p>
 
 <p class="secao">DADOS DA MONITORAÇÃO</p>
-<p><b>DATA DE INÍCIO:</b> ___ &nbsp;&nbsp;&nbsp;&nbsp; <b>DATA DE TÉRMINO:</b> ___</p>
+<p><b>DATA DE INÍCIO:</b> ${esc(_rvCapa(r0).inicio)||'___'} &nbsp;&nbsp;&nbsp;&nbsp; <b>DATA DE TÉRMINO:</b> ${esc(_rvCapa(r0).termino)||'___'}</p>
 
-<p style="text-align:justify;margin-top:10pt">Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos dos deveres e obrigações do monitorado, gerados pelo sistema de monitoração eletrônica no período de ___ a ___.</p>
+<p style="text-align:justify;margin-top:10pt">Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos dos deveres e obrigações do monitorado, gerados pelo sistema de monitoração eletrônica no período de ${esc(_rvCapa(r0).periodo)||'___ a ___'}.</p>
 
 <p style="font-weight:bold;margin-top:12pt;margin-bottom:4pt">RESUMO QUANTITATIVO DE VIOLAÇÕES:</p>
 <table style="border-collapse:collapse;width:55%">
@@ -22000,8 +22040,8 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
       ${assImg}
       <div style="font-weight:bold;font-size:10.5pt">${esc(info.nome)}</div>
       ${info.cargo  ? `<div style="font-size:10pt">${esc(info.cargo)}</div>` : ''}
-      ${info.cress  ? `<div style="font-size:9.5pt">${esc(info.cress)}</div>` : ''}
-      <div style="font-size:9.5pt">Central de Monitoração Eletrônica – CME/IAPEN</div>
+      ${info.decreto ? `<div style="font-size:9.5pt">${esc(_fmtDecreto(info.decreto))}</div>` : info.cress ? `<div style="font-size:9.5pt">${esc(info.cress)}</div>` : ''}
+      <div style="font-size:9.5pt">Central de Monitoramento Eletrônico – CME/IAPEN</div>
     </div>`;
   }
 
@@ -22091,8 +22131,8 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
         <div class="secao-tit">DADOS PESSOAIS</div>
         <p class="dado"><strong>MONITORADO:</strong> ${esc(r0.nome) || 'XXX'}</p>
         <p class="dado"><strong>CPF:</strong> ${esc(fmtCpf(r0.cpf)) || 'XXX'}</p>
-        <p class="dado"><strong>ENDEREÇO:</strong> XXX</p>
-        <p class="dado"><strong>CONTATO:</strong> XXX</p>
+        <p class="dado"><strong>ENDEREÇO:</strong> ${esc(_rvCapa(r0).endereco) || 'XXX'}</p>
+        <p class="dado"><strong>CONTATO:</strong> ${esc(_rvCapa(r0).contato) || 'XXX'}</p>
 
         <div class="secao-tit">DADOS PROCESSUAIS</div>
         <p class="dado"><strong>PROCESSO Nº:</strong> ${esc(r0.processo) || 'XXX'}</p>
@@ -22100,12 +22140,12 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
         <p class="dado"><strong>COMARCA:</strong> ${esc(r0.comarca) || 'XXX'}</p>
 
         <div class="secao-tit">DADOS DA MONITORAÇÃO</div>
-        <p class="dado"><strong>DATA DE INÍCIO:</strong> XXX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>DATA DE TÉRMINO:</strong> XXX</p>
+        <p class="dado"><strong>DATA DE INÍCIO:</strong> ${esc(_rvCapa(r0).inicio) || 'XXX'}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>DATA DE TÉRMINO:</strong> ${esc(_rvCapa(r0).termino) || 'XXX'}</p>
 
         <p class="corpo" style="margin-top:12px">
           Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos
           dos deveres e obrigações do monitorado, gerados pelo sistema de monitoração eletrônica
-          no período de ___ a ___.
+          no período de ${esc(_rvCapa(r0).periodo)||'___ a ___'}.
         </p>
 
         <div class="secao-tit">RESUMO QUANTITATIVO DE VIOLAÇÕES</div>
