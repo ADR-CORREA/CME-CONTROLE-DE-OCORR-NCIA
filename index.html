@@ -2094,6 +2094,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         <div class="sub-tab" id="ger-stab-produtividade" onclick="mudarSubAbaGer('produtividade')">📈 Produtividade Servidores</div>
         <div class="sub-tab" id="ger-stab-vdzona" onclick="mudarSubAbaGer('vdzona')">🚫 VD sem zona de exclusão</div>
         <div class="sub-tab" id="ger-stab-saidatemp" onclick="mudarSubAbaGer('saidatemp')">Saída temporária × zona</div>
+        <div class="sub-tab" id="ger-stab-graves" onclick="mudarSubAbaGer('graves')">Violações graves</div>
       </div>
       <div class="sub-panel active" id="ger-panel-agenda">
         <div class="idv-barra">
@@ -2155,6 +2156,12 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       <div class="sub-panel" id="ger-panel-saidatemp">
         <div class="idv-secao" style="margin:0 0 10px">Saída temporária × zona do AKILES</div>
         <div id="stz-corpo"></div>
+      </div>
+
+      <!-- ── Sub-painel: Violações graves de cada plantão (robô diário 08h10, só leitura) — violacoes-graves.js ── -->
+      <div class="sub-panel" id="ger-panel-graves">
+        <div class="idv-secao" style="margin:0 0 10px">Violações graves do plantão</div>
+        <div id="vgr-corpo"></div>
       </div>
 
       <!-- ── Sub-painel: Produtividade dos servidores (plantões em cima, administrativo embaixo) ── -->
@@ -13299,7 +13306,7 @@ function _relSemComDocHTML(m, infoAss, isWord) {
 
 // Navegação sub-abas Gerência
 function mudarSubAbaGer(aba) {
-  ['agenda','arquivados','calendario','produtividade','vdzona','saidatemp'].forEach(a => {
+  ['agenda','arquivados','calendario','produtividade','vdzona','saidatemp','graves'].forEach(a => {
     document.getElementById('ger-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('ger-panel-' + a)?.classList.toggle('active', a === aba);
   });
@@ -13309,6 +13316,7 @@ function mudarSubAbaGer(aba) {
   if (aba === 'produtividade') { if (typeof inc_render === 'function') inc_render(); pl_renderizar(); if (typeof prod_renderAdm === 'function') prod_renderAdm(); }
   if (aba === 'vdzona' && typeof vdz_render === 'function') vdz_render();
   if (aba === 'saidatemp' && typeof stz_render === 'function') stz_render();
+  if (aba === 'graves' && typeof vgr_render === 'function') vgr_render();
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -29915,6 +29923,7 @@ function estat_exportarResultado() {
 <script src="plantoes-servidores.js?v=20261020f4"></script>
 <script src="vd-zonas.js?v=20261020f4"></script>
 <script src="saida-temp.js?v=20261022a"></script>
+<script src="violacoes-graves.js?v=20261022a"></script>
 <script src="radar-mandado.js?v=20261020f4"></script>
 <script src="rv-justificativas.js?v=20261022a"></script>
 <script src="estoque-plantao.js?v=20261021b"></script>
