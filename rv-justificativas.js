@@ -257,6 +257,7 @@ async function _rvjLer(arq, r) {
     else r.erro = 'formato não lido';
     const d = rvj_datasDoTexto(texto, { horas: true });
     r.dias = d.dias; r.horas = d.horas; r.qualidade = notas.length ? Math.min(...notas) : null;
+    r.texto = texto.slice(0, 60000); // usado também pela conferência do horário da decisão (rv-conferencia.js)
     if (!r.erro && !texto.trim()) r.erro = 'não deu para ler o texto';
   }
 }

@@ -147,12 +147,58 @@ function _rvcSeguir(modo, grupos) {
   return rv_gerarSelecionados(modo, grupos);
 }
 
-function rvc_antesDeGerar(modo, selecionados) {
+// acrescenta achados (horário da decisão) e recalcula o nível e a sugestão
+function _rvcJuntar(c, extras) {
+  if (!extras || !extras.length) return c;
+  const achados = c.achados.concat(extras);
+  const nivel = achados.some(a => a.nivel === 'trava') ? 'trava' : achados.some(a => a.nivel === 'aviso') ? 'aviso' : 'ok';
+  const sugestao = nivel !== 'trava' ? null : (c.sugestao || (extras.some(a => a.codigo === 'horario-fora') ? 'retirar' : null));
+  return { nivel, achados, sugestao };
+}
+
+// lê as decisões da pasta (horário de recolhimento) com tela de progresso; "Pular" segue sem essa conferência
+async function _rvcLerHorarios(selecionados) {
+  if (typeof rvch_lerDecisoes !== 'function' || !(typeof _r2Pronto === 'function' && _r2Pronto())) return null;
+  if (!selecionados.some(g => g.some(v => /inclus/i.test(String(v.tipo || ''))))) return {};
+  let ov = document.getElementById('rvc-modal');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'rvc-modal'; ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9990;display:flex;align-items:center;justify-content:center;padding:16px'; document.body.appendChild(ov); }
+  ov.innerHTML = '<div style="background:var(--idv-cartao);border:1px solid var(--idv-borda);border-radius:8px;max-width:460px;width:100%;padding:18px 20px;font-size:14px;color:var(--idv-texto)">'
+    + '<div style="font-weight:600;font-size:16px;margin-bottom:6px">\u{2696}\u{FE0F} Conferindo o horário das decisões…</div>'
+    + '<div id="rvc-prog" style="color:var(--idv-sec);min-height:2.4em">Abrindo as pastas dos monitorados…</div>'
+    + '<div style="display:flex;justify-content:flex-end;margin-top:10px"><button type="button" id="rvc-pular" class="idv-btn mini">Pular esta conferência</button></div></div>';
+  let pular;
+  const pulou = new Promise(res => { pular = res; });
+  document.getElementById('rvc-pular').onclick = () => pular('pulou');
+  const prog = m => { const el = document.getElementById('rvc-prog'); if (el) el.textContent = m; };
+  try {
+    const r = await Promise.race([rvch_lerDecisoes(selecionados, prog), pulou, new Promise(res => setTimeout(() => res('tempo'), 180000))]);
+    if (r === 'pulou' || r === 'tempo') return { _avisoGeral: r === 'pulou' ? 'Conferência pelo horário da decisão pulada pelo servidor.' : 'A leitura das decisões demorou demais — horário não conferido.' };
+    return r;
+  } catch (e) { return { _avisoGeral: 'Não consegui ler as decisões da pasta (' + (e.message || e) + ') — horário não conferido.' }; }
+  finally { ov.remove(); }
+}
+
+async function rvc_antesDeGerar(modo, selecionados) {
   // veredito do GPS que veio do robô junto com os mapas (rv_capturarViaCloud → window._rv_gps)
   const gps = window._rv_gps || {};
   const comGps = v => { const g = gps[String(v.idOc || '').replace(/\D/g, '')]; return g ? Object.assign({}, v, { gps: g }) : v; };
+  // horário de recolhimento das decisões da pasta (só para saídas de zona de inclusão)
+  const hor = (await _rvcLerHorarios(selecionados)) || {};
   // it.v fica sendo o objeto ORIGINAL do grupo (o "Retirar" filtra por identidade)
-  const res = selecionados.map(g => ({ grupo: g, itens: g.map(v => { const vg = comGps(v); return { v, temGps: !!vg.gps, c: rvc_conferir(vg) }; }) }));
+  const res = selecionados.map(g => {
+    const h = hor[g[0].nome];
+    let avisouPasta = false;
+    return { grupo: g, itens: g.map(v => {
+      const vg = comGps(v); let c = rvc_conferir(vg);
+      if (/inclus/i.test(String(v.tipo || ''))) {
+        const extras = h && h.decs.length && typeof rvch_conferir === 'function' ? rvch_conferir(v, h.decs) : [];
+        const geral = (h && h.avisos) || (hor._avisoGeral ? [hor._avisoGeral] : []);
+        if (!avisouPasta && geral.length) { geral.forEach(t => extras.push({ nivel: 'aviso', codigo: 'decisao-pasta', texto: t })); avisouPasta = true; }
+        c = _rvcJuntar(c, extras);
+      }
+      return { v, temGps: !!vg.gps, c };
+    }) };
+  });
   const comAchado = res.some(r => r.itens.some(it => it.c.nivel !== 'ok'));
   if (!comAchado) {
     _mostrarToast('\u{2705} Conferência das violações: nenhum problema encontrado.', 'sucesso');
