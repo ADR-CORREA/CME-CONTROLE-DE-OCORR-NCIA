@@ -141,6 +141,8 @@ function rvc_conferir(v) {
       add('trava', 'gps-diverge', 'O GPS não confirma o horário registrado no AKILES: ' + (g.resumo || 'leituras fora do período da ocorrência') + '.');
     } else if (g.bate === true) add('ok', 'gps-ok', 'GPS compatível com a ocorrência' + (g.resumo ? ': ' + g.resumo : '') + '.');
   }
+  // violação de zona sem o GPS do robô: nada acima foi conferido (nem espelhamento) — não passar calado
+  if (!g && (inclusao || exclusao)) add('aviso', 'gps-nao-conferido', 'GPS NÃO CONFERIDO: o robô não devolveu o trajeto desta violação (robô desligado ou mapa não capturado) — espelhamento e passagem pela zona não foram checados. Confira o mapa e a telemetria no AKILES antes de enviar.');
 
   const nivel = achados.some(a => a.nivel === 'trava') ? 'trava' : achados.some(a => a.nivel === 'aviso') ? 'aviso' : 'ok';
   return { nivel, achados, sugestao: nivel === 'trava' ? sugestao : null };
