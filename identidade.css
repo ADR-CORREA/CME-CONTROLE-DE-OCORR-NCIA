@@ -762,37 +762,38 @@ table table td { font-size: inherit; }
 .admin-card-header { background: var(--idv-fundo); color: var(--idv-texto); border-bottom: 1px solid var(--idv-borda); }
 .admin-card-header * { color: inherit; }
 
-/* ═══════════ FASE 5 (22/10/2026): tema "Azul IAPEN" — quadro tingido + folha de trabalho ═══════════
-   Pedido dele: "tudo branco me incomoda" — escolheu a proposta A, um tom mais escura. Direção "framed sheet" da
-   skill de design: o menu lateral e a barra de cima formam um quadro azul-acinzentado (cor do IAPEN em baixa
-   saturação); o trabalho fica numa folha cinza-azulada; cartões e tabelas um degrau mais claros, sem branco puro.
-   Botão principal azul-marinho. A situação não muda de sentido (vermelho/amarelo/verde), só fica um tom mais
-   escura para manter 4,5:1 no fundo tingido. Contraste conferido: menor texto 5,1:1 sobre a folha.
+/* ═══════════ FASE 5 (22/10/2026): tema "Marinho IAPEN" — quadro azul-marinho + folha de trabalho ═══════════
+   Pedido dele: "tudo branco me incomoda". Escolheu a proposta C (a imagem com o menu azul-marinho): o menu lateral
+   e a barra de cima formam um quadro azul-marinho, com texto claro e o item ativo marcado em dourado (cor do selo);
+   o trabalho fica numa folha cinza-azulada clara com canto arredondado; cartões e tabelas um degrau mais claros.
+   Botão principal azul-marinho. A situação não muda de sentido (vermelho/amarelo/verde), só um tom mais escura.
    Para voltar ao branco: apagar este bloco. */
 :root {
-  --idv-quadro: #c3d0de; --idv-fundo: #d9e1eb; --idv-cartao: #edf1f6; --idv-th: #e1e8f0; --idv-campo: #f7f9fb;
-  --idv-borda: #b3c2d2; --idv-linha: #c9d4e0; --idv-ativo: #aec0d4; --idv-texto: #141d28; --idv-sec: #3f4b59;
-  --idv-cab: #1d3a5f; --idv-marca: #1d3a5f;
-  --idv-cr: #b01b25; --idv-at: #7d5300; --idv-ok: #156a2c; --idv-in: #0a54a8;
+  --idv-quadro: #1d3048; --idv-fundo: #edf1f5; --idv-cartao: #fafbfc; --idv-th: #eef2f6; --idv-campo: #ffffff;
+  --idv-borda: #cdd6e0; --idv-linha: #dde3ea; --idv-ativo: #e3e9f0; --idv-q-ativo: #2e4766; /* q-ativo = item ativo no menu escuro; ativo = selecionado no conteúdo claro */ --idv-texto: #17202b; --idv-sec: #4d5967;
+  --idv-cab: #1d3a5f; --idv-marca: #e3b65c;
+  --idv-cr: #b91c27; --idv-at: #855800; --idv-ok: #17702f; --idv-in: #0a58b0;
+  --idv-zebra: #f2f5f8; /* linha alternada e caixa de prévia: um passo abaixo do cartão */
+  --cz4: var(--idv-th); /* token antigo "quase branco" do index (seção de formulário nas janelas, etiqueta neutra) — só é usado como fundo */
 }
 body { background: var(--idv-quadro); }
 #app[style*="block"] { background: var(--idv-quadro); }
 #app > .topbar { background: var(--idv-quadro); border-bottom: 0; }
 #app > .nav-tabs { background: var(--idv-quadro); border-right: 0; }
-#app > .main { background: var(--idv-fundo); border: 1px solid var(--idv-borda); border-radius: 14px; margin: 0 8px 8px 0; max-width: none;
+#app > .main { background: var(--idv-fundo); border: 1px solid var(--idv-quadro); border-radius: 14px; margin: 0 8px 8px 0; max-width: none;
   min-height: calc(100vh - var(--idv-topo) - 8px); }
-#app > .nav-tabs .nav-tab:hover, #app > .nav-tabs .nav-tab.active { background: var(--idv-ativo); }
+#app > .nav-tabs .nav-tab:hover, #app > .nav-tabs .nav-tab.active { background: var(--idv-q-ativo); }
 #app > .nav-tabs .nav-tab.active { box-shadow: inset 3px 0 0 var(--idv-marca); }
-.topbar-menu:hover { background: var(--idv-ativo); }
+.topbar-menu:hover { background: var(--idv-q-ativo); }
 .btn-primary:hover, .btn-refresh:hover, .idv-btn.criar:hover { background: #142b47; border-color: #142b47; }
 /* cabeçalho da tabela um tom acima das linhas (continua claro, sem caixa alta) */
 table.idv-tabela thead tr, table.idv-tabela th, .data-table thead tr, .data-table th:not([style*="color"]):not([style*="background"]) { background: var(--idv-th) !important; }
 /* campos de digitar um pouco mais claros que o cartão: se veem como "lugar de escrever" */
 .form-field input, .form-field select, .form-field textarea, .idv-busca, .idv-select, .form-group input,
 input:not([type]), input[type="text"], input[type="search"], input[type="number"], input[type="date"], input[type="datetime-local"], input[type="time"],
-input[type="email"], input[type="password"], select, textarea { background-color: var(--idv-campo); }
+input[type="email"], input[type="password"], select, textarea, .role-select { background-color: var(--idv-campo); }
 /* fundos brancos fixos das telas antigas → cor de cartão do tema */
-:is(.admin-card, .dash-card, .dchart-card, .dsec-card, .est-kpi, .kpi-card, .modal-box, .tri-filtros, .r2-pasta-card,
+:is(.admin-card, .dash-card, .dchart-card, .dsec-card, .est-kpi, .kpi-card, .modal-box, .tri-filtros, .r2-pasta-card, .table-wrapper,
   .pagination-btns button, .btn-secondary, .dalert-pill),
 [style*="background:#fff;"], [style$="background:#fff"], [style*="background: #fff;"], [style*="background:#ffffff"], [style*="background: #ffffff"],
 [style*="background:white"], [style*="background: white"],
@@ -801,7 +802,18 @@ input[type="email"], input[type="password"], select, textarea { background-color
    O rgb(...) é como o navegador regrava a cor posta por código (el.style.background / cssText). */
 [style*="background:#f8fafc"], [style*="background: #f8fafc"], [style*="background:#fafafa"],
 [style*="background: rgb(248, 250, 252)"] { background: var(--idv-th) !important; }
-.escx { --bg: var(--idv-cartao) !important; --el: var(--idv-cartao) !important; --sf: var(--idv-fundo) !important; --bd: var(--idv-borda) !important; }
+.escx { --bg: var(--idv-cartao) !important; --el: var(--idv-cartao) !important; --sf: var(--idv-fundo) !important; --bd: var(--idv-borda) !important;
+  /* a escala tem cópia própria da paleta antiga: liga ao tema (botão azul-marinho, situação mais escura, zebra) */
+  --zb: var(--idv-zebra) !important; --ln: var(--idv-linha) !important; --tx: var(--idv-texto) !important; --mu: var(--idv-sec) !important;
+  --cab: var(--idv-cab) !important; --ac: var(--idv-in) !important; --ok: var(--idv-ok) !important; --wa: var(--idv-at) !important; --da: var(--idv-cr) !important; }
+/* quadro escuro: texto do menu e da barra de cima fica claro; item ativo com marca dourada */
+#app > .topbar, #app > .topbar .topbar-brand .name, #app > .topbar .user-chip, .topbar-menu { color: #eef2f7; }
+#app > .topbar .topbar-brand .sub { color: #b3c0cf; }
+#app > .topbar .role-badge { background: rgba(238,242,247,.12); color: #e3b65c; border-left-color: #e3b65c; }
+#app > .topbar .user-chip .avatar { background: #e3b65c; color: #1d3048; }
+#app > .nav-tabs .nav-tab { color: #dfe6ee; }
+#app > .nav-tabs .nav-tab:hover, #app > .nav-tabs .nav-tab.active { color: #ffffff; }
+.nav-grupo-tit { color: #a9b6c6; }
 @media (max-width: 900px) {
   #app > .main { margin: 0; border: 0; border-radius: 0; }
   #app > .nav-tabs { background: var(--idv-quadro); }
