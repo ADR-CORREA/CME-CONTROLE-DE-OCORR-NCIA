@@ -2085,7 +2085,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     <div class="tab-panel" id="panel-gerencia">
       <!-- Identidade visual (20/10/2026): cabeçalho, legenda, botões e tabelas do guia (identidade.css) -->
       <div class="idv-cab">
-        <div><h1>Gerência</h1><div class="idv-sub">Agenda de demandas, compromissos, arquivados, produtividade e VD sem zona de exclusão</div></div>
+        <div><h1>Gerência</h1><div class="idv-sub">Agenda de demandas, compromissos, arquivados, produtividade, VD sem zona de exclusão e saída temporária × zona</div></div>
       </div>
       <div class="sub-tabs">
         <div class="sub-tab active" id="ger-stab-agenda" onclick="mudarSubAbaGer('agenda')">📋 Agenda</div>
@@ -2093,6 +2093,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         <div class="sub-tab" id="ger-stab-arquivados" onclick="mudarSubAbaGer('arquivados')">📁 Arquivados</div>
         <div class="sub-tab" id="ger-stab-produtividade" onclick="mudarSubAbaGer('produtividade')">📈 Produtividade Servidores</div>
         <div class="sub-tab" id="ger-stab-vdzona" onclick="mudarSubAbaGer('vdzona')">🚫 VD sem zona de exclusão</div>
+        <div class="sub-tab" id="ger-stab-saidatemp" onclick="mudarSubAbaGer('saidatemp')">Saída temporária × zona</div>
       </div>
       <div class="sub-panel active" id="ger-panel-agenda">
         <div class="idv-barra">
@@ -2148,6 +2149,12 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       <div class="sub-panel" id="ger-panel-vdzona">
         <div class="idv-secao" style="margin:0 0 10px">Violência doméstica sem zona de exclusão</div>
         <div id="vdz-corpo"></div>
+      </div>
+
+      <!-- ── Sub-painel: Saída temporária × zona do AKILES (robô 08h10/14h/20h, só leitura) — saida-temp.js ── -->
+      <div class="sub-panel" id="ger-panel-saidatemp">
+        <div class="idv-secao" style="margin:0 0 10px">Saída temporária × zona do AKILES</div>
+        <div id="stz-corpo"></div>
       </div>
 
       <!-- ── Sub-painel: Produtividade dos servidores (plantões em cima, administrativo embaixo) ── -->
@@ -13292,7 +13299,7 @@ function _relSemComDocHTML(m, infoAss, isWord) {
 
 // Navegação sub-abas Gerência
 function mudarSubAbaGer(aba) {
-  ['agenda','arquivados','calendario','produtividade','vdzona'].forEach(a => {
+  ['agenda','arquivados','calendario','produtividade','vdzona','saidatemp'].forEach(a => {
     document.getElementById('ger-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('ger-panel-' + a)?.classList.toggle('active', a === aba);
   });
@@ -13301,6 +13308,7 @@ function mudarSubAbaGer(aba) {
   if (aba === 'calendario') cal_render('ger-calendario');
   if (aba === 'produtividade') { if (typeof inc_render === 'function') inc_render(); pl_renderizar(); if (typeof prod_renderAdm === 'function') prod_renderAdm(); }
   if (aba === 'vdzona' && typeof vdz_render === 'function') vdz_render();
+  if (aba === 'saidatemp' && typeof stz_render === 'function') stz_render();
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -29903,6 +29911,7 @@ function estat_exportarResultado() {
 <script src="plantoes-detalhe.js?v=20261020f4"></script>
 <script src="plantoes-servidores.js?v=20261020f4"></script>
 <script src="vd-zonas.js?v=20261020f4"></script>
+<script src="saida-temp.js?v=20261022a"></script>
 <script src="radar-mandado.js?v=20261020f4"></script>
 <script src="rv-justificativas.js?v=20261020f4"></script>
 <script src="estoque-plantao.js?v=20261021b"></script>
