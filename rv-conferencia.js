@@ -123,7 +123,16 @@ function rvc_conferir(v) {
 
   // 4) GPS × ocorrência (o robô devolve junto com o mapa — só nas violações de zona)
   const g = v.gps;
-  if (g && g.semLeitura) add('aviso', 'gps-sem-leitura', 'Sem leituras do GPS no período da ocorrência — o mapa não confirma nem desmente a violação.');
+  // ESPELHAMENTO de GPS (multicaminhamento) — parecer técnico da UE Brasil de 15/10/2025 (caso Valdenor):
+  // pontos "em violação" com ALTITUDE NEGATIVA na telemetria não são saída real e não vão ao Judiciário.
+  const esp = g && g.espelho;
+  if (esp && esp.veredito === 'espelhamento') {
+    add('trava', 'espelhamento', 'ESPELHAMENTO DE GPS: ' + esp.motivo + '. Pelo parecer técnico da UE Brasil (15/10/2025), ponto com altitude negativa é reflexão do sinal, não saída real — não enviar ao Judiciário.');
+    sugestao = 'retirar';
+  } else if (esp && esp.veredito === 'indicio') add('aviso', 'espelhamento-indicio', 'Possível espelhamento de GPS: ' + esp.motivo + ' — confira a telemetria (coluna Alt) no AKILES antes de enviar.');
+  else if (esp && esp.veredito === 'erro') add('aviso', 'telemetria-erro', 'Não consegui ler a telemetria para conferir espelhamento (' + esp.motivo + ').');
+  if (esp && esp.veredito === 'espelhamento') { /* o resto da conferência do GPS não se aplica */ }
+  else if (g && g.semLeitura) add('aviso', 'gps-sem-leitura', 'Sem leituras do GPS no período da ocorrência — o mapa não confirma nem desmente a violação.');
   else if (g && g.verificado) {
     if (exclusao && g.dentro === false) {
       if (g.travessia) add('aviso', 'gps-travessia', 'Nenhuma leitura do GPS dentro da zona de exclusão, mas a linha entre duas leituras cruza a zona — confira o mapa.');
