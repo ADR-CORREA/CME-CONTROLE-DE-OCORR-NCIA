@@ -24,10 +24,17 @@ function _padmModelo(id) {
   if (m) return { nome: String(m.nome).replace(/^\S+\s(?=Livre)/, ''), cat: String(m.cat).replace(/^[^A-Za-zÀ-ÿ]+/, '') };
   return { nome: id || 'Sem modelo', cat: /desvinc/i.test(id) ? 'Desvinculação' : /vinc/i.test(id) ? 'Vinculação' : 'Outros' };
 }
+// Agrupa por servidor ignorando acento, maiúsculas e espaços ("CORRÊA" e "CORREA" = mesma pessoa);
+// mostra a grafia com acento quando houver.
+function _padmChaveNome(s) { return String(s || '').normalize('NFD').replace(/[\u{300}-\u{36f}]/gu, '').replace(/\s+/g, ' ').trim().toUpperCase(); }
 function _padmAgrupar(lista, chave) {
-  const g = {};
-  lista.forEach(x => { const k = String(chave(x) || '(sem nome)').trim(); (g[k] = g[k] || []).push(x); });
-  return Object.entries(g).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+  const g = {}, rotulo = {}, temAcento = s => /[\u{300}-\u{36f}]/u.test(String(s).normalize('NFD'));
+  lista.forEach(x => {
+    const bruto = String(chave(x) || '(sem nome)').replace(/\s+/g, ' ').trim(), k = _padmChaveNome(bruto);
+    (g[k] = g[k] || []).push(x);
+    if (!rotulo[k] || (temAcento(bruto) && !temAcento(rotulo[k]))) rotulo[k] = bruto;
+  });
+  return Object.entries(g).map(([k, l]) => [rotulo[k], l]).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
 }
 
 function prod_renderAdm() {

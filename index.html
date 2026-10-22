@@ -28203,7 +28203,8 @@ function _prodAno(rec, m) {
   const mm = String(d).match(/(\d{4})/);
   return mm ? mm[1] : '';
 }
-function _prodNorm(s){ return String(s||'').trim().toLowerCase(); }
+// sem acento, minúsculo e com espaço único: "CORRÊA" e "CORREA" contam para a mesma pessoa (troca de nome no cadastro)
+function _prodNorm(s){ return String(s||'').normalize('NFD').replace(/[\u{300}-\u{36f}]/gu,'').replace(/\s+/g,' ').trim().toLowerCase(); }
 function _prodMatch(rec, m, u) {
   const who = _prodNorm(rec[m.who]);
   if (!who) return false;
@@ -29896,7 +29897,7 @@ function estat_exportarResultado() {
 <script src="secretaria-faltas.js?v=20261020f4"></script>
 <script src="secretaria-atencao.js?v=20261021a"></script>
 <script src="semcom-contatos.js?v=20261020f4"></script>
-<script src="produtividade.js?v=20261020f4"></script>
+<script src="produtividade.js?v=20261022a"></script>
 <script src="inconsistencias.js?v=20261020f4"></script>
 <script src="plantoes-resumo.js?v=20261020f4"></script>
 <script src="plantoes-detalhe.js?v=20261020f4"></script>
@@ -29909,6 +29910,6 @@ function estat_exportarResultado() {
 <script src="passagem-servico.js?v=20261021b"></script>
 <script src="upload-imagem-pdf.js?v=20261020f4"></script>
 <script src="assinatura-foto.js?v=20261021a"></script>
-<script src="rv-conferencia.js?v=20261022b"></script>
+<script src="rv-conferencia.js?v=20261022c"></script>
 </body>
 </html>

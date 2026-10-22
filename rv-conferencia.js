@@ -18,7 +18,7 @@ const RVC_BATERIA_MIN = 15;          // descarga acima disto = violação confir
 const RVC_SAIDA_LONGA_H = 24;        // inclusão: saída de 24 h ou mais → padrão de saída temporária
 let _rvc_decisoes = {};              // idOc → { acao, motivo } (reaproveitado se gerar de novo)
 
-function _rvcNorm(s) { return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, ' ').trim(); }
+function _rvcNorm(s) { return String(s == null ? '' : s).normalize('NFD').replace(/[\u{300}-\u{36f}]/gu, '').toUpperCase().replace(/\s+/g, ' ').trim(); }
 
 // "0d 16h 51min" / "305d 21h 27min" / "45min" → minutos
 function rvc_duracaoMin(s) {
