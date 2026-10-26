@@ -51,6 +51,7 @@ function ep_renderizar() {
       + _epBtn('\u{2699}\u{FE0F} Mínimos', 'ep_abrirMinimos()', '', 'Quantidade mínima de cada item; abaixo disso aparece o alerta de estoque baixo') : '')
     + (admin && d.inventarioEncerradoEm ? _epBtn('Reabrir inventário', 'ep_reabrirInventario()', 'btn-secondary', 'Libera de novo o cadastro de inventário pelo plantão') : '')
     + (ep_podeCadastrar() ? _epBtn('\u{2795} Cadastrar dispositivos', 'ep_abrirCadastro()', 'btn-primary', 'Gerência e admin: cadastra módulo ou DPP novo direto no estoque do plantão, digitando o nº de série ou IMEI') : '')
+    + (ep_podeCadastrar() ? _epBtn('\u{1F50D} Conferência física', 'ep_abrirConferencia()', '', 'Gerência e admin: cole os números que estão na sala; quem está cadastrado e não foi achado recebe Baixa de uma vez') : '')
     + '</div></div>');
   if (!pode) html.push('<div class="idv-faixa at" style="margin-bottom:12px"><span>\u{1F512} <strong>Modo visualização:</strong> só o plantão lança movimentações aqui.' + (ep_podeCadastrar() ? ' A gerência pode cadastrar dispositivos novos pelo botão "Cadastrar dispositivos".' : '') + '</span></div>');
   // 1º momento: o plantão cadastra o que já tem; depois, tudo novo vem do Estoque do CME
@@ -550,4 +551,60 @@ function ep_relatorioAuditoria() {
     + '</body></html>';
   _entregarDoc(new Blob([html], { type: 'text/html' }), 'Estoque do Plantao - auditoria ' + agora.toLocaleDateString('pt-BR').replace(/\//g, '-') + '.html');
   auditar({ modulo: 'Estoque Plantão', action: 'ep_relatorio_auditoria', alvo: 'levantamento', detalhe: mods.length + ' tornozeleira(s), ' + dpps.length + ' DPP' });
+}
+
+/* ── Conferência física (gerência e admin, 26/10/2026): cola os nº de série / IMEI que estão de fato na sala;
+   o sistema mostra quem está cadastrado e não foi achado e dá Baixa neles de uma vez, no nome de quem está logado.
+   Casa o nº da etiqueta com o do sistema: "58358-3" (etiqueta, com dígito verificador) = "0000000058358" (sistema). ── */
+const _EPC_ITENS = { 'Módulo eletrônico de monitoração': 'Tornozeleiras (nº de série)', 'Dispositivo DPP': 'Botões do pânico (IMEI)' };
+function _epcChaves(v) {  // formas de comparar um número: sem zeros à esquerda, com e sem o dígito depois do traço
+  const s = String(v || '').trim(), base = s.split('-')[0].replace(/\D/g, '').replace(/^0+(?=\d)/, ''), tudo = s.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+  return [...new Set([base, tudo].filter(Boolean))];
+}
+function _epcAnalisar(item, texto) {
+  const lidos = String(texto || '').split(/[\s,;]+/).map(x => x.trim()).filter(Boolean);
+  const cad = ep_unidades(ep_get(), item).map(u => u.id);
+  const chavesLidas = new Set(lidos.flatMap(_epcChaves));
+  const achados = cad.filter(id => _epcChaves(id).some(k => chavesLidas.has(k)));
+  const faltam = cad.filter(id => !achados.includes(id));
+  const chavesCad = new Set(cad.flatMap(_epcChaves));
+  const foraDoSistema = lidos.filter(x => !_epcChaves(x).some(k => chavesCad.has(k)));
+  return { lidos, cad, achados, faltam, foraDoSistema };
+}
+function ep_abrirConferencia() {
+  if (!ep_podeCadastrar()) { alert('Só a gerência e o administrador fazem a conferência física.'); return; }
+  const corpo = '<div style="font-size:14px;line-height:1.6">Cole ou digite os números que estão <b>de fato na sala</b> (um por linha ou separados por espaço). '
+    + 'O sistema mostra quem está cadastrado e <b>não foi achado</b> e dá <b>Baixa</b> neles em nome de <b>' + esc(_epQuem()) + '</b>.</div>'
+    + '<div class="form-field" style="margin-top:10px"><label>Tipo</label><select id="epc-item" onchange="_epcPrevia()">'
+    + Object.entries(_EPC_ITENS).map(([k, r]) => '<option value="' + esc(k) + '">' + esc(r) + '</option>').join('') + '</select></div>'
+    + '<div class="form-field"><label>Números encontrados na sala</label><textarea id="epc-txt" rows="6" oninput="_epcPrevia()" placeholder="58358-3&#10;55564-9&#10;..."></textarea></div>'
+    + '<div class="form-field"><label>Motivo da baixa</label><input type="text" id="epc-mot" value="Acerto de inventário — não encontrada na conferência física de ' + new Date().toLocaleDateString('pt-BR') + '"></div>'
+    + '<div id="epc-res" style="margin-top:8px"></div>';
+  _epModal('\u{1F50D} Conferência física do estoque', corpo, _epBtn('Cancelar', "fecharModal('ep-modal')") + '<button type="button" class="btn-danger" id="epc-ok" disabled onclick="ep_confirmarConferencia()">Dar baixa</button>');
+}
+function _epcPrevia() {
+  const item = document.getElementById('epc-item').value, txt = document.getElementById('epc-txt').value;
+  const r = _epcAnalisar(item, txt), el = document.getElementById('epc-res'), btn = document.getElementById('epc-ok');
+  const lista = ids => '<div class="idv-mono" style="font-size:13px;max-height:140px;overflow:auto;margin-top:2px">' + ids.map(esc).join(' · ') + '</div>';
+  if (!r.lidos.length) { el.innerHTML = '<div class="idv-mini">' + r.cad.length + ' cadastrado(s) no sistema.</div>'; btn.disabled = true; btn.textContent = 'Dar baixa'; return; }
+  el.innerHTML = '<div style="font-size:14px">Cadastrados no sistema: <b>' + r.cad.length + '</b> · achados na sala: <b style="color:var(--idv-ok)">' + r.achados.length + '</b> · '
+    + 'não achados: <b style="color:var(--idv-cr)">' + r.faltam.length + '</b></div>'
+    + (r.faltam.length ? '<div style="margin-top:6px;font-size:13px;font-weight:600;color:var(--idv-cr)">Vão receber baixa:</div>' + lista(r.faltam) : '')
+    + (r.foraDoSistema.length ? '<div class="idv-faixa at" style="margin-top:8px;font-size:13px">Estes números da sala <b>não estão cadastrados</b> no estoque do Plantão (confira se foram digitados certo ou cadastre-os): ' + r.foraDoSistema.map(esc).join(', ') + '</div>' : '');
+  btn.disabled = !r.faltam.length || r.achados.length === 0;  // sem nenhum achado é quase certo erro de digitação: não deixa zerar o estoque
+  btn.textContent = r.faltam.length ? 'Dar baixa em ' + r.faltam.length : 'Dar baixa';
+}
+async function ep_confirmarConferencia() {
+  const item = document.getElementById('epc-item').value, motivo = (document.getElementById('epc-mot').value || '').trim();
+  const r = _epcAnalisar(item, document.getElementById('epc-txt').value);
+  if (!motivo) return alert('Informe o motivo da baixa.');
+  if (!r.faltam.length || !r.achados.length) return;
+  if (!confirm('Dar BAIXA em ' + r.faltam.length + ' ' + (_EPC_ITENS[item] || item).toLowerCase() + ' que não foram achados na sala, em nome de ' + _epQuem() + '?\n\nFicam no estoque só os ' + r.achados.length + ' achados.')) return;
+  const btn = document.getElementById('epc-ok'); btn.disabled = true; btn.textContent = 'Gravando...';
+  const op = { categoria: _EP_CAT[item], item, tamanho: '', estado: '', seriais: r.faltam, qtd: r.faltam.length };
+  const ok = await ep_salvarMov('baixa', op, { motivo, obs: 'Conferência física: ' + r.achados.length + ' achado(s) na sala (' + r.achados.join(', ') + ').' });
+  if (!ok) { _epcPrevia(); return; }
+  fecharModal('ep-modal');
+  _mostrarToast('\u{2713} Baixa de ' + r.faltam.length + ' registrada. Ficaram ' + r.achados.length + ' no estoque do Plantão.', 'ok');
+  ep_renderizar(); try { _dashEstoqueDisp(); } catch (e) {}
 }
