@@ -226,6 +226,8 @@ function sc_imprimirLista(area) {
   _sccModal('\u{1F5A8}\u{FE0F} Lista para contato (PDF)',
     '<div style="font-size:14px;line-height:1.6">Sai a lista de quem está sem comunicação, com <b>telefones</b>, <b>tempo sem comunicar</b> e um espaço para o servidor anotar o resultado do contato.</div>'
     + '<div style="font-size:14px;line-height:1.6;margin-top:8px">Para incluir o <b>endereço</b>, escolha o relatório <b>"Cadastro completo dos monitorados"</b> do AKILES (.xls). O endereço só vai para a folha; não fica guardado no CME.</div>'
+    + '<div style="font-size:14px;margin-top:10px">Formato: <label style="margin-right:12px"><input type="radio" name="scc-fmt" value="pdf" checked> PDF (imprimir)</label>'
+    + '<label><input type="radio" name="scc-fmt" value="doc"> Word (.doc)</label></div>'
     + '<label class="btn-primary" style="cursor:pointer;margin-top:12px;display:inline-block">Escolher o cadastro do AKILES e gerar'
     + '<input type="file" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="sc_imprimirComCadastro(this)"></label>',
     '<button class="btn-secondary" onclick="document.getElementById(\'scc-modal\').classList.remove(\'open\');_sccImprimir(null)">Gerar sem endereço</button>');
@@ -261,6 +263,7 @@ function _sccEnderecos(linhas) {
 }
 function _sccImprimir(endDe) {
   const area = _sccListaArea;
+  const word = (document.querySelector('input[name="scc-fmt"]:checked') || {}).value === 'doc';
   const lista = _scListaArea(getSemCom(), area).filter(_scEmAberto).sort(_scOrdemPrioridade);
   if (!lista.length) { _mostrarToast('Nenhum monitorado sem comunicação nesta área.', 'erro'); return; }
   const e = s => esc(String(s == null ? '' : s));
@@ -290,6 +293,10 @@ function _sccImprimir(endDe) {
     + '<div class="s">' + lista.length + ' pessoa(s), em ordem de prioridade (mais tempo sem comunicar primeiro) · gerada em ' + new Date().toLocaleString('pt-BR') + ' · documento restrito (dados pessoais)</div>'
     + '<table><thead><tr><th>Nº</th><th style="width:20%">Nome</th><th style="width:21%">Telefones</th>' + (endDe ? '<th style="width:24%">Endereço residencial</th>' : '')
     + '<th>Sem comunicação</th><th>Resultado do contato (servidor, data, hora)</th></tr></thead><tbody>' + linhas + '</tbody></table></body></html>';
-  _entregarDoc(new Blob([html], { type: 'text/html' }), titulo + ' - lista para contato.html');
+  // Word abre o mesmo HTML como documento (.doc); sem o botão de imprimir
+  if (word) {
+    const doc = html.replace(/<div class="np"[\s\S]*?<\/div>/, '').replace('<html lang="pt-BR">', '<html lang="pt-BR" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">');
+    _entregarDoc(new Blob(['﻿' + doc], { type: 'application/msword' }), titulo + ' - lista para contato.doc');
+  } else _entregarDoc(new Blob([html], { type: 'text/html' }), titulo + ' - lista para contato.html');
   auditar({ modulo: 'Sem Comunicação', action: 'semcom_lista_contato', alvo: area, detalhe: lista.length + ' pessoa(s)' + (endDe ? ' com endereço' : '') });
 }
