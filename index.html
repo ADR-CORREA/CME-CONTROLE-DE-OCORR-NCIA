@@ -3511,7 +3511,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         <div style="max-width:600px;margin:24px auto 0">
           <div class="form-field" style="margin-bottom:16px">
             <label for="est-consultar-input" style="font-size:16px;font-weight:600;color:var(--idv-texto);letter-spacing:0">Buscar no estoque</label>
-            <input type="text" id="est-consultar-input" placeholder="IMEI, nº de série, nome, responsável, monitorado, plantão, motivo..."
+            <input type="text" id="est-consultar-input" placeholder="Nº de estoque (DPP), nº de série, nome, responsável, monitorado, plantão, motivo..."
               oninput="consultarSerial(this.value)"
               style="width:100%;padding:10px 14px;font-size:15px;margin-top:6px">
             <span style="font-size:13px;color:var(--idv-sec);margin-top:4px;display:block">Pesquisa em todos os campos do estoque e do histórico de movimentações</span>
@@ -15589,7 +15589,7 @@ function renderizarEstoque() {
       if (seriais.length > 0) {
         rowsDpp.push(`<tr style="background:var(--idv-fundo)">
           <td colspan="8" style="font-size:13px;color:var(--idv-sec);padding:6px 14px">
-            \u{1F4CB} <strong>IMEIs em estoque:</strong> ${seriais.join(' · ')}
+            \u{1F4CB} <strong>Nºs de estoque em estoque:</strong> ${seriais.join(' · ')}
           </td>
         </tr>`);
       }
@@ -15673,10 +15673,10 @@ function verDetalheMovEstoque(id) {
   const dtEntrega = m.dataEntrega ? m.dataEntrega.split('-').reverse().join('/') : '—';
   const badgeColor = { 'Entrada':'ok', 'Saída':'cr', 'Devolução':'at', 'Baixa':'at' }[m.tipo] || 'ne';  // etiqueta do guia
 
-  // Seriais / IMEIs registrados no movimento
+  // Seriais / nºs de estoque registrados no movimento
   let serialHtml = '';
   if ((m.seriais || []).length > 0) {
-    serialHtml = _vsec('Números de Série / IMEI registrados',
+    serialHtml = _vsec('Números de Série / Nº de estoque registrados',
       `<div class="idv-mono" style="grid-column:1/-1;padding:8px;background:var(--idv-fundo);border:1px solid var(--idv-linha);border-radius:6px;font-size:14px;line-height:1.9">
         ${m.seriais.map(s => `<span style="display:inline-block;background:var(--idv-cartao);border:1px solid var(--idv-borda);border-radius:3px;padding:2px 8px;margin:2px">${s}</span>`).join('')}
       </div>`
@@ -15812,7 +15812,7 @@ function consultarSerial(valor) {
   if (unidadesEncontradas.length === 0 && movsEncontrados.length === 0) {
     resultado.innerHTML = `<div class="idv-vazio">
       Nenhum resultado encontrado para "<strong>${_escHtml(valor)}</strong>".<br>
-      <span style="font-size:13px">Tente buscar por IMEI, série, nome do responsável, monitorado, plantão, motivo...</span>
+      <span style="font-size:13px">Tente buscar por nº de estoque, série, nome do responsável, monitorado, plantão, motivo...</span>
     </div>`;
     return;
   }
@@ -15824,7 +15824,7 @@ function consultarSerial(valor) {
     html += `<div class="idv-secao">Unidades encontradas (${unidadesEncontradas.length})</div>`;
     unidadesEncontradas.forEach(({ tipo, reg, id, emEstoque, simples }) => {
       const isDpp = tipo === 'Dispositivo DPP';
-      const labelId = isDpp ? 'IMEI' : 'Nº de Série';
+      const labelId = isDpp ? 'Nº de estoque' : 'Nº de série';
       const statusColor = emEstoque ? 'ok' : 'cr';  // etiqueta do guia
       const statusLabel = emEstoque ? 'Em estoque' : 'Fora do estoque';
       const extraDpp = isDpp && !simples
@@ -15868,7 +15868,7 @@ function consultarSerial(valor) {
     <div class="table-scroll"><table class="data-table idv-tabela">
       <thead><tr>
         <th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Estado</th>
-        <th>Responsável</th><th>Monitorado</th><th>Plantão</th><th>Motivo</th><th>Série/IMEI</th><th></th>
+        <th>Responsável</th><th>Monitorado</th><th>Plantão</th><th>Motivo</th><th>Série/Nº estoque</th><th></th>
       </tr></thead>
       <tbody>
         ${movsEncontrados.map(m => {
@@ -15974,7 +15974,7 @@ function toggleTamanhoEst(pfx) {
 
 /* ─ Campos dinâmicos de número de série ─────────────────── */
 function _serialLabel(itemTipo) {
-  return itemTipo === 'Dispositivo DPP' ? 'IMEI' : 'Nº de série';
+  return itemTipo === 'Dispositivo DPP' ? 'Nº de estoque' : 'Nº de série';
 }
 
 function atualizarCamposSerialEntrada() {
@@ -15985,7 +15985,7 @@ function atualizarCamposSerialEntrada() {
   const titulo = document.getElementById('ent-seriais-titulo');
   if (!container || !lista) return;
   const isDpp = itemTipo === 'Dispositivo DPP';
-  if (titulo) titulo.textContent = isDpp ? 'IMEI do Dispositivo DPP' : 'Números de Série';
+  if (titulo) titulo.textContent = isDpp ? 'Nº de estoque do Dispositivo DPP' : 'Números de Série';
   if (ITENS_COM_SERIAL.includes(itemTipo) && qtd > 0) {
     container.style.display = '';
     const existentes = Array.from(lista.querySelectorAll('.ent-serial-input')).map(i => i.value);
@@ -16024,7 +16024,7 @@ function atualizarCamposSerialDevolucao() {
   const titulo = document.getElementById('dev-seriais-titulo');
   if (!container || !lista) return;
   const isDpp = itemTipo === 'Dispositivo DPP';
-  if (titulo) titulo.textContent = isDpp ? 'IMEI do Dispositivo DPP' : 'Números de Série';
+  if (titulo) titulo.textContent = isDpp ? 'Nº de estoque do Dispositivo DPP' : 'Números de Série';
   if (ITENS_COM_SERIAL.includes(itemTipo) && qtd > 0) {
     container.style.display = '';
     const existentes = Array.from(lista.querySelectorAll('.dev-serial-input')).map(i => i.value);
@@ -16053,7 +16053,7 @@ function atualizarCamposSerialSaida() {
   const titulo = document.getElementById('sai-seriais-titulo');
   if (!container || !lista) return;
   const isDpp = itemTipo === 'Dispositivo DPP';
-  if (titulo) titulo.textContent = isDpp ? 'Selecionar IMEI do Dispositivo DPP' : 'Selecionar Números de Série';
+  if (titulo) titulo.textContent = isDpp ? 'Selecionar Nº de estoque do Dispositivo DPP' : 'Selecionar Números de Série';
   if (ITENS_COM_SERIAL.includes(itemTipo) && qtd > 0) {
     container.style.display = '';
     const est = getEstoque();
@@ -16194,7 +16194,7 @@ function salvarMovEstoque(tipo) {
     const _noSetor = _buildSerialEstadoMap(est, itemTipo), _fora = _ids.find(id => !_noSetor[id]);
     if (_fora) return alert(`O ${_serialLabel(itemTipo)} "${_fora}" não está no estoque do setor. Escolha da lista.`);
   }
-  const unidadesSaida = []; // nº de série/IMEI que saem, com estado/carregador/chip (vão junto para o Plantão)
+  const unidadesSaida = []; // nº de série/nº de estoque que saem, com estado/carregador/chip (vão junto para o Plantão)
 
   // Atualizar saldo
   est.itens[chave] = (tipo === 'entrada' || tipo === 'devolucao')
@@ -17336,7 +17336,7 @@ Registramos nesta data (${dataFmt}) a DEVOLUÇÃO ESPONTÂNEA do DISPOSITIVO DE 
 • USUÁRIA/VÍTIMA: ${monit}
 • CPF: ${cpf}
 • PROCESSO/ALVARÁ: ${processo}
-• Nº DE SÉRIE/IMEI DO DPP: ${dpp}
+• Nº DE ESTOQUE DO DPP: ${dpp}
 • DATA DA DEVOLUÇÃO: ${dataFmt}
 
 A usuária/vítima compareceu espontaneamente a esta Central de Monitoramento Eletrônico e DEVOLVEU o referido dispositivo, declarando não mais necessitar de sua utilização. O equipamento foi recebido por esta Central e encaminhado ao setor competente para triagem e manutenção, encerrando-se a disponibilização do "Botão do Pânico".
@@ -29989,8 +29989,8 @@ function estat_exportarResultado() {
 <script src="violacoes-graves.js?v=20261022a"></script>
 <script src="radar-mandado.js?v=20261020f4"></script>
 <script src="rv-justificativas.js?v=20261022b"></script>
-<script src="estoque-plantao.js?v=20261026a"></script>
-<script src="estoque-plantao-tela.js?v=20261026conf"></script>
+<script src="estoque-plantao.js?v=20261026est"></script>
+<script src="estoque-plantao-tela.js?v=20261026est"></script>
 <script src="passagem-servico.js?v=20261021b"></script>
 <script src="upload-imagem-pdf.js?v=20261020f4"></script>
 <script src="assinatura-foto.js?v=20261021a"></script>

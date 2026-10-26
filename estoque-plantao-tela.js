@@ -42,7 +42,7 @@ function ep_renderizar() {
     + '<div class="idv-sub">Um estoque só para as equipes ALFA a ECHO, separado do Estoque do CME. Lance na hora tudo que entra e sai. Equipe de hoje: <b>' + esc(equipe || '—') + '</b></div></div>'
     + '<div class="idv-acoes">' + _epBtn('\u{1F504} Atualizar', 'ep_renderizar()', '', 'Recarrega a tela com os números mais recentes')
     + (typeof ep_abrirPassagem === 'function' ? _epBtn('\u{1F5A8}\u{FE0F} Passagem de serviço', 'ep_abrirPassagem()', '', 'Folha da troca de plantão para imprimir: material, viaturas e as assinaturas de quem passa e de quem recebe') : '')
-    + _epBtn('\u{1F4CB} Auditoria (PDF)', 'ep_relatorioAuditoria()', '', 'Levantamento para auditoria: saldos, cintas por tamanho, travas e a lista de cada tornozeleira (nº de série) e DPP (IMEI)')
+    + _epBtn('\u{1F4CB} Auditoria (PDF)', 'ep_relatorioAuditoria()', '', 'Levantamento para auditoria: saldos, cintas por tamanho, travas e a lista de cada tornozeleira (nº de série) e DPP (nº de estoque)')
     + (pode && !d.inventarioEncerradoEm ? _epBtn('\u{2B06} Inventário inicial', "ep_abrirMov('entrada')", 'btn-primary', 'Cadastra o que o plantão já tem na sala (só no começo)') + _epBtn('\u{2714} Encerrar inventário', 'ep_encerrarInventario()', '', 'Termina o cadastro inicial; depois disso, item novo só chega pelo Estoque do CME') : '')
     + (pode ? _epBtn('\u{2B07} Saída', "ep_abrirMov('saida')", '', 'Instalação de tornozeleira ou entrega de equipamento ao monitorado')
       + _epBtn('\u{21A9} Devolução', "ep_abrirMov('devolucao')", '', 'Equipamento retirado do monitorado que volta para o plantão')
@@ -50,14 +50,14 @@ function ep_renderizar() {
       + _epBtn('\u{2715} Baixa', "ep_abrirMov('baixa')", 'btn-danger', 'Item perdido, quebrado ou inutilizado que sai de vez do estoque')
       + _epBtn('\u{2699}\u{FE0F} Mínimos', 'ep_abrirMinimos()', '', 'Quantidade mínima de cada item; abaixo disso aparece o alerta de estoque baixo') : '')
     + (admin && d.inventarioEncerradoEm ? _epBtn('Reabrir inventário', 'ep_reabrirInventario()', 'btn-secondary', 'Libera de novo o cadastro de inventário pelo plantão') : '')
-    + (ep_podeCadastrar() ? _epBtn('\u{2795} Cadastrar dispositivos', 'ep_abrirCadastro()', 'btn-primary', 'Gerência e admin: cadastra módulo ou DPP novo direto no estoque do plantão, digitando o nº de série ou IMEI') : '')
+    + (ep_podeCadastrar() ? _epBtn('\u{2795} Cadastrar dispositivos', 'ep_abrirCadastro()', 'btn-primary', 'Gerência e admin: cadastra módulo ou DPP novo direto no estoque do plantão, digitando o nº de série ou nº de estoque') : '')
     + (ep_podeCadastrar() ? _epBtn('\u{1F50D} Conferência física', 'ep_abrirConferencia()', '', 'Gerência e admin: cole os números que estão na sala; quem está cadastrado e não foi achado recebe Baixa de uma vez') : '')
     + '</div></div>');
   if (!pode) html.push('<div class="idv-faixa at" style="margin-bottom:12px"><span>\u{1F512} <strong>Modo visualização:</strong> só o plantão lança movimentações aqui.' + (ep_podeCadastrar() ? ' A gerência pode cadastrar dispositivos novos pelo botão "Cadastrar dispositivos".' : '') + '</span></div>');
   // 1º momento: o plantão cadastra o que já tem; depois, tudo novo vem do Estoque do CME
   html.push(d.inventarioEncerradoEm
     ? '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:12px">\u{2714} Inventário inicial encerrado em <span class="idv-data">' + new Date(d.inventarioEncerradoEm).toLocaleString('pt-BR') + '</span>' + (d.inventarioEncerradoPor ? ' por ' + esc(d.inventarioEncerradoPor) : '') + '. Item novo chega pelo Estoque do CME, em "A receber", ou pelo cadastro de dispositivos (gerência e admin).</div>'
-    : '<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:12px"><span>\u{1F4CB} <strong>Primeiro passo — inventário inicial:</strong> cadastre em "Inventário inicial" tudo que o plantão já tem na sala (com o IMEI/nº de série de cada DPP e módulo). Quando terminar, clique em <b>Encerrar inventário</b>. Depois disso, item novo só entra pelo que o Estoque do CME enviar ("A receber").</span></div>');
+    : '<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:12px"><span>\u{1F4CB} <strong>Primeiro passo — inventário inicial:</strong> cadastre em "Inventário inicial" tudo que o plantão já tem na sala (com o nº de estoque de cada DPP e o nº de série de cada módulo). Quando terminar, clique em <b>Encerrar inventário</b>. Depois disso, item novo só entra pelo que o Estoque do CME enviar ("A receber").</span></div>');
   if (d.recontagemEm) html.push('<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:12px"><span>\u{1F9EE} <strong>Recontagem em <span class="idv-data">' + new Date(d.recontagemEm).toLocaleString('pt-BR') + '</span>:</strong> o saldo conta só o que foi lançado a partir dessa data.</span></div>');
   html.push(_epHtmlPendencias('plantao', pode));
   html.push('<div class="idv-kpis" style="margin-bottom:16px">' + kpi(it[M] || 0, 'Módulo Eletrônico', '', 'Tornozeleiras (o aparelho) na sala do plantão')
@@ -70,7 +70,7 @@ function ep_renderizar() {
     + kpi(baixo, 'Estoque Baixo', 'at', 'Itens abaixo da quantidade mínima definida em Mínimos') + kpi(zero, 'Sem Estoque', 'cr', 'Itens que acabaram (quantidade zero)') + '</div>');
   // busca no topo, igual à "Buscar no estoque" do Estoque do CME (pedido de 26/10/2026)
   html.push('<div style="margin:0 0 20px"><div style="max-width:640px"><label for="ep-busca" style="display:block;font-size:16px;font-weight:600;color:var(--idv-texto)">Buscar no estoque</label>'
-    + '<input type="text" id="ep-busca" placeholder="IMEI, nº de série, monitorado, plantonista, equipe, motivo..." oninput="ep_consultar(this.value)" autocomplete="off" style="width:100%;padding:10px 14px;font-size:15px;margin-top:6px;border:1px solid var(--idv-borda);border-radius:6px;background:var(--idv-campo)">'
+    + '<input type="text" id="ep-busca" placeholder="Nº de estoque (DPP), nº de série, monitorado, plantonista, equipe, motivo..." oninput="ep_consultar(this.value)" autocomplete="off" style="width:100%;padding:10px 14px;font-size:15px;margin-top:6px;border:1px solid var(--idv-borda);border-radius:6px;background:var(--idv-campo)">'
     + '<span style="font-size:13px;color:var(--idv-sec);margin-top:4px;display:block">Pesquisa nas unidades do estoque do Plantão e em todo o histórico de movimentações</span></div>'
     + '<div id="ep-busca-res" style="margin-top:10px"></div></div>');
   html.push(_epHtmlTabelas(d, pe));
@@ -177,7 +177,7 @@ function _epHtmlHistorico(d, admin) {
       + '<td style="white-space:nowrap">' + _epBtn('\u{1F441}', "ep_verMov('" + _jsq(m.id) + "')", 'btn-sm') + (admin ? _epBtn('\u{1F5D1}', "ep_excluirMov('" + _jsq(m.id) + "')", 'btn-sm btn-danger') : '') + '</td></tr>';
   }).join('') : '<tr><td colspan="12" class="idv-vazio">Nenhuma movimentação no estoque do Plantão ainda. Comece pelo inventário: botão "Entrada" → "Inventário inicial".</td></tr>';
   return '<div class="idv-secao" style="margin-top:28px">Histórico do Plantão</div><div class="table-scroll"><table class="data-table idv-tabela"><thead><tr>'
-    + '<th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Tam.</th><th>Qtd</th><th>Série/IMEI</th><th>Equipe</th><th>Plantonista</th><th>Monitorado</th><th>Motivo</th><th>Obs.</th><th>Ações</th></tr></thead><tbody>' + corpo + '</tbody></table></div>';
+    + '<th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Tam.</th><th>Qtd</th><th>Série/Nº estoque</th><th>Equipe</th><th>Plantonista</th><th>Monitorado</th><th>Motivo</th><th>Obs.</th><th>Ações</th></tr></thead><tbody>' + corpo + '</tbody></table></div>';
 }
 
 /* ── consulta: onde está a unidade + movimentações que citam o termo ── */
@@ -186,7 +186,7 @@ function ep_consultar(valor) {
   const q = String(valor || '').trim(); if (q.length < 2) { el.innerHTML = ''; return; }
   const p = ep_get(), ql = q.toLowerCase(), qn = _epSoDig(q);
   const txt = v => String(v == null ? '' : v).toLowerCase();
-  // 1. unidades que estão no estoque do Plantão (aceita parte do IMEI / nº de série)
+  // 1. unidades que estão no estoque do Plantão (aceita parte do nº de estoque / nº de série)
   const unids = [];
   ITENS_COM_SERIAL.forEach(item => ep_unidades(p, item).forEach(u => {
     if ((qn && _epSoDig(u.id).includes(qn)) || txt(u.id).includes(ql) || txt(u.estado).includes(ql)) unids.push(Object.assign({ item }, u));
@@ -197,7 +197,7 @@ function ep_consultar(valor) {
   const movs = p.movimentacoes.filter(m => [m.tipo, m.categoria, m.item, m.tamanho, m.estado, m.monitorado, m.processo, m.motivo, m.obs,
     m.equipe, m.plantonista, m.responsavel, m.dataEntrega, ...(m.seriais || [])].some(v => txt(v).includes(ql)) || (qn.length >= 4 && (m.seriais || []).some(s => _epSoDig(s).includes(qn))));
   if (!unids.length && !onde && !movs.length) {
-    el.innerHTML = '<div class="idv-vazio">Nenhum resultado para "<strong>' + esc(q) + '</strong>".<br><span style="font-size:13px">Tente o IMEI, o nº de série, o nome do monitorado, o plantonista, a equipe ou o motivo.</span></div>';
+    el.innerHTML = '<div class="idv-vazio">Nenhum resultado para "<strong>' + esc(q) + '</strong>".<br><span style="font-size:13px">Tente o nº de estoque, o nº de série, o nome do monitorado, o plantonista, a equipe ou o motivo.</span></div>';
     return;
   }
   const linhaMov = m => '<div onclick="ep_verMov(\'' + _jsq(m.id) + '\')" title="Ver detalhes" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 0;border-bottom:1px solid var(--idv-linha);cursor:pointer">'
@@ -213,7 +213,7 @@ function ep_consultar(valor) {
       h += '<div style="background:var(--idv-cartao);border:1px solid var(--idv-borda);border-radius:6px;padding:14px 16px;margin-bottom:10px">'
         + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px"><span style="font-weight:600;font-size:15px">' + esc(u.item) + '</span>'
         + '<span class="idv-etq ' + (u.estado === 'Novo' ? 'ok' : u.estado === 'Reutilizado' ? 'at' : 'ne') + '">' + esc(u.estado || '—') + '</span><span class="idv-etq ok">No estoque do Plantão</span></div>'
-        + '<div style="font-size:14px"><strong>' + (dpp ? 'IMEI' : 'Nº de série') + ':</strong> <code class="idv-mono" style="background:var(--idv-fundo);border:1px solid var(--idv-linha);padding:2px 8px;border-radius:3px">' + esc(u.id) + '</code>'
+        + '<div style="font-size:14px"><strong>' + (dpp ? 'Nº de estoque' : 'Nº de série') + ':</strong> <code class="idv-mono" style="background:var(--idv-fundo);border:1px solid var(--idv-linha);padding:2px 8px;border-radius:3px">' + esc(u.id) + '</code>'
         + (dpp ? '<span style="margin-left:12px">' + (u.temCarregador ? 'Com carregador' : 'Sem carregador') + ' · ' + (u.temChip ? 'Com chip' : 'Sem chip') + '</span>' : '') + '</div>'
         + (hist.length ? '<div style="margin-top:10px;font-size:13px;color:var(--idv-sec);border-top:1px solid var(--idv-linha);padding-top:8px"><strong>Movimentações (' + hist.length + '):</strong>' + hist.slice(0, 20).map(linhaMov).join('') + '</div>' : '')
         + '</div>';
@@ -221,7 +221,7 @@ function ep_consultar(valor) {
   }
   if (movs.length) {
     h += '<div class="idv-secao" style="margin-top:' + (unids.length || onde ? '16px' : '0') + '">Movimentações encontradas (' + movs.length + ')</div>'
-      + '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Estado</th><th>Plantonista</th><th>Equipe</th><th>Monitorado</th><th>Motivo</th><th>Série/IMEI</th></tr></thead><tbody>'
+      + '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Estado</th><th>Plantonista</th><th>Equipe</th><th>Monitorado</th><th>Motivo</th><th>Série/Nº estoque</th></tr></thead><tbody>'
       + movs.slice(0, 100).map(m => '<tr style="cursor:pointer" onclick="ep_verMov(\'' + _jsq(m.id) + '\')" title="Clique para ver detalhes">'
         + '<td class="idv-data" style="white-space:nowrap;font-size:13px">' + new Date(m.ts).toLocaleString('pt-BR') + '</td><td><span class="idv-etq ' + (_EP_BADGE[m.tipo] || 'ne') + '">' + esc(m.tipo) + '</span></td>'
         + '<td>' + esc(m.item) + (m.tamanho ? ' ' + esc(m.tamanho) : '') + '</td><td>' + esc(m.estado || '—') + '</td><td>' + esc(m.plantonista || m.responsavel || '—') + '</td><td>' + esc(m.equipe || '—') + '</td>'
@@ -236,7 +236,7 @@ function ep_verMov(id) {
   const html = _vsec('Item', _vf('Tipo', m.tipo) + _vf('Item', m.item) + (m.tamanho ? _vf('Tamanho', m.tamanho) : '') + _vf('Quantidade', m.quantidade) + _vf('Estado', m.estado || '—'))
     + _vsec('Quem e quando', _vf('Data/Hora', new Date(m.ts).toLocaleString('pt-BR')) + _vf('Plantonista', m.plantonista || m.responsavel || '—') + _vf('Equipe', m.equipe || '—') + _vf('Motivo', m.motivo || '—'))
     + (m.monitorado ? _vsec('Monitorado', _vf('Nome', m.monitorado) + (m.processo ? _vf('Processo', m.processo) : '')) : '')
-    + ((m.seriais || []).length ? _vsec('Nº de série / IMEI', _vf('', m.seriais.join(' · '))) : '')
+    + ((m.seriais || []).length ? _vsec('Nº de série / Nº de estoque', _vf('', m.seriais.join(' · '))) : '')
     + (m.obs ? _vsec('Observações', _vta('', m.obs)) : '');
   _abrirViewer('Estoque do Plantão — ' + esc(m.tipo) + ' de ' + esc(m.item), html, null);
 }
@@ -389,7 +389,7 @@ function _epAtualizarUnidades() {
   const item = document.getElementById('ep-f-item').value, soma = _epForm.tipo === 'entrada' || _epForm.tipo === 'devolucao';
   if (item === _EP_KIT) { box.innerHTML = _epHtmlKit(); return; }
   if (!ITENS_COM_SERIAL.includes(item)) { box.innerHTML = ''; return; }
-  const dpp = item === 'Dispositivo DPP', lbl = dpp ? 'IMEI' : 'Nº de série';
+  const dpp = item === 'Dispositivo DPP', lbl = dpp ? 'Nº de estoque' : 'Nº de série';
   if (soma) {
     const n = Math.min(50, parseInt(document.getElementById('ep-f-qtd').value, 10) || 0);
     const ja = [...box.querySelectorAll('.ep-u-id')].map(i => i.value);
@@ -441,7 +441,7 @@ async function ep_confirmarMov() {
   ep_renderizar(); try { _dashEstoqueDisp(); } catch (e) {}
 }
 
-/* ── cadastro manual de dispositivos (gerência e admin, 26/10/2026): digita ou cola a lista de nº de série/IMEI,
+/* ── cadastro manual de dispositivos (gerência e admin, 26/10/2026): digita ou cola a lista de nº de série/nº de estoque,
    cada número é conferido na hora e a lista entra de uma vez. Regras em ep_cadastrarDispositivos. ── */
 const _EP_MOTIVOS_CAD = ['Dispositivo novo recebido do fornecedor', 'Acerto de inventário (estava na sala e não foi lançado)', 'Outro'];
 function ep_abrirCadastro() {
@@ -462,7 +462,7 @@ function ep_abrirCadastro() {
   document.getElementById('ep-c-ids').focus();
 }
 function _epPreviaCadastro() {
-  const item = document.getElementById('ep-c-item').value, dpp = item === 'Dispositivo DPP', lbl = dpp ? 'IMEI' : 'Nº de série';
+  const item = document.getElementById('ep-c-item').value, dpp = item === 'Dispositivo DPP', lbl = dpp ? 'Nº de estoque' : 'Nº de série';
   document.getElementById('ep-c-rot').textContent = lbl;
   document.getElementById('ep-c-ids').placeholder = dpp ? '356938035643809\n356938035643817' : '63316-4\n63625-8';
   document.getElementById('ep-c-dpp').style.display = dpp ? 'flex' : 'none';
@@ -497,7 +497,7 @@ async function ep_confirmarCadastro() {
 
 // ── Levantamento para AUDITORIA (imprimir / salvar em PDF) ─────────────────────────────────────
 // Tudo o que o sistema diz que está no Estoque do Plantão: saldos, cintas por tamanho, travas, carregadores,
-// e a lista de cada tornozeleira (nº de série) e de cada DPP (IMEI), com uma coluna para marcar na conferência.
+// e a lista de cada tornozeleira (nº de série) e de cada DPP (nº de estoque), com uma coluna para marcar na conferência.
 // Aponta quando o saldo do item não bate com a quantidade de aparelhos cadastrados.
 function ep_relatorioAuditoria() {
   if (!ep_podeVer()) { _mostrarToast('Sem permissão para o levantamento do estoque.', 'erro'); return; }
@@ -519,7 +519,7 @@ function ep_relatorioAuditoria() {
   const aviso = (item, saldo, n) => saldo !== n ? '<div class="av">⚠ O saldo do sistema (' + saldo + ') é diferente da quantidade de aparelhos cadastrados (' + n + ') — conferir.</div>' : '';
   const linhaResumo = (rot, q, extra) => '<tr><td>' + rot + '</td><td class="c"><b>' + q + '</b></td><td class="c"></td><td>' + (extra || '') + '</td></tr>';
   const resumo = linhaResumo('Tornozeleiras (módulo eletrônico)', it[M] || 0, mods.length !== (it[M] || 0) ? mods.length + ' com nº de série cadastrado' : '')
-    + linhaResumo('Botões do pânico (DPP)', it[D] || 0, dpps.length !== (it[D] || 0) ? dpps.length + ' com IMEI cadastrado' : '')
+    + linhaResumo('Botões do pânico (DPP)', it[D] || 0, dpps.length !== (it[D] || 0) ? dpps.length + ' com nº de estoque cadastrado' : '')
     + linhaResumo('Cintas (todos os tamanhos)', totCinta, '')
     + linhaResumo('Travas', it['Trava'] || 0, estado('Trava').replace(/<[^>]+>/g, ''))
     + linhaResumo('Carregadores da tornozeleira', it['Carregador da tornozeleira'] || 0, estado('Carregador da tornozeleira').replace(/<[^>]+>/g, ''));
@@ -529,7 +529,7 @@ function ep_relatorioAuditoria() {
   const tabMods = mods.map((a, i) => '<tr><td class="c">' + (i + 1) + '</td><td class="m">' + e(a.id) + '</td><td>' + e(a.estado || '—') + '</td><td class="c">' + dataBR(a.entradaEm) + '</td><td class="c cf"></td></tr>').join('')
     || '<tr><td colspan="5"><i>Nenhuma tornozeleira cadastrada com nº de série.</i></td></tr>';
   const tabDpp = dpps.map((a, i) => '<tr><td class="c">' + (i + 1) + '</td><td class="m">' + e(a.id) + '</td><td>' + e(a.estado || '—') + '</td><td class="c">' + (a.temCarregador ? 'sim' : 'não') + '</td><td class="c">' + (a.temChip ? 'sim' : 'não') + '</td><td class="c">' + dataBR(a.entradaEm) + '</td><td class="c cf"></td></tr>').join('')
-    || '<tr><td colspan="7"><i>Nenhum botão do pânico cadastrado com IMEI.</i></td></tr>';
+    || '<tr><td colspan="7"><i>Nenhum botão do pânico cadastrado com nº de estoque.</i></td></tr>';
   const agora = new Date(), quem = ((usuarioAtual && usuarioAtual.nome) || '').toUpperCase();
   const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>Estoque do Plantão - levantamento para auditoria</title>'
     + '<style>html,body{background:#fff}@page{size:A4 portrait;margin:12mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:9.5pt}'
@@ -546,17 +546,17 @@ function ep_relatorioAuditoria() {
     + aviso('Tornozeleira', it[M] || 0, mods.length) + aviso('DPP', it[D] || 0, dpps.length)
     + '<h2>2. Cintas por tamanho</h2>' + tabCintas
     + '<h2>3. Tornozeleiras – nº de série (' + mods.length + ')</h2><table><thead><tr><th>Nº</th><th>Nº de série</th><th>Estado</th><th>Entrada</th><th>Conferido</th></tr></thead><tbody>' + tabMods + '</tbody></table>'
-    + '<h2>4. Botões do pânico (DPP) – IMEI (' + dpps.length + ')</h2><table><thead><tr><th>Nº</th><th>IMEI</th><th>Estado</th><th>Carregador</th><th>Chip</th><th>Entrada</th><th>Conferido</th></tr></thead><tbody>' + tabDpp + '</tbody></table>'
+    + '<h2>4. Botões do pânico (DPP) – nº de estoque (' + dpps.length + ')</h2><table><thead><tr><th>Nº</th><th>Nº de estoque</th><th>Estado</th><th>Carregador</th><th>Chip</th><th>Entrada</th><th>Conferido</th></tr></thead><tbody>' + tabDpp + '</tbody></table>'
     + '<div class="ass"><div>Responsável pela auditoria</div><div>Plantonista presente</div></div>'
     + '</body></html>';
   _entregarDoc(new Blob([html], { type: 'text/html' }), 'Estoque do Plantao - auditoria ' + agora.toLocaleDateString('pt-BR').replace(/\//g, '-') + '.html');
   auditar({ modulo: 'Estoque Plantão', action: 'ep_relatorio_auditoria', alvo: 'levantamento', detalhe: mods.length + ' tornozeleira(s), ' + dpps.length + ' DPP' });
 }
 
-/* ── Conferência física (gerência e admin, 26/10/2026): cola os nº de série / IMEI que estão de fato na sala;
+/* ── Conferência física (gerência e admin, 26/10/2026): cola os nº de série / nº de estoque que estão de fato na sala;
    o sistema mostra quem está cadastrado e não foi achado e dá Baixa neles de uma vez, no nome de quem está logado.
    Casa o nº da etiqueta com o do sistema: "58358-3" (etiqueta, com dígito verificador) = "0000000058358" (sistema). ── */
-const _EPC_ITENS = { 'Módulo eletrônico de monitoração': 'Tornozeleiras (nº de série)', 'Dispositivo DPP': 'Botões do pânico (IMEI)' };
+const _EPC_ITENS = { 'Módulo eletrônico de monitoração': 'Tornozeleiras (nº de série)', 'Dispositivo DPP': 'Botões do pânico (nº de estoque)' };
 function _epcChaves(v) {  // formas de comparar um número: sem zeros à esquerda, com e sem o dígito depois do traço
   const s = String(v || '').trim(), base = s.split('-')[0].replace(/\D/g, '').replace(/^0+(?=\d)/, ''), tudo = s.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
   return [...new Set([base, tudo].filter(Boolean))];

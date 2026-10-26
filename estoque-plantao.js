@@ -4,7 +4,7 @@
    • Store "estoque_plantao" (chave cme_estoque_plantao). ⚠️ NÃO usar nome que comece com "plantao_":
      no banco, cme_plantao_* só abre para gerência/admin (seguranca-banco/6-plantoes-gerencia.sql).
    • Mesma estrutura do store "estoque" do setor: itens (saldo), registros/seriais (uma linha por nº de série
-     ou IMEI), movimentacoes. Aba própria "Estoque Plantão" (plantão, gerência e admin).
+     ou nº de estoque do DPP), movimentacoes. Aba própria "Estoque Plantão" (plantão, gerência e admin).
    • Cada lado só vê e altera o PRÓPRIO estoque (pedido dele, 20/10): o plantão não vê nem mexe no do CME e o CME
      não vê nem mexe no do plantão; admin e gerência veem os dois; o Dashboard mostra o resumo dos dois a todos.
    • Transferências num registro neutro "estoque_transferencias": Saída do setor para o plantão fica "a receber";
@@ -39,7 +39,7 @@ function ep_normalizar(d, itensPadrao) {
   return x;
 }
 
-// unidades (nº de série / IMEI) que estão neste estoque: registros (formato novo) + seriais (formato antigo)
+// unidades (nº de série / nº de estoque) que estão neste estoque: registros (formato novo) + seriais (formato antigo)
 function ep_unidades(d, item) {
   const mapa = {};
   ((d.seriais || {})[item] || []).forEach(id => { mapa[id] = { id, estado: '', temCarregador: false, temChip: false }; });
@@ -59,7 +59,7 @@ function ep_aplicar(d, op, comSerial) {
   if (!op.soma && qtd > saldo) return { erro: 'Saldo insuficiente: há ' + saldo + ' unidade(s) de ' + chave.replace('_', ' ') + '.' };
   let unidades = [];
   if (comSerial) {
-    const lbl = op.item === 'Dispositivo DPP' ? 'IMEI' : 'nº de série';
+    const lbl = op.item === 'Dispositivo DPP' ? 'nº de estoque' : 'nº de série';
     const ja = ep_unidades(d, op.item), jaIds = new Set(ja.map(u => u.id));
     if (op.soma) {
       unidades = (op.unidades || []).map(u => Object.assign({}, u, { id: String(u.id || '').trim() })).filter(u => u.id);
@@ -159,7 +159,7 @@ function ep_porEstado(d, itensPadrao, comSerialLista) {
   return { novo, reutilizado: reut };
 }
 
-// onde está uma unidade (nº de série / IMEI): plantão, setor, a caminho, ou o último destino conhecido
+// onde está uma unidade (nº de série / nº de estoque): plantão, setor, a caminho, ou o último destino conhecido
 // setor = null quando quem consulta não pode ver o estoque do CME (plantonista)
 function ep_onde(id, setor, plantao, comSerialLista, transf) {
   id = String(id || '').trim(); if (!id) return null;
@@ -366,7 +366,7 @@ async function ep_salvarMov(tipo, op, extra) {
     const noCme = new Set(ep_unidades(getEstoque(), op.item).map(u => u.id));
     ep_getTransf().transferencias.filter(t => t.status === 'pendente' || t.status === 'recusada').forEach(t => (t.unidades || []).forEach(u => noCme.add(u.id)));
     const dup = (op.unidades || []).find(u => noCme.has(String(u.id || '').trim()));
-    if (dup) { alert('O ' + (op.item === 'Dispositivo DPP' ? 'IMEI' : 'nº de série') + ' "' + dup.id + '" está registrado no estoque do CME (ou a caminho). Peça ao Estoque a Saída para o Plantão e receba por "A receber".'); return false; }
+    if (dup) { alert('O ' + (op.item === 'Dispositivo DPP' ? 'nº de estoque' : 'nº de série') + ' "' + dup.id + '" está registrado no estoque do CME (ou a caminho). Peça ao Estoque a Saída para o Plantão e receba por "A receber".'); return false; }
   }
   let mov = null;
   const ok = await _epMutar(d => {
@@ -405,12 +405,12 @@ async function ep_salvarKit(ops, extra) {
 }
 
 /* ── Cadastro manual de dispositivo (pedido de 26/10/2026): só gerência e admin. Módulo ou DPP entra direto no saldo
-   do plantão, mesmo com o inventário encerrado. Cada nº de série/IMEI é conferido antes: não pode repetir na lista nem
+   do plantão, mesmo com o inventário encerrado. Cada nº de série/nº de estoque é conferido antes: não pode repetir na lista nem
    estar no plantão, no CME ou a caminho. A comparação ignora traço e espaço ("633164" = "63316-4"). ── */
 function _epNormId(s) { return String(s || '').toLowerCase().replace(/[^0-9a-z]/g, ''); }
 function ep_lerListaIds(texto) { return String(texto || '').split(/[\s,;]+/).map(s => s.trim()).filter(Boolean); }
 function ep_formatoEstranho(id, item) {
-  return item === 'Dispositivo DPP' ? !/^\d{15}$/.test(id) : !/^\d{5,6}-\d$/.test(id);
+  return item === 'Dispositivo DPP' ? false : !/^\d{5,6}-\d$/.test(id); // DPP é pelo nº de estoque (26/10/2026): sem formato fixo
 }
 // devolve [{ id, problema, aviso }]: problema impede o cadastro; aviso (formato diferente do usual) não impede
 function ep_conferirCadastro(ids, item, plantao, setor, transf) {
@@ -424,15 +424,15 @@ function ep_conferirCadastro(ids, item, plantao, setor, transf) {
     const n = _epNormId(id);
     const problema = !n ? 'número inválido' : vistos.has(n) ? 'repetido na lista' : onde.get(n) || '';
     vistos.add(n);
-    return { id, problema, aviso: !problema && ep_formatoEstranho(id, item) ? (item === 'Dispositivo DPP' ? 'IMEI costuma ter 15 dígitos' : 'formato diferente do usual (ex.: 63316-4)') : '' };
+    return { id, problema, aviso: !problema && ep_formatoEstranho(id, item) ? 'formato diferente do usual (ex.: 63316-4)' : '' };
   });
 }
 // op = { categoria, item, estado, unidades:[{ id, estado, temCarregador, temChip }] }
 async function ep_cadastrarDispositivos(op, extra) {
   if (!ep_podeCadastrar()) { alert('Só a gerência e o administrador cadastram dispositivos.'); return false; }
-  if (!_epSerial(op.item)) { alert('O cadastro manual é só para módulo e DPP (itens com nº de série ou IMEI).'); return false; }
+  if (!_epSerial(op.item)) { alert('O cadastro manual é só para módulo e DPP (itens com nº de série ou nº de estoque).'); return false; }
   const ids = (op.unidades || []).map(u => u.id);
-  if (!ids.length) { alert('Digite ao menos um nº de série ou IMEI.'); return false; }
+  if (!ids.length) { alert('Digite ao menos um nº de série ou nº de estoque.'); return false; }
   const ruim = ep_conferirCadastro(ids, op.item, ep_get(), getEstoque(), ep_getTransf()).find(r => r.problema);
   if (ruim) { alert('"' + ruim.id + '": ' + ruim.problema + '. Nada foi cadastrado.'); return false; }
   let mov = null;
