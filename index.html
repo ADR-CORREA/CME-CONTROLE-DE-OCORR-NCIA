@@ -5817,6 +5817,12 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         </div>
       </div>
 
+      <!-- Parecer automático da violação (parecer-ocorrencia.js): sugere 6/7 com prova, sem escrever no AKILES -->
+      <div style="margin-top:14px;border-top:1px solid #e0e6ed;padding-top:10px">
+        <div style="font-weight:600;font-size:.85rem;color:var(--az1);margin-bottom:6px">⚖️ Parecer automático</div>
+        <div id="ver-parecer"></div>
+      </div>
+
       <!-- Histórico / auditoria da ocorrência -->
       <div style="margin-top:14px;border-top:1px solid #e0e6ed;padding-top:10px">
         <div style="font-weight:600;font-size:.85rem;color:var(--az1);margin-bottom:6px">📜 Histórico</div>
@@ -8665,7 +8671,7 @@ function renderizarCriticos() {
     const priorColor = priorNum === 1 ? "var(--idv-cr)" : priorNum <= 3 ? "var(--idv-at)" : "var(--idv-sec)";
     return `<tr class="${rowClass}">
       <td class="idv-data" style="text-align:center;font-weight:600;font-size:15px;color:${priorColor}">${priorNum}º</td>
-      <td><div class="idv-nome">${esc(oc.monitorado) || "—"}${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</div><div class="idv-mini"><span class="idv-mono">ID ${esc(oc.id)}</span>${_ocSeloAuto(oc)} · ${esc(oc.medida) || "—"}</div>${oc.registroAkiles ? _akBateriaHtml(oc.registroAkiles) : ''}</td>
+      <td><div class="idv-nome">${esc(oc.monitorado) || "—"}${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</div><div class="idv-mini"><span class="idv-mono">ID ${esc(oc.id)}</span>${_ocSeloAuto(oc)}${typeof po_selo === 'function' ? po_selo(oc) : ''} · ${esc(oc.medida) || "—"}</div>${oc.registroAkiles ? _akBateriaHtml(oc.registroAkiles) : ''}</td>
       <td>${esc(oc.tipo) || "—"}</td>
       <td>${idv_etiqueta(oc._status)}<div class="idv-det ${cls}">${esc(idv_prazoTxt(pr))}</div></td>
       <td class="idv-data" style="font-size:13px;white-space:nowrap">${formatDate(oc.dataAlerta)}</td>
@@ -8687,7 +8693,7 @@ function renderizarCriticos() {
 }
 // menu "⋯" de uma linha de Críticos (as ações que antes eram 5 botões coloridos)
 function _critMenuLinha(idx) {
-  return [['Editar', 'editarOcorrencia(' + idx + ')'], ['Gerar comunicação (COM)', 'gerarComunicacaoDeOcorrencia(' + idx + ')'],
+  return [['Editar', 'editarOcorrencia(' + idx + ')'], ['Parecer da violação', 'po_abrir(' + idx + ')'], ['Gerar comunicação (COM)', 'gerarComunicacaoDeOcorrencia(' + idx + ')'],
     ['Gerar relatório (REL)', 'gerarRelatorioDeOcorrencia(' + idx + ')'], ['Relatório de violações', 'rv_relatorioDaOcorrencia(' + idx + ')']];
 }
 
@@ -8838,7 +8844,7 @@ function renderizarOcorrencias() {
       const rowClass = getRowClass(s, oc.medida);
       const idx = findIdx(oc.id), cls = idv_sit(s)[0];
       return `<tr class="${rowClass}">
-        <td><div class="idv-nome">${esc(oc.monitorado) || "—"}${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</div><div class="idv-mini"><span class="idv-mono">ID ${esc(oc.id)}</span>${_ocSeloAuto(oc)} · ${esc(oc.medida) || "—"}</div>${oc.registroAkiles ? _akBateriaHtml(oc.registroAkiles) : ''}</td>
+        <td><div class="idv-nome">${esc(oc.monitorado) || "—"}${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</div><div class="idv-mini"><span class="idv-mono">ID ${esc(oc.id)}</span>${_ocSeloAuto(oc)}${typeof po_selo === 'function' ? po_selo(oc) : ''} · ${esc(oc.medida) || "—"}</div>${oc.registroAkiles ? _akBateriaHtml(oc.registroAkiles) : ''}</td>
         <td><div>${esc(oc.tipo) || "—"}</div><div class="idv-mini">prazo POP: ${esc(pp)} · decorrido: ${esc(td)}</div></td>
         <td class="idv-data" style="font-size:13px;white-space:nowrap">${formatDate(oc.dataAlerta)}</td>
         <td>${idv_etiqueta(s)}<div class="idv-det ${cls}">${esc(idv_prazoTxt(pr))}</div></td>
@@ -8877,7 +8883,7 @@ function filtrarOcorrenciasSit(c) { filtroOcSit = c; paginaAtual = 1; renderizar
 
 // menus "⋯" da linha e "Mais ▾" do cabeçalho (o que antes eram botões soltos e coloridos)
 function _ocMenuLinha(idx) {
-  return [['Editar', 'editarOcorrencia(' + idx + ')'], ['Relatório de violações', 'rv_relatorioDaOcorrencia(' + idx + ')'], 'hr', ['Excluir ocorrência', 'excluirOcorrencia(' + idx + ')', true]];
+  return [['Editar', 'editarOcorrencia(' + idx + ')'], ['Parecer da violação', 'po_abrir(' + idx + ')'], ['Relatório de violações', 'rv_relatorioDaOcorrencia(' + idx + ')'], 'hr', ['Excluir ocorrência', 'excluirOcorrencia(' + idx + ')', true]];
 }
 function _ocMenuMais() {
   return [['Atualizar a lista', 'renderizarOcorrencias()'], ['Importar planilha Excel', "document.getElementById('import-excel').click()"], ['Baixar planilha modelo', 'baixarModeloExcel()']];
@@ -11363,6 +11369,9 @@ function visualizarOcorrencia(idx) {
         </div>`).join('')
       : '<div style="color:#999">Sem histórico registrado.</div>';
   }
+  // Parecer automático (parecer-ocorrencia.js)
+  const parEl = document.getElementById('ver-parecer');
+  if (parEl) parEl.innerHTML = typeof po_htmlResumo === 'function' ? po_htmlResumo(oc, idx) : '';
 
   // Botão Editar no rodapé
   document.getElementById('ver-btn-editar').onclick = function() {
@@ -30024,5 +30033,6 @@ function estat_exportarResultado() {
 <script src="assinatura-foto.js?v=20261021a"></script>
 <script src="rv-conferencia.js?v=20261026a"></script>
 <script src="rv-conferencia-horario.js?v=20261022a"></script>
+<script src="parecer-ocorrencia.js?v=20261026a"></script>
 </body>
 </html>
