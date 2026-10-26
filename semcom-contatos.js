@@ -215,3 +215,81 @@ function _scHtmlContatos(m) {
     + (c.obs ? '<div style="font-size:13px;color:var(--idv-texto);margin-top:6px;white-space:pre-wrap"><b>Obs.:</b> ' + esc(_sccFixAcento(c.obs)) + '</div>' : '')
     + '<div style="font-size:12px;color:var(--idv-sec);margin-top:6px">Do cadastro do AKILES · importado em <span class="idv-data">' + new Date(c.atualizadoEm).toLocaleString('pt-BR') + '</span>' + (c.por ? ' por ' + esc(c.por) : '') + '</div>';
 }
+
+// ── Lista para contato (imprimir / salvar em PDF) ────────────────────────────
+// Nome, telefones, endereço e tempo sem comunicação de quem está em aberto na área.
+// O endereço NÃO fica guardado no CME: é lido na hora do "Cadastro completo dos monitorados"
+// do AKILES (opcional) e só vai para a folha impressa.
+let _sccListaArea = 'juridico';
+function sc_imprimirLista(area) {
+  _sccListaArea = area || 'juridico';
+  _sccModal('\u{1F5A8}\u{FE0F} Lista para contato (PDF)',
+    '<div style="font-size:14px;line-height:1.6">Sai a lista de quem está sem comunicação, com <b>telefones</b>, <b>tempo sem comunicar</b> e um espaço para o servidor anotar o resultado do contato.</div>'
+    + '<div style="font-size:14px;line-height:1.6;margin-top:8px">Para incluir o <b>endereço</b>, escolha o relatório <b>"Cadastro completo dos monitorados"</b> do AKILES (.xls). O endereço só vai para a folha; não fica guardado no CME.</div>'
+    + '<label class="btn-primary" style="cursor:pointer;margin-top:12px;display:inline-block">Escolher o cadastro do AKILES e gerar'
+    + '<input type="file" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="sc_imprimirComCadastro(this)"></label>',
+    '<button class="btn-secondary" onclick="document.getElementById(\'scc-modal\').classList.remove(\'open\');_sccImprimir(null)">Gerar sem endereço</button>');
+}
+async function sc_imprimirComCadastro(input) {
+  const f = input.files && input.files[0]; input.value = '';
+  if (!f) return;
+  if (f.size > 40 * 1024 * 1024) { _mostrarToast('Arquivo grande demais (máx. 40 MB).', 'erro'); return; }
+  try { _mostrarToast('Lendo ' + f.name + '…'); _sccImprimir(_sccEnderecos(await _sccLerPlanilha(f))); }
+  catch (e) { _mostrarToast('Não consegui ler o cadastro: ' + (e.message || e), 'erro'); return; }
+  document.getElementById('scc-modal').classList.remove('open');
+}
+// endereço residencial por nº de registro e por nome (só usado se o nome for único)
+function _sccEnderecos(linhas) {
+  const iHdr = linhas.findIndex(r => { const h = r.map(_sccNorm); return h.includes('nome') && h.some(x => /logradouro residencial/.test(x)); });
+  if (iHdr < 0) throw new Error('Não achei a coluna "Logradouro Residencial". Use o relatório "Cadastro completo dos monitorados" do AKILES.');
+  const h = linhas[iHdr].map(_sccNorm), ix = rx => h.findIndex(x => rx.test(x));
+  const c = { nome: h.indexOf('nome'), reg: ix(/registro/), log: ix(/logradouro residencial/), num: ix(/numero residencial/), comp: ix(/complemento residencial/),
+    bai: ix(/bairro residencial/), mun: ix(/municipio residencial/), uf: ix(/uf residencial/), cep: ix(/cep residencial/) };
+  const cel = (r, i) => (i >= 0 && i < r.length ? _sccFixAcento(String(r[i] || '').trim()) : '');
+  const porReg = new Map(), porNome = new Map();
+  linhas.slice(iHdr + 1).forEach(r => {
+    const nome = cel(r, c.nome); if (!nome || r.length < 10) return;
+    const cep = cel(r, c.cep).replace(/\D/g, '');
+    const end = [cel(r, c.log), cel(r, c.num) ? 'nº ' + cel(r, c.num) : '', cel(r, c.bai), [cel(r, c.mun), cel(r, c.uf)].filter(Boolean).join('/'),
+      cep.length === 8 ? 'CEP ' + cep.slice(0, 5) + '-' + cep.slice(5) : ''].filter(Boolean).join(', ');
+    const comp = cel(r, c.comp);
+    const v = { end, comp: comp && !end.toUpperCase().includes(comp.toUpperCase()) ? comp.slice(0, 200) : '' };
+    const reg = _scChaveReg(cel(r, c.reg)); if (reg && !porReg.has(reg)) porReg.set(reg, v);
+    const kn = _sccNorm(nome); porNome.set(kn, (porNome.get(kn) || []).concat([v]));
+  });
+  return m => porReg.get(_scChaveReg(m.registro)) || ((porNome.get(_sccNorm(m.nome)) || []).length === 1 ? porNome.get(_sccNorm(m.nome))[0] : null);
+}
+function _sccImprimir(endDe) {
+  const area = _sccListaArea;
+  const lista = _scListaArea(getSemCom(), area).filter(_scEmAberto).sort(_scOrdemPrioridade);
+  if (!lista.length) { _mostrarToast('Nenhum monitorado sem comunicação nesta área.', 'erro'); return; }
+  const e = s => esc(String(s == null ? '' : s));
+  const tels = m => {
+    const c = m.contato || {}, out = [];
+    if (c.telefone) out.push('<b>' + _sccFmtTel(c.telefone) + '</b> (próprio)');
+    (c.refs || []).filter(r => r.telefone).forEach(r => out.push(_sccFmtTel(r.telefone) + ' (' + e(r.nome || 'referência') + ')'));
+    _sccTelsDaObs(c).filter(x => x.novo && !_SCC_TIPOS_INUTEIS.includes(x.tipo)).forEach(x => out.push(_sccFmtTel(x.tel) + ' (' + e(x.rotulo || 'anotado no AKILES') + ')'));
+    return out.length ? out.join('<br>') : '<i>sem telefone no cadastro</i>';
+  };
+  const titulo = area === 'psicossocial' ? 'Monitoradas com DPP sem comunicação' : 'Monitorados sem comunicação';
+  const linhas = lista.map((m, i) => {
+    const dias = _diasSemComAtual(m), en = endDe ? endDe(m) : null;
+    return '<tr><td class="c">' + (i + 1) + '</td><td><b>' + e(m.nome) + '</b><div class="p">Reg. ' + e(m.registro) + (_scVD(m) ? ' · violência doméstica' : '') + '</div></td>'
+      + '<td>' + tels(m) + '</td>'
+      + (endDe ? '<td>' + (en ? e(en.end) + (en.comp ? '<div class="p">' + e(en.comp) + '</div>' : '') : '<i>não encontrado no cadastro</i>') + '</td>' : '')
+      + '<td class="c"><b>' + dias + ' dia' + (dias === 1 ? '' : 's') + '</b><div class="p">desde ' + e(_scDataBR(m.ultimaComunicacao)) + '</div></td>'
+      + '<td class="r"></td></tr>';
+  }).join('');
+  const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>' + titulo + ' - lista para contato</title>'
+    + '<style>html,body{background:#fff}@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:9pt}'
+    + 'h1{font-size:13pt;margin:0 0 2px}.s{font-size:9pt;margin-bottom:8px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #000;padding:3px 5px;vertical-align:top}'
+    + 'th{background:#e6e6e6;font-size:8.5pt}td.c{text-align:center;white-space:nowrap}td.r{width:19%}.p{font-size:8pt;color:#333}thead{display:table-header-group}tr{page-break-inside:avoid}'
+    + '@media screen{body{padding:10px 16px}}@media print{.np{display:none}}</style></head><body>'
+    + '<div class="np" style="text-align:right;margin-bottom:6px"><button onclick="print()" style="padding:6px 16px;font-size:11pt;cursor:pointer">Imprimir / salvar em PDF</button></div>'
+    + '<h1>CME/IAPEN – ' + titulo + ' – lista para contato</h1>'
+    + '<div class="s">' + lista.length + ' pessoa(s), em ordem de prioridade (mais tempo sem comunicar primeiro) · gerada em ' + new Date().toLocaleString('pt-BR') + ' · documento restrito (dados pessoais)</div>'
+    + '<table><thead><tr><th>Nº</th><th style="width:20%">Nome</th><th style="width:21%">Telefones</th>' + (endDe ? '<th style="width:24%">Endereço residencial</th>' : '')
+    + '<th>Sem comunicação</th><th>Resultado do contato (servidor, data, hora)</th></tr></thead><tbody>' + linhas + '</tbody></table></body></html>';
+  _entregarDoc(new Blob([html], { type: 'text/html' }), titulo + ' - lista para contato.html');
+  auditar({ modulo: 'Sem Comunicação', action: 'semcom_lista_contato', alvo: area, detalhe: lista.length + ' pessoa(s)' + (endDe ? ' com endereço' : '') });
+}

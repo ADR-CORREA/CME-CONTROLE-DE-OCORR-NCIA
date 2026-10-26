@@ -4048,6 +4048,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               <input type="file" id="pscom-file-input" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="importarExcelSemCom(this,'psicossocial')">
             </label>
             <button class="btn-secondary" onclick="renderizarSemCom('psicossocial')">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="sc_imprimirLista('psicossocial')">Lista para contato (PDF)</button>
             <button class="btn-secondary" onclick="exportarSemComExcel('psicossocial')">📥 Exportar Excel</button>
           </div>
         </div>
@@ -5276,6 +5277,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           <div><h1>Monitorados sem comunicação</h1>
             <div class="idv-sub"><span id="sc-kpi-total">0</span> em aberto · <span id="semcom-ultima-importacao">dados do AKILES</span></div></div>
           <div class="idv-acoes">
+            <button type="button" class="idv-btn" onclick="sc_imprimirLista('juridico')">Lista para contato (PDF)</button>
             <button type="button" class="idv-btn" onclick="exportarSemComExcel()">Exportar Excel</button>
             <button type="button" class="idv-btn" onclick="idv_menu(event,_scMenuMais())">Mais &#9662;</button>
           </div>
@@ -29956,7 +29958,7 @@ function estat_exportarResultado() {
 <script src="secretaria-escserv.js?v=20261016a"></script>
 <script src="secretaria-faltas.js?v=20261020f4"></script>
 <script src="secretaria-atencao.js?v=20261021a"></script>
-<script src="semcom-contatos.js?v=20261020f4"></script>
+<script src="semcom-contatos.js?v=20261026a"></script>
 <script src="produtividade.js?v=20261022a"></script>
 <script src="inconsistencias.js?v=20261022a"></script>
 <script src="plantoes-resumo.js?v=20261020f4"></script>
