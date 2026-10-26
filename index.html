@@ -1922,7 +1922,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
           <!-- Aviso assinatura -->
           <div id="rv-aviso-ass" class="idv-faixa at" style="display:none;margin-bottom:12px">
-            <span class="idv-faixa-ic" aria-hidden="true">!</span><span>O servidor selecionado não tem assinatura cadastrada. <a href="#" class="idv-link" onclick="mudarAba('admin');return false">Cadastrar assinatura →</a></span>
+            <span class="idv-faixa-ic" aria-hidden="true">!</span><span>O servidor selecionado não tem assinatura cadastrada. Se for você, <a href="#" class="idv-link" onclick="ass_abrirMinha();return false">cadastre em "Minha assinatura" →</a>; se for outro servidor, peça a ele que cadastre pelo botão "Minha assinatura" no topo.</span>
           </div>
 
           <!-- Lista de monitorados -->
@@ -3799,7 +3799,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           <div class="idv-acoes" id="psi-btns-acao">
             <button type="button" class="idv-btn" onclick="renderizarPsi()">Atualizar</button>
             <button type="button" class="idv-btn" onclick="exportarPsi()">Exportar Excel</button>
-            <button type="button" class="idv-btn criar" onclick="abrirModalPsi()">+ Novo registro</button>
+            <button type="button" class="idv-btn criar" id="psi-btn-novo" onclick="abrirModalPsi()">+ Novo registro</button>
           </div>
         </div>
 
@@ -5635,6 +5635,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               <option value="Descarregamento de bateria">Descarregamento de bateria</option>
               <option value="Zona de Exclusão (permanência)">Zona de Exclusão (permanência)</option>
               <option value="Zona de Exclusão (passagem rápida)">Zona de Exclusão (passagem rápida)</option>
+              <option value="Zona de Inclusão (saída)">Zona de Inclusão (saída)</option>
               <option value="DPP Acionado">DPP Acionado</option>
               <option value="Aproximação DPP">Aproximação DPP</option>
             </select>
@@ -8191,7 +8192,7 @@ const TABS_POR_NIVEL = {
   estatistica:   ['dashboard', 'estatisticas', 'links', 'arquivos', 'semcom'],
   secretaria:    ['secretaria', 'arquivos', 'links', 'semcom'],
   gerencia:   ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
-               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'gerencia', 'arquivos', 'estatisticas', 'mandado', 'secretaria', 'semcom', 'estplantao'],
+               'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia', 'arquivos', 'estatisticas', 'mandado', 'secretaria', 'semcom', 'estplantao'],
   admin:      ['dashboard', 'criticos', 'ocorrencias', 'juridico', 'comunicacao',
                'estoque', 'triagem', 'psicossocial', 'relatorio', 'links', 'modelos', 'gerencia', 'admin', 'arquivos', 'estatisticas', 'mandado', 'secretaria', 'semcom', 'estplantao'],
 };
@@ -8206,6 +8207,8 @@ function aplicarVisibilidadeTabs(nivel) {
     const tab = document.querySelector('.nav-tab[data-aba="' + aba + '"]');
     if (tab) tab.style.display = permitidas.includes(aba) ? 'flex' : 'none';
   });
+  // (26/10/2026) título de grupo sem aba visível (ex.: "Setores" para a Secretaria) some junto
+  document.querySelectorAll('#cme-menu .nav-grupo').forEach(g => { g.style.display = [...g.querySelectorAll('.nav-tab')].some(t => t.style.display !== 'none') ? '' : 'none'; });
   // Navegar para a primeira aba permitida
   mudarAba(permitidas[0] || 'dashboard');
 }
@@ -8671,7 +8674,7 @@ function renderizarCriticos() {
     const priorColor = priorNum === 1 ? "var(--idv-cr)" : priorNum <= 3 ? "var(--idv-at)" : "var(--idv-sec)";
     return `<tr class="${rowClass}">
       <td class="idv-data" style="text-align:center;font-weight:600;font-size:15px;color:${priorColor}">${priorNum}º</td>
-      <td><div class="idv-nome">${esc(oc.monitorado) || "—"}${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</div><div class="idv-mini"><span class="idv-mono">ID ${esc(oc.id)}</span>${_ocSeloAuto(oc)}${typeof po_selo === 'function' ? po_selo(oc) : ''} · ${esc(oc.medida) || "—"}</div>${oc.registroAkiles ? _akBateriaHtml(oc.registroAkiles) : ''}</td>
+      <td><div class="idv-nome">${esc(oc.monitorado) || "—"}${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</div><div class="idv-mini"><span class="idv-mono">ID ${esc(oc.id)}</span>${_ocSeloAuto(oc)}${typeof po_selo === 'function' ? po_selo(oc) : ''} · ${esc(oc.medida) || "—"}${oc.oficioNum ? ' · <span class="idv-mono" title="Ofício já gerado — falta marcar o envio na Comunicação">Ofício ' + esc(oc.oficioNum) + '/' + esc(oc.oficioAno || '') + '</span>' : ''}</div>${oc.registroAkiles ? _akBateriaHtml(oc.registroAkiles) : ''}</td>
       <td>${esc(oc.tipo) || "—"}</td>
       <td>${idv_etiqueta(oc._status)}<div class="idv-det ${cls}">${esc(idv_prazoTxt(pr))}</div></td>
       <td class="idv-data" style="font-size:13px;white-space:nowrap">${formatDate(oc.dataAlerta)}</td>
@@ -8691,10 +8694,22 @@ function renderizarCriticos() {
     </tr>`;
   }).join("");
 }
+// (26/10/2026) As ações de linha recebem 'id:<id>' em vez da posição: entre o desenho da lista e o clique o
+// Realtime pode reordenar a lista, e a posição apontaria para outra ocorrência. Quem ainda passa número continua funcionando.
+function _ocRefDe(idx) { const oc = getOcorrencias()[idx]; return oc && oc.id != null ? "'id:" + oc.id + "'" : String(idx); }
+function _ocRef(ref) {
+  if (typeof ref === 'string' && ref.startsWith('id:')) { const id = parseInt(ref.slice(3)); return getOcorrencias().findIndex(o => o.id === id); }
+  return ref;
+}
 // menu "⋯" de uma linha de Críticos (as ações que antes eram 5 botões coloridos)
+// (26/10/2026) só oferece "Gerar comunicação/relatório" a quem pode gerar — antes plantão e jurídico clicavam e recebiam "sem permissão"
 function _critMenuLinha(idx) {
-  return [['Editar', 'editarOcorrencia(' + idx + ')'], ['Parecer da violação', 'po_abrir(' + idx + ')'], ['Gerar comunicação (COM)', 'gerarComunicacaoDeOcorrencia(' + idx + ')'],
-    ['Gerar relatório (REL)', 'gerarRelatorioDeOcorrencia(' + idx + ')'], ['Relatório de violações', 'rv_relatorioDaOcorrencia(' + idx + ')']];
+  const r = _ocRefDe(idx), nivel = usuarioAtual?.nivel || '';
+  const itens = [['Editar', 'editarOcorrencia(' + r + ')'], ['Parecer da violação', 'po_abrir(' + r + ')']];
+  if (['comunicacao', 'admin', 'gerencia'].includes(nivel)) itens.push(['Gerar comunicação (COM)', 'gerarComunicacaoDeOcorrencia(' + r + ')']);
+  if (['juridico', 'admin', 'gerencia'].includes(nivel)) itens.push(['Gerar relatório (REL)', 'gerarRelatorioDeOcorrencia(' + r + ')']);
+  itens.push(['Relatório de violações', 'rv_relatorioDaOcorrencia(' + r + ')']);
+  return itens;
 }
 
 function filtrarCriticos(v) { filtroCrit = v; renderizarCriticos(); }
@@ -8702,6 +8717,7 @@ function filtrarCriticosTipo(v) { filtroCritTipo = v; renderizarCriticos(); }
 
 /* ─── GERAR COMUNICAÇÃO A PARTIR DE OCORRÊNCIA ───────── */
 function gerarComunicacaoDeOcorrencia(idx) {
+  idx = _ocRef(idx);
   const ocs = getOcorrencias();
   const oc  = ocs[idx];
   if (!oc) return _mostrarToast('\u{26A0}\u{FE0F} Ocorrência não encontrada.', 'erro');
@@ -8730,7 +8746,8 @@ function gerarComunicacaoDeOcorrencia(idx) {
     const nomeMon = document.getElementById('com-of-nome');
     const processo = document.getElementById('com-of-processo');
     if (nomeMon) nomeMon.value = oc.monitorado || '';
-    if (processo) processo.value = oc.prodocNum || '';
+    if (processo) processo.value = oc.processo || ''; // (26/10/2026) era o nº do PRODOC no campo do processo
+    window._comOcOrigemId = oc.id; // (26/10/2026) ao gerar o ofício, o nº fica gravado nesta ocorrência (_comVincularOcorrencia)
 
     // Selecionar o modelo
     const selModelo = document.getElementById('com-of-modelo');
@@ -8775,6 +8792,7 @@ function gerarComunicacaoDeOcorrencia(idx) {
 
 /* ─── GERAR RELATÓRIO (Jurídico) A PARTIR DE OCORRÊNCIA ───────── */
 function gerarRelatorioDeOcorrencia(idx) {
+  idx = _ocRef(idx);
   const ocs = getOcorrencias();
   const oc  = ocs[idx];
   if (!oc) return _mostrarToast('\u{26A0}\u{FE0F} Ocorrência não encontrada.', 'erro');
@@ -8827,7 +8845,7 @@ function renderizarOcorrencias() {
   if (filtroOcSit) ocs = comSit.filter(x => x.c === filtroOcSit).map(x => x.o);
   const total = ocs.length;
   const totalPag = Math.ceil(total / ITEMS_POR_PAG);
-  if (paginaAtual > totalPag) paginaAtual = 1;
+  if (paginaAtual > totalPag) paginaAtual = Math.max(1, totalPag);
   const inicio = (paginaAtual - 1) * ITEMS_POR_PAG;
   const pagOcs = ocs.slice(inicio, inicio + ITEMS_POR_PAG);
 
@@ -8844,7 +8862,7 @@ function renderizarOcorrencias() {
       const rowClass = getRowClass(s, oc.medida);
       const idx = findIdx(oc.id), cls = idv_sit(s)[0];
       return `<tr class="${rowClass}">
-        <td><div class="idv-nome">${esc(oc.monitorado) || "—"}${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</div><div class="idv-mini"><span class="idv-mono">ID ${esc(oc.id)}</span>${_ocSeloAuto(oc)}${typeof po_selo === 'function' ? po_selo(oc) : ''} · ${esc(oc.medida) || "—"}</div>${oc.registroAkiles ? _akBateriaHtml(oc.registroAkiles) : ''}</td>
+        <td><div class="idv-nome">${esc(oc.monitorado) || "—"}${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</div><div class="idv-mini"><span class="idv-mono">ID ${esc(oc.id)}</span>${_ocSeloAuto(oc)}${typeof po_selo === 'function' ? po_selo(oc) : ''} · ${esc(oc.medida) || "—"}${oc.oficioNum ? ' · <span class="idv-mono" title="Ofício já gerado — falta marcar o envio na Comunicação">Ofício ' + esc(oc.oficioNum) + '/' + esc(oc.oficioAno || '') + '</span>' : ''}</div>${oc.registroAkiles ? _akBateriaHtml(oc.registroAkiles) : ''}</td>
         <td><div>${esc(oc.tipo) || "—"}</div><div class="idv-mini">prazo POP: ${esc(pp)} · decorrido: ${esc(td)}</div></td>
         <td class="idv-data" style="font-size:13px;white-space:nowrap">${formatDate(oc.dataAlerta)}</td>
         <td>${idv_etiqueta(s)}<div class="idv-det ${cls}">${esc(idv_prazoTxt(pr))}</div></td>
@@ -8883,17 +8901,19 @@ function filtrarOcorrenciasSit(c) { filtroOcSit = c; paginaAtual = 1; renderizar
 
 // menus "⋯" da linha e "Mais ▾" do cabeçalho (o que antes eram botões soltos e coloridos)
 function _ocMenuLinha(idx) {
-  return [['Editar', 'editarOcorrencia(' + idx + ')'], ['Parecer da violação', 'po_abrir(' + idx + ')'], ['Relatório de violações', 'rv_relatorioDaOcorrencia(' + idx + ')'], 'hr', ['Excluir ocorrência', 'excluirOcorrencia(' + idx + ')', true]];
+  const r = _ocRefDe(idx);
+  const itens = [['Editar', 'editarOcorrencia(' + r + ')'], ['Parecer da violação', 'po_abrir(' + r + ')'], ['Relatório de violações', 'rv_relatorioDaOcorrencia(' + r + ')']];
+  if (_podeExcluirOc()) itens.push('hr', ['Excluir ocorrência', 'excluirOcorrencia(' + r + ')', true]);
+  return itens;
 }
+function _podeExcluirOc() { return ['gerencia', 'admin'].includes(usuarioAtual?.nivel || ''); }
 function _ocMenuMais() {
   return [['Atualizar a lista', 'renderizarOcorrencias()'], ['Importar planilha Excel', "document.getElementById('import-excel').click()"], ['Baixar planilha modelo', 'baixarModeloExcel()']];
 }
 
 function irPag(p) {
-  const ocs = getOcorrencias();
-  const totalPag = Math.ceil(ocs.length / ITEMS_POR_PAG);
-  if (p < 1 || p > totalPag) return;
-  paginaAtual = p;
+  if (p < 1) return;
+  paginaAtual = p; // renderizarOcorrencias limita à última página da lista FILTRADA
   renderizarOcorrencias();
 }
 function filtrarOcorrencias(v) { filtroOc = v; paginaAtual = 1; renderizarOcorrencias(); }
@@ -9039,12 +9059,9 @@ function _scAreaDe(m)       { if (m && (m.areaManual === 'psicossocial' || m.are
 function _scEhMembro(m, area){ return _scAreaDe(m) === (area || 'juridico'); }
 // Move um registro entre Jurídico e Psicossocial (DPP) manualmente; a marcação
 // persiste nos próximos imports (o merge preserva campos não-AKILES).
-function _scMoverArea(id, destino) {
-  const dados = getSemCom();
-  const m = (dados.monitorados||[]).find(x => x.id === id);
-  if (!m) return;
-  m.areaManual = destino;
-  salvarSemCom(dados);
+async function _scMoverArea(id, destino) {
+  const ok = await _scMutar(d => { const m = (d.monitorados||[]).find(x => x.id === id); if (!m) return false; m.areaManual = destino; });
+  if (!ok) return;
   atualizarBadgeSemCom();
   renderizarSemCom('juridico'); renderizarSemComDesvinc('juridico');
   renderizarSemCom('psicossocial'); renderizarSemComDesvinc('psicossocial');
@@ -10362,14 +10379,11 @@ function exportarArquivadosExcel(area) {
 }
 
 // Reverter desvinculação (volta para Ativos)
-function reverterDesvinculacao(id) {
+async function reverterDesvinculacao(id) {
   if (!confirm('Reverter desvinculação? O monitorado voltará para a lista de Ativos.')) return;
-  const dados = getSemCom();
-  const m = dados.monitorados.find(x => x.id === id);
-  if (!m) return;
-  m.situacao = 'ativo';
-  m.desvinculacao = null;
-  salvarSemCom(dados);
+  let m = null;
+  const ok = await _scMutar(d => { m = (d.monitorados||[]).find(x => x.id === id); if (!m) return false; m.situacao = 'ativo'; m.desvinculacao = null; });
+  if (!ok) return;
   atualizarBadgeSemCom();
   renderizarSemComDesvinc(_scAreaDe(m));
   _mostrarToast('\u{21A9} Desvinculação revertida. Monitorado voltou para Ativos.', 'sucesso');
@@ -11383,6 +11397,7 @@ function visualizarOcorrencia(idx) {
 }
 
 function editarOcorrencia(idx) {
+  idx = _ocRef(idx);
   const ocs = getOcorrencias();
   const oc = ocs[idx];
   if (!oc) return;
@@ -11439,12 +11454,12 @@ async function salvarOcorrencia() {
 async function _salvarOcorrencia() {
   const idEdit = document.getElementById("oc-id-edit").value;
   const id = parseInt(document.getElementById("oc-id").value);
-  if (!id) return alert("Informe o ID da ocorrência.");
+  if (!id) return _mostrarToast('Informe o ID da ocorrência.', 'erro');
   const data = document.getElementById("oc-data").value;
-  if (!data) return alert("Informe a data e hora do alerta.");
+  if (!data) return _mostrarToast('Informe a data e hora do alerta.', 'erro');
   const medida = document.getElementById("oc-medida").value;
   const tipo = document.getElementById("oc-tipo").value;
-  if (!medida || !tipo) return alert("Selecione a Medida e o Tipo de Violação.");
+  if (!medida || !tipo) return _mostrarToast('Selecione a Medida e o Tipo de Violação.', 'erro');
 
   // Apenas os campos editáveis neste formulário
   const campos = {
@@ -11464,7 +11479,7 @@ async function _salvarOcorrencia() {
   const i = arr.findIndex(o => o.id === id);
   const novo = (idEdit === "");
 
-  if (novo && i >= 0) return alert("Já existe uma ocorrência com este ID.");
+  if (novo && i >= 0) return _mostrarToast('Já existe uma ocorrência com este ID.', 'erro');
 
   if (i >= 0) {
     arr[i] = { ...arr[i], id, ...campos };
@@ -11478,10 +11493,13 @@ async function _salvarOcorrencia() {
   }
   salvarStore('ocorrencias', arr);
   fecharModal("modal-ocorrencia");
+  _mostrarToast(novo ? 'Ocorrência #' + id + ' registrada.' : 'Ocorrência #' + id + ' atualizada.', 'sucesso');
   atualizarTudo();
 }
 
 async function excluirOcorrencia(idx) {
+  if (!_podeExcluirOc()) { _mostrarToast('Só a gerência e o administrador excluem ocorrências.', 'erro'); return; }
+  idx = _ocRef(idx);
   const id = getOcorrencias()[idx]?.id;
   if (id == null) return;
   if (!confirm("Tem certeza que deseja excluir esta ocorrência? Esta ação não pode ser desfeita.")) return;
@@ -13804,9 +13822,9 @@ function abrirModalComOcorrencia(idx) {
   const ocs = getOcorrencias();
   const o = ocs[idx];
   if (!o) return;
-  document.getElementById('com-oc-edit-id').value = idx;
+  document.getElementById('com-oc-edit-id').value = o.id;
   document.getElementById('com-oc-id-display').textContent = '#' + o.id;
-  document.getElementById('com-oc-monitorado-display').textContent = o.monitorado || '';
+  document.getElementById('com-oc-monitorado-display').textContent = (o.monitorado || '') + (o.oficioNum ? ' · Ofício nº ' + o.oficioNum + '/' + (o.oficioAno || '') : '');
   document.getElementById('com-oc-prodoc-num').value = o.prodocNum || '';
   const _n = new Date(); _n.setMinutes(_n.getMinutes() - _n.getTimezoneOffset());
   document.getElementById('com-oc-data-envio').value = _n.toISOString().slice(0,10);
@@ -13814,22 +13832,24 @@ function abrirModalComOcorrencia(idx) {
   document.getElementById('modal-com-ocorrencia').classList.add('open');
 }
 
-function salvarComOcorrencia() {
-  const idx = parseInt(document.getElementById('com-oc-edit-id').value);
+async function salvarComOcorrencia() {
+  const id = parseInt(document.getElementById('com-oc-edit-id').value);
   const dataEnvio = document.getElementById('com-oc-data-envio').value;
   const prodocNum = document.getElementById('com-oc-prodoc-num').value.trim();
   if (!dataEnvio) { _mostrarToast('\u{26A0}\u{FE0F} Informe a data do envio.', 'erro'); return; }
-  const ocs = getOcorrencias();
-  if (!ocs[idx]) return;
-  ocs[idx].prodoc = 'SIM';
-  if (prodocNum) ocs[idx].prodocNum = prodocNum;
-  ocs[idx].prodocData = dataEnvio;
-  ocs[idx].arquivadaPorComunicacao = true;
-  ocs[idx].etapa = 'arquivado';
-  ocs[idx].comEnviadoEm = new Date().toISOString();
-  _relMarcarPorOcorrencia(ocs[idx].id, { comEnviadoEm: new Date().toISOString() });
-  ocs[idx].comObs = document.getElementById('com-oc-obs').value.trim();
-  _histOc(ocs[idx], 'PRODOC enviado pela Comunicação — caso arquivado');
+  // (26/10/2026) grava por ID sobre a base mais fresca — antes mexia na posição da lista, a partir do cache
+  const ocs = await _ocorrenciasFrescas();
+  const oc = ocs.find(o => o.id === id);
+  if (!oc) { _mostrarToast('Ocorrência não encontrada (a lista foi atualizada). Abra de novo.', 'erro'); return; }
+  oc.prodoc = 'SIM';
+  if (prodocNum) oc.prodocNum = prodocNum;
+  oc.prodocData = dataEnvio;
+  oc.arquivadaPorComunicacao = true;
+  oc.etapa = 'arquivado';
+  oc.comEnviadoEm = new Date().toISOString();
+  _relMarcarPorOcorrencia(oc.id, { comEnviadoEm: new Date().toISOString() });
+  oc.comObs = document.getElementById('com-oc-obs').value.trim();
+  _histOc(oc, 'PRODOC enviado pela Comunicação — caso arquivado');
   salvarStore('ocorrencias', ocs);
   fecharModal('modal-com-ocorrencia');
   renderizarComunicacao();
@@ -14527,6 +14547,7 @@ function _psiDataDe(a) {
 }
 
 function renderizarPsi() {
+  const _pb = document.getElementById('psi-btn-novo'); if (_pb) _pb.style.display = podeAlterarPsi() ? '' : 'none'; // (26/10/2026)
   const dados = getPsi();
 
   // Auto-arquivar após 90 dias
@@ -15440,6 +15461,7 @@ function estStatusLabel(cls)     { return cls === 'ok' ? 'DISPONÍVEL' : cls ===
 function renderizarEstoque() {
   // estoque do Plantão + transferências (estoque-plantao-tela.js)
   try { if (typeof ep_renderizar === 'function') ep_renderizar(); } catch (e) { console.warn('[CME] estoque do plantão:', e); }
+  const _eb = document.getElementById('est-btns-acao'); if (_eb) _eb.style.display = podeAlterarEstoque() ? '' : 'none'; // (26/10/2026) só quem pode mexer vê Entrada/Saída/Baixa
   const est   = getEstoque();
   const itens = est.itens;
   const regs  = est.registros || {};
@@ -17927,8 +17949,9 @@ const MODELOS_POR_NIVEL = {
   plantao:     ['plantao'],
   relatorio:   ['multi'],
   comunicacao: ['comunicacao'],
-  juridico:    ['juridico-mod'],   // sub-aba própria do jurídico (a definir)
-  gerencia:    [],                 // gerência não tem acesso a modelos
+  juridico:    ['juridico-mod'],   // sub-aba própria do jurídico
+  psicossocial: ['multi'],         // equipe multidisciplinar (26/10/2026: antes caía nos modelos do plantão)
+  gerencia:    ['comunicacao', 'juridico-mod'], // (26/10/2026) "Gerar comunicação/relatório" nos Críticos levava a gerência ao Painel
   admin:       ['plantao', 'multi', 'comunicacao', 'juridico-mod'],
 };
 
@@ -20767,6 +20790,7 @@ function rv_atualizarAssinante() {
 // carrega no Gerador, pede os mapas ao robô e baixa o Word pronto.
 function _rvIsoData(d){ const z=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()); }
 function rv_relatorioDaOcorrencia(idx){
+  idx=_ocRef(idx);
   const oc=getOcorrencias()[idx];
   if(!oc||!String(oc.monitorado||'').trim()){ _mostrarToast('Esta ocorrência não tem o nome do monitorado.','erro'); return; }
   const base=oc.dataAlerta?new Date(oc.dataAlerta):new Date();
@@ -23427,12 +23451,34 @@ async function _comRegistrarOficioAgora(dados) {
   _mostrarToast('\u{26A0}\u{FE0F} O ofício nº ' + dados.numero + ' foi gerado, mas NÃO consegui lançar na lista de ofícios. Gere de novo (pode usar o mesmo número) ou avise a gerência.', 'erro');
   return false;
 }
+/* (26/10/2026) Ofício gerado a partir de uma ocorrência ("Gerar comunicação" nos Críticos/Ocorrências):
+   grava o nº do ofício NA ocorrência e manda o caso para a fila da Comunicação (etapa 'comunicacao'),
+   onde só falta "Marcar como enviado". Antes o nº não voltava para a ocorrência e o caso ficava parado. */
+async function _comVincularOcorrencia(numero, ano, dataStr, nomeMon) {
+  const id = window._comOcOrigemId; if (id == null) return;
+  const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+  const arr = await _ocorrenciasFrescas();
+  const oc = arr.find(o => o.id === id);
+  if (!oc) return;
+  if (nomeMon && norm(oc.monitorado) && norm(nomeMon) !== norm(oc.monitorado)) {
+    _mostrarToast('O ofício é de ' + nomeMon + ', mas a ocorrência aberta é de ' + oc.monitorado + ' — o nº NÃO foi gravado na ocorrência.', 'erro'); return;
+  }
+  oc.oficioNum = numero; oc.oficioAno = ano; oc.oficioData = dataStr || ''; oc.oficioPor = usuarioAtual?.nome || '';
+  const etapa = _etapaOc(oc), moveu = !etapa || etapa === 'relatorio';
+  if (moveu) { oc.etapa = 'comunicacao'; oc.encComEm = oc.encComEm || new Date().toISOString(); }
+  _histOc(oc, 'Ofício nº ' + numero + '/' + ano + ' gerado' + (moveu ? ' — caso enviado à fila da Comunicação para marcar o envio do PRODOC' : ''));
+  salvarStore('ocorrencias', arr);
+  window._comOcOrigemId = null;
+  try { atualizarBadgeCom(); atualizarBadgeOc(); } catch (e) {}
+  _mostrarToast('Ofício nº ' + numero + '/' + ano + ' gravado na ocorrência #' + oc.id + (moveu ? '. O caso está na Comunicação: falta só "Marcar como enviado".' : '.'), 'sucesso');
+}
 /* Chamado ao gerar o ofício (ambos os fluxos). Upsert por (numero, ano):
    reusar o mesmo número apenas atualiza o registro, não consome outro. */
 function com_registrarGerado(numero, dataStr, modelo, extras) {
   numero = parseInt(String(numero).replace(/\D/g, ''));
   if (!numero) return;
   const ano = (dataStr && /^\d{4}/.test(dataStr)) ? parseInt(dataStr.slice(0,4)) : new Date().getFullYear();
+  _comVincularOcorrencia(numero, ano, dataStr, extras.nomeMon || '').catch(e => console.warn('[CME] vínculo ofício×ocorrência:', e));
   com_registrarOficio({
     numero, ano,
     data:        dataStr || '',
@@ -26669,6 +26715,7 @@ function _prevGenConfirmar() {
 /* ─────────────────────────────────────────────────────────────── */
 
 function com_limparOficio() {
+  window._comOcOrigemId = null;
   _comTextoBloqueado = false;
   _comCorpoEditado   = false;
   const badge = document.getElementById('com-texto-editado-badge');

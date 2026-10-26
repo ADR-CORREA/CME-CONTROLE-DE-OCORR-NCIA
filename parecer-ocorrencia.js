@@ -149,6 +149,7 @@ function _poOverlay(titulo) {
 function _poProg(m) { const el = document.getElementById('po-prog'); if (el) el.textContent = m; }
 
 async function po_abrir(idx) {
+  if (typeof _ocRef === 'function') idx = _ocRef(idx); // (26/10/2026) aceita 'id:<id>'
   const oc = getOcorrencias()[idx]; if (!oc) return;
   const nome = String(oc.monitorado || '').trim();
   if (!nome) { _mostrarToast('Esta ocorrência não tem o nome do monitorado.', 'erro'); return; }
