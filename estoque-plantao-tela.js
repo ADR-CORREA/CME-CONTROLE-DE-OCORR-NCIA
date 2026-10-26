@@ -49,11 +49,12 @@ function ep_renderizar() {
       + _epBtn('\u{2715} Baixa', "ep_abrirMov('baixa')", 'btn-danger', 'Item perdido, quebrado ou inutilizado que sai de vez do estoque')
       + _epBtn('\u{2699}\u{FE0F} Mínimos', 'ep_abrirMinimos()', '', 'Quantidade mínima de cada item; abaixo disso aparece o alerta de estoque baixo') : '')
     + (admin && d.inventarioEncerradoEm ? _epBtn('Reabrir inventário', 'ep_reabrirInventario()', 'btn-secondary', 'Libera de novo o cadastro de inventário pelo plantão') : '')
+    + (ep_podeCadastrar() ? _epBtn('\u{2795} Cadastrar dispositivos', 'ep_abrirCadastro()', 'btn-primary', 'Gerência e admin: cadastra módulo ou DPP novo direto no estoque do plantão, digitando o nº de série ou IMEI') : '')
     + '</div></div>');
-  if (!pode) html.push('<div class="idv-faixa at" style="margin-bottom:12px"><span>\u{1F512} <strong>Modo visualização:</strong> só o plantão lança movimentações aqui.</span></div>');
+  if (!pode) html.push('<div class="idv-faixa at" style="margin-bottom:12px"><span>\u{1F512} <strong>Modo visualização:</strong> só o plantão lança movimentações aqui.' + (ep_podeCadastrar() ? ' A gerência pode cadastrar dispositivos novos pelo botão "Cadastrar dispositivos".' : '') + '</span></div>');
   // 1º momento: o plantão cadastra o que já tem; depois, tudo novo vem do Estoque do CME
   html.push(d.inventarioEncerradoEm
-    ? '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:12px">\u{2714} Inventário inicial encerrado em <span class="idv-data">' + new Date(d.inventarioEncerradoEm).toLocaleString('pt-BR') + '</span>' + (d.inventarioEncerradoPor ? ' por ' + esc(d.inventarioEncerradoPor) : '') + '. Item novo chega pelo Estoque do CME, em "A receber".</div>'
+    ? '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:12px">\u{2714} Inventário inicial encerrado em <span class="idv-data">' + new Date(d.inventarioEncerradoEm).toLocaleString('pt-BR') + '</span>' + (d.inventarioEncerradoPor ? ' por ' + esc(d.inventarioEncerradoPor) : '') + '. Item novo chega pelo Estoque do CME, em "A receber", ou pelo cadastro de dispositivos (gerência e admin).</div>'
     : '<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:12px"><span>\u{1F4CB} <strong>Primeiro passo — inventário inicial:</strong> cadastre em "Inventário inicial" tudo que o plantão já tem na sala (com o IMEI/nº de série de cada DPP e módulo). Quando terminar, clique em <b>Encerrar inventário</b>. Depois disso, item novo só entra pelo que o Estoque do CME enviar ("A receber").</span></div>');
   if (d.recontagemEm) html.push('<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:12px"><span>\u{1F9EE} <strong>Recontagem em <span class="idv-data">' + new Date(d.recontagemEm).toLocaleString('pt-BR') + '</span>:</strong> o saldo conta só o que foi lançado a partir dessa data.</span></div>');
   html.push(_epHtmlPendencias('plantao', pode));
@@ -395,5 +396,58 @@ async function ep_confirmarMov() {
   fecharModal('ep-modal');
   _mostrarToast(kit ? '\u{2713} Saída do kit registrada para ' + mon + ': ' + ops.map(o => o.item === _EP_MOD ? 'módulo ' + o.seriais[0] : o.item === 'Cinta' ? 'cinta ' + o.tamanho : (o.item === 'Trava' ? 'pares de travas' : 'carregador') + ' ×' + o.qtd).join(', ') + '.'
     : '\u{2713} ' + EP_TIPO[tipo] + ' registrada no estoque do Plantão.' + (tipo === 'envio' ? ' Fica "a receber" no Estoque do CME.' : ''), 'ok');
+  ep_renderizar(); try { _dashEstoqueDisp(); } catch (e) {}
+}
+
+/* ── cadastro manual de dispositivos (gerência e admin, 26/10/2026): digita ou cola a lista de nº de série/IMEI,
+   cada número é conferido na hora e a lista entra de uma vez. Regras em ep_cadastrarDispositivos. ── */
+const _EP_MOTIVOS_CAD = ['Dispositivo novo recebido do fornecedor', 'Acerto de inventário (estava na sala e não foi lançado)', 'Outro'];
+function ep_abrirCadastro() {
+  if (!ep_podeCadastrar()) { alert('Só a gerência e o administrador cadastram dispositivos.'); return; }
+  const campo = (lbl, html, id) => '<div class="form-field"' + (id ? ' id="' + id + '"' : '') + '><label>' + lbl + '</label>' + html + '</div>';
+  const corpo = '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:8px">Cadastrado por <b>' + esc(_epQuem()) + '</b> · <span class="idv-data">' + new Date().toLocaleString('pt-BR') + '</span> · entra direto no estoque do Plantão</div>'
+    + '<div class="form-grid">' + campo('Dispositivo *', '<select id="ep-c-item" onchange="_epPreviaCadastro()"><option value="' + esc(_EP_MOD) + '">Módulo eletrônico (tornozeleira)</option><option value="Dispositivo DPP">Dispositivo DPP (botão do pânico)</option></select>')
+    + campo('Estado *', '<select id="ep-c-estado"><option>Novo</option><option>Reutilizado</option></select>') + '</div>'
+    + campo('<span id="ep-c-rot">Nº de série</span> — um por linha (pode colar uma lista) *', '<textarea id="ep-c-ids" rows="6" oninput="_epPreviaCadastro()" placeholder="63316-4&#10;63625-8" style="width:100%;padding:8px 10px;border:1px solid var(--idv-borda);border-radius:6px;font-family:var(--idv-mono);font-size:14px;resize:vertical"></textarea>')
+    + '<div id="ep-c-dpp" style="display:none;gap:16px;margin:4px 0 8px;font-size:14px"><label><input type="checkbox" id="ep-c-car"> \u{1F50B} Todos vêm com carregador</label><label><input type="checkbox" id="ep-c-chip"> \u{1F4F6} Todos vêm com chip</label></div>'
+    + '<div id="ep-c-previa" style="margin:4px 0 12px"></div>'
+    + '<div class="form-grid">' + campo('Motivo *', '<select id="ep-c-motsel" onchange="document.getElementById(\'ep-c-row-mottxt\').style.display=this.value===\'Outro\'?\'\':\'none\'">' + _EP_MOTIVOS_CAD.map(m => '<option>' + esc(m) + '</option>').join('') + '</select>')
+    + campo('Qual motivo? *', '<input type="text" id="ep-c-mottxt" placeholder="Descreva">', 'ep-c-row-mottxt') + '</div>'
+    + '<div class="form-grid">' + campo('Observação', '<input type="text" id="ep-c-obs" placeholder="Opcional (ex.: nº da nota, lote, quem entregou)">') + '</div>';
+  _epModal('\u{2795} Cadastrar dispositivos no estoque do Plantão', corpo, _epBtn('Cancelar', "fecharModal('ep-modal')") + '<button type="button" class="btn-primary" id="ep-c-ok" onclick="ep_confirmarCadastro()" disabled>Cadastrar</button>');
+  document.getElementById('ep-c-row-mottxt').style.display = 'none';
+  _epPreviaCadastro();
+  document.getElementById('ep-c-ids').focus();
+}
+function _epPreviaCadastro() {
+  const item = document.getElementById('ep-c-item').value, dpp = item === 'Dispositivo DPP', lbl = dpp ? 'IMEI' : 'Nº de série';
+  document.getElementById('ep-c-rot').textContent = lbl;
+  document.getElementById('ep-c-ids').placeholder = dpp ? '356938035643809\n356938035643817' : '63316-4\n63625-8';
+  document.getElementById('ep-c-dpp').style.display = dpp ? 'flex' : 'none';
+  const res = ep_conferirCadastro(ep_lerListaIds(document.getElementById('ep-c-ids').value), item, ep_get(), getEstoque(), ep_getTransf());
+  const bons = res.filter(r => !r.problema).length, ruins = res.length - bons;
+  const btn = document.getElementById('ep-c-ok');
+  btn.disabled = !res.length || ruins > 0;
+  btn.textContent = res.length && !ruins ? 'Cadastrar ' + bons + ' ' + (bons === 1 ? 'dispositivo' : 'dispositivos') : 'Cadastrar';
+  document.getElementById('ep-c-previa').innerHTML = !res.length ? ''
+    : '<div style="font-size:13px;margin-bottom:4px">' + (ruins ? '<span style="color:var(--idv-cr);font-weight:600">' + ruins + ' com problema — corrija ou apague para liberar o cadastro.</span> ' : '') + '<span style="color:var(--idv-sec)">' + bons + ' pronto(s) para entrar.</span></div>'
+      + '<div style="max-height:200px;overflow:auto;border:1px solid var(--idv-linha);border-radius:6px;padding:4px 8px">'
+      + res.map(r => '<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:13px;' + (r.problema ? 'box-shadow:inset 3px 0 0 var(--idv-cr);padding-left:8px' : r.aviso ? 'box-shadow:inset 3px 0 0 var(--idv-at);padding-left:8px' : '') + '">'
+        + '<span class="idv-mono" style="min-width:150px">' + esc(r.id) + '</span>'
+        + (r.problema ? '<span style="color:var(--idv-cr)">\u{2715} ' + esc(r.problema) + '</span>' : r.aviso ? '<span style="color:var(--idv-at)">\u{26A0}\u{FE0F} ' + esc(r.aviso) + ' — confira</span>' : '<span style="color:var(--idv-ok)">\u{2713} novo</span>') + '</div>').join('')
+      + '</div>';
+}
+async function ep_confirmarCadastro() {
+  const v = id => ((document.getElementById(id) || {}).value || '').trim();
+  const item = v('ep-c-item'), estado = v('ep-c-estado'), ids = ep_lerListaIds(v('ep-c-ids'));
+  const car = !!document.getElementById('ep-c-car').checked, chip = !!document.getElementById('ep-c-chip').checked, dpp = item === 'Dispositivo DPP';
+  const sel = v('ep-c-motsel'), motivo = sel === 'Outro' ? v('ep-c-mottxt') : sel;
+  if (!motivo) return alert('Descreva o motivo.');
+  const btn = document.getElementById('ep-c-ok'); btn.disabled = true; btn.textContent = 'Gravando...';
+  const op = { categoria: _EP_CAT[item], item, tamanho: '', estado, unidades: ids.map(id => ({ id, estado, temCarregador: dpp && car, temChip: dpp && chip })) };
+  const ok = await ep_cadastrarDispositivos(op, { motivo: 'Cadastro manual — ' + motivo, obs: v('ep-c-obs') });
+  if (!ok) { _epPreviaCadastro(); return; }
+  fecharModal('ep-modal');
+  _mostrarToast('\u{2713} ' + ids.length + ' ' + (dpp ? 'DPP' : 'módulo(s)') + ' cadastrado(s) no estoque do Plantão.', 'ok');
   ep_renderizar(); try { _dashEstoqueDisp(); } catch (e) {}
 }

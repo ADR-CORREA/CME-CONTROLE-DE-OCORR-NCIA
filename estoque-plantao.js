@@ -226,9 +226,9 @@ function _epMutarStore(chave, normalizar, fn) {
     return _epGravar(chave, d);
   });
 }
-// estoque do PLANTÃO — só o plantão (e o admin) chama
-function _epMutar(fn) {
-  if (!ep_podeMover()) { alert('Sem permissão para alterar o estoque do Plantão.'); return Promise.resolve(false); }
+// estoque do PLANTÃO — só o plantão (e o admin) chama; o cadastro manual passa a própria permissão (gerência e admin)
+function _epMutar(fn, pode) {
+  if (!(pode === undefined ? ep_podeMover() : pode)) { alert('Sem permissão para alterar o estoque do Plantão.'); return Promise.resolve(false); }
   return _epMutarStore(EP_STORE, b => ep_normalizar(b, EST_PADRAO.itens), fn);
 }
 // registro de transferências (neutro: não é estoque de ninguém)
@@ -404,6 +404,52 @@ async function ep_salvarKit(ops, extra) {
   return true;
 }
 
+/* ── Cadastro manual de dispositivo (pedido de 26/10/2026): só gerência e admin. Módulo ou DPP entra direto no saldo
+   do plantão, mesmo com o inventário encerrado. Cada nº de série/IMEI é conferido antes: não pode repetir na lista nem
+   estar no plantão, no CME ou a caminho. A comparação ignora traço e espaço ("633164" = "63316-4"). ── */
+function _epNormId(s) { return String(s || '').toLowerCase().replace(/[^0-9a-z]/g, ''); }
+function ep_lerListaIds(texto) { return String(texto || '').split(/[\s,;]+/).map(s => s.trim()).filter(Boolean); }
+function ep_formatoEstranho(id, item) {
+  return item === 'Dispositivo DPP' ? !/^\d{15}$/.test(id) : !/^\d{5,6}-\d$/.test(id);
+}
+// devolve [{ id, problema, aviso }]: problema impede o cadastro; aviso (formato diferente do usual) não impede
+function ep_conferirCadastro(ids, item, plantao, setor, transf) {
+  const onde = new Map();
+  ep_unidades(plantao, item).forEach(u => onde.set(_epNormId(u.id), 'já está no estoque do Plantão (' + u.id + ')'));
+  if (setor) ep_unidades(setor, item).forEach(u => onde.set(_epNormId(u.id), 'está no estoque do CME (' + u.id + ')'));
+  ((transf && transf.transferencias) || []).filter(t => (t.status === 'pendente' || t.status === 'recusada') && t.item === item)
+    .forEach(t => (t.unidades || []).forEach(u => onde.set(_epNormId(u.id), 'está a caminho entre o CME e o Plantão (' + u.id + ')')));
+  const vistos = new Set();
+  return ids.map(id => {
+    const n = _epNormId(id);
+    const problema = !n ? 'número inválido' : vistos.has(n) ? 'repetido na lista' : onde.get(n) || '';
+    vistos.add(n);
+    return { id, problema, aviso: !problema && ep_formatoEstranho(id, item) ? (item === 'Dispositivo DPP' ? 'IMEI costuma ter 15 dígitos' : 'formato diferente do usual (ex.: 63316-4)') : '' };
+  });
+}
+// op = { categoria, item, estado, unidades:[{ id, estado, temCarregador, temChip }] }
+async function ep_cadastrarDispositivos(op, extra) {
+  if (!ep_podeCadastrar()) { alert('Só a gerência e o administrador cadastram dispositivos.'); return false; }
+  if (!_epSerial(op.item)) { alert('O cadastro manual é só para módulo e DPP (itens com nº de série ou IMEI).'); return false; }
+  const ids = (op.unidades || []).map(u => u.id);
+  if (!ids.length) { alert('Digite ao menos um nº de série ou IMEI.'); return false; }
+  const ruim = ep_conferirCadastro(ids, op.item, ep_get(), getEstoque(), ep_getTransf()).find(r => r.problema);
+  if (ruim) { alert('"' + ruim.id + '": ' + ruim.problema + '. Nada foi cadastrado.'); return false; }
+  let mov = null;
+  const ok = await _epMutar(d => {
+    // relido do banco: confere de novo o que está no plantão (outro computador pode ter lançado no mesmo instante)
+    const r = ep_conferirCadastro(ids, op.item, d, null, null).find(x => x.problema);
+    if (r) return { erro: '"' + r.id + '": ' + r.problema + '. Nada foi cadastrado.' };
+    const opF = Object.assign({}, op, { soma: true, qtd: ids.length });
+    const ap = ep_aplicar(d, opF, true); if (ap.erro) return ap;
+    mov = ep_mov(EP_TIPO.entrada, opF, ap.unidades, Object.assign({ responsavel: _epQuem(), cadastroManual: true }, extra || {}));
+    ep_registrarMov(d, mov);
+  }, ep_podeCadastrar());
+  if (!ok) return false;
+  addLog('Estoque do Plantão — ' + (mov.motivo || 'Cadastro manual') + ': ' + mov.item + ' ×' + mov.quantidade + ' (' + mov.seriais.join(', ') + ') (' + _epQuem() + ')');
+  return true;
+}
+
 // resumo para o Dashboard (todos veem): módulos e DPP no CME e no plantão + o que está a caminho
 function ep_resumo() {
   const p = ep_get(), s = getEstoque(), tr = ep_getTransf(), M = 'Módulo eletrônico de monitoração', D = 'Dispositivo DPP';
@@ -419,3 +465,4 @@ function ep_resumo() {
 function ep_podeMover() { return !!usuarioAtual && ['plantao', 'admin'].includes(usuarioAtual.nivel); }
 function ep_podeVer() { return !!usuarioAtual && ['plantao', 'admin', 'gerencia'].includes(usuarioAtual.nivel); }
 function ep_podeVerCme() { return !!usuarioAtual && usuarioAtual.nivel !== 'plantao'; }
+function ep_podeCadastrar() { return !!usuarioAtual && ['admin', 'gerencia'].includes(usuarioAtual.nivel); }
