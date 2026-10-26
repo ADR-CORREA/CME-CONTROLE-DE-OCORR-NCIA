@@ -20846,11 +20846,10 @@ async function rv_gerarAutomatico(nomeOuFiltros, ini, fim, opts){
         if(!rs.length) semResultado.push(n);
         rs.forEach(x=>{ const k=String(x.id_ocorrencia||'')+'|'+String(x.monitorado||''); if(!vistos.has(k)){ vistos.add(k); rows.push(x); } });
       }
-      if(semResultado.length) _mostrarToast('Sem violação no período: '+semResultado.join(', ')+'.','erro');
-    } else rows=await buscar(filtros);
+    } else { rows=await buscar(filtros); if(!rows.length && filtros.monitorado) semResultado.push(filtros.monitorado); }
   }catch(e){ _mostrarToast('Não consegui buscar no Metabase: '+(e.message||e),'erro'); return; }
   const fmtBR=iso=>iso.split('-').reverse().join('/');
-  if(!rows.length){ _mostrarToast('Nenhuma violação de '+nome+' entre '+fmtBR(ini)+' e '+fmtBR(fim)+' no Metabase.','erro'); return; }
+  if(!rows.length && !semResultado.length){ _mostrarToast('Nenhuma violação de '+nome+' entre '+fmtBR(ini)+' e '+fmtBR(fim)+' no Metabase.','erro'); return; }
   // mesmas colunas da planilha que era exportada do Metabase
   const colUS=_rvDetectarColunaUS(rows.map(r=>r.data_ocorrencia_inicio));
   const t=v=>String(v==null?'':v).trim();
@@ -20864,7 +20863,25 @@ async function rv_gerarAutomatico(nomeOuFiltros, ini, fim, opts){
   })).filter(r=>r.nome);
   const mapa={};
   linhas.forEach(r=>{ const k=r.nome+'|||'+r.processo; if(!mapa[k]) mapa[k]=[]; if(r.idOc && mapa[k].some(o=>o.idOc===r.idOc)) return; mapa[k].push(r); });
-  _rv_grupos=Object.values(mapa);
+  // sem violação no período: a ficha do AKILES dá nome, processo e CPF e sai o relatório SEM VIOLAÇÃO
+  const semGrupos=[], fichasSem={};
+  if(semResultado.length){
+    if(typeof _mpFichasRobo!=='function'){ _mostrarToast('Sem violação no período: '+semResultado.join(', ')+'.','erro'); }
+    else try{
+      _mostrarToast('\u{1F4C4} Sem violação no período: '+semResultado.join(', ')+' — buscando a ficha no AKILES para o relatório SEM VIOLAÇÃO…');
+      const fs=await _mpFichasRobo(semResultado), nao=[];
+      semResultado.forEach(n=>{
+        const f=fs[n]; if(!f||!f.encontrado){ nao.push(n); return; }
+        const ps=Array.isArray(f.processos)?f.processos:[], p=ps.find(x=>x.principal&&/ativ/i.test(x.status||''))||ps.find(x=>/ativ/i.test(x.status||''))||ps[0]||{};
+        const g=[{ nome:t(f.nome)||n, processo:t(p.processo), cpf:t((f.qualificacao||{}).cpf), competencia:'', comarca:'', tipo:'', idOc:'', ocorreu:'', duracao:'', disp:t(f.idInterno).replace(/\D/g,''),
+          fim:'', endereco:'', contato:'', situacao:'', atendimento:'', comentario:'', _retirada:true, _semOcorrencia:true }];
+        semGrupos.push(g); fichasSem[g[0].nome]=f;
+      });
+      if(nao.length) _mostrarToast('Sem violação e não encontrado no AKILES: '+nao.join(', ')+' — confira o nome.','erro');
+    }catch(e){ _mostrarToast('Sem violação no período: '+semResultado.join(', ')+' — não consegui buscar a ficha no AKILES ('+(e.message||e)+').','erro'); }
+  }
+  if(!rows.length && !semGrupos.length) return;
+  _rv_grupos=Object.values(mapa).concat(semGrupos);
   _rv_planilha='Metabase (automático) — '+nome+(filtros.tipo?' — '+filtros.tipo:'')+' — '+fmtBR(ini)+' a '+fmtBR(fim);
   // abre o Gerador já carregado (o servidor confere ali o que vai no relatório)
   mudarAba('relatorio'); mudarSubAbaRel('gerador');
@@ -20880,16 +20897,16 @@ async function rv_gerarAutomatico(nomeOuFiltros, ini, fim, opts){
   _rv_grupos.forEach(g=>g.forEach(x=>{ x.periodoIni=fmtBR(ini); x.periodoFim=fmtBR(fim); }));
   if(typeof _mpFichasRobo==='function'){
     try{
-      const nomes=[...new Set(_rv_grupos.map(g=>g[0].nome))];
-      _mostrarToast('\u{1F4C7} Buscando no AKILES os dados da capa (endereço, contato, datas)…');
-      const fichas=await _mpFichasRobo(nomes);
+      const nomes=[...new Set(_rv_grupos.filter(g=>!g[0]._semOcorrencia).map(g=>g[0].nome))];
+      if(nomes.length) _mostrarToast('\u{1F4C7} Buscando no AKILES os dados da capa (CPF, endereço, contato, vara, datas)…');
+      const fichas=Object.assign(nomes.length?await _mpFichasRobo(nomes):{}, fichasSem);
       const sem=_rv_grupos.filter(g=>!_rvAplicarFicha(g,fichas[g[0].nome])).map(g=>g[0].nome);
       if(sem.length) _mostrarToast('Capa sem os dados do AKILES para: '+sem.join(', ')+' (ficha não encontrada ou processo diferente) — preencha à mão.','erro');
     }catch(e){ _mostrarToast('Não consegui buscar os dados da capa no AKILES ('+(e.message||e)+') — a capa sai com os campos para preencher.','erro'); }
   }
   if(opts.gerarWord===false){
     const pessoas=_rv_grupos.length;
-    _mostrarToast('\u{2705} '+rows.length+' violação(ões) de '+pessoas+' monitorado(s)/processo(s) carregada(s). Confira, escolha o assinante e clique em "Gerar Word".','sucesso');
+    _mostrarToast('\u{2705} '+rows.length+' violação(ões) de '+(pessoas-semGrupos.length)+' monitorado(s)/processo(s) carregada(s)'+(semGrupos.length?' + '+semGrupos.length+' SEM VIOLAÇÃO no período':'')+'. Confira, escolha o assinante e clique em "Gerar Word".','sucesso');
     return;
   }
   const sel=document.getElementById('rv-assinante');
@@ -21042,7 +21059,7 @@ function rv_renderizarLista() {
         <span class="idv-mono" style="color:var(--idv-sec);margin-left:6px;font-size:13px">${r0.processo}</span>
       </label>
       ${mapsBtn}
-      <span class="idv-data" style="color:var(--idv-sec);font-size:13px;white-space:nowrap">${total} ocorrência${total!==1?'s':''} · ${tipos} tipo${tipos!==1?'s':''}</span>
+      ${_rvSemViolacao(g) ? '<span style="color:var(--idv-ok);font-size:13px;font-weight:600;white-space:nowrap">sem violação no período</span>' : `<span class="idv-data" style="color:var(--idv-sec);font-size:13px;white-space:nowrap">${total} ocorrência${total!==1?'s':''} · ${tipos} tipo${tipos!==1?'s':''}</span>`}
     </div>${mapsPanel}`;
   }).join('');
 }
@@ -21460,6 +21477,13 @@ function rv_gerarSelecionados(modo = 'html', gruposConferidos) {
   if (!infoAss) { _mostrarToast('Selecione o servidor assinante.', 'erro'); return; }
   // Antes de gerar: violação com justificativa no CME não vai ao Judiciário sem decisão do servidor.
   if (!gruposConferidos) {
+    const semV = selecionados.filter(_rvSemViolacao);
+    if (semV.length) {
+      _rv_semViolPend = _rv_semViolPend.concat(semV);
+      const comV = selecionados.filter(g => !_rvSemViolacao(g));
+      if (!comV.length) { rv_gerarSelecionados(modo, []); return; }
+      selecionados.length = 0; selecionados.push(...comV);
+    }
     // 1º a conferência das violações (registro do AKILES, tratamento, GPS); ela segue para as justificativas
     if (typeof rvc_antesDeGerar === 'function') { rvc_antesDeGerar(modo, selecionados); return; }
     if (typeof rvj_antesDeGerar === 'function') { rvj_antesDeGerar(modo, selecionados); return; }
@@ -21688,7 +21712,11 @@ function _rvAplicarFicha(grupo, f){
   // data de término já passada com o monitorado ainda no relatório = cadastro desatualizado: não vai ao juízo
   const termino=!fim||(mf&&new Date(+mf[3],+mf[2]-1,+mf[1])<hoje)?'sem data vigente no sistema':fim;
   const iso=s=>String(s||'').split('/').reverse().join('-');
+  const vj=(Array.isArray(f.violacoes)?f.violacoes:[]).find(v=>v&&v.juizo&&(!procG||dig(v.processo).slice(0,20)===procG))||null;
   grupo.forEach(x=>{ if(!x.endereco) x.endereco=String(q.endereco||'').trim(); if(!x.contato) x.contato=contatos.join('; '); x.dataInicio=inicio; x.dataTermino=termino;
+    if(!String(x.cpf||'').trim() && q.cpf) x.cpf=String(q.cpf).trim();
+    if(!String(x.competencia||'').trim() && vj) x.competencia=String(vj.juizo).trim();
+    if(!String(x.comarca||'').trim() && vj && vj.foro) x.comarca=String(vj.foro).trim();
     // monitoração começou depois do início da busca: o período do relatório começa no início da monitoração
     if(/^\d{2}\/\d{2}\/\d{4}$/.test(inicio) && x.periodoIni && iso(inicio)>iso(x.periodoIni)) x.periodoIni=inicio; });
   return true;
