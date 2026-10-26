@@ -42,6 +42,7 @@ function ep_renderizar() {
     + '<div class="idv-sub">Um estoque só para as equipes ALFA a ECHO, separado do Estoque do CME. Lance na hora tudo que entra e sai. Equipe de hoje: <b>' + esc(equipe || '—') + '</b></div></div>'
     + '<div class="idv-acoes">' + _epBtn('\u{1F504} Atualizar', 'ep_renderizar()', '', 'Recarrega a tela com os números mais recentes')
     + (typeof ep_abrirPassagem === 'function' ? _epBtn('\u{1F5A8}\u{FE0F} Passagem de serviço', 'ep_abrirPassagem()', '', 'Folha da troca de plantão para imprimir: material, viaturas e as assinaturas de quem passa e de quem recebe') : '')
+    + _epBtn('\u{1F4CB} Auditoria (PDF)', 'ep_relatorioAuditoria()', '', 'Levantamento para auditoria: saldos, cintas por tamanho, travas e a lista de cada tornozeleira (nº de série) e DPP (IMEI)')
     + (pode && !d.inventarioEncerradoEm ? _epBtn('\u{2B06} Inventário inicial', "ep_abrirMov('entrada')", 'btn-primary', 'Cadastra o que o plantão já tem na sala (só no começo)') + _epBtn('\u{2714} Encerrar inventário', 'ep_encerrarInventario()', '', 'Termina o cadastro inicial; depois disso, item novo só chega pelo Estoque do CME') : '')
     + (pode ? _epBtn('\u{2B07} Saída', "ep_abrirMov('saida')", '', 'Instalação de tornozeleira ou entrega de equipamento ao monitorado')
       + _epBtn('\u{21A9} Devolução', "ep_abrirMov('devolucao')", '', 'Equipamento retirado do monitorado que volta para o plantão')
@@ -67,9 +68,9 @@ function ep_renderizar() {
     + kpi(total, 'Total Geral', '', 'Soma de todos os itens do estoque do plantão')
     + kpi(baixo, 'Estoque Baixo', 'at', 'Itens abaixo da quantidade mínima definida em Mínimos') + kpi(zero, 'Sem Estoque', 'cr', 'Itens que acabaram (quantidade zero)') + '</div>');
   // busca no topo, igual à "Buscar no estoque" do Estoque do CME (pedido de 26/10/2026)
-  html.push('<div style="max-width:640px;margin:0 0 20px"><label for="ep-busca" style="display:block;font-size:16px;font-weight:600;color:var(--idv-texto)">Buscar no estoque</label>'
+  html.push('<div style="margin:0 0 20px"><div style="max-width:640px"><label for="ep-busca" style="display:block;font-size:16px;font-weight:600;color:var(--idv-texto)">Buscar no estoque</label>'
     + '<input type="text" id="ep-busca" placeholder="IMEI, nº de série, monitorado, plantonista, equipe, motivo..." oninput="ep_consultar(this.value)" autocomplete="off" style="width:100%;padding:10px 14px;font-size:15px;margin-top:6px;border:1px solid var(--idv-borda);border-radius:6px;background:var(--idv-campo)">'
-    + '<span style="font-size:13px;color:var(--idv-sec);margin-top:4px;display:block">Pesquisa nas unidades do estoque do Plantão e em todo o histórico de movimentações</span>'
+    + '<span style="font-size:13px;color:var(--idv-sec);margin-top:4px;display:block">Pesquisa nas unidades do estoque do Plantão e em todo o histórico de movimentações</span></div>'
     + '<div id="ep-busca-res" style="margin-top:10px"></div></div>');
   html.push(_epHtmlTabelas(d, pe));
   html.push(_epHtmlHistorico(d, admin));
@@ -491,4 +492,62 @@ async function ep_confirmarCadastro() {
   fecharModal('ep-modal');
   _mostrarToast('\u{2713} ' + ids.length + ' ' + (dpp ? 'DPP' : 'módulo(s)') + ' cadastrado(s) no estoque do Plantão.', 'ok');
   ep_renderizar(); try { _dashEstoqueDisp(); } catch (e) {}
+}
+
+// ── Levantamento para AUDITORIA (imprimir / salvar em PDF) ─────────────────────────────────────
+// Tudo o que o sistema diz que está no Estoque do Plantão: saldos, cintas por tamanho, travas, carregadores,
+// e a lista de cada tornozeleira (nº de série) e de cada DPP (IMEI), com uma coluna para marcar na conferência.
+// Aponta quando o saldo do item não bate com a quantidade de aparelhos cadastrados.
+function ep_relatorioAuditoria() {
+  if (!ep_podeVer()) { _mostrarToast('Sem permissão para o levantamento do estoque.', 'erro'); return; }
+  const d = ep_get(), it = d.itens, M = 'Módulo eletrônico de monitoração', D = 'Dispositivo DPP';
+  const e = s => esc(String(s == null ? '' : s));
+  const dataBR = s => { const x = s ? new Date(s) : null; return x && !isNaN(x) ? x.toLocaleDateString('pt-BR') : '—'; };
+  // aparelhos: registros (formato novo) + seriais (formato antigo, sem detalhes)
+  const aparelhos = item => {
+    const mapa = new Map();
+    ((d.seriais || {})[item] || []).forEach(id => mapa.set(id, { id }));
+    ((d.registros || {})[item] || []).forEach(r => { const id = _epIdUnid(r); if (id) mapa.set(id, Object.assign({ id }, r)); });
+    return [...mapa.values()].sort((a, b) => String(a.id).localeCompare(String(b.id), 'pt-BR', { numeric: true }));
+  };
+  const mods = aparelhos(M), dpps = aparelhos(D);
+  const cintas = EST_TAMANHOS.map(t => [t, it['Cinta_' + t] || 0]);
+  const totCinta = cintas.reduce((s, [, q]) => s + q, 0);
+  const pe = ep_porEstado(d, EST_PADRAO.itens, ITENS_COM_SERIAL);
+  const estado = k => (pe && pe.novo && pe.reut && (pe.novo[k] || pe.reut[k])) ? ' <span class="p">(' + (pe.novo[k] || 0) + ' novo(s) · ' + (pe.reut[k] || 0) + ' reutilizado(s))</span>' : '';
+  const aviso = (item, saldo, n) => saldo !== n ? '<div class="av">⚠ O saldo do sistema (' + saldo + ') é diferente da quantidade de aparelhos cadastrados (' + n + ') — conferir.</div>' : '';
+  const linhaResumo = (rot, q, extra) => '<tr><td>' + rot + '</td><td class="c"><b>' + q + '</b></td><td class="c"></td><td>' + (extra || '') + '</td></tr>';
+  const resumo = linhaResumo('Tornozeleiras (módulo eletrônico)', it[M] || 0, mods.length !== (it[M] || 0) ? mods.length + ' com nº de série cadastrado' : '')
+    + linhaResumo('Botões do pânico (DPP)', it[D] || 0, dpps.length !== (it[D] || 0) ? dpps.length + ' com IMEI cadastrado' : '')
+    + linhaResumo('Cintas (todos os tamanhos)', totCinta, '')
+    + linhaResumo('Travas', it['Trava'] || 0, estado('Trava').replace(/<[^>]+>/g, ''))
+    + linhaResumo('Carregadores da tornozeleira', it['Carregador da tornozeleira'] || 0, estado('Carregador da tornozeleira').replace(/<[^>]+>/g, ''));
+  const tabCintas = '<table class="cin"><tr>' + cintas.map(([t]) => '<th>' + e(t) + '</th>').join('') + '<th>Total</th></tr><tr>'
+    + cintas.map(([, q]) => '<td class="c">' + q + '</td>').join('') + '<td class="c"><b>' + totCinta + '</b></td></tr><tr>'
+    + cintas.map(() => '<td class="c cf"></td>').join('') + '<td class="c cf"></td></tr></table><div class="p">Linha de baixo em branco: quantidade contada na auditoria.</div>';
+  const tabMods = mods.map((a, i) => '<tr><td class="c">' + (i + 1) + '</td><td class="m">' + e(a.id) + '</td><td>' + e(a.estado || '—') + '</td><td class="c">' + dataBR(a.entradaEm) + '</td><td class="c cf"></td></tr>').join('')
+    || '<tr><td colspan="5"><i>Nenhuma tornozeleira cadastrada com nº de série.</i></td></tr>';
+  const tabDpp = dpps.map((a, i) => '<tr><td class="c">' + (i + 1) + '</td><td class="m">' + e(a.id) + '</td><td>' + e(a.estado || '—') + '</td><td class="c">' + (a.temCarregador ? 'sim' : 'não') + '</td><td class="c">' + (a.temChip ? 'sim' : 'não') + '</td><td class="c">' + dataBR(a.entradaEm) + '</td><td class="c cf"></td></tr>').join('')
+    || '<tr><td colspan="7"><i>Nenhum botão do pânico cadastrado com IMEI.</i></td></tr>';
+  const agora = new Date(), quem = ((usuarioAtual && usuarioAtual.nome) || '').toUpperCase();
+  const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>Estoque do Plantão - levantamento para auditoria</title>'
+    + '<style>html,body{background:#fff}@page{size:A4 portrait;margin:12mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:9.5pt}'
+    + 'h1{font-size:14pt;margin:0 0 2px}h2{font-size:11pt;margin:14px 0 4px;border-bottom:1.5px solid #000;padding-bottom:2px}.s{font-size:9pt;margin-bottom:8px}'
+    + 'table{border-collapse:collapse;width:100%;margin-bottom:4px}th,td{border:1px solid #000;padding:3px 5px;vertical-align:top}th{background:#e6e6e6;font-size:8.5pt}'
+    + 'td.c{text-align:center;white-space:nowrap}td.m{font-family:"Courier New",monospace;font-size:9.5pt}td.cf{width:13%}.p{font-size:8pt;color:#333}'
+    + '.av{border:1.5px solid #000;padding:4px 6px;margin:4px 0;font-weight:bold}table.cin th,table.cin td{font-size:8pt;padding:2px 3px}thead{display:table-header-group}tr{page-break-inside:avoid}'
+    + '.ass{display:flex;gap:30px;margin-top:28px}.ass div{flex:1;text-align:center;border-top:1px solid #000;padding-top:3px;font-size:9pt}'
+    + '@media screen{body{padding:10px 16px;max-width:900px}}@media print{.np{display:none}}</style></head><body>'
+    + '<div class="np" style="text-align:right;margin-bottom:6px"><button onclick="print()" style="padding:6px 16px;font-size:11pt;cursor:pointer">Imprimir / salvar em PDF</button></div>'
+    + '<h1>CME/IAPEN – Estoque do Plantão – levantamento para auditoria</h1>'
+    + '<div class="s">Situação registrada no sistema em ' + agora.toLocaleString('pt-BR') + (quem ? ' · emitido por ' + e(quem) : '') + '</div>'
+    + '<h2>1. Resumo</h2><table><thead><tr><th>Item</th><th>No sistema</th><th>Contado</th><th>Observação</th></tr></thead><tbody>' + resumo + '</tbody></table>'
+    + aviso('Tornozeleira', it[M] || 0, mods.length) + aviso('DPP', it[D] || 0, dpps.length)
+    + '<h2>2. Cintas por tamanho</h2>' + tabCintas
+    + '<h2>3. Tornozeleiras – nº de série (' + mods.length + ')</h2><table><thead><tr><th>Nº</th><th>Nº de série</th><th>Estado</th><th>Entrada</th><th>Conferido</th></tr></thead><tbody>' + tabMods + '</tbody></table>'
+    + '<h2>4. Botões do pânico (DPP) – IMEI (' + dpps.length + ')</h2><table><thead><tr><th>Nº</th><th>IMEI</th><th>Estado</th><th>Carregador</th><th>Chip</th><th>Entrada</th><th>Conferido</th></tr></thead><tbody>' + tabDpp + '</tbody></table>'
+    + '<div class="ass"><div>Responsável pela auditoria</div><div>Plantonista presente</div></div>'
+    + '</body></html>';
+  _entregarDoc(new Blob([html], { type: 'text/html' }), 'Estoque do Plantao - auditoria ' + agora.toLocaleDateString('pt-BR').replace(/\//g, '-') + '.html');
+  auditar({ modulo: 'Estoque Plantão', action: 'ep_relatorio_auditoria', alvo: 'levantamento', detalhe: mods.length + ' tornozeleira(s), ' + dpps.length + ' DPP' });
 }
