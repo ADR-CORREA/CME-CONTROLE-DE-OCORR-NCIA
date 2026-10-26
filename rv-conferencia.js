@@ -239,7 +239,6 @@ function _rvcMostrar(modo, res) {
         + '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:13px">'
         + '<label style="cursor:pointer"><input type="radio" name="rvc-' + k + '" value="retirar"' + (dec && dec.acao === 'retirar' ? ' checked' : '') + ' onchange="_rvcAtualizar()"> Retirar do relatório</label>'
         + '<label style="cursor:pointer"><input type="radio" name="rvc-' + k + '" value="manter"' + (dec && dec.acao === 'manter' ? ' checked' : '') + ' onchange="_rvcAtualizar()"> Manter no relatório</label>'
-        + '<input type="text" class="rvc-motivo" placeholder="' + (trava ? 'Por que manter? (obrigatório)' : 'Observação (opcional)') + '" value="' + esc(dec && dec.motivo || '') + '" oninput="_rvcAtualizar()" style="flex:1;min-width:180px;padding:4px 8px;border:1px solid var(--idv-borda);border-radius:6px;font-size:13px;display:' + (dec && dec.acao === 'manter' && trava ? '' : 'none') + '">'
         + '</div></div>';
     }).join('');
     return '<div style="margin-bottom:12px"><div class="idv-nome">' + esc(g0.nome) + ' <span class="idv-mono" style="color:var(--idv-sec);font-weight:400;font-size:12px">' + esc(g0.processo) + '</span>'
@@ -266,15 +265,15 @@ function _rvcLer() {
   });
 }
 function _rvcAtualizar() {
-  const ds = _rvcLer(), pend = ds.filter(d => !d.acao || (d.trava && d.acao === 'manter' && !d.motivo)).length;
+  const ds = _rvcLer(), pend = ds.filter(d => !d.acao).length;
   const c = document.getElementById('rvc-contagem'), ok = document.getElementById('rvc-ok');
   if (c) c.textContent = ds.filter(d => d.acao === 'retirar').length + ' a retirar · ' + ds.filter(d => d.acao === 'manter').length + ' mantida(s)' + (pend ? ' · ' + pend + ' sem decisão' : '');
-  if (ok) { ok.disabled = !!pend; ok.style.opacity = pend ? '.5' : ''; ok.style.cursor = pend ? 'not-allowed' : 'pointer'; ok.title = pend ? 'Decida as violações em vermelho (e diga por que manter) antes de continuar' : ''; }
+  if (ok) { ok.disabled = !!pend; ok.style.opacity = pend ? '.5' : ''; ok.style.cursor = pend ? 'not-allowed' : 'pointer'; ok.title = pend ? 'Decida as violações em vermelho (retirar ou manter) antes de continuar' : ''; }
 }
 function _rvcConfirmar() {
   const ov = document.getElementById('rvc-modal'), st = ov && ov._rvc; if (!st) return;
   const ds = _rvcLer();
-  if (ds.some(d => !d.acao || (d.trava && d.acao === 'manter' && !d.motivo))) { _mostrarToast('Decida as violações em vermelho antes de continuar.', 'erro'); return; }
+  if (ds.some(d => !d.acao)) { _mostrarToast('Decida as violações em vermelho antes de continuar.', 'erro'); return; }
   const retirar = new Set(), frases = [];
   ds.forEach(d => {
     const it = st.itens[d.k], id = String(it.v.idOc || '');
