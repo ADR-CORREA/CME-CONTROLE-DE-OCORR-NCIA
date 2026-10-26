@@ -428,6 +428,7 @@ function _epPreviaCadastro() {
   const bons = res.filter(r => !r.problema).length, ruins = res.length - bons;
   const btn = document.getElementById('ep-c-ok');
   btn.disabled = !res.length || ruins > 0;
+  btn.style.opacity = btn.disabled ? '.45' : ''; btn.style.cursor = btn.disabled ? 'default' : ''; // o site não tem estilo de botão desabilitado
   btn.textContent = res.length && !ruins ? 'Cadastrar ' + bons + ' ' + (bons === 1 ? 'dispositivo' : 'dispositivos') : 'Cadastrar';
   document.getElementById('ep-c-previa').innerHTML = !res.length ? ''
     : '<div style="font-size:13px;margin-bottom:4px">' + (ruins ? '<span style="color:var(--idv-cr);font-weight:600">' + ruins + ' com problema — corrija ou apague para liberar o cadastro.</span> ' : '') + '<span style="color:var(--idv-sec)">' + bons + ' pronto(s) para entrar.</span></div>'
