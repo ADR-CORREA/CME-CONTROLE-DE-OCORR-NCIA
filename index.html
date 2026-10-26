@@ -1332,7 +1332,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     <div class="tab-panel active" id="panel-dashboard">
       <!-- Identidade visual (16/10/2026): Painel no padrão do guia (identidade.css) -->
       <div class="idv-cab">
-        <div><h1>Painel de hoje</h1><div class="idv-achado" id="dash-achado"></div><div class="idv-sub" id="dash-update">Atualizado agora</div></div>
+        <div><h1>Painel de hoje</h1><div class="idv-achado" id="dash-achado"></div><div class="idv-sub" id="dash-update">Atualizado agora</div><div class="idv-sub" id="dash-akiles"></div></div>
         <div class="idv-acoes">
           <button type="button" class="idv-btn" onclick="exportarDashboardExcel()">Exportar Excel</button>
           <button type="button" class="idv-btn criar" onclick="atualizarTudo()">Atualizar</button>
@@ -8374,6 +8374,7 @@ function atualizarDashboard() {
   try { _dashRenderPlantaoHoje(); } catch(e) { console.warn('plantão hoje', e); }
   try { _dashAplicarModoPessoal(); } catch(e) { console.warn('dash modo pessoal', e); }
   try { _dashEstoqueDisp(); } catch(e) {}
+  try { _akRenderIndicadores(); } catch(e) {}
   const ocs = getOcorrencias();
   let ok=0, at=0, ve=0, vd=0, com=0, prot=0;
   let protSemProd=0, cautSemProd=0, protVenc=0;
@@ -8664,7 +8665,7 @@ function renderizarCriticos() {
     const priorColor = priorNum === 1 ? "var(--idv-cr)" : priorNum <= 3 ? "var(--idv-at)" : "var(--idv-sec)";
     return `<tr class="${rowClass}">
       <td class="idv-data" style="text-align:center;font-weight:600;font-size:15px;color:${priorColor}">${priorNum}º</td>
-      <td><div class="idv-nome">${esc(oc.monitorado) || "—"}${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</div><div class="idv-mini"><span class="idv-mono">ID ${esc(oc.id)}</span>${_ocSeloAuto(oc)} · ${esc(oc.medida) || "—"}</div></td>
+      <td><div class="idv-nome">${esc(oc.monitorado) || "—"}${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</div><div class="idv-mini"><span class="idv-mono">ID ${esc(oc.id)}</span>${_ocSeloAuto(oc)} · ${esc(oc.medida) || "—"}</div>${oc.registroAkiles ? _akBateriaHtml(oc.registroAkiles) : ''}</td>
       <td>${esc(oc.tipo) || "—"}</td>
       <td>${idv_etiqueta(oc._status)}<div class="idv-det ${cls}">${esc(idv_prazoTxt(pr))}</div></td>
       <td class="idv-data" style="font-size:13px;white-space:nowrap">${formatDate(oc.dataAlerta)}</td>
@@ -8837,7 +8838,7 @@ function renderizarOcorrencias() {
       const rowClass = getRowClass(s, oc.medida);
       const idx = findIdx(oc.id), cls = idv_sit(s)[0];
       return `<tr class="${rowClass}">
-        <td><div class="idv-nome">${esc(oc.monitorado) || "—"}${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</div><div class="idv-mini"><span class="idv-mono">ID ${esc(oc.id)}</span>${_ocSeloAuto(oc)} · ${esc(oc.medida) || "—"}</div></td>
+        <td><div class="idv-nome">${esc(oc.monitorado) || "—"}${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</div><div class="idv-mini"><span class="idv-mono">ID ${esc(oc.id)}</span>${_ocSeloAuto(oc)} · ${esc(oc.medida) || "—"}</div>${oc.registroAkiles ? _akBateriaHtml(oc.registroAkiles) : ''}</td>
         <td><div>${esc(oc.tipo) || "—"}</div><div class="idv-mini">prazo POP: ${esc(pp)} · decorrido: ${esc(td)}</div></td>
         <td class="idv-data" style="font-size:13px;white-space:nowrap">${formatDate(oc.dataAlerta)}</td>
         <td>${idv_etiqueta(s)}<div class="idv-det ${cls}">${esc(idv_prazoTxt(pr))}</div></td>
@@ -9699,6 +9700,25 @@ function _scAplicarLinhas(linhas, opts) {
 // da pulseira") e botoes ("Botão de segurança preventiva"). Quem abrir o CME
 // primeiro aplica o pacote — uma vez só, com o MESMO núcleo do Excel.
 function _akilesPacote() { return carregarStore('akiles_auto', null); }
+// Bateria e indicadores do AKILES (robô bateria-akiles.js, de hora em hora, pela API interna do AKILES):
+// pacote.bateria = { em, indicadores:{pul,case,btd,zni,zne,online}, porReg:{ registro: [% bateria, operadora] } }.
+// Leitura com mais de 6 h não aparece (o robô parou ou o PC desligou).
+function _akBateria() { const b = (_akilesPacote() || {}).bateria; return b && b.em && Date.now() - new Date(b.em) < 6 * 3600e3 ? b : null; }
+function _akBateriaHtml(reg, ultima) {
+  const b = _akBateria(), v = b && b.porReg && b.porReg[_scChaveReg(reg)];
+  if (!v) return '';
+  const cor = v[0] <= 15 ? 'var(--idv-cr)' : v[0] <= 30 ? 'var(--idv-at)' : 'var(--idv-sec)';
+  return '<div class="idv-mini" title="Leitura do AKILES às ' + new Date(b.em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + (ultima ? ' — é a última bateria que a tornozeleira enviou antes de parar de comunicar' : '') + '">'
+    + '<span style="color:' + cor + ';font-weight:600">' + (ultima ? 'última bateria ' : 'bateria ') + v[0] + '%</span>' + (v[1] ? ' · ' + esc(v[1]) : '') + '</div>';
+}
+function _akRenderIndicadores() {
+  const el = document.getElementById('dash-akiles'); if (!el) return;
+  const b = _akBateria(), i = b && b.indicadores;
+  if (!i) { el.textContent = ''; return; }
+  const n = (v, rot) => v == null ? '' : '<b class="idv-data">' + esc(v) + '</b> ' + rot;
+  el.innerHTML = 'AKILES às ' + new Date(b.em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + ': '
+    + [n(i.online, 'on-line'), n(i.btd, 'bateria (BTD)'), n(i.zni, 'zona de inclusão (ZNI)'), n(i.zne, 'zona de exclusão (ZNE)'), n(i.pul, 'pulseira (PUL)'), n(i.case, 'case (CAS)')].filter(Boolean).join(' · ');
+}
 function getAkilesOc() { const d = carregarStore('akiles_ocorrencias', null); return (d && typeof d === 'object') ? d : { rompimentos: {}, botoes: {} }; }
 function _scVD(m) { return /^\s*9\.|viol[êe]ncia dom[ée]stica/i.test(String((m && m.grupo) || '')); }
 // Agressor de MPU (tornozeleira, grupo 9): prioridade — relatório ao juiz p/ mandado de prisão.
@@ -10454,7 +10474,7 @@ function renderizarSemCom(area) {
     const idj = _jsq(m.id);
     return `<tr class="${cls === 'cr' ? 'row-vencido' : cls === 'at' ? 'row-atencao' : ''}">
       <td><div class="idv-nome">${esc(m.nome)}${_scSeloVD(m)}</div>${unid ? `<div class="idv-mini">${esc(unid)}</div>` : ''}${typeof _scLinhaContato === 'function' ? _scLinhaContato(m) : ''}</td>
-      <td><span class="idv-data" style="font-size:15px;font-weight:600;color:${cls === 'cr' ? 'var(--idv-cr)' : cls === 'at' ? 'var(--idv-at)' : 'var(--idv-sec)'}">${dias} d</span>${m.tempoSemCom ? `<div class="idv-mini">${esc(m.tempoSemCom)}</div>` : ''}</td>
+      <td><span class="idv-data" style="font-size:15px;font-weight:600;color:${cls === 'cr' ? 'var(--idv-cr)' : cls === 'at' ? 'var(--idv-at)' : 'var(--idv-sec)'}">${dias} d</span>${m.tempoSemCom ? `<div class="idv-mini">${esc(m.tempoSemCom)}</div>` : ''}${_akBateriaHtml(m.registro, true)}</td>
       <td><span class="idv-data" style="font-size:13px;white-space:nowrap">${esc(_scDataBR(m.ultimaComunicacao))}</span>${m.intervalo ? `<div class="idv-mini">${esc(m.intervalo)}</div>` : ''}</td>
       <td>${sit}</td>
       <td>${tratQt ? `<span class="idv-data" style="font-weight:600">${tratQt}</span>${ult && ult.data ? `<div class="idv-mini">última ${esc(new Date(ult.data).toLocaleDateString('pt-BR'))}</div>` : ''}` : '<span class="idv-mini">nenhuma</span>'}</td>
