@@ -66,10 +66,12 @@ function ep_renderizar() {
     + kpi(pe.reutilizado[M] || 0, 'Tornozeleiras Reutilizadas', '', 'Tornozeleiras que já foram usadas e voltaram para o estoque')
     + kpi(total, 'Total Geral', '', 'Soma de todos os itens do estoque do plantão')
     + kpi(baixo, 'Estoque Baixo', 'at', 'Itens abaixo da quantidade mínima definida em Mínimos') + kpi(zero, 'Sem Estoque', 'cr', 'Itens que acabaram (quantidade zero)') + '</div>');
+  // busca no topo, igual à "Buscar no estoque" do Estoque do CME (pedido de 26/10/2026)
+  html.push('<div style="max-width:640px;margin:0 0 20px"><label for="ep-busca" style="display:block;font-size:16px;font-weight:600;color:var(--idv-texto)">Buscar no estoque</label>'
+    + '<input type="text" id="ep-busca" placeholder="IMEI, nº de série, monitorado, plantonista, equipe, motivo..." oninput="ep_consultar(this.value)" autocomplete="off" style="width:100%;padding:10px 14px;font-size:15px;margin-top:6px;border:1px solid var(--idv-borda);border-radius:6px;background:var(--idv-campo)">'
+    + '<span style="font-size:13px;color:var(--idv-sec);margin-top:4px;display:block">Pesquisa nas unidades do estoque do Plantão e em todo o histórico de movimentações</span>'
+    + '<div id="ep-busca-res" style="margin-top:10px"></div></div>');
   html.push(_epHtmlTabelas(d, pe));
-  html.push('<div class="idv-secao">\u{1F50D} Onde está? (nº de série, IMEI, monitorado, plantonista)</div>'
-    + '<input type="text" id="ep-busca" placeholder="Digite o IMEI, nº de série, nome do monitorado..." oninput="ep_consultar(this.value)" style="width:100%;max-width:560px;height:38px;padding:0 12px;border:1px solid var(--idv-borda);border-radius:6px;font-size:14px;background:var(--idv-cartao);color:var(--idv-texto)">'
-    + '<div id="ep-busca-res" style="margin-top:8px"></div>');
   html.push(_epHtmlHistorico(d, admin));
   const busca = document.getElementById('ep-busca'), valor = busca ? busca.value : '';
   el.innerHTML = html.join('');
@@ -180,12 +182,50 @@ function _epHtmlHistorico(d, admin) {
 function ep_consultar(valor) {
   const el = document.getElementById('ep-busca-res'); if (!el) return;
   const q = String(valor || '').trim(); if (q.length < 2) { el.innerHTML = ''; return; }
-  const p = ep_get(), s = getEstoque(), ql = q.toLowerCase();
-  const onde = ep_onde(q, ep_podeVerCme() ? s : null, p, ITENS_COM_SERIAL, ep_getTransf());
-  const movs = p.movimentacoes.filter(m => [m.tipo, m.item, m.tamanho, m.monitorado, m.processo, m.motivo, m.obs, m.equipe, m.plantonista, m.responsavel, ...(m.seriais || [])].some(v => String(v || '').toLowerCase().includes(ql))).slice(0, 50);
-  let h = onde ? '<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:8px"><span><b class="idv-mono">' + esc(q) + '</b> — ' + esc(onde.item) + ': <b>' + esc(onde.texto) + '</b></span></div>' : '';
-  h += movs.length ? '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:4px">' + movs.length + ' movimentação(ões) do plantão com "' + esc(q) + '":</div>' + movs.map(m => '<div onclick="ep_verMov(\'' + _jsq(m.id) + '\')" style="cursor:pointer;display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--idv-linha);font-size:13px"><span class="idv-etq ' + (_EP_BADGE[m.tipo] || 'ne') + '">' + esc(m.tipo) + '</span><span class="idv-data">' + new Date(m.ts).toLocaleString('pt-BR') + '</span><span>' + esc(m.item) + ' \u{00D7}' + esc(m.quantidade) + '</span><span style="color:var(--idv-sec)">' + esc(m.monitorado || m.motivo || '') + '</span><span style="margin-left:auto;color:var(--idv-in);font-weight:600">\u{1F441} detalhe</span></div>').join('')
-    : (onde ? '' : '<div style="color:var(--idv-sec);padding:8px 0">Nada encontrado para "' + esc(q) + '".</div>');
+  const p = ep_get(), ql = q.toLowerCase(), qn = _epSoDig(q);
+  const txt = v => String(v == null ? '' : v).toLowerCase();
+  // 1. unidades que estão no estoque do Plantão (aceita parte do IMEI / nº de série)
+  const unids = [];
+  ITENS_COM_SERIAL.forEach(item => ep_unidades(p, item).forEach(u => {
+    if ((qn && _epSoDig(u.id).includes(qn)) || txt(u.id).includes(ql) || txt(u.estado).includes(ql)) unids.push(Object.assign({ item }, u));
+  }));
+  // 2. número que não está no Plantão: onde ele está (setor, a caminho, saiu, baixa)
+  const onde = unids.length ? null : ep_onde(q, ep_podeVerCme() ? getEstoque() : null, p, ITENS_COM_SERIAL, ep_getTransf());
+  // 3. movimentações do Plantão que citam o termo, em qualquer campo
+  const movs = p.movimentacoes.filter(m => [m.tipo, m.categoria, m.item, m.tamanho, m.estado, m.monitorado, m.processo, m.motivo, m.obs,
+    m.equipe, m.plantonista, m.responsavel, m.dataEntrega, ...(m.seriais || [])].some(v => txt(v).includes(ql)) || (qn.length >= 4 && (m.seriais || []).some(s => _epSoDig(s).includes(qn))));
+  if (!unids.length && !onde && !movs.length) {
+    el.innerHTML = '<div class="idv-vazio">Nenhum resultado para "<strong>' + esc(q) + '</strong>".<br><span style="font-size:13px">Tente o IMEI, o nº de série, o nome do monitorado, o plantonista, a equipe ou o motivo.</span></div>';
+    return;
+  }
+  const linhaMov = m => '<div onclick="ep_verMov(\'' + _jsq(m.id) + '\')" title="Ver detalhes" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 0;border-bottom:1px solid var(--idv-linha);cursor:pointer">'
+    + '<span class="idv-etq ' + (_EP_BADGE[m.tipo] || 'ne') + '">' + esc(m.tipo) + '</span><span class="idv-data" style="color:var(--idv-texto)">' + new Date(m.ts).toLocaleString('pt-BR') + '</span>'
+    + '<span>' + esc(m.plantonista || m.responsavel || '') + '</span>' + (m.equipe ? '<span>' + esc(m.equipe) + '</span>' : '') + (m.monitorado ? '<span>' + esc(m.monitorado) + '</span>' : '')
+    + '<span class="idv-link" style="margin-left:auto;font-size:13px">ver detalhe</span></div>';
+  let h = '';
+  if (onde) h += '<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:10px"><span><b class="idv-mono">' + esc(q) + '</b> — ' + esc(onde.item) + ': <b>' + esc(onde.texto) + '</b></span></div>';
+  if (unids.length) {
+    h += '<div class="idv-secao">Unidades encontradas (' + unids.length + ')</div>';
+    unids.slice(0, 40).forEach(u => {
+      const dpp = u.item === 'Dispositivo DPP', hist = p.movimentacoes.filter(m => (m.seriais || []).includes(u.id));
+      h += '<div style="background:var(--idv-cartao);border:1px solid var(--idv-borda);border-radius:6px;padding:14px 16px;margin-bottom:10px">'
+        + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px"><span style="font-weight:600;font-size:15px">' + esc(u.item) + '</span>'
+        + '<span class="idv-etq ' + (u.estado === 'Novo' ? 'ok' : u.estado === 'Reutilizado' ? 'at' : 'ne') + '">' + esc(u.estado || '—') + '</span><span class="idv-etq ok">No estoque do Plantão</span></div>'
+        + '<div style="font-size:14px"><strong>' + (dpp ? 'IMEI' : 'Nº de série') + ':</strong> <code class="idv-mono" style="background:var(--idv-fundo);border:1px solid var(--idv-linha);padding:2px 8px;border-radius:3px">' + esc(u.id) + '</code>'
+        + (dpp ? '<span style="margin-left:12px">' + (u.temCarregador ? 'Com carregador' : 'Sem carregador') + ' · ' + (u.temChip ? 'Com chip' : 'Sem chip') + '</span>' : '') + '</div>'
+        + (hist.length ? '<div style="margin-top:10px;font-size:13px;color:var(--idv-sec);border-top:1px solid var(--idv-linha);padding-top:8px"><strong>Movimentações (' + hist.length + '):</strong>' + hist.slice(0, 20).map(linhaMov).join('') + '</div>' : '')
+        + '</div>';
+    });
+  }
+  if (movs.length) {
+    h += '<div class="idv-secao" style="margin-top:' + (unids.length || onde ? '16px' : '0') + '">Movimentações encontradas (' + movs.length + ')</div>'
+      + '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Estado</th><th>Plantonista</th><th>Equipe</th><th>Monitorado</th><th>Motivo</th><th>Série/IMEI</th></tr></thead><tbody>'
+      + movs.slice(0, 100).map(m => '<tr style="cursor:pointer" onclick="ep_verMov(\'' + _jsq(m.id) + '\')" title="Clique para ver detalhes">'
+        + '<td class="idv-data" style="white-space:nowrap;font-size:13px">' + new Date(m.ts).toLocaleString('pt-BR') + '</td><td><span class="idv-etq ' + (_EP_BADGE[m.tipo] || 'ne') + '">' + esc(m.tipo) + '</span></td>'
+        + '<td>' + esc(m.item) + (m.tamanho ? ' ' + esc(m.tamanho) : '') + '</td><td>' + esc(m.estado || '—') + '</td><td>' + esc(m.plantonista || m.responsavel || '—') + '</td><td>' + esc(m.equipe || '—') + '</td>'
+        + '<td>' + esc(m.monitorado || '—') + '</td><td>' + esc(m.motivo || '—') + '</td><td class="idv-mono" style="font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc((m.seriais || []).join(', ') || '—') + '</td></tr>').join('')
+      + '</tbody></table></div>' + (movs.length > 100 ? '<div style="font-size:13px;color:var(--idv-sec);margin-top:4px">Mostrando as 100 mais recentes — refine a busca.</div>' : '');
+  }
   el.innerHTML = h;
 }
 
