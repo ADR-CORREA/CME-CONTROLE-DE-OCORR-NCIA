@@ -113,11 +113,13 @@ async function rd_levantar() {
       const r = await r2_api('GET', '/list?monitorado=' + encodeURIComponent(c.nome)); dados.pasta = r.arquivos || [];
       // termos de guarda: pelo nome (termo/guarda/TNZ/troca de tornozeleira), nunca "troca de endereço"; arquivos grandes (várias páginas) ficam de fora
       const termos = dados.pasta.filter(a => /termo|guarda|\btnz\b|troca(?: de)? (?:tnz|tornoz|disp|equip)|^\d{2}\.\d{2}\.\d{2}\s*troca/i.test(a.nome) && !/endere/i.test(a.nome) && (!a.tamanho || a.tamanho < 900000));
-      for (const a of termos.slice(0, 12)) {
-        try { const rr = await r2_api('GET', '/download?key=' + encodeURIComponent(a.key)); const buf = await rr.arrayBuffer(); rd_set('Levantando… lendo ' + a.nome + ' (OCR)'); const txt = await rd_pdfTexto(buf, true, 1);
+      // os termos são lidos em paralelo (o leitor da nuvem leva 1–2 min por página)
+      rd_set('Levantando… lendo ' + termos.length + ' termo(s) de guarda da pasta (OCR)');
+      await Promise.all(termos.slice(0, 8).map(async a => {
+        try { const rr = await r2_api('GET', '/download?key=' + encodeURIComponent(a.key)); const buf = await rr.arrayBuffer(); const txt = await rd_pdfTexto(buf, true, 1);
           const serie = (txt.replace(/\s+/g, ' ').match(/n[ºo°]\s*de\s*s[ée]rie\s*0*(\d{4,})/i) || [])[1] || ''; const data = rd_dataExtenso(txt) || ((txt.match(/\d{2}\/\d{2}\/\d{4}/g) || []).pop() || '');
           dados.termos.push({ arquivo: a.nome, serie, data, iso: rd_dataISO(data) }); } catch (e) { dados.erros.push('termo ' + a.nome + ': ' + e.message); }
-      }
+      }));
       dados.termos.sort((x, y) => (x.iso || '').localeCompare(y.iso || ''));
     } catch (e) { dados.erros.push('pasta: ' + e.message); }
   })();
@@ -153,7 +155,8 @@ function rd_montar() {
     const mot = (r.texto.match(/(?:EM RAZ[ÃA]O D[EAO]|DEVIDO(?:\s+A(?=\s))?|POR APRESENTAR|MOTIVO:?)\s*(.{5,300}?)(?:\.|$)/i) || [])[1] || '';
     let t = m ? cadeia.find(x => String(x.serie).replace(/^0+/, '') === m[2].replace(/^0+/, '')) : null;
     if (!t && iso) t = cadeia.find(x => x.iso && dias(x.iso, iso) <= 3);
-    if (t) { if (m) t.anterior = m[1]; if (mot && !t.motivo) t.motivo = mot; t.fonte += '; Registro do AKILES de ' + r.data.slice(0, 16); }
+    // a data do Registro do AKILES vale mais que a data lida por OCR no termo (o OCR erra "dezesseis"/"dezessete")
+    if (t) { if (m) t.anterior = m[1]; if (mot && !t.motivo) t.motivo = mot; if (iso) { t.data = r.data.slice(0, 10); t.iso = iso; } t.fonte += '; Registro do AKILES de ' + r.data.slice(0, 16); }
     else cadeia.push({ data: r.data.slice(0, 10), iso, serie: m ? m[2] : '(ver termo de guarda)', anterior: m ? m[1] : '', motivo: mot, fonte: 'Registro do AKILES de ' + r.data.slice(0, 16) });
   });
   cadeia.sort((x, y) => (x.iso || '').localeCompare(y.iso || '')); cadeia.forEach((t, i) => { if (!t.anterior && i > 0) t.anterior = cadeia[i - 1].serie; });
