@@ -117,7 +117,8 @@ async function rd_levantar() {
       rd_set('Levantando… lendo ' + termos.length + ' termo(s) de guarda da pasta (OCR)');
       await Promise.all(termos.slice(0, 8).map(async a => {
         try { const rr = await r2_api('GET', '/download?key=' + encodeURIComponent(a.key)); const buf = await rr.arrayBuffer(); const txt = await rd_pdfTexto(buf, true, 1);
-          const serie = (txt.replace(/\s+/g, ' ').match(/n[ºo°]\s*de\s*s[ée]rie\s*0*(\d{4,})/i) || [])[1] || ''; const data = rd_dataExtenso(txt) || ((txt.match(/\d{2}\/\d{2}\/\d{4}/g) || []).pop() || '');
+          // o OCR da nuvem às vezes troca "série"/"serie"/"sério" e parte os zeros: aceita qualquer coisa curta entre a palavra e os dígitos
+          const serie = (txt.replace(/\s+/g, ' ').match(/s[ée]ri[eo]\D{0,8}?0*(\d{4,13})/i) || [])[1] || ''; const data = rd_dataExtenso(txt) || ((txt.match(/\d{2}\/\d{2}\/\d{4}/g) || []).pop() || '');
           dados.termos.push({ arquivo: a.nome, serie, data, iso: rd_dataISO(data) }); } catch (e) { dados.erros.push('termo ' + a.nome + ': ' + e.message); }
       }));
       dados.termos.sort((x, y) => (x.iso || '').localeCompare(y.iso || ''));
@@ -146,18 +147,19 @@ function rd_montar() {
   const ak = d.akiles && d.akiles.encontrado ? d.akiles : null, f = ak ? ak.ficha : null, per = rd_dataBR(c.ini) + ' a ' + rd_dataBR(c.fim);
   const blocos = [];
   // cadeia de equipamentos: termos (série + data) + registros do AKILES que falam de substituição
-  const cadeia = d.termos.filter(t => t.serie).map(t => ({ data: t.data, iso: t.iso, serie: t.serie, fonte: 'Termo de Guarda e Responsabilidade de ' + t.data }));
+  const cadeia = d.termos.filter(t => t.serie || t.iso).map(t => ({ data: t.data, iso: t.iso, serie: t.serie || '(ver termo de guarda)', fonte: 'Termo de Guarda e Responsabilidade de ' + t.data }));
   const regsEq = ak ? [].concat(ak.registros.antes, ak.registros.periodo, ak.registros.depois).filter(r => r.equipamento) : [];
   // registro de substituição/troca: casa com o termo pela série ou pela data (±3 dias) e dá o MOTIVO; sem termo, entra na cadeia mesmo assim
   const dias = (a, b) => Math.abs(new Date(a) - new Date(b)) / 864e5;
   regsEq.filter(r => /SUBSTITUI|TROCA D[OEA]\s*(?:EQUIPAMENTO|TORNOZELEIRA|DISPOSITIVO)|TROCADO|TROCOU/i.test(r.texto)).forEach(r => {
     const m = r.texto.match(/DISPOSITIVO\s*N[ºo°.]?\s*0*(\d{4,})\s*PELO(?:\s*DE)?\s*N[ºo°.]?\s*0*(\d{4,})/i), iso = rd_dataISO(r.data);
+    const antigo = (r.texto.match(/(?:TORNOZELEIRA|DISPOSITIVO|EQUIPAMENTO)\s*(?:N[ºo°.]?\s*)?0*(\d{4,})/i) || [])[1] || ''; // "INSPEÇÃO DA TORNOZELEIRA 0058187 … TROCA" = o que saiu
     const mot = (r.texto.match(/(?:EM RAZ[ÃA]O D[EAO]|DEVIDO(?:\s+A(?=\s))?|POR APRESENTAR|MOTIVO:?)\s*(.{5,300}?)(?:\.|$)/i) || [])[1] || '';
     let t = m ? cadeia.find(x => String(x.serie).replace(/^0+/, '') === m[2].replace(/^0+/, '')) : null;
     if (!t && iso) t = cadeia.find(x => x.iso && dias(x.iso, iso) <= 3);
     // a data do Registro do AKILES vale mais que a data lida por OCR no termo (o OCR erra "dezesseis"/"dezessete")
-    if (t) { if (m) t.anterior = m[1]; if (mot && !t.motivo) t.motivo = mot; if (iso) { t.data = r.data.slice(0, 10); t.iso = iso; } t.fonte += '; Registro do AKILES de ' + r.data.slice(0, 16); }
-    else cadeia.push({ data: r.data.slice(0, 10), iso, serie: m ? m[2] : '(ver termo de guarda)', anterior: m ? m[1] : '', motivo: mot, fonte: 'Registro do AKILES de ' + r.data.slice(0, 16) });
+    if (t) { if (m) t.anterior = m[1]; else if (antigo && !t.anterior) t.anterior = antigo; if (mot && !t.motivo) t.motivo = mot; if (iso) { t.data = r.data.slice(0, 10); t.iso = iso; } t.fonte += '; Registro do AKILES de ' + r.data.slice(0, 16); }
+    else cadeia.push({ data: r.data.slice(0, 10), iso, serie: m ? m[2] : '(ver termo de guarda)', anterior: m ? m[1] : antigo, motivo: mot, fonte: 'Registro do AKILES de ' + r.data.slice(0, 16) });
   });
   cadeia.sort((x, y) => (x.iso || '').localeCompare(y.iso || '')); cadeia.forEach((t, i) => { if (!t.anterior && i > 0) t.anterior = cadeia[i - 1].serie; });
   const noPer = cadeia.filter(t => t.iso >= c.ini && t.iso <= c.fim), antesPer = cadeia.filter(t => t.iso < c.ini), depoisPer = cadeia.filter(t => t.iso > c.fim);
