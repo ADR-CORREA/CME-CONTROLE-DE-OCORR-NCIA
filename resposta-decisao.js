@@ -34,14 +34,14 @@ function rd_dataExtenso(t) {
 }
 
 /* ── 1. ler o documento ─────────────────────────────────────────── */
-async function rd_pdfTexto(buf, ocrSePreciso) {
+async function rd_pdfTexto(buf, ocrSePreciso, maxOcrPag) {
   await _carregarScriptSE(_RD_PDFJS, 'pdfjsLib');
   try { pdfjsLib.GlobalWorkerOptions.workerSrc = _RD_PDFJS.replace('pdf.min.js', 'pdf.worker.min.js'); } catch (e) {}
   const pdf = await pdfjsLib.getDocument({ data: buf }).promise; let txt = '';
   for (let p = 1; p <= Math.min(pdf.numPages, 30); p++) { const pg = await pdf.getPage(p); const c = await pg.getTextContent(); txt += '\n' + c.items.map(x => x.str).join(' '); }
   if (txt.replace(/\s/g, '').length < 80 && ocrSePreciso && typeof _comOcrCanvas === 'function') {
     txt = '';
-    for (let p = 1; p <= Math.min(pdf.numPages, 4); p++) {
+    for (let p = 1; p <= Math.min(pdf.numPages, maxOcrPag || 4); p++) { // OCR local leva até 90 s por página — termo de guarda é 1 página
       const pg = await pdf.getPage(p), vp = pg.getViewport({ scale: 1.6 }), cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
       await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
       const t = await _comOcrCanvas(cv); txt += '\n' + (typeof t === 'string' ? t : (t && t.texto) || '');
@@ -109,9 +109,10 @@ async function rd_levantar() {
   const pPasta = (async () => {
     try {
       const r = await r2_api('GET', '/list?monitorado=' + encodeURIComponent(c.nome)); dados.pasta = r.arquivos || [];
-      const termos = dados.pasta.filter(a => /termo|troca|guarda/i.test(a.nome) && /\.pdf$/i.test(a.nome) || /termo de guarda|troca de tnz/i.test(a.nome));
+      // termos de guarda: pelo nome (termo/guarda/TNZ/troca de tornozeleira), nunca "troca de endereço"; arquivos grandes (várias páginas) ficam de fora
+      const termos = dados.pasta.filter(a => /termo|guarda|\btnz\b|troca(?: de)? (?:tnz|tornoz|disp|equip)|^\d{2}\.\d{2}\.\d{2}\s*troca/i.test(a.nome) && !/endere/i.test(a.nome) && (!a.tamanho || a.tamanho < 900000));
       for (const a of termos.slice(0, 12)) {
-        try { const rr = await r2_api('GET', '/download?key=' + encodeURIComponent(a.key)); const buf = await rr.arrayBuffer(); const txt = await rd_pdfTexto(buf, true);
+        try { const rr = await r2_api('GET', '/download?key=' + encodeURIComponent(a.key)); const buf = await rr.arrayBuffer(); rd_set('Levantando… lendo ' + a.nome + ' (OCR)'); const txt = await rd_pdfTexto(buf, true, 1);
           const serie = (txt.replace(/\s+/g, ' ').match(/n[ºo°]\s*de\s*s[ée]rie\s*0*(\d{4,})/i) || [])[1] || ''; const data = rd_dataExtenso(txt) || ((txt.match(/\d{2}\/\d{2}\/\d{4}/g) || []).pop() || '');
           dados.termos.push({ arquivo: a.nome, serie, data, iso: rd_dataISO(data) }); } catch (e) { dados.erros.push('termo ' + a.nome + ': ' + e.message); }
       }
