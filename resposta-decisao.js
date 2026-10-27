@@ -139,6 +139,7 @@ async function rd_levantar() {
 }
 
 /* ── 3. montar a minuta por item ────────────────────────────────── */
+function rd_plain(x) { const ta = document.createElement('textarea'); ta.innerHTML = String(x == null ? '' : x).replace(/<[^>]+>/g, ' '); return ta.value.replace(/\s+/g, ' ').trim(); }
 function rd_tab(cab, linhas, cls) { return '<table class="rd-t' + (cls ? ' ' + cls : '') + '"><thead><tr>' + cab.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + (linhas.length ? linhas.map(l => '<tr>' + l.map(x => '<td>' + x + '</td>').join('') + '</tr>').join('') : '<tr><td colspan="' + cab.length + '" style="text-align:center">— sem registros —</td></tr>') + '</tbody></table>'; }
 function rd_ext(v) { return ({ 0: 'zero', 1: 'uma', 2: 'duas', 3: 'três', 4: 'quatro', 5: 'cinco', 6: 'seis', 7: 'sete', 8: 'oito', 9: 'nove', 10: 'dez' })[v] || String(v); }
 function rd_pct(v) { return v == null ? '—' : v + '%'; }
@@ -166,20 +167,22 @@ function rd_montar() {
   const emUso = antesPer.length ? antesPer[antesPer.length - 1] : null;
   c.itens.forEach(it => {
     if (!it.responder) return;
-    const b = { n: it.n, pergunta: it.texto, tipo: it.tipo, html: '', texto: '' };
+    const b = { n: it.n, pergunta: it.texto, tipo: it.tipo, html: '', texto: '', tabelas: [] };
+    // T = tabela na tela (HTML) e no PDF (linhas em texto puro)
+    const T = (cab, linhas, cls, titulo) => { b.tabelas.push({ titulo: titulo || '', cab, linhas: linhas.map(l => l.map(rd_plain)), cls }); return (titulo ? '<div class="rd-leg">' + esc(titulo) + '</div>' : '') + rd_tab(cab, linhas, cls); };
     if (it.tipo === 'equipamento') {
-      b.html = rd_tab(['Data', 'Equipamento anterior', 'Equipamento instalado', 'Motivo / fonte'], cadeia.map(t => [esc(t.data), esc(t.anterior ? String(t.anterior).padStart(13, '0') : '—'), '<b>' + esc(String(t.serie).padStart(13, '0')) + '</b>', esc((t.motivo ? t.motivo + ' (' : 'Instalação/substituição (') + t.fonte + ')')]));
+      b.html = T(['Data', 'Equipamento anterior', 'Equipamento instalado', 'Motivo / fonte'], cadeia.map(t => [esc(t.data), esc(t.anterior ? String(t.anterior).padStart(13, '0') : '—'), '<b>' + esc(String(t.serie).padStart(13, '0')) + '</b>', esc((t.motivo ? t.motivo + ' (' : 'Instalação/substituição (') + t.fonte + ')')]));
       b.texto = noPer.length
         ? 'No período de ' + per + ' houve ' + rd_ext(noPer.length) + ' (' + noPer.length + ') substituição(ões) de equipamento: ' + noPer.map(t => 'em ' + t.data + ', do nº de série ' + (t.anterior || '—') + ' para o nº ' + t.serie + (t.motivo ? ', motivo: ' + t.motivo.toLowerCase() : '')).join('; ') + '. O histórico completo dos equipamentos vinculados consta da tabela acima.'
         : 'No período de ' + per + ' o(a) monitorado(a) utilizou um único equipamento' + (emUso ? ', a tornozeleira eletrônica de nº de série ' + String(emUso.serie).padStart(13, '0') + ', instalada em ' + emUso.data : '') + ', não havendo substituição de equipamento dentro do período.' + (depoisPer.length ? ' Registra-se que houve substituição posterior ao período, em ' + depoisPer.map(t => t.data + ' (nº ' + t.serie + (t.motivo ? ' – ' + t.motivo.toLowerCase() : '') + ')').join(', ') + '.' : '') + ' O histórico completo dos equipamentos vinculados consta da tabela acima.';
     } else if (it.tipo === 'registros') {
       const regs = ak ? ak.registros.periodo : [], eq = regs.filter(r => r.equipamento);
-      b.html = rd_tab(['Data', 'Tipo', 'Registro', 'Operador'], regs.map(r => [esc(r.data.slice(0, 16)), esc(r.tipo), esc(r.texto), esc(r.operador)])) + (d.tratativas.length ? '<div class="rd-leg">Tratativas registradas no sistema da CME no período</div>' + rd_tab(['Data', 'Servidor', 'Descrição'], d.tratativas.map(t => [esc(String(t.data || t.ts || '').slice(0, 16)), esc(t.servidor || t.usuario || ''), esc(t.descricao || t.texto || '')])) : '');
+      b.html = T(['Data', 'Tipo', 'Registro', 'Operador'], regs.map(r => [esc(r.data.slice(0, 16)), esc(r.tipo), esc(r.texto), esc(r.operador)])) + (d.tratativas.length ? T(['Data', 'Servidor', 'Descrição'], d.tratativas.map(t => [esc(String(t.data || t.ts || '').slice(0, 16)), esc(t.servidor || t.usuario || ''), esc(t.descricao || t.texto || '')]), '', 'Tratativas registradas no sistema da CME no período') : '');
       b.texto = 'Foram pesquisados os Registros do Sistema AKILES vinculados ao(à) monitorado(a), as tratativas do sistema interno da CME e os documentos de sua pasta. ' + (eq.length ? 'No período constam ' + rd_ext(eq.length) + ' (' + eq.length + ') registro(s) relacionado(s) ao equipamento (reclamação, inspeção, manutenção ou defeito), destacados na tabela acima: ' + eq.map(r => r.data.slice(0, 10) + ' – ' + r.texto.slice(0, 160)).join('; ') + '.' : 'No período de ' + per + ' não consta nenhuma reclamação do(a) monitorado(a) sobre defeito, falha de funcionamento ou problema de carregamento do equipamento, nem inspeção ou manutenção realizada. Os registros existentes no período constam da tabela acima.') + (ak ? ' Registros posteriores ao período relacionados ao equipamento: ' + (ak.registros.depois.filter(r => r.equipamento).map(r => r.data.slice(0, 10) + ' – ' + r.texto.slice(0, 160)).join('; ') || 'nenhum') + '.' : '');
     } else if (it.tipo === 'bateria') {
       const B = ak ? ak.bateria : [], n = B.length;
       const cls = a => a.classe === 'abrupta' ? 'Queda abrupta — a apurar' : a.classe === 'sem' ? 'Sem telemetria suficiente' : 'Descarga progressiva';
-      b.html = rd_tab(['Nº', 'Id AKILES', 'Desligamento', 'Restabelecimento', 'Horas sem carga', 'Carga 24 h antes', 'Carga 6 h antes', 'Carga 1 h antes', 'Última leitura', 'Recarregou nas 24 h antes', 'Após restabelecer (1ª → pico)', 'Classificação'],
+      b.html = T(['Nº', 'Id AKILES', 'Desligamento', 'Restabelecimento', 'Horas sem carga', 'Carga 24 h antes', 'Carga 6 h antes', 'Carga 1 h antes', 'Última leitura', 'Recarregou nas 24 h antes', 'Após restabelecer (1ª → pico)', 'Classificação'],
         B.map((a, i) => [i + 1, esc(a.idOc), esc(a.inicio), esc(a.fim), a.horasSemCarga != null ? a.horasSemCarga : '—', rd_pct(a.pct24h), rd_pct(a.pct6h), rd_pct(a.pct1h), rd_pct(a.ultimaPct), a.carregouAntes24h ? 'Sim' : 'Não', a.primeiraDepoisPct != null ? rd_pct(a.primeiraDepoisPct) + ' → ' + rd_pct(a.picoDepois) : '—', esc(cls(a))]), 'rd-t3');
       const prog = B.filter(a => a.classe === 'progressiva').length, abr = B.filter(a => a.classe === 'abrupta').length, sem = B.filter(a => a.classe === 'sem').length;
       const picos = B.map(a => a.picoAntes).filter(Boolean), taxas = B.filter(a => a.pct6h != null && a.pct1h != null && a.pct6h > a.pct1h).map(a => (a.pct6h - a.pct1h) / 5);
@@ -191,11 +194,11 @@ function rd_montar() {
         : 'No período de ' + per + ' não consta ocorrência de desligamento por falta de carga na bateria no Sistema AKILES.';
     } else if (it.tipo === 'ocorrencias') {
       const O = ak ? ak.ocorrencias : [], pt = ak ? ak.porTipo : {};
-      b.html = rd_tab(['Tipo de ocorrência', 'Quantidade'], Object.entries(pt).map(([t, q]) => [esc(t), q])) + rd_tab(['Id AKILES', 'Tipo', 'Início', 'Fim', 'Duração', 'Situação', 'Atendimento'], O.map(o => [esc(o.idOc), esc(o.tipo), esc(o.inicio), esc(o.fim), esc(o.duracao), esc(o.situacao), esc(o.atendimento)]), 'rd-t3');
+      b.html = T(['Tipo de ocorrência', 'Quantidade'], Object.entries(pt).map(([t, q]) => [esc(t), q])) + T(['Id AKILES', 'Tipo', 'Início', 'Fim', 'Duração', 'Situação', 'Atendimento'], O.map(o => [esc(o.idOc), esc(o.tipo), esc(o.inicio), esc(o.fim), esc(o.duracao), esc(o.situacao), esc(o.atendimento)]), 'rd-t3');
       b.texto = 'No período de ' + per + ' o Sistema AKILES registra ' + rd_ext(O.length) + ' (' + O.length + ') ocorrência(s)' + (O.length ? ': ' + Object.entries(pt).map(([t, q]) => q + ' de "' + t + '"').join(', ') : '') + '. O detalhamento consta da tabela acima.';
     } else if (it.tipo === 'situacao') {
       const s = f && f.situacaoAkiles || {};
-      b.html = f ? rd_tab(['Campo', 'Informação'], [['Nome', esc(f.nome)], ['Registro no AKILES', esc(f.registro)], ['Situação do cadastro', esc(f.situacaoCadastro || '')], ['Grupo', esc(f.grupo || '')], ['Tipo', esc(f.tipoMonitorado || '')], ['Início da monitoração', esc(f.inicioMonitoracao || '')], ['Término previsto', esc(f.terminoMonitoracao || '')], ['Processos', esc((f.processos || []).map(p => p.processo + ' (' + p.status + ')').join('; '))], ['Última comunicação', esc(s.ultimaComunicacao ? new Date(s.ultimaComunicacao).toLocaleString('pt-BR') : '')], ['Situação atual', esc(s.situacao || '')], ['Bateria (agora)', esc(s.bateria != null ? s.bateria + '%' : '')]]) : '';
+      b.html = f ? T(['Campo', 'Informação'], [['Nome', esc(f.nome)], ['Registro no AKILES', esc(f.registro)], ['Situação do cadastro', esc(f.situacaoCadastro || '')], ['Grupo', esc(f.grupo || '')], ['Tipo', esc(f.tipoMonitorado || '')], ['Início da monitoração', esc(f.inicioMonitoracao || '')], ['Término previsto', esc(f.terminoMonitoracao || '')], ['Processos', esc((f.processos || []).map(p => p.processo + ' (' + p.status + ')').join('; '))], ['Última comunicação', esc(s.ultimaComunicacao ? new Date(s.ultimaComunicacao).toLocaleString('pt-BR') : '')], ['Situação atual', esc(s.situacao || '')], ['Bateria (agora)', esc(s.bateria != null ? s.bateria + '%' : '')]]) : '';
       b.texto = f ? 'Conforme o Sistema AKILES, o(a) monitorado(a) ' + f.nome + ' (registro ' + f.registro + ') encontra-se com cadastro ' + String(f.situacaoCadastro || '').toLowerCase() + ', grupo "' + (f.grupo || '') + '", monitoração iniciada em ' + (f.inicioMonitoracao || '—') + '. Situação do equipamento nesta data: ' + (s.situacao || 'não lida') + (s.ultimaComunicacao ? ', última comunicação em ' + new Date(s.ultimaComunicacao).toLocaleString('pt-BR') : '') + '.' : 'Monitorado(a) não localizado(a) no Sistema AKILES.';
     } else { b.html = ''; b.texto = '(Descrever a resposta a este item com base nos dados levantados.)'; }
     blocos.push(b);
@@ -225,6 +228,54 @@ function rd_html(numero) {
     + '<div class="ass">' + (ass ? '<img src="' + ass + '" style="max-height:80px;max-width:220px;display:block;margin:0 auto 2px">' : '') + '<b>' + esc(String(u.nome || '').toUpperCase()) + '</b><br>' + esc(u.cargo || '') + (u.decreto ? '<br>' + esc(u.decreto) : '') + '<br>Central de Monitoramento Eletrônico – CME/IAPEN</div></body></html>';
 }
 function rd_previa() { rd_lerCampos(); rd_lerTextos(); const w = window.open('', '_blank'); if (!w) { _mostrarToast('Libere o pop-up para ver a prévia.', 'erro'); return; } w.document.write(rd_html('')); w.document.close(); }
+/* ── 5. PDF de verdade (jsPDF + autoTable, ABNT da CME) — salvo na pasta do monitorado ── */
+async function rd_pdfBlob(numero) {
+  await _carregarScriptSE('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'jspdf');
+  if (!window.jspdf.jsPDF.API.autoTable) await new Promise((ok, err) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'; s.onload = ok; s.onerror = () => err(new Error('não carregou o autoTable')); document.head.appendChild(s); });
+  const { jsPDF } = window.jspdf, c = _rd.campos, u = usuarioAtual || {};
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const mL = 30, mR = 20, mT = 30, mB = 23, W = 210 - mL - mR, pageH = 297; let y = mT;
+  const F = (st, sz) => { doc.setFont('times', st || 'normal'); doc.setFontSize(sz || 12); };
+  const garante = h => { if (y + h > pageH - mB) { doc.addPage(); y = mT; } };
+  // parágrafo justificado (última linha à esquerda), com quebra de página linha a linha
+  const par = (txt, o) => { o = o || {}; F(o.st, o.sz); const lh = (o.sz || 12) * 0.3528 * 1.5, lines = doc.splitTextToSize(String(txt || ''), W);
+    lines.forEach((l, i) => { garante(lh); if (o.dir) doc.text(l, 210 - mR, y, { align: 'right' }); else if (i < lines.length - 1 && !o.esq) doc.text(l, mL, y, { align: 'justify', maxWidth: W }); else doc.text(l, mL, y); y += lh; }); y += o.gap == null ? 2.5 : o.gap; };
+  const hoje = new Date(), data = hoje.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+  // cabeçalho institucional (só na 1ª página)
+  try { if (window._CME_LOGO_B64) doc.addImage('data:image/png;base64,' + window._CME_LOGO_B64, 'PNG', mL, 14, 18, 18); if (window._IAPEN_LOGO_B64) doc.addImage('data:image/png;base64,' + window._IAPEN_LOGO_B64, 'PNG', 210 - mR - 18, 14, 18, 18); } catch (e) {}
+  const cx = mL + W / 2; F('bold', 10.5); doc.text('GOVERNO DO ESTADO DO AMAPÁ', cx, 17, { align: 'center' }); F('normal', 8.5); doc.text('SECRETARIA DE ESTADO DE JUSTIÇA E SEGURANÇA PÚBLICA', cx, 21, { align: 'center' }); doc.text('INSTITUTO DE ADMINISTRAÇÃO PENITENCIÁRIA DO AMAPÁ', cx, 24.5, { align: 'center' }); F('bold', 11); doc.text('CENTRAL DE MONITORAMENTO ELETRÔNICO – CME', cx, 29, { align: 'center' });
+  doc.setLineWidth(0.5); doc.line(mL, 34, 210 - mR, 34); y = 42;
+  par('Ofício nº ' + numero + ' – CME/IAPEN', { st: 'bold' }); par('Macapá-AP, ' + data + '.', { dir: true });
+  par(String(c.destinatario || '') + (c.processo ? '\nPara juntada aos autos do Processo nº ' + c.processo + (c.vara ? ' – ' + c.vara : '') : ''), { esq: true });
+  F('bold', 12); garante(6); doc.text('Assunto: ', mL, y); const wA = doc.getTextWidth('Assunto: '); F('normal', 12); const la = doc.splitTextToSize(String(c.assunto || ''), W - wA); doc.text(la[0] || '', mL + wA, y); y += 6.35; la.slice(1).forEach(l => { garante(6.35); doc.text(l, mL, y); y += 6.35; }); y += 2.5;
+  par('Senhor(a),', { esq: true });
+  par('Cumprimentando-o(a) cordialmente, em atenção ao ' + (c.origem || 'expediente em referência') + ', a Central de Monitoramento Eletrônico – CME/IAPEN presta, com base nos registros do Sistema AKILES AP e dos documentos arquivados na pasta do(a) monitorado(a) ' + c.nome + (c.processo ? ' (Processo nº ' + c.processo + ')' : '') + ', as informações solicitadas, referentes ao período de ' + rd_dataBR(c.ini) + ' a ' + rd_dataBR(c.fim) + '.');
+  for (const b of _rd.blocos || []) {
+    garante(14); par(b.n + '. ' + b.pergunta, { st: 'bold', gap: 1 });
+    for (const t of b.tabelas || []) {
+      if (t.titulo) par(t.titulo, { st: 'bold', sz: 10, gap: 0.5, esq: true });
+      const larga = t.cab.length >= 10, fs = larga ? 6.3 : (t.cab.length >= 7 ? 7.2 : 8.5);
+      doc.autoTable({ startY: y, margin: { left: mL, right: mR, top: mT, bottom: mB }, head: [t.cab], body: t.linhas.length ? t.linhas : [[{ content: '— sem registros —', colSpan: t.cab.length, styles: { halign: 'center' } }]], theme: 'grid',
+        styles: { font: 'times', fontSize: fs, cellPadding: larga ? 0.7 : 1.1, lineColor: 0, lineWidth: 0.2, textColor: 0, valign: 'middle', overflow: 'linebreak' },
+        headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: 'bold', halign: 'center' }, bodyStyles: larga ? { halign: 'center' } : {}, tableWidth: W });
+      y = doc.lastAutoTable.finalY + 4;
+    }
+    String(b.texto || '').split(/\n+/).filter(Boolean).forEach(p => par(p));
+  }
+  par('As informações acima foram extraídas do Sistema AKILES AP (ficha, registros, ocorrências e telemetria) e da pasta do(a) monitorado(a) em ' + data + '. Esta Central permanece à disposição para os esclarecimentos que se fizerem necessários.');
+  par('Atenciosamente,', { esq: true, gap: 6 });
+  // assinatura: imagem do perfil (se houver) + nome, cargo, decreto — nunca linha acima do nome
+  const ass = typeof _assinaturaDoLogado === 'function' ? _assinaturaDoLogado() : ''; const hAss = (ass ? 22 : 0) + 24; garante(hAss);
+  if (ass) { try { doc.addImage(ass, /png/i.test(ass.slice(0, 20)) ? 'PNG' : 'JPEG', cx - 25, y, 50, 18); } catch (e) {} y += 20; }
+  F('bold', 12); doc.text(String(u.nome || '').toUpperCase(), cx, y, { align: 'center' }); y += 5.5; F('normal', 12);
+  [u.cargo || '', u.decreto || '', 'Central de Monitoramento Eletrônico – CME/IAPEN'].filter(Boolean).forEach(l => { doc.text(l, cx, y, { align: 'center' }); y += 5.5; });
+  // rodapé em todas as páginas
+  const n = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setLineWidth(0.3); doc.line(mL, pageH - 17, 210 - mR, pageH - 17); F('normal', 8);
+    doc.text('Central de Monitoramento Eletrônico – CME · Av. Machado de Assis, 372 – Centro – CEP 68900-066, Macapá-AP · cme.iapen.ap@gmail.com · (96) 98415-2844', cx, pageH - 13, { align: 'center' });
+    doc.text('Página ' + i + ' de ' + n, cx, pageH - 9.5, { align: 'center' }); }
+  return doc.output('blob');
+}
 async function rd_gerar() {
   rd_lerCampos(); rd_lerTextos(); const c = _rd.campos; if (!(_rd.blocos || []).length) { rd_set('Monte a minuta antes de gerar.', true); return; }
   const ano = new Date().getFullYear(); let numero = 0;
@@ -234,13 +285,18 @@ async function rd_gerar() {
     numero = parseInt(r && r.numero); if (!numero) throw new Error((r && r.error) || 'resposta inválida');
   } catch (e) { alert('Não consegui reservar o número na central de números (' + (e.message || e) + ').\n\nO ofício NÃO foi gerado, para não repetir número.'); return; }
   const num = numero + '/' + ano, u = usuarioAtual || {};
+  rd_set('Gerando o PDF do Ofício nº ' + num + '…');
+  let blob = null, nomeArq = 'Oficio ' + numero + '-' + ano + ' - RESPOSTA A DECISAO - ' + c.nome + '.pdf';
+  try { blob = await rd_pdfBlob(num); } catch (e) { console.warn('rd pdf', e); }
+  // 1) registra o número; 2) salva na pasta do monitorado; 3) abre na tela
   await com_registrarOficio({ numero, ano, data: new Date().toISOString().slice(0, 10), monitorado: c.nome, processo: c.processo, destinatario: c.destinatario, comarca: '', vara: c.vara || '', modelo: 'resposta-decisao', assunto: c.assunto, signatario: String(u.nome || '').toUpperCase(), cargo: u.cargo || '', decreto: u.decreto || '', signatarioUsuario: u.usuario || '', geradoPor: u.nome || '?', geradoEm: new Date().toISOString(), campos: { itens: _rd.blocos.map(b => ({ n: b.n, pergunta: b.pergunta, texto: b.texto })) } });
-  try { auditar({ modulo: 'Relatório', action: 'resposta_decisao_gerar', alvo: c.nome, detalhe: 'Ofício ' + num + ' · ' + (c.processo || '') }); } catch (e) {}
-  const html = rd_html(num), w = window.open('', '_blank');
-  if (w) { w.document.write(html); w.document.close(); setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 800); }
-  else _entregarDoc(new Blob([html], { type: 'text/html' }), 'Oficio ' + numero + '-' + ano + ' ' + c.nome + '.html');
-  rd_set('Ofício nº ' + num + ' gerado e registrado em Consultar Ofícios. Imprima em PDF e anexe na pasta do(a) monitorado(a).');
-  _mostrarToast('Ofício nº ' + num + ' gerado e registrado.', 'sucesso');
+  let salvo = false;
+  if (blob) { try { const up = await r2_api('POST', '/upload', { 'X-Monitorado': c.nome, 'X-Pasta': 'Docs do monitorado', 'X-Filename': encodeURIComponent(nomeArq), 'Content-Type': 'application/pdf' }, blob); salvo = !!(up && (up.ok || up.key)); } catch (e) { console.warn('rd upload', e); } }
+  try { auditar({ modulo: 'Relatório', action: 'resposta_decisao_gerar', alvo: c.nome, detalhe: 'Ofício ' + num + ' · ' + (c.processo || '') + (salvo ? ' · salvo na pasta' : '') }); } catch (e) {}
+  if (blob) _entregarDoc(blob, nomeArq);
+  else { const html = rd_html(num), w = window.open('', '_blank'); if (w) { w.document.write(html); w.document.close(); setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 800); } }
+  rd_set('Ofício nº ' + num + ' gerado e registrado em Consultar Ofícios' + (salvo ? ' e salvo na pasta do(a) monitorado(a) (Docs do monitorado).' : (blob ? '. Não consegui salvar na pasta — anexe o arquivo aberto.' : '. Imprima em PDF e anexe na pasta.')), !salvo);
+  _mostrarToast('Ofício nº ' + num + (salvo ? ' gerado, registrado e salvo na pasta.' : ' gerado e registrado.'), 'sucesso');
 }
 
 /* ── tela ───────────────────────────────────────────────────────── */
@@ -269,7 +325,7 @@ function rd_render() {
   if (B) {
     h += '<div class="idv-bloco" style="margin-top:12px"><div class="idv-bloco-cab"><span>Minuta da resposta — confira e ajuste o texto de cada item</span></div><div class="idv-bloco-corpo">'
       + B.map((b, i) => '<div class="idv-secao" style="margin:10px 0 4px">' + esc(b.n + '. ' + b.pergunta) + '</div><div class="table-scroll" style="max-height:260px">' + b.html + '</div><textarea id="rd-tx-' + i + '" rows="6" style="width:100%;margin-top:6px">' + esc(b.texto) + '</textarea>').join('')
-      + '<div class="idv-acoes" style="margin-top:10px"><button type="button" class="idv-btn" onclick="rd_montar()">Remontar textos</button><button type="button" class="idv-btn" onclick="rd_previa()">Prévia</button><button type="button" class="idv-btn criar" onclick="rd_gerar()">Gerar PDF (reserva o nº do ofício)</button></div></div></div>';
+      + '<div class="idv-acoes" style="margin-top:10px"><button type="button" class="idv-btn" onclick="rd_montar()">Remontar textos</button><button type="button" class="idv-btn" onclick="rd_previa()">Prévia</button><button type="button" class="idv-btn criar" onclick="rd_gerar()">Gerar PDF (reserva o nº, salva na pasta)</button></div></div></div>';
   }
   el.innerHTML = h;
 }
