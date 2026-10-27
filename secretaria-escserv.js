@@ -164,7 +164,7 @@ function _secCartaoServico() {
   return '<div id="sec-serv-card" class="escx">'
     + '<div class="escx-top"><div><div class="escx-tit">Escala de serviço (24x96)</div><div class="escx-sub">Plantão da CME e setor administrativo</div></div>'
     + '<div class="escx-nav"><button type="button" class="escx-btn" onclick="_secEscMesVis=_secEscMaisMes(\'' + mes + '\',-1);_secEscAtualizar()" title="Mês anterior" aria-label="Mês anterior">\u{2039}</button>'
-    + '<div class="escx-mes">' + esc(_secEscMesTxt(mes)) + '</div>'
+    + '<div class="escx-mes">' + esc(_secEscMesTit(mes)) + '</div>'
     + '<button type="button" class="escx-btn" onclick="_secEscMesVis=_secEscMaisMes(\'' + mes + '\',1);_secEscAtualizar()" title="Próximo mês" aria-label="Próximo mês">\u{203A}</button>'
     + '<button type="button" class="escx-btn pri" onclick="sec_servImprimir(\'' + mes + '\')">Imprimir escala do mês</button></div></div>'
     + aviso + legenda

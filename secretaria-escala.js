@@ -31,6 +31,7 @@ function _secEscDatas(mes, d) { return [...new Set(_secEscSabados(mes).concat(d.
 function _secEscNome(x, d) { return x.servidorId ? _secNomeServ(x.servidorId, d) : (x.nome || '—'); }
 function _secEscCurto(nome) { const p = String(nome).split(' ').filter(Boolean); return p.length > 2 ? p[0] + ' ' + p[p.length - 1] : nome; }
 function _secEscMesTxt(mes) { return new Date(mes + '-15T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); }
+function _secEscMesTit(mes) { const t = _secEscMesTxt(mes); return t.charAt(0).toUpperCase() + t.slice(1); } // "Outubro de 2026" (o capitalize do CSS dava "Outubro De 2026")
 function _secEscMaisMes(mes, n) { const [a, m] = mes.split('-').map(Number), x = new Date(a, m - 1 + n, 1); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0'); }
 function _secEscAfastadosMes(mes, d) {
   const ini = mes + '-01', fim = mes + '-31';
@@ -104,7 +105,7 @@ function _secEscxCss() {
     + '.escx-btn{background:var(--el);color:var(--tx);border:1px solid #cbd5e1;padding:5px 14px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;line-height:1.5}'
     + '.escx-btn:hover{border-color:var(--ac);color:var(--tx)}'
     + '.escx-btn.pri{background:#1f883d;color:#fff;border-color:#1a7f37}.escx-btn.pri:hover{background:#1a7f37}'
-    + '.escx-mes{font-size:16px;font-weight:600;min-width:160px;text-align:center;text-transform:capitalize}'
+    + '.escx-mes{font-size:16px;font-weight:600;min-width:160px;text-align:center}'
     + '.escx-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}'
     + '.escx-card{background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:12px;min-width:0}'
     + '.escx-card.on{border-color:var(--pu);box-shadow:inset 3px 0 0 var(--pu)}.escx-card.plantao{border-color:var(--ok);box-shadow:inset 3px 0 0 var(--ok)}'
@@ -257,12 +258,15 @@ function _secCartaoEscala() {
   const fora = situacao.filter(x => x.reg === 'NAO' || !x.precisa.length || x.af);
   const pend = situacao.filter(x => !fora.includes(x) && x.falta.length);
   const prontos = situacao.filter(x => !fora.includes(x) && !x.falta.length);
-  const pessoa = (x, extra) => '<div class="escx-row col" draggable="true" ondragstart="sec_escArrastar(event,\'serv\',\'' + x.s.id + '\')" title="' + esc(x.s.nome) + ' — arraste para um sábado">'
-    + '<span class="escx-nome">' + esc(_secEscCurto(x.s.nome)) + '</span><span class="escx-etqs">' + extra + '</span></div>';
+  const pessoa = (x, extra, botoes) => '<div class="escx-row col" draggable="true" ondragstart="sec_escArrastar(event,\'serv\',\'' + x.s.id + '\')" title="' + esc(x.s.nome) + ' — arraste para um sábado">'
+    + '<span class="escx-nome">' + esc(_secEscCurto(x.s.nome)) + '</span><span class="escx-etqs">' + extra + '</span>' + (botoes || '') + '</div>';
   const grade = itens => '<div class="escx-grid" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:0 10px">' + itens.join('') + '</div>';
+  // 27/10/2026 ("mais fácil para quem usa"): além de arrastar, um clique no dia escala a pessoa no sábado que ainda vem
+  const sabsFuturos = datas.filter(dt => dt >= hoje);
+  const botoesDia = x => sabsFuturos.length ? '<span class="escx-etqs" style="margin-top:2px">' + sabsFuturos.map(dt => '<button type="button" class="escx-btn" style="padding:2px 9px;font-size:13px" onclick="sec_escClique(\'' + dt + '\',\'' + x.s.id + '\',\'' + _jsq(x.falta[0]) + '\')" title="Escalar ' + esc(_secEscCurto(x.s.nome)) + ' em ' + _secBR(dt) + ' (' + esc(x.falta[0]) + ')">' + _secBR(dt).slice(0, 5) + '</button>').join('') + '</span>' : '';
   const blocoPend = pend.length
-    ? '<div class="escx-sec">Faltam escalar <span>arraste o nome para um sábado</span></div>'
-      + grade(pend.map(x => pessoa(x, x.falta.map(l => '<span class="escx-badge ' + _secEscCorLocal(l) + '">' + l + ' este mês</span>').join(''))))
+    ? '<div class="escx-sec">Faltam escalar <span>clique no dia, ou arraste o nome para um sábado</span></div>'
+      + grade(pend.map(x => pessoa(x, x.falta.map(l => '<span class="escx-badge ' + _secEscCorLocal(l) + '">' + l + ' este mês</span>').join(''), botoesDia(x))))
     : '';
   const blocoProntos = prontos.length ? '<details><summary>Já escalados no mês <span class="n">(' + prontos.length + ')</span></summary><div class="dentro">'
     + grade(prontos.map(x => pessoa(x, x.precisa.map(l => '<span class="escx-badge ' + _secEscCorLocal(l) + '">\u{2713} ' + l + '</span>').join('')))) + '</div></details>' : '';
@@ -279,8 +283,10 @@ function _secCartaoEscala() {
   // faixa única (identidade visual): amarela = falta gente, verde = completa (com o próximo sábado), neutra = montando
   const nProx = prox ? d.escalaSabado.filter(x => x.data === prox).length : 0;
   const txtProx = prox && prox.slice(0, 7) === mes ? ' Próximo sábado: <b>' + _secBR(prox).slice(0, 5) + '</b>, ' + nProx + (nProx === 1 ? ' pessoa.' : ' pessoas.') : '';
+  const podeRegra = sabsFuturos.length > 0;
   const faixa = mes < atual ? '' : pend.length
-    ? '<div class="escx-faixa at"><span class="escx-faixa-ic">!</span><span><b>' + pend.length + ' servidor(es)</b> ainda sem o sábado do mês — arraste o nome (lista abaixo da tabela) para um sábado.</span></div>'
+    ? '<div class="escx-faixa at"><span class="escx-faixa-ic">!</span><span><b>' + pend.length + ' servidor(es)</b> ainda sem o sábado do mês — clique no dia ao lado do nome (lista abaixo da tabela) ou arraste o nome para um sábado.</span>'
+      + (podeRegra ? '<button type="button" class="escx-btn pri" style="margin-left:auto;white-space:nowrap" onclick="sec_escEscalarPendentes(\'' + mes + '\')" title="Distribui quem falta pelos sábados que ainda vêm, no local certo e no sábado com menos gente">Escalar os ' + pend.length + ' pela regra</button>' : '') + '</div>'
     : vazio ? '<div class="escx-faixa"><span class="escx-faixa-ic">\u{2026}</span><span>Montando a escala de ' + esc(_secEscMesTxt(mes)) + ' pela regra…</span></div>'
     : '<div class="escx-faixa ok"><span class="escx-faixa-ic">\u{2713}</span><span><b>Escala completa</b> — todos do expediente já estão escalados em ' + esc(_secEscMesTxt(mes)) + '.' + txtProx + '</span></div>';
 
@@ -288,7 +294,7 @@ function _secCartaoEscala() {
     + '<div class="escx-top"><div><div class="escx-tit">Apoio de sábado</div>'
     + '<div class="escx-sub">Administrativo · <span onclick="sec_escHorarioEditar()" title="Clique para mudar o horário" style="cursor:pointer;text-decoration:underline dotted">' + esc(horario) + '</span> · obrigação para o adicional noturno (não gera dispensa)</div></div>'
     + '<div class="escx-nav"><button type="button" class="escx-btn" onclick="_secEscMesVis=_secEscMaisMes(\'' + mes + '\',-1);_secEscPicker=null;_secEscAtualizar()" title="Mês anterior">\u{2039}</button>'
-    + '<div class="escx-mes">' + esc(_secEscMesTxt(mes)) + '</div>'
+    + '<div class="escx-mes">' + esc(_secEscMesTit(mes)) + '</div>'
     + '<button type="button" class="escx-btn" onclick="_secEscMesVis=_secEscMaisMes(\'' + mes + '\',1);_secEscPicker=null;_secEscAtualizar()" title="Próximo mês">\u{203A}</button>'
     + '<button type="button" class="escx-btn" onclick="sec_escImprimir(\'' + mes + '\')">Imprimir</button></div></div>'
     + (vazio && mes < atual ? '<div class="escx-faixa"><span class="escx-faixa-ic">\u{2013}</span><span>Sem escala registrada em ' + esc(_secEscMesTxt(mes)) + '.</span></div>' : faixa)
@@ -313,6 +319,22 @@ async function sec_escConfirmarPicker(dt, local) {
   let sid = v, nome = '';
   if (v === '__outro') { nome = (prompt('Nome da pessoa (não está na lista de servidores):') || '').trim(); if (nome.length < 3) return; sid = ''; }
   if (await _secEscAdd(dt, sid, nome, local)) { _secEscPicker = null; _secEscAtualizar(); }
+}
+// clique no dia (cartão "Faltam escalar"): escala a pessoa naquele sábado, no local que falta
+async function sec_escClique(dt, sid, local) { if (await _secEscAdd(dt, sid, '', local || '')) { _mostrarToast(_secEscCurto(_secNomeServ(sid)) + ' escalado(a) em ' + _secBR(dt) + ' (' + (local || 'CME') + ').', 'sucesso'); _secEscAtualizar(); } }
+// "Escalar os N pela regra": os que faltam entram de uma vez nos sábados que ainda vêm (mesma regra da montagem automática)
+async function sec_escEscalarPendentes(mes) {
+  const d0 = _secDados();
+  const pendentes = _secEscPessoal(d0).filter(s => { const p = _secEscPrecisa(s, mes, d0); return p.length && !_secEscAfastadosMes(mes, d0).some(a => a.servidorId === s.id) && p.some(l => !d0.escalaSabado.some(x => x.servidorId === s.id && x.local === l && x.data.slice(0, 7) === mes)); });
+  const plano = _secEscPlanoAuto(mes, d0, new Set(pendentes.map(s => s.id))).filter(p => !d0.escalaSabado.some(x => x.servidorId === p.sid && x.data.slice(0, 7) === mes && x.local === p.local));
+  if (!plano.length) { _mostrarToast('Não há sábado que ainda vem para escalar quem falta — use "incluir um dia que não é sábado" ou escale à mão.', 'erro'); return; }
+  const resumo = plano.map(p => _secEscCurto(_secNomeServ(p.sid, d0)) + ' → ' + _secBR(p.dt).slice(0, 5) + ' ' + p.local).join('\n');
+  if (!confirm('Escalar assim?\n\n' + resumo)) return;
+  const ok = await _secMutar(d => {
+    const agora = new Date().toISOString(), por = usuarioAtual ? usuarioAtual.nome : '';
+    plano.forEach(p => { if (!d.escalaSabado.some(x => x.servidorId === p.sid && x.data === p.dt)) d.escalaSabado.push({ id: _secId('esc'), data: p.dt, servidorId: p.sid, nome: '', local: p.local, status: '', criadoPor: por, criadoEm: agora }); });
+  }, { action: 'sec_esc_add', alvo: _secEscMesTxt(mes), detalhe: 'pela regra: ' + resumo.replace(/\n/g, '; ').slice(0, 200) });
+  if (ok) { _mostrarToast(plano.length + ' escalado(s) pela regra.', 'sucesso'); _secEscAtualizar(); }
 }
 function sec_escArrastar(ev, tipo, id) { ev.dataTransfer.setData('text/plain', tipo + ':' + id); ev.dataTransfer.effectAllowed = 'move'; }
 // local (16/10/2026, tabela local × sábado): soltar na linha do outro local também troca CME/PEF
@@ -362,8 +384,8 @@ function sec_escDataExtra(mes) {
 }
 
 // ── Montagem automática pela regra (só sábados de hoje em diante) ─────────────
-function _secEscPlanoAuto(mes, d) {
-  const hoje = _secHoje(), sabs = _secEscSabados(mes).filter(s => s >= hoje), pessoal = _secEscPessoal(d).filter(s => _secEscPrecisa(s, mes, d).length);
+function _secEscPlanoAuto(mes, d, soIds) {
+  const hoje = _secHoje(), sabs = _secEscSabados(mes).filter(s => s >= hoje), pessoal = _secEscPessoal(d).filter(s => _secEscPrecisa(s, mes, d).length && (!soIds || soIds.has(s.id)));
   if (!sabs.length || !pessoal.length) return [];
   const ultimo = sid => d.escalaSabado.filter(x => x.servidorId === sid && x.data < mes + '-01').reduce((m, x) => x.data > m ? x.data : m, '');
   // quem está há mais tempo sem sábado escolhe primeiro; empate: ordem alfabética
