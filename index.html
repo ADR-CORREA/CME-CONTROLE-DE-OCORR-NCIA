@@ -1736,8 +1736,11 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         <div class="sub-tab"        id="rel-stab-gerador"    onclick="mudarSubAbaRel('gerador')">Gerador de Violações</div>
         <div class="sub-tab"        id="rel-stab-semcom"     onclick="mudarSubAbaRel('semcom')">Sem Comunicação<span id="rel-semcom-badge" class="notif-badge" style="display:none">0</span></div>
         <div class="sub-tab"        id="rel-stab-termino"    onclick="mudarSubAbaRel('termino')">Término da monitoração<span id="rel-term-badge" class="notif-badge" style="display:none">0</span></div>
+        <div class="sub-tab"        id="rel-stab-resposta"   onclick="mudarSubAbaRel('resposta')" title="Jogue o ofício/decisão: o sistema lê o pedido, levanta no AKILES e na pasta e monta a minuta">Resposta a decisão</div>
         <div class="sub-tab"        id="rel-stab-romp"       onclick="mudarSubAbaRel('romp')">Rompimento<span id="rel-romp-badge" class="notif-badge" style="display:none">0</span></div>
       </div>
+      <!-- ── Sub-painel: Resposta a decisão judicial (27/10/2026) — tela montada por resposta-decisao.js ── -->
+      <div class="sub-panel" id="rel-panel-resposta"></div>
       <!-- ── Sub-painel: Recebidos dos Críticos (fluxo) ── -->
       <div class="sub-panel active" id="rel-panel-recebidos">
         <div class="idv-barra" style="margin-top:12px">
@@ -13032,7 +13035,7 @@ function mudarSubAbaCom(aba) {
 
 // Navegação sub-abas Relatório
 function mudarSubAbaRel(aba) {
-  ['recebidos','lista','aguardando','arquivadas','gerador','semcom','termino','romp'].forEach(a => {
+  ['recebidos','lista','aguardando','arquivadas','gerador','semcom','termino','romp','resposta'].forEach(a => {
     document.getElementById('rel-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('rel-panel-' + a)?.classList.toggle('active', a === aba);
   });
@@ -13044,6 +13047,7 @@ function mudarSubAbaRel(aba) {
   if (aba === 'semcom')     renderizarRelSemCom();
   if (aba === 'romp')       renderizarAkOc('rompimentos');
   if (aba === 'termino')    renderizarRelTermino();
+  if (aba === 'resposta')   { if (typeof rd_render === 'function') rd_render(); }
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -29581,5 +29585,6 @@ function estat_exportarResultado() {
 <script src="rv-conferencia.js?v=20261026a"></script>
 <script src="rv-conferencia-horario.js?v=20261022a"></script>
 <script src="parecer-ocorrencia.js?v=20261026a"></script>
+<script src="resposta-decisao.js?v=20261027a"></script>
 </body>
 </html>
