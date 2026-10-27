@@ -21749,10 +21749,14 @@ function _rvAplicarFicha(grupo, f){
   const termino=!fim||(mf&&new Date(+mf[3],+mf[2]-1,+mf[1])<hoje)?'sem data vigente no sistema':fim;
   const iso=s=>String(s||'').split('/').reverse().join('-');
   const vj=(Array.isArray(f.violacoes)?f.violacoes:[]).find(v=>v&&v.juizo&&(!procG||dig(v.processo).slice(0,20)===procG))||null;
+  // sem violação no período não há de onde tirar a vara: usa o "cadastro completo" do AKILES (robô), só do MESMO processo
+  const vc=(Array.isArray(f.varasCadastro)?f.varasCadastro:[]).find(v=>v&&procG&&dig(v.processo).slice(0,20)===procG)||null;
   grupo.forEach(x=>{ if(!x.endereco) x.endereco=String(q.endereco||'').trim(); if(!x.contato) x.contato=contatos.join('; '); x.dataInicio=inicio; x.dataTermino=termino;
     if(!String(x.cpf||'').trim() && q.cpf) x.cpf=String(q.cpf).trim();
     if(!String(x.competencia||'').trim() && vj) x.competencia=String(vj.juizo).trim();
     if(!String(x.comarca||'').trim() && vj && vj.foro) x.comarca=String(vj.foro).trim();
+    if(!String(x.competencia||'').trim() && vc && vc.vara) x.competencia=String(vc.vara).trim();
+    if(!String(x.comarca||'').trim() && vc && vc.foro) x.comarca=String(vc.foro).trim();
     // monitoração começou depois do início da busca: o período do relatório começa no início da monitoração
     if(/^\d{2}\/\d{2}\/\d{4}$/.test(inicio) && x.periodoIni && iso(inicio)>iso(x.periodoIni)) x.periodoIni=inicio; });
   return true;
