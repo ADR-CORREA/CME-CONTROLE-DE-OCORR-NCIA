@@ -1288,7 +1288,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         <span id="user-display">Usuário</span>
       </div>
       <button class="btn-logout" id="btn-tema" onclick="toggleTema()" title="Alternar tema claro / escuro" aria-label="Alternar tema claro e escuro" style="margin-right:6px;min-width:34px"><span id="tema-icone">🌙</span></button>
-      <button class="btn-logout" onclick="ass_abrirMinha()" title="Cadastrar ou atualizar a minha assinatura" style="margin-right:6px">✍️ Minha assinatura</button>
+      <button class="btn-logout" onclick="ass_abrirMinha()" title="Cadastrar ou atualizar a minha assinatura" style="margin-right:6px">Minha assinatura</button>
       <button class="btn-logout" onclick="fazerLogout()">Sair</button>
     </div>
   </div>
@@ -1464,8 +1464,8 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       </div>
       <input type="file" id="import-excel" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(this)">
       <div class="sub-tabs">
-        <div class="sub-tab active" id="oc-stab-ativas" onclick="mudarSubAbaOc('ativas')">📋 Ativas</div>
-        <div class="sub-tab" id="oc-stab-arquivadas" onclick="mudarSubAbaOc('arquivadas')">📁 Arquivadas</div>
+        <div class="sub-tab active" id="oc-stab-ativas" onclick="mudarSubAbaOc('ativas')">Ativas</div>
+        <div class="sub-tab" id="oc-stab-arquivadas" onclick="mudarSubAbaOc('arquivadas')">Arquivadas</div>
       </div>
 
       <!-- SUB-PANEL: ATIVAS -->
@@ -1514,7 +1514,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         <div class="table-toolbar">
           <div style="font-weight:600;color:var(--az1)">📁 Ocorrências arquivadas pela Comunicação (PRODOC enviado)</div>
           <div class="table-actions">
-            <button class="btn-secondary" onclick="renderizarOcArquivadas()">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="renderizarOcArquivadas()">Atualizar</button>
           </div>
         </div>
         <div class="table-scroll">
@@ -1536,9 +1536,9 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         <div><h1>Jurídico</h1><div class="idv-sub">Casos com PRODOC enviado e controle de OFC / vinculações</div></div>
       </div>
       <div class="sub-tabs" style="margin-bottom:0">
-        <div class="sub-tab active" id="jur-stab-ocorrencias" onclick="mudarSubAbaJur('ocorrencias')">⚖️ Ocorrências Jurídicas</div>
+        <div class="sub-tab active" id="jur-stab-ocorrencias" onclick="mudarSubAbaJur('ocorrencias')">Ocorrências Jurídicas</div>
         <div class="sub-tab" id="jur-stab-ofc" onclick="mudarSubAbaJur('ofc')">
-          📋 OFC / Vinculações
+          OFC / Vinculações
           <span id="jur-ofc-badge" class="notif-badge" style="display:none">0</span>
         </div>
       </div>
@@ -1600,9 +1600,9 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
         <!-- Sub-abas Ativos / Arquivados -->
         <div class="sub-tabs" style="margin:10px 0 0 0">
-          <div class="sub-tab active" id="ofc-stab-ativos" onclick="mudarSubAbaOFC('ativos')">📋 Ativos</div>
+          <div class="sub-tab active" id="ofc-stab-ativos" onclick="mudarSubAbaOFC('ativos')">Ativos</div>
           <div class="sub-tab" id="ofc-stab-arquivados" onclick="mudarSubAbaOFC('arquivados')">
-            📁 Arquivados
+            Arquivados
             <span id="ofc-arq-badge" class="notif-badge" style="display:none;background:var(--idv-ok)">0</span>
           </div>
         </div>
@@ -1729,14 +1729,14 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       </div>
       <div id="rel-term-aviso" onclick="mudarSubAbaRel('termino')" title="Abrir a lista de término da monitoração" style="display:none;cursor:pointer;margin:0 0 10px 0;padding:12px 16px;border-radius:6px;border:1px solid var(--idv-cr);border-left:4px solid var(--idv-cr);background:var(--idv-cr-f);font-size:15px;color:var(--idv-texto)"></div>
       <div class="sub-tabs">
-        <div class="sub-tab active" id="rel-stab-recebidos" onclick="mudarSubAbaRel('recebidos')">📥 Recebidos<span id="rel-rec-count" style="color:var(--idv-at);font-weight:600"></span></div>
-        <div class="sub-tab"        id="rel-stab-lista"      onclick="mudarSubAbaRel('lista')">📄 Relatórios</div>
-        <div class="sub-tab"        id="rel-stab-aguardando" onclick="mudarSubAbaRel('aguardando')">⏳ Aguardando<span id="rel-aguard-count" style="color:var(--idv-at);font-weight:600"></span></div>
-        <div class="sub-tab"        id="rel-stab-arquivadas" onclick="mudarSubAbaRel('arquivadas')">📁 Arquivadas</div>
-        <div class="sub-tab"        id="rel-stab-gerador"    onclick="mudarSubAbaRel('gerador')">⚡ Gerador de Violações</div>
-        <div class="sub-tab"        id="rel-stab-semcom"     onclick="mudarSubAbaRel('semcom')">📵 Sem Comunicação<span id="rel-semcom-badge" class="notif-badge" style="display:none">0</span></div>
-        <div class="sub-tab"        id="rel-stab-termino"    onclick="mudarSubAbaRel('termino')">⏳ Término da monitoração<span id="rel-term-badge" class="notif-badge" style="display:none">0</span></div>
-        <div class="sub-tab"        id="rel-stab-romp"       onclick="mudarSubAbaRel('romp')">⛓️ Rompimento<span id="rel-romp-badge" class="notif-badge" style="display:none">0</span></div>
+        <div class="sub-tab active" id="rel-stab-recebidos" onclick="mudarSubAbaRel('recebidos')">Recebidos<span id="rel-rec-count" style="color:var(--idv-at);font-weight:600"></span></div>
+        <div class="sub-tab"        id="rel-stab-lista"      onclick="mudarSubAbaRel('lista')">Relatórios</div>
+        <div class="sub-tab"        id="rel-stab-aguardando" onclick="mudarSubAbaRel('aguardando')">Aguardando<span id="rel-aguard-count" style="color:var(--idv-at);font-weight:600"></span></div>
+        <div class="sub-tab"        id="rel-stab-arquivadas" onclick="mudarSubAbaRel('arquivadas')">Arquivadas</div>
+        <div class="sub-tab"        id="rel-stab-gerador"    onclick="mudarSubAbaRel('gerador')">Gerador de Violações</div>
+        <div class="sub-tab"        id="rel-stab-semcom"     onclick="mudarSubAbaRel('semcom')">Sem Comunicação<span id="rel-semcom-badge" class="notif-badge" style="display:none">0</span></div>
+        <div class="sub-tab"        id="rel-stab-termino"    onclick="mudarSubAbaRel('termino')">Término da monitoração<span id="rel-term-badge" class="notif-badge" style="display:none">0</span></div>
+        <div class="sub-tab"        id="rel-stab-romp"       onclick="mudarSubAbaRel('romp')">Rompimento<span id="rel-romp-badge" class="notif-badge" style="display:none">0</span></div>
       </div>
       <!-- ── Sub-painel: Recebidos dos Críticos (fluxo) ── -->
       <div class="sub-panel active" id="rel-panel-recebidos">
@@ -1931,7 +1931,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px">
             <div style="font-weight:600;font-size:15px;color:var(--idv-texto)" id="rv-lista-titulo"></div>
             <div id="rv-lista-controles" style="display:none;gap:6px;flex-wrap:wrap">
-              <button type="button" id="rv-bulk-btn" class="idv-btn mini" onclick="rv_botaoLote()" title="Se o robô (motor) estiver ligado, captura os mapas no AKILES automaticamente. Senão, importe os prints de uma pasta — cada um vai pro slot pelo número da ocorrência (idOc) no nome do arquivo">🗺️ Importar prints (lote)</button>
+              <button type="button" id="rv-bulk-btn" class="idv-btn mini" onclick="rv_botaoLote()" title="Se o robô (motor) estiver ligado, captura os mapas no AKILES automaticamente. Senão, importe os prints de uma pasta — cada um vai pro slot pelo número da ocorrência (idOc) no nome do arquivo">Importar prints (lote)</button>
               <input type="file" id="rv-bulk-input" accept="image/*" multiple style="display:none" onchange="rv_importarPrintsLote(this.files); this.value=''">
               <button type="button" class="idv-btn mini" onclick="rv_marcarTodos(true)">Marcar todos</button>
               <button type="button" class="idv-btn mini" onclick="rv_marcarTodos(false)">Desmarcar todos</button>
@@ -2090,11 +2090,11 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         <div><h1>Gerência</h1><div class="idv-sub">Agenda de demandas, compromissos, arquivados, produtividade, VD sem zona de exclusão e saída temporária × zona</div></div>
       </div>
       <div class="sub-tabs">
-        <div class="sub-tab active" id="ger-stab-agenda" onclick="mudarSubAbaGer('agenda')">📋 Agenda</div>
-        <div class="sub-tab" id="ger-stab-calendario" onclick="mudarSubAbaGer('calendario')">📅 Calendário</div>
-        <div class="sub-tab" id="ger-stab-arquivados" onclick="mudarSubAbaGer('arquivados')">📁 Arquivados</div>
-        <div class="sub-tab" id="ger-stab-produtividade" onclick="mudarSubAbaGer('produtividade')">📈 Produtividade Servidores</div>
-        <div class="sub-tab" id="ger-stab-vdzona" onclick="mudarSubAbaGer('vdzona')">🚫 VD sem zona de exclusão</div>
+        <div class="sub-tab active" id="ger-stab-agenda" onclick="mudarSubAbaGer('agenda')">Agenda</div>
+        <div class="sub-tab" id="ger-stab-calendario" onclick="mudarSubAbaGer('calendario')">Calendário</div>
+        <div class="sub-tab" id="ger-stab-arquivados" onclick="mudarSubAbaGer('arquivados')">Arquivados</div>
+        <div class="sub-tab" id="ger-stab-produtividade" onclick="mudarSubAbaGer('produtividade')">Produtividade Servidores</div>
+        <div class="sub-tab" id="ger-stab-vdzona" onclick="mudarSubAbaGer('vdzona')">VD sem zona de exclusão</div>
         <div class="sub-tab" id="ger-stab-saidatemp" onclick="mudarSubAbaGer('saidatemp')">Saída temporária × zona</div>
         <div class="sub-tab" id="ger-stab-graves" onclick="mudarSubAbaGer('graves')">Violações graves</div>
       </div>
@@ -2211,10 +2211,10 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       <!-- Sub-abas Modelos -->
       <div class="sub-tabs" style="margin-bottom:0" id="mod-subtabs-wrap">
-        <div class="sub-tab active" id="mod-stab-plantao"       onclick="mudarSubAbaModelos('plantao')">📋 Plantão</div>
-        <div class="sub-tab"        id="mod-stab-multi"          onclick="mudarSubAbaModelos('multi')">⚕️ Equipe Multidisciplinar</div>
-        <div class="sub-tab"        id="mod-stab-comunicacao"    onclick="mudarSubAbaModelos('comunicacao')">📡 Comunicação</div>
-        <div class="sub-tab"        id="mod-stab-juridico-mod"   onclick="mudarSubAbaModelos('juridico-mod')">⚖️ Jurídico</div>
+        <div class="sub-tab active" id="mod-stab-plantao"       onclick="mudarSubAbaModelos('plantao')">Plantão</div>
+        <div class="sub-tab"        id="mod-stab-multi"          onclick="mudarSubAbaModelos('multi')">Equipe Multidisciplinar</div>
+        <div class="sub-tab"        id="mod-stab-comunicacao"    onclick="mudarSubAbaModelos('comunicacao')">Comunicação</div>
+        <div class="sub-tab"        id="mod-stab-juridico-mod"   onclick="mudarSubAbaModelos('juridico-mod')">Jurídico</div>
       </div>
 
       <!-- Sub-panel Plantão -->
@@ -2244,7 +2244,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               <button onclick="_bmonSelecionarTodos('pla', false)" style="background:var(--idv-cartao);color:var(--idv-sec);border:1px solid var(--idv-borda);border-radius:6px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer">☐ Nenhum</button>
               <span id="pla-docs-sel-count" style="font-size:12px;color:var(--idv-sec)"></span>
               <div style="flex:1"></div>
-              <button onclick="_bmonCarregarEExtrair('pla')" style="background:var(--idv-cab);color:#fff;border:none;border-radius:6px;padding:7px 15px;font-size:12px;font-weight:600;cursor:pointer">🤖 Carregar e Extrair com IA</button>
+              <button onclick="_bmonCarregarEExtrair('pla')" style="background:var(--idv-cab);color:#fff;border:none;border-radius:6px;padding:7px 15px;font-size:12px;font-weight:600;cursor:pointer">Carregar e Extrair com IA</button>
             </div>
           </div>
           <div id="pla-ia-status" style="display:none;margin-top:8px;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:600"></div>
@@ -2263,9 +2263,9 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           <div id="anex-lista-plantao" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"></div>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px">
-          <button class="btn-secondary" onclick="limparModelo()">🗑️ Limpar</button>
-          <button class="btn-secondary" onclick="copiarModelo()">📋 Copiar Texto</button>
-          <button class="btn-primary"   onclick="baixarModeloPDF()">🖨️ Gerar PDF</button>
+          <button class="btn-secondary" onclick="limparModelo()">Limpar</button>
+          <button class="btn-secondary" onclick="copiarModelo()">Copiar Texto</button>
+          <button class="btn-primary"   onclick="baixarModeloPDF()">Gerar PDF</button>
         </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:4px">
         <!-- Coluna Formulário -->
@@ -2426,7 +2426,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               <button onclick="_bmonSelecionarTodos('mul', false)" style="background:var(--idv-cartao);color:var(--idv-sec);border:1px solid var(--idv-borda);border-radius:6px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer">☐ Nenhum</button>
               <span id="mul-docs-sel-count" style="font-size:12px;color:var(--idv-sec)"></span>
               <div style="flex:1"></div>
-              <button onclick="_bmonCarregarEExtrair('mul')" style="background:var(--idv-cab);color:#fff;border:none;border-radius:6px;padding:7px 15px;font-size:12px;font-weight:600;cursor:pointer">🤖 Carregar e Extrair com IA</button>
+              <button onclick="_bmonCarregarEExtrair('mul')" style="background:var(--idv-cab);color:#fff;border:none;border-radius:6px;padding:7px 15px;font-size:12px;font-weight:600;cursor:pointer">Carregar e Extrair com IA</button>
             </div>
           </div>
           <div id="mul-ia-status" style="display:none;margin-top:8px;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:600"></div>
@@ -2444,9 +2444,9 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           <div id="anex-lista-multi" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"></div>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px">
-          <button class="btn-secondary" onclick="limparModeloMulti()">🗑️ Limpar</button>
-          <button class="btn-secondary" onclick="copiarModeloMulti()">📋 Copiar Texto</button>
-          <button class="btn-primary"   onclick="imprimirModeloMulti()">🖨️ Imprimir</button>
+          <button class="btn-secondary" onclick="limparModeloMulti()">Limpar</button>
+          <button class="btn-secondary" onclick="copiarModeloMulti()">Copiar Texto</button>
+          <button class="btn-primary"   onclick="imprimirModeloMulti()">Imprimir</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:4px">
 
@@ -2712,9 +2712,9 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
         <!-- Toolbar -->
         <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px;flex-wrap:wrap">
-          <button class="btn-secondary" onclick="com_limparOficio()">🗑️ Limpar</button>
-          <button class="btn-secondary" onclick="com_copiarOficio()">📋 Copiar Texto</button>
-          <button class="btn-primary"   onclick="com_gerarOficioSeguro()">🖨️ Gerar PDF</button>
+          <button class="btn-secondary" onclick="com_limparOficio()">Limpar</button>
+          <button class="btn-secondary" onclick="com_copiarOficio()">Copiar Texto</button>
+          <button class="btn-primary"   onclick="com_gerarOficioSeguro()">Gerar PDF</button>
           <button id="com-btn-pdf-anexos" onclick="com_gerarPDFComAnexos()"
             style="background:var(--idv-ok);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer">
             📑 PDF com Anexos
@@ -2926,7 +2926,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               Varre os arquivos de cada monitorado (aba <b>Arquivos</b>/R2), identifica os que parecem ofício pelo nome e lista os cujo número <b>não aparece</b> no registro acima. É <b>só leitura</b> — não grava nada. Pode levar alguns minutos se houver muitos monitorados.
             </div>
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-              <button id="com-conf-btn" onclick="com_conferirArquivos()" style="background:var(--idv-cab);color:#fff;border:none;border-radius:6px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer">🔍 Conferir arquivos × registro</button>
+              <button id="com-conf-btn" onclick="com_conferirArquivos()" style="background:var(--idv-cab);color:#fff;border:none;border-radius:6px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer">Conferir arquivos × registro</button>
               <button id="com-conf-cancelar" onclick="com_confCancelar()" style="display:none;background:var(--idv-cartao);color:var(--idv-cr);border:1px solid var(--idv-cr);border-radius:6px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer">&times; Cancelar</button>
             </div>
             <div id="com-conf-resultado" style="margin-top:12px;font-size:13px"></div>
@@ -2962,7 +2962,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               <button onclick="_bmonSelecionarTodos('jur', false)" style="background:var(--idv-cartao);color:var(--idv-sec);border:1px solid var(--idv-borda);border-radius:6px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer">☐ Nenhum</button>
               <span id="jur-docs-sel-count" style="font-size:12px;color:var(--idv-sec)"></span>
               <div style="flex:1"></div>
-              <button onclick="_bmonCarregarEExtrair('jur')" style="background:var(--idv-cab);color:#fff;border:none;border-radius:6px;padding:7px 15px;font-size:12px;font-weight:600;cursor:pointer">🤖 Carregar e Extrair com IA</button>
+              <button onclick="_bmonCarregarEExtrair('jur')" style="background:var(--idv-cab);color:#fff;border:none;border-radius:6px;padding:7px 15px;font-size:12px;font-weight:600;cursor:pointer">Carregar e Extrair com IA</button>
             </div>
           </div>
           <div id="jur-ia-status" style="display:none;margin-top:8px;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:600"></div>
@@ -2982,10 +2982,10 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           <div id="anex-lista-jur" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"></div>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin:12px 0 8px;flex-wrap:wrap">
-          <button class="btn-secondary" onclick="jur_limpar()">🗑️ Limpar</button>
-          <button class="btn-secondary" onclick="jur_copiar()">📋 Copiar Texto</button>
-          <button class="btn-primary"   onclick="jur_gerarPDF()">🖨️ Gerar PDF</button>
-          <button class="btn-secondary" onclick="jur_gerarDoc()">📄 Gerar .doc</button>
+          <button class="btn-secondary" onclick="jur_limpar()">Limpar</button>
+          <button class="btn-secondary" onclick="jur_copiar()">Copiar Texto</button>
+          <button class="btn-primary"   onclick="jur_gerarPDF()">Gerar PDF</button>
+          <button class="btn-secondary" onclick="jur_gerarDoc()">Gerar .doc</button>
         </div>
 
         <!-- Grid 1fr 1fr -->
@@ -3356,8 +3356,8 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       </div>
       <!-- Sub-tabs da Comunicação -->
       <div class="sub-tabs">
-        <div class="sub-tab active" id="com-stab-ocorrencias" onclick="mudarSubAbaCom('ocorrencias')">📋 Ocorrências</div>
-        <div class="sub-tab" id="com-stab-arquivados" onclick="mudarSubAbaCom('arquivados')">📁 Arquivados</div>
+        <div class="sub-tab active" id="com-stab-ocorrencias" onclick="mudarSubAbaCom('ocorrencias')">Ocorrências</div>
+        <div class="sub-tab" id="com-stab-arquivados" onclick="mudarSubAbaCom('arquivados')">Arquivados</div>
       </div>
 
       <!-- SUB-PANEL: OCORRÊNCIAS (conteúdo existente) -->
@@ -3438,9 +3438,9 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       <!-- Sub-tabs -->
       <div class="sub-tabs" style="margin-bottom:0">
-        <div class="sub-tab active" id="est-stab-estoque"  onclick="mudarSubAbaEstoque('estoque')">📦 Estoque</div>
-        <div class="sub-tab"       id="est-stab-consultar" onclick="mudarSubAbaEstoque('consultar')">🔍 Consultar</div>
-        <div class="sub-tab"       id="est-stab-plantao"   onclick="mudarSubAbaEstoque('plantao')">🛡️ Estoque do Plantão</div>
+        <div class="sub-tab active" id="est-stab-estoque"  onclick="mudarSubAbaEstoque('estoque')">Estoque</div>
+        <div class="sub-tab"       id="est-stab-consultar" onclick="mudarSubAbaEstoque('consultar')">Consultar</div>
+        <div class="sub-tab"       id="est-stab-plantao"   onclick="mudarSubAbaEstoque('plantao')">Estoque do Plantão</div>
       </div>
 
       <!-- Sub-panel Estoque -->
@@ -3534,9 +3534,9 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       <!-- Sub-tabs Triagem -->
       <div class="sub-tabs" style="margin-bottom:0">
-        <div class="sub-tab active" id="tri-stab-ativos"    onclick="mudarSubAbaTriagem('ativos')">📋 Atendimentos</div>
+        <div class="sub-tab active" id="tri-stab-ativos"    onclick="mudarSubAbaTriagem('ativos')">Atendimentos</div>
         <div class="sub-tab"       id="tri-stab-arquivados" onclick="mudarSubAbaTriagem('arquivados')">
-          📁 Arquivados <span id="tri-arq-badge" class="notif-badge" style="display:none">0</span>
+          Arquivados <span id="tri-arq-badge" class="notif-badge" style="display:none">0</span>
         </div>
       </div>
 
@@ -3781,15 +3781,15 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       <!-- Sub-tabs -->
       <div class="sub-tabs" style="margin-bottom:0">
-        <div class="sub-tab active" id="psi-stab-ativos"    onclick="mudarSubAbaPsi('ativos')">📋 Atendimentos</div>
+        <div class="sub-tab active" id="psi-stab-ativos"    onclick="mudarSubAbaPsi('ativos')">Atendimentos</div>
         <div class="sub-tab"       id="psi-stab-arquivados" onclick="mudarSubAbaPsi('arquivados')">
-          📁 Arquivados <span id="psi-arq-badge" class="notif-badge" style="display:none">0</span>
+          Arquivados <span id="psi-arq-badge" class="notif-badge" style="display:none">0</span>
         </div>
-        <div class="sub-tab"       id="psi-stab-semcom" onclick="mudarSubAbaPsi('semcom')">
-          📵 Sem Comunicação (DPP) <span id="psi-semcom-badge" class="notif-badge" style="display:none">0</span>
+        <div class="sub-tab"       id="psi-stab-semcom" onclick="mudarAba('semcom'); sc_verArea('psicossocial')" title="Abre a aba Sem Comunicação já nas vítimas com DPP">
+          Sem Comunicação (DPP) <span id="psi-semcom-badge" class="notif-badge" style="display:none">0</span>
         </div>
         <div class="sub-tab"       id="psi-stab-botao" onclick="mudarSubAbaPsi('botao')">
-          🆘 Botão de segurança (DPP) <span id="psi-botao-badge" class="notif-badge" style="display:none">0</span>
+          Botão de segurança (DPP) <span id="psi-botao-badge" class="notif-badge" style="display:none">0</span>
         </div>
       </div>
 
@@ -4037,262 +4037,6 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       </div><!-- /psi-panel-arquivados -->
 
-      <!-- ── SEM COMUNICAÇÃO (DPP) — Psicossocial ── -->
-      <div class="sub-panel" id="psi-panel-semcom">
-
-        <!-- Toolbar -->
-        <div class="table-toolbar" style="flex-wrap:wrap;gap:8px">
-          <div style="font-weight:600;color:var(--az1);font-size:1rem">📵 Monitorados DPP Sem Comunicação — AKILES</div>
-          <div class="table-actions" style="flex-wrap:wrap;gap:6px">
-            <span id="pscom-ultima-importacao" style="font-size:.82rem;color:#888;align-self:center"></span>
-            <label class="btn-secondary" style="cursor:pointer;margin:0">
-              📂 Importar Excel AKILES
-              <input type="file" id="pscom-file-input" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="importarExcelSemCom(this,'psicossocial')">
-            </label>
-            <button class="btn-secondary" onclick="renderizarSemCom('psicossocial')">🔄 Atualizar</button>
-            <button class="btn-secondary" onclick="sc_imprimirLista('psicossocial')">Lista para contato (PDF)</button>
-            <button class="btn-secondary" onclick="exportarSemComExcel('psicossocial')">📥 Exportar Excel</button>
-          </div>
-        </div>
-
-        <!-- Sub-abas internas: Ativos / Desvinculados -->
-        <div class="sub-tabs" style="margin:10px 0 0 0;border-bottom:1px solid #e2e8f0">
-          <div class="sub-tab active" id="psc-stab-ativos" onclick="mudarSubAbaSemCom('ativos','psicossocial')" style="font-size:.88rem">📡 Ativos</div>
-          <div class="sub-tab" id="psc-stab-desvinculados" onclick="mudarSubAbaSemCom('desvinculados','psicossocial')" style="font-size:.88rem">
-            ✅ Desvinculados
-            <span id="psc-desvinc-badge" class="notif-badge" style="display:none;background:#16a34a">0</span>
-          </div>
-          <div class="sub-tab" id="psc-stab-arquivados" onclick="mudarSubAbaSemCom('arquivados','psicossocial')" style="font-size:.88rem" title="Quem voltou a comunicar — resolvidos">
-            🗄️ Arquivados <span id="psc-arq-qtd" style="color:#94a3b8;font-weight:400"></span>
-          </div>
-        </div>
-
-        <!-- ── Painel: Ativos ── -->
-        <div class="sub-panel active" id="psc-panel-ativos" style="padding:0">
-
-        <!-- KPIs -->
-        <div class="kpi-grid" style="margin:12px 0 8px 0;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
-          <div class="kpi-card" style="background:#f0f9ff;border-left:4px solid #0284c7">
-            <div class="kpi-icon">📋</div>
-            <div class="kpi-value" id="psc-kpi-total">0</div>
-            <div class="kpi-label">Total</div>
-          </div>
-          <div class="kpi-card" style="background:#fefce8;border-left:4px solid #ca8a04">
-            <div class="kpi-icon">⏱️</div>
-            <div class="kpi-value" id="psc-kpi-4h">0</div>
-            <div class="kpi-label">+4 horas</div>
-          </div>
-          <div class="kpi-card" style="background:#fff7ed;border-left:4px solid #ea580c">
-            <div class="kpi-icon">📅</div>
-            <div class="kpi-value" id="psc-kpi-1d">0</div>
-            <div class="kpi-label">+1 dia</div>
-          </div>
-          <div class="kpi-card" style="background:#fef2f2;border-left:4px solid #dc2626">
-            <div class="kpi-icon">📆</div>
-            <div class="kpi-value" id="psc-kpi-7d">0</div>
-            <div class="kpi-label">+7 dias</div>
-          </div>
-          <div class="kpi-card" style="background:#fdf4ff;border-left:4px solid #9333ea">
-            <div class="kpi-icon">🗓️</div>
-            <div class="kpi-value" id="psc-kpi-30d">0</div>
-            <div class="kpi-label">+30 dias</div>
-          </div>
-          <div class="kpi-card" style="border-left:4px solid var(--idv-cr)">
-            <div class="kpi-icon">⚠️</div>
-            <div class="kpi-value" id="psc-kpi-180d" style="color:var(--idv-cr)">0</div>
-            <div class="kpi-label" style="color:var(--idv-cr)">≥180 dias — desvincular</div>
-          </div>
-          <div class="kpi-card" style="background:#f0fdf4;border-left:4px solid #16a34a">
-            <div class="kpi-icon">✅</div>
-            <div class="kpi-value" id="psc-kpi-desvinc">0</div>
-            <div class="kpi-label">Desvinculados</div>
-          </div>
-        </div>
-
-        <!-- Filtros -->
-        <div class="tri-filtros">
-          <div class="tri-filtros-title">🔍 Filtros</div>
-          <div class="tri-filtros-grid">
-            <div class="form-field" style="margin:0">
-              <label>Nome</label>
-              <input type="text" id="psc-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemCom('psicossocial')">
-            </div>
-            <div class="form-field" style="margin:0">
-              <label>Registro</label>
-              <input type="text" id="psc-f-registro" placeholder="Nº registro..." oninput="renderizarSemCom('psicossocial')">
-            </div>
-            <div class="form-field" style="margin:0">
-              <label>Intervalo</label>
-              <select id="psc-f-intervalo" onchange="renderizarSemCom('psicossocial')">
-                <option value="">Todos</option>
-                <option>1. at&eacute; 30 min</option>
-                <option>2. at&eacute; 1 hora</option>
-                <option>3. at&eacute; 3 horas</option>
-                <option>4. at&eacute; 4 horas</option>
-                <option>5. mais de 4h</option>
-              </select>
-            </div>
-            <div class="form-field" style="margin:0">
-              <label>Situação</label>
-              <select id="psc-f-situacao" onchange="renderizarSemCom('psicossocial')">
-                <option value="">Todas</option>
-                <option value="ativo">Ativo</option>
-                <option value="tratativa">Com tratativa</option>
-                <option value="desvinculado">Desvinculado</option>
-              </select>
-            </div>
-            <div class="form-field" style="margin:0">
-              <label>Mín. dias sem com.</label>
-              <input type="number" id="psc-f-dias-min" placeholder="ex: 180" min="0" oninput="renderizarSemCom('psicossocial')" style="width:100%">
-            </div>
-            <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
-              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemCom('psicossocial')">✕ Limpar</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="est-section-title" id="psc-count-label">Registros</div>
-        <div class="idv-tabela-box">
-          <table class="data-table idv-tabela">
-            <thead><tr>
-              <th>Monitorado</th>
-              <th>Dias sem comunicar</th>
-              <th>Última comunicação</th>
-              <th>Situação</th>
-              <th>Tratativas</th>
-              <th style="text-align:right">Ações</th>
-            </tr></thead>
-            <tbody id="tbody-pscom"></tbody>
-          </table>
-        </div>
-        </div><!-- /psc-panel-ativos -->
-
-        <!-- ── Painel: Desvinculados ── -->
-        <div class="sub-panel" id="psc-panel-desvinculados" style="padding:0">
-          <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
-            <div style="font-weight:600;color:#16a34a">✅ Monitorados DPP Desvinculados</div>
-            <div class="table-actions">
-              <button class="btn-secondary" onclick="renderizarSemComDesvinc('psicossocial')">🔄 Atualizar</button>
-              <button class="btn-secondary" onclick="exportarDesvinculadosExcel('psicossocial')">📥 Exportar Excel</button>
-            </div>
-          </div>
-
-          <!-- Filtros desvinculados -->
-          <div class="tri-filtros" style="margin-top:8px">
-            <div class="tri-filtros-title">🔍 Filtros</div>
-            <div class="tri-filtros-grid">
-              <div class="form-field" style="margin:0">
-                <label>Nome</label>
-                <input type="text" id="pscde-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemComDesvinc('psicossocial')">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Registro</label>
-                <input type="text" id="pscde-f-registro" placeholder="Nº registro..." oninput="renderizarSemComDesvinc('psicossocial')">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Servidor que desvinculou</label>
-                <input type="text" id="pscde-f-servidor" placeholder="Nome do servidor..." oninput="renderizarSemComDesvinc('psicossocial')">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Data desvinculação início</label>
-                <input type="date" id="pscde-f-inicio" onchange="renderizarSemComDesvinc('psicossocial')">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Data desvinculação fim</label>
-                <input type="date" id="pscde-f-fim" onchange="renderizarSemComDesvinc('psicossocial')">
-              </div>
-              <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
-                <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemComDesvinc('psicossocial')">✕ Limpar</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="est-section-title" id="psc-desvinc-count-label">Desvinculados</div>
-          <div class="table-scroll">
-            <table class="data-table" style="font-size:.83rem">
-              <thead><tr>
-                <th>Nº</th>
-                <th>Nome</th>
-                <th>Registro</th>
-                <th>Última Comunicação</th>
-                <th>Dias (na desvinc.)</th>
-                <th>Unidade</th>
-                <th>Data Desvinculação</th>
-                <th>Servidor</th>
-                <th>Ato / Autorização</th>
-                <th>Sistema</th>
-                <th>Observações</th>
-                <th>Ações</th>
-              </tr></thead>
-              <tbody id="tbody-pscom-desvinc"></tbody>
-            </table>
-          </div>
-        </div><!-- /psc-panel-desvinculados -->
-
-        <!-- ── Painel: Arquivados (voltaram a comunicar) ── -->
-        <div class="sub-panel" id="psc-panel-arquivados" style="padding:0">
-          <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
-            <div style="font-weight:600;color:#475569">🗄️ Arquivados — voltaram a comunicar</div>
-            <div class="table-actions">
-              <button class="btn-secondary" onclick="renderizarSemComArquivados('psicossocial')">🔄 Atualizar</button>
-              <button class="btn-secondary" onclick="exportarArquivadosExcel('psicossocial')">📥 Exportar Excel</button>
-            </div>
-          </div>
-          <div style="font-size:.8rem;color:#64748b;margin:6px 0 0">Automático: quem não aparece no Excel novo do AKILES vem para cá com todo o histórico. Se voltar a aparecer sem comunicação, retorna para Ativos com as tratativas.</div>
-
-          <div class="tri-filtros" style="margin-top:8px">
-            <div class="tri-filtros-title">🔍 Filtros</div>
-            <div class="tri-filtros-grid">
-              <div class="form-field" style="margin:0">
-                <label>Nome</label>
-                <input type="text" id="pscar-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemComArquivados('psicossocial')">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Registro</label>
-                <input type="text" id="pscar-f-registro" placeholder="Nº registro..." oninput="renderizarSemComArquivados('psicossocial')">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Arquivado de</label>
-                <input type="date" id="pscar-f-inicio" onchange="renderizarSemComArquivados('psicossocial')">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Arquivado até</label>
-                <input type="date" id="pscar-f-fim" onchange="renderizarSemComArquivados('psicossocial')">
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Mostrar</label>
-                <select id="pscar-f-trat" onchange="renderizarSemComArquivados('psicossocial')">
-                  <option value="">Todos</option>
-                  <option value="com">Só com tratativa</option>
-                  <option value="reinc">Ficou sem comunicar mais de 1 vez</option>
-                </select>
-              </div>
-              <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
-                <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemComArquivados('psicossocial')">✕ Limpar</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="est-section-title" id="pscar-count-label">Arquivados</div>
-          <div class="table-scroll">
-            <table class="data-table" style="font-size:.83rem">
-              <thead><tr>
-                <th>Nº</th>
-                <th>Nome</th>
-                <th>Registro</th>
-                <th>Sem comunicar desde</th>
-                <th>Dias sem com.</th>
-                <th title="Importação do AKILES em que a pessoa deixou de aparecer sem comunicação">Arquivado em</th>
-                <th title="Quantas vezes ficou sem comunicar">Vezes</th>
-                <th>Tratativas</th>
-                <th>Ações</th>
-              </tr></thead>
-              <tbody id="tbody-pscom-arq"></tbody>
-            </table>
-          </div>
-        </div><!-- /psc-panel-arquivados -->
-
-      </div><!-- /psi-panel-semcom -->
       <!-- ── Sub-painel: Botão de segurança (DPP) (pacote automático do AKILES) ── -->
       <div class="sub-panel" id="psi-panel-botao">
         <div>
@@ -4367,7 +4111,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           <div style="background:var(--idv-fundo);border-radius:6px;padding:12px;font-size:13px;color:var(--idv-texto);max-height:180px;overflow-y:auto" id="r2-import-preview"></div>
           <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
             <button class="btn-secondary" onclick="r2_fecharImportPainel()">Cancelar</button>
-            <button class="btn-primary"   id="r2-import-btn-confirmar" onclick="r2_confirmarImportacao()" style="display:none">✅ Confirmar e Importar</button>
+            <button class="btn-primary"   id="r2-import-btn-confirmar" onclick="r2_confirmarImportacao()" style="display:none">Confirmar e Importar</button>
           </div>
         </div>
 
@@ -4677,8 +4421,8 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           </select>
           <input type="date" id="ind-data" onchange="ind_render()" style="display:none;padding:6px 9px;border:1px solid var(--idv-borda);border-radius:6px;font-size:13px">
           <input type="month" id="ind-mes" onchange="ind_render()" style="display:none;padding:6px 9px;border:1px solid var(--idv-borda);border-radius:6px;font-size:13px">
-          <button class="btn-secondary" onclick="ind_render()">🔄 Atualizar</button>
-          <button class="btn-secondary" onclick="ind_gerarPDF()">📄 Relatório PDF</button>
+          <button class="btn-secondary" onclick="ind_render()">Atualizar</button>
+          <button class="btn-secondary" onclick="ind_gerarPDF()">Relatório PDF</button>
           <span id="ind-periodo-label" style="font-size:12px;color:var(--idv-in);font-weight:600"></span>
         </div>
         <!-- Caixa de pergunta IA -->
@@ -4687,7 +4431,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
             <input type="text" id="ind-ia-input" placeholder="Pergunte: quantos atendimentos de violência doméstica essa semana?"
               onkeydown="if(event.key==='Enter')ind_perguntar()"
               style="flex:1;padding:9px 12px;border:1px solid var(--idv-borda);border-radius:6px;font-size:13px">
-            <button class="btn-primary" onclick="ind_perguntar()" style="white-space:nowrap;padding:9px 18px">✨ Perguntar</button>
+            <button class="btn-primary" onclick="ind_perguntar()" style="white-space:nowrap;padding:9px 18px">Perguntar</button>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px">
             <span onclick="ind_exemplo(this)" style="font-size:13px;padding:3px 10px;border:1px solid var(--idv-borda);border-radius:4px;color:var(--idv-texto);background:var(--idv-cartao);cursor:pointer">quantas violações essa semana?</span>
@@ -4745,7 +4489,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           </select>
           <input type="date" id="prod-data" onchange="prod_render()" style="display:none;padding:6px 9px;border:1px solid var(--idv-borda);border-radius:6px;font-size:13px">
           <input type="month" id="prod-mes" onchange="prod_render()" style="display:none;padding:6px 9px;border:1px solid var(--idv-borda);border-radius:6px;font-size:13px">
-          <button class="btn-secondary" onclick="prod_render()">🔄 Atualizar</button>
+          <button class="btn-secondary" onclick="prod_render()">Atualizar</button>
           <span id="prod-periodo-label" style="font-size:12px;color:var(--idv-in);font-weight:600"></span>
           <span style="font-size:12px;color:var(--idv-sec)">Conta os registros criados em cada setor, por servidor.</span>
         </div>
@@ -4763,7 +4507,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         <div style="font-size:13px">O arquivo é processado localmente — nenhum dado é enviado para servidores</div>
         <label style="cursor:pointer">
           <input type="file" accept=".xls,.xlsx,.csv" style="display:none" onchange="estat_importar(this)">
-          <span class="btn-primary" style="padding:10px 24px;font-size:14px">📂 Selecionar arquivo</span>
+          <span class="btn-primary" style="padding:10px 24px;font-size:14px">Selecionar arquivo</span>
         </label>
       </div>
 
@@ -4775,11 +4519,11 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
         <!-- Barra de ações extras -->
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <button class="btn-secondary" onclick="estat_toggleGraficos()" id="estat-btn-graficos">📊 Gráficos</button>
-          <button class="btn-secondary" onclick="estat_gerarPDF()" id="estat-btn-pdf">📄 Relatório PDF</button>
+          <button class="btn-secondary" onclick="estat_toggleGraficos()" id="estat-btn-graficos">Gráficos</button>
+          <button class="btn-secondary" onclick="estat_gerarPDF()" id="estat-btn-pdf">Relatório PDF</button>
           <label style="cursor:pointer">
             <input type="file" id="estat-comp-input" accept=".xls,.xlsx,.csv" style="display:none" onchange="estat_importarComparacao(this)">
-            <span class="btn-secondary" onclick="document.getElementById('estat-comp-input').click()">📅 Comparar Período</span>
+            <span class="btn-secondary" onclick="document.getElementById('estat-comp-input').click()">Comparar Período</span>
           </label>
           <div id="estat-comp-label" style="align-self:center;font-size:12px;color:var(--idv-sec);display:none"></div>
         </div>
@@ -4831,7 +4575,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
             <input type="text" id="estat-query" placeholder="Ex: monitorados de Macapá em violência doméstica do sexo feminino..."
               style="flex:1;padding:9px 12px;border:1px solid var(--idv-borda);border-radius:6px;font-size:14px"
               onkeydown="if(event.key==='Enter') estat_buscarIA()">
-            <button class="btn-primary" onclick="estat_buscarIA()" style="white-space:nowrap">🔍 Buscar</button>
+            <button class="btn-primary" onclick="estat_buscarIA()" style="white-space:nowrap">Buscar</button>
             <button class="btn-secondary" onclick="estat_limparFiltros()" title="Limpar filtros">✕</button>
           </div>
           <div id="estat-ia-msg" style="margin-top:8px;font-size:13px;color:var(--idv-in);display:none"></div>
@@ -4916,7 +4660,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           <div style="font-size:13px">Atendimentos, laudos e acompanhamentos do setor psicossocial</div>
           <label style="cursor:pointer">
             <input type="file" accept=".xls,.xlsx" style="display:none" onchange="psi_importar(this)">
-            <span class="btn-primary" style="padding:10px 24px;font-size:14px">📂 Selecionar arquivo</span>
+            <span class="btn-primary" style="padding:10px 24px;font-size:14px">Selecionar arquivo</span>
           </label>
         </div>
 
@@ -4928,8 +4672,8 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
           <!-- Ações -->
           <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-            <button class="btn-secondary" onclick="psi_toggleGraficos()" id="psi-btn-graficos">📊 Gráficos</button>
-            <button class="btn-secondary" onclick="psi_gerarPDF()">📄 Relatório PDF</button>
+            <button class="btn-secondary" onclick="psi_toggleGraficos()" id="psi-btn-graficos">Gráficos</button>
+            <button class="btn-secondary" onclick="psi_gerarPDF()">Relatório PDF</button>
             <button class="btn-secondary" onclick="psi_exportarResultado()">⬇️ Exportar XLS</button>
           </div>
 
@@ -4964,7 +4708,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               <input type="text" id="psi-query" placeholder="Ex: atendimentos de urgência com alto risco em violência doméstica..."
                 style="flex:1;padding:9px 12px;border:1px solid var(--idv-borda);border-radius:6px;font-size:14px"
                 onkeydown="if(event.key==='Enter') psi_buscar()">
-              <button class="btn-primary" onclick="psi_buscar()" style="white-space:nowrap">🔍 Buscar</button>
+              <button class="btn-primary" onclick="psi_buscar()" style="white-space:nowrap">Buscar</button>
               <button class="btn-secondary" onclick="psi_limparFiltros()" title="Limpar">✕</button>
             </div>
             <div id="psi-ia-msg" style="margin-top:8px;font-size:13px;color:var(--idv-in);display:none"></div>
@@ -5130,7 +4874,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
           <!-- Botões de ação -->
           <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <button class="btn-primary" onclick="cruz_gerarPDF()">📄 Relatório de Cruzamento PDF</button>
+            <button class="btn-primary" onclick="cruz_gerarPDF()">Relatório de Cruzamento PDF</button>
             <button class="btn-secondary" onclick="cruz_exportarXLS()">⬇️ Exportar lista crítica XLS</button>
           </div>
 
@@ -5227,7 +4971,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         </div>
         <div class="modal-footer">
           <button class="btn-secondary" onclick="r2_fecharConfig()">Cancelar</button>
-          <button class="btn-primary" onclick="r2_salvarConfig()">💾 Salvar</button>
+          <button class="btn-primary" onclick="r2_salvarConfig()">Salvar</button>
         </div>
       </div>
     </div>
@@ -5243,7 +4987,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           <div style="display:flex;gap:10px;margin-bottom:12px">
             <input id="r2-aud-busca" type="text" placeholder="Filtrar por monitorado ou usuário…"
                    style="flex:1;border:1px solid var(--idv-borda);border-radius:6px;padding:7px 10px;font-size:13px">
-            <button class="btn-secondary" onclick="r2_carregarAuditoria()">🔄 Atualizar</button>
+            <button class="btn-secondary" onclick="r2_carregarAuditoria()">Atualizar</button>
           </div>
           <div class="table-scroll">
             <table class="data-table idv-tabela">
@@ -5271,6 +5015,11 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
     <!-- ─── SEM COMUNICAÇÃO (aba própria, todos os acessos) ─── -->
     <div class="tab-panel" id="panel-semcom">
+      <!-- (27/10/2026) Sem Comunicação num lugar só: tornozeleiras (jurídico) OU DPP das vítimas (psicossocial); a sub-aba do Psicossocial só pula para cá -->
+      <div id="sc-area-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px">
+        <button type="button" class="idv-chip ativo" id="sc-area-juridico" aria-pressed="true" onclick="sc_verArea('juridico')">Tornozeleiras <span class="idv-n" id="sc-area-n-juridico">0</span></button>
+        <button type="button" class="idv-chip" id="sc-area-psicossocial" aria-pressed="false" onclick="sc_verArea('psicossocial')">DPP das vítimas <span class="idv-n" id="sc-area-n-psicossocial">0</span></button>
+      </div>
             <!-- Sub-painel: Sem Comunicação -->
       <div class="sub-panel active" id="jur-panel-semcom">
 
@@ -5307,14 +5056,12 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           <button type="button" class="idv-kpi cr" onclick="_scFiltrarMedida('', 180)" title="Mostrar só quem está há 180 dias ou mais"><span class="idv-num" id="sc-kpi-180d">0</span><span class="idv-rot">180 dias ou mais</span><span class="idv-leg">avaliar desvinculação</span></button>
           <div class="idv-kpi at"><span class="idv-num" id="sc-kpi-30d">0</span><span class="idv-rot">30 a 179 dias</span><span class="idv-leg">cobrar contato</span></div>
           <div class="idv-kpi at"><span class="idv-num" id="sc-kpi-7d">0</span><span class="idv-rot">7 a 29 dias</span><span class="idv-leg">acompanhar</span></div>
-          <div class="idv-kpi"><span class="idv-num" id="sc-kpi-1d">0</span><span class="idv-rot">1 a 6 dias</span><span class="idv-leg">recentes</span></div>
-          <div class="idv-kpi"><span class="idv-num" id="sc-kpi-4h">0</span><span class="idv-rot">Menos de 1 dia</span><span class="idv-leg">mais de 4 horas</span></div>
+          <div class="idv-kpi"><span class="idv-num" id="sc-kpi-menos7">0</span><span class="idv-rot">Menos de 7 dias</span><span class="idv-leg">recentes</span></div>
         </div>
         <h2 class="idv-secao">Por medida</h2>
         <div class="idv-kpis">
           <button type="button" class="idv-kpi de" onclick="_scFiltrarMedida('mpu')" title="Agressores com medida protetiva — prioridade: relatório ao juiz p/ mandado de prisão"><span class="idv-num" id="sc-kpi-mpu">0</span><span class="idv-rot">MPU (agressores)</span><span class="idv-leg">medida protetiva</span></button>
           <button type="button" class="idv-kpi cr" onclick="_scFiltrarMedida('mpu', 3)" title="MPU sem comunicar há 3 dias ou mais — enviar relatório ao juiz"><span class="idv-num" id="sc-kpi-mpu3">0</span><span class="idv-rot">MPU há 3+ dias</span><span class="idv-leg">relatório p/ MP</span></button>
-          <button type="button" class="idv-kpi" onclick="_scFiltrarMedida('demais')" title="Tornozeleiras que não são de medida protetiva"><span class="idv-num" id="sc-kpi-demais">0</span><span class="idv-rot">Demais tornozeleiras</span><span class="idv-leg">sem medida protetiva</span></button>
         </div>
 
         <!-- Filtros -->
@@ -5366,8 +5113,8 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
             <div style="font-weight:600;color:#16a34a">✅ Monitorados Desvinculados</div>
             <div class="table-actions">
-              <button class="btn-secondary" onclick="renderizarSemComDesvinc()">🔄 Atualizar</button>
-              <button class="btn-secondary" onclick="exportarDesvinculadosExcel()">📥 Exportar Excel</button>
+              <button class="btn-secondary" onclick="renderizarSemComDesvinc()">Atualizar</button>
+              <button class="btn-secondary" onclick="exportarDesvinculadosExcel()">Exportar Excel</button>
             </div>
           </div>
 
@@ -5428,8 +5175,8 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
             <div style="font-weight:600;color:#475569">🗄️ Arquivados — voltaram a comunicar</div>
             <div class="table-actions">
-              <button class="btn-secondary" onclick="renderizarSemComArquivados('juridico')">🔄 Atualizar</button>
-              <button class="btn-secondary" onclick="exportarArquivadosExcel('juridico')">📥 Exportar Excel</button>
+              <button class="btn-secondary" onclick="renderizarSemComArquivados('juridico')">Atualizar</button>
+              <button class="btn-secondary" onclick="exportarArquivadosExcel('juridico')">Exportar Excel</button>
             </div>
           </div>
           <div style="font-size:.8rem;color:#64748b;margin:6px 0 0">Automático: quem não aparece no Excel novo do AKILES vem para cá com todo o histórico. Se voltar a aparecer sem comunicação, retorna para Ativos com as tratativas.</div>
@@ -5487,6 +5234,233 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         </div><!-- /sc-panel-arquivados -->
 
       </div><!-- /jur-panel-semcom -->
+      <!-- ── SEM COMUNICAÇÃO (DPP) — Psicossocial ── -->
+      <div class="sub-panel" id="psi-panel-semcom">
+
+        <!-- Toolbar -->
+        <div class="table-toolbar" style="flex-wrap:wrap;gap:8px">
+          <div class="idv-secao" style="margin:0">Vítimas com DPP sem comunicação — AKILES</div>
+          <div class="table-actions" style="flex-wrap:wrap;gap:6px">
+            <span id="pscom-ultima-importacao" style="font-size:.82rem;color:#888;align-self:center"></span>
+            <label class="btn-secondary" style="cursor:pointer;margin:0">
+              📂 Importar Excel AKILES
+              <input type="file" id="pscom-file-input" accept=".xls,.xlsx,.html,.htm" style="display:none" onchange="importarExcelSemCom(this,'psicossocial')">
+            </label>
+            <button class="btn-secondary" onclick="renderizarSemCom('psicossocial')">Atualizar</button>
+            <button class="btn-secondary" onclick="sc_imprimirLista('psicossocial')">Lista para contato (PDF)</button>
+            <button class="btn-secondary" onclick="exportarSemComExcel('psicossocial')">Exportar Excel</button>
+          </div>
+        </div>
+
+        <!-- Sub-abas internas: Ativos / Desvinculados -->
+        <div class="sub-tabs" style="margin:10px 0 0 0;border-bottom:1px solid #e2e8f0">
+          <div class="sub-tab active" id="psc-stab-ativos" onclick="mudarSubAbaSemCom('ativos','psicossocial')" style="font-size:.88rem">Ativos</div>
+          <div class="sub-tab" id="psc-stab-desvinculados" onclick="mudarSubAbaSemCom('desvinculados','psicossocial')" style="font-size:.88rem">
+            Desvinculados
+            <span id="psc-desvinc-badge" class="notif-badge" style="display:none;background:#16a34a">0</span>
+          </div>
+          <div class="sub-tab" id="psc-stab-arquivados" onclick="mudarSubAbaSemCom('arquivados','psicossocial')" style="font-size:.88rem" title="Quem voltou a comunicar — resolvidos">
+            Arquivados <span id="psc-arq-qtd" style="color:#94a3b8;font-weight:400"></span>
+          </div>
+        </div>
+
+        <!-- ── Painel: Ativos ── -->
+        <div class="sub-panel active" id="psc-panel-ativos" style="padding:0">
+
+        <!-- Indicadores (27/10/2026): peças do guia, mesmas faixas do painel das tornozeleiras -->
+        <div class="idv-kpis" style="margin:12px 0 8px 0">
+          <div class="idv-kpi cr"><span class="idv-num" id="psc-kpi-180d">0</span><span class="idv-rot">180 dias ou mais</span><span class="idv-leg">desvincular</span></div>
+          <div class="idv-kpi at"><span class="idv-num" id="psc-kpi-30d">0</span><span class="idv-rot">30 a 179 dias</span><span class="idv-leg">cobrar contato</span></div>
+          <div class="idv-kpi at"><span class="idv-num" id="psc-kpi-7d">0</span><span class="idv-rot">7 a 29 dias</span><span class="idv-leg">acompanhar</span></div>
+          <div class="idv-kpi"><span class="idv-num" id="psc-kpi-menos7">0</span><span class="idv-rot">Menos de 7 dias</span><span class="idv-leg">recentes</span></div>
+          <div class="idv-kpi"><span class="idv-num" id="psc-kpi-total">0</span><span class="idv-rot">Em aberto</span><span class="idv-leg">vítimas com DPP</span></div>
+          <div class="idv-kpi ok"><span class="idv-num" id="psc-kpi-desvinc">0</span><span class="idv-rot">Desvinculados</span></div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="tri-filtros">
+          <div class="tri-filtros-title">🔍 Filtros</div>
+          <div class="tri-filtros-grid">
+            <div class="form-field" style="margin:0">
+              <label>Nome</label>
+              <input type="text" id="psc-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemCom('psicossocial')">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Registro</label>
+              <input type="text" id="psc-f-registro" placeholder="Nº registro..." oninput="renderizarSemCom('psicossocial')">
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Intervalo</label>
+              <select id="psc-f-intervalo" onchange="renderizarSemCom('psicossocial')">
+                <option value="">Todos</option>
+                <option>1. at&eacute; 30 min</option>
+                <option>2. at&eacute; 1 hora</option>
+                <option>3. at&eacute; 3 horas</option>
+                <option>4. at&eacute; 4 horas</option>
+                <option>5. mais de 4h</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Situação</label>
+              <select id="psc-f-situacao" onchange="renderizarSemCom('psicossocial')">
+                <option value="">Todas</option>
+                <option value="ativo">Ativo</option>
+                <option value="tratativa">Com tratativa</option>
+                <option value="desvinculado">Desvinculado</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Mín. dias sem com.</label>
+              <input type="number" id="psc-f-dias-min" placeholder="ex: 180" min="0" oninput="renderizarSemCom('psicossocial')" style="width:100%">
+            </div>
+            <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+              <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemCom('psicossocial')">✕ Limpar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="est-section-title" id="psc-count-label">Registros</div>
+        <div class="idv-tabela-box">
+          <table class="data-table idv-tabela">
+            <thead><tr>
+              <th>Monitorado</th>
+              <th>Dias sem comunicar</th>
+              <th>Última comunicação</th>
+              <th>Situação</th>
+              <th>Tratativas</th>
+              <th style="text-align:right">Ações</th>
+            </tr></thead>
+            <tbody id="tbody-pscom"></tbody>
+          </table>
+        </div>
+        </div><!-- /psc-panel-ativos -->
+
+        <!-- ── Painel: Desvinculados ── -->
+        <div class="sub-panel" id="psc-panel-desvinculados" style="padding:0">
+          <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
+            <div style="font-weight:600;color:#16a34a">✅ Monitorados DPP Desvinculados</div>
+            <div class="table-actions">
+              <button class="btn-secondary" onclick="renderizarSemComDesvinc('psicossocial')">Atualizar</button>
+              <button class="btn-secondary" onclick="exportarDesvinculadosExcel('psicossocial')">Exportar Excel</button>
+            </div>
+          </div>
+
+          <!-- Filtros desvinculados -->
+          <div class="tri-filtros" style="margin-top:8px">
+            <div class="tri-filtros-title">🔍 Filtros</div>
+            <div class="tri-filtros-grid">
+              <div class="form-field" style="margin:0">
+                <label>Nome</label>
+                <input type="text" id="pscde-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemComDesvinc('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Registro</label>
+                <input type="text" id="pscde-f-registro" placeholder="Nº registro..." oninput="renderizarSemComDesvinc('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Servidor que desvinculou</label>
+                <input type="text" id="pscde-f-servidor" placeholder="Nome do servidor..." oninput="renderizarSemComDesvinc('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Data desvinculação início</label>
+                <input type="date" id="pscde-f-inicio" onchange="renderizarSemComDesvinc('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Data desvinculação fim</label>
+                <input type="date" id="pscde-f-fim" onchange="renderizarSemComDesvinc('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+                <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemComDesvinc('psicossocial')">✕ Limpar</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="est-section-title" id="psc-desvinc-count-label">Desvinculados</div>
+          <div class="table-scroll">
+            <table class="data-table" style="font-size:.83rem">
+              <thead><tr>
+                <th>Nº</th>
+                <th>Nome</th>
+                <th>Registro</th>
+                <th>Última Comunicação</th>
+                <th>Dias (na desvinc.)</th>
+                <th>Unidade</th>
+                <th>Data Desvinculação</th>
+                <th>Servidor</th>
+                <th>Ato / Autorização</th>
+                <th>Sistema</th>
+                <th>Observações</th>
+                <th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-pscom-desvinc"></tbody>
+            </table>
+          </div>
+        </div><!-- /psc-panel-desvinculados -->
+
+        <!-- ── Painel: Arquivados (voltaram a comunicar) ── -->
+        <div class="sub-panel" id="psc-panel-arquivados" style="padding:0">
+          <div class="table-toolbar" style="flex-wrap:wrap;gap:8px;margin-top:8px">
+            <div style="font-weight:600;color:#475569">🗄️ Arquivados — voltaram a comunicar</div>
+            <div class="table-actions">
+              <button class="btn-secondary" onclick="renderizarSemComArquivados('psicossocial')">Atualizar</button>
+              <button class="btn-secondary" onclick="exportarArquivadosExcel('psicossocial')">Exportar Excel</button>
+            </div>
+          </div>
+          <div style="font-size:.8rem;color:#64748b;margin:6px 0 0">Automático: quem não aparece no Excel novo do AKILES vem para cá com todo o histórico. Se voltar a aparecer sem comunicação, retorna para Ativos com as tratativas.</div>
+
+          <div class="tri-filtros" style="margin-top:8px">
+            <div class="tri-filtros-title">🔍 Filtros</div>
+            <div class="tri-filtros-grid">
+              <div class="form-field" style="margin:0">
+                <label>Nome</label>
+                <input type="text" id="pscar-f-nome" placeholder="Nome do monitorado..." oninput="renderizarSemComArquivados('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Registro</label>
+                <input type="text" id="pscar-f-registro" placeholder="Nº registro..." oninput="renderizarSemComArquivados('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Arquivado de</label>
+                <input type="date" id="pscar-f-inicio" onchange="renderizarSemComArquivados('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Arquivado até</label>
+                <input type="date" id="pscar-f-fim" onchange="renderizarSemComArquivados('psicossocial')">
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Mostrar</label>
+                <select id="pscar-f-trat" onchange="renderizarSemComArquivados('psicossocial')">
+                  <option value="">Todos</option>
+                  <option value="com">Só com tratativa</option>
+                  <option value="reinc">Ficou sem comunicar mais de 1 vez</option>
+                </select>
+              </div>
+              <div class="form-field" style="margin:0;display:flex;align-items:flex-end">
+                <button class="btn-secondary" style="width:100%" onclick="limparFiltrosSemComArquivados('psicossocial')">✕ Limpar</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="est-section-title" id="pscar-count-label">Arquivados</div>
+          <div class="table-scroll">
+            <table class="data-table" style="font-size:.83rem">
+              <thead><tr>
+                <th>Nº</th>
+                <th>Nome</th>
+                <th>Registro</th>
+                <th>Sem comunicar desde</th>
+                <th>Dias sem com.</th>
+                <th title="Importação do AKILES em que a pessoa deixou de aparecer sem comunicação">Arquivado em</th>
+                <th title="Quantas vezes ficou sem comunicar">Vezes</th>
+                <th>Tratativas</th>
+                <th>Ações</th>
+              </tr></thead>
+              <tbody id="tbody-pscom-arq"></tbody>
+            </table>
+          </div>
+        </div><!-- /psc-panel-arquivados -->
+
+      </div><!-- /psi-panel-semcom -->
     </div>
 
     <!-- ─── MANDADO DE PRISÃO (cruzamento BNMP) ─── -->
@@ -5690,7 +5664,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-ocorrencia')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarOcorrencia()">💾 Salvar Ocorrência</button>
+      <button class="btn-primary" onclick="salvarOcorrencia()">Salvar Ocorrência</button>
     </div>
   </div>
 </div>
@@ -5940,7 +5914,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-editar-usuario')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarEdicaoUsuario()">💾 Salvar</button>
+      <button class="btn-primary" onclick="salvarEdicaoUsuario()">Salvar</button>
     </div>
   </div>
 </div>
@@ -5994,7 +5968,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         <canvas id="ass-canvas" width="460" height="200"
           style="border:1px solid #ccc;border-radius:8px;background:#fff;cursor:crosshair;touch-action:none;width:100%;max-width:460px;display:block"></canvas>
         <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn-secondary" style="font-size:.82rem" onclick="ass_limpar()">🗑️ Limpar</button>
+          <button class="btn-secondary" style="font-size:.82rem" onclick="ass_limpar()">Limpar</button>
           <span style="font-size:.78rem;color:#aaa;align-self:center">Dica: use caneta óptica ou mouse para melhor resultado</span>
         </div>
       </div>
@@ -6024,8 +5998,8 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-assinatura')">Cancelar</button>
-      <button class="btn-danger" id="ass-btn-remover" style="display:none" onclick="ass_remover()">🗑️ Remover assinatura</button>
-      <button class="btn-primary" onclick="ass_salvar()">💾 Salvar assinatura</button>
+      <button class="btn-danger" id="ass-btn-remover" style="display:none" onclick="ass_remover()">Remover assinatura</button>
+      <button class="btn-primary" onclick="ass_salvar()">Salvar assinatura</button>
     </div>
   </div>
 </div>
@@ -6137,7 +6111,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-ofc')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarOFC()">💾 Salvar</button>
+      <button class="btn-primary" onclick="salvarOFC()">Salvar</button>
     </div>
   </div>
 </div>
@@ -6187,7 +6161,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 <div class="modal-overlay" id="modal-semcom-tratativa">
   <div class="modal-box" style="max-width:560px">
     <div class="modal-header">
-      <h3>📝 Registrar Tratativa</h3>
+      <h3>Registrar Tratativa</h3>
       <button class="modal-close" onclick="fecharModal('modal-semcom-tratativa')">✕</button>
     </div>
     <div class="modal-body">
@@ -6238,7 +6212,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-semcom-tratativa')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarTratativaSemCom()">💾 Salvar Tratativa</button>
+      <button class="btn-primary" onclick="salvarTratativaSemCom()">Salvar Tratativa</button>
     </div>
   </div>
 </div>
@@ -6247,7 +6221,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 <div class="modal-overlay" id="modal-semcom-desvinc">
   <div class="modal-box" style="max-width:560px">
     <div class="modal-header">
-      <h3>⚡ Registrar Desvinculação</h3>
+      <h3>Registrar Desvinculação</h3>
       <button class="modal-close" onclick="fecharModal('modal-semcom-desvinc')">✕</button>
     </div>
     <div class="modal-body">
@@ -6297,7 +6271,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-semcom-desvinc')">Cancelar</button>
-      <button class="btn-primary" style="background:#dc2626" onclick="salvarDesvinculacao()">⚡ Confirmar Desvinculação</button>
+      <button class="btn-primary" style="background:#dc2626" onclick="salvarDesvinculacao()">Confirmar Desvinculação</button>
     </div>
   </div>
 </div>
@@ -6417,7 +6391,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-juridico')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarJuridico()">💾 Salvar</button>
+      <button class="btn-primary" onclick="salvarJuridico()">Salvar</button>
     </div>
   </div>
 </div>
@@ -6430,7 +6404,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 <div class="modal-overlay" id="modal-triagem">
   <div class="modal-box" style="max-width:680px">
     <div class="modal-header">
-      <h3 id="tri-modal-title">➕ Novo Atendimento</h3>
+      <h3 id="tri-modal-title">Novo Atendimento</h3>
       <button class="modal-close" onclick="fecharModal('modal-triagem')">✕</button>
     </div>
     <div class="modal-body">
@@ -6518,7 +6492,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-triagem')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarAtendimentoTriagem()">💾 Salvar Atendimento</button>
+      <button class="btn-primary" onclick="salvarAtendimentoTriagem()">Salvar Atendimento</button>
     </div>
   </div>
 </div>
@@ -6527,7 +6501,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 <div class="modal-overlay" id="modal-psi">
   <div class="modal-box" style="max-width:820px">
     <div class="modal-header">
-      <h3 id="psi-modal-title">🧠 Novo Registro — Equipe Multidisciplinar</h3>
+      <h3 id="psi-modal-title">Novo Registro — Equipe Multidisciplinar</h3>
       <button class="modal-close" onclick="fecharModal('modal-psi')">✕</button>
     </div>
     <div class="modal-body">
@@ -6787,7 +6761,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-psi')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarAtendimentoPsi()">💾 Salvar Registro</button>
+      <button class="btn-primary" onclick="salvarAtendimentoPsi()">Salvar Registro</button>
     </div>
   </div>
 </div>
@@ -6796,7 +6770,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 <div class="modal-overlay" id="modal-comunicacao">
   <div class="modal-box" style="max-width:500px">
     <div class="modal-header">
-      <h3>📡 Atualizar PRODOC</h3>
+      <h3>Atualizar PRODOC</h3>
       <button class="modal-close" onclick="fecharModal('modal-comunicacao')">✕</button>
     </div>
     <div class="modal-body">
@@ -6830,7 +6804,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-comunicacao')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarComunicacao()">💾 Salvar</button>
+      <button class="btn-primary" onclick="salvarComunicacao()">Salvar</button>
     </div>
   </div>
 </div>
@@ -6839,7 +6813,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 <div class="modal-overlay" id="modal-relatorio">
   <div class="modal-box" style="max-width:620px">
     <div class="modal-header">
-      <h3 id="rel-modal-title">➕ Novo Relatório</h3>
+      <h3 id="rel-modal-title">Novo Relatório</h3>
       <button class="modal-close" onclick="fecharModal('modal-relatorio')">✕</button>
     </div>
     <div class="modal-body">
@@ -6899,7 +6873,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-relatorio')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarRelatorio()">💾 Salvar Relatório</button>
+      <button class="btn-primary" onclick="salvarRelatorio()">Salvar Relatório</button>
     </div>
   </div>
 </div>
@@ -6908,7 +6882,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 <div class="modal-overlay" id="modal-gerencia">
   <div class="modal-box" style="max-width:560px">
     <div class="modal-header">
-      <h3 id="ger-modal-title">➕ Nova Demanda</h3>
+      <h3 id="ger-modal-title">Nova Demanda</h3>
       <button class="modal-close" onclick="fecharModal('modal-gerencia')">✕</button>
     </div>
     <div class="modal-body">
@@ -6942,7 +6916,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-gerencia')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarDemandaGerencia()">💾 Salvar</button>
+      <button class="btn-primary" onclick="salvarDemandaGerencia()">Salvar</button>
     </div>
   </div>
 </div>
@@ -6955,14 +6929,14 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 <div class="modal-overlay" id="modal-est-config">
   <div class="modal-box" style="max-width:600px">
     <div class="modal-header">
-      <h3>⚙️ Configurar Quantidades Mínimas</h3>
+      <h3>Configurar Quantidades Mínimas</h3>
       <button class="modal-close" onclick="fecharModal('modal-est-config')">✕</button>
     </div>
     <div class="modal-body" id="est-config-body">
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-est-config')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarConfigEstoque()">💾 Salvar Configurações</button>
+      <button class="btn-primary" onclick="salvarConfigEstoque()">Salvar Configurações</button>
     </div>
   </div>
 </div>
@@ -7016,7 +6990,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-est-entrada')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarMovEstoque('entrada')">💾 Registrar Entrada</button>
+      <button class="btn-primary" onclick="salvarMovEstoque('entrada')">Registrar Entrada</button>
     </div>
   </div>
 </div>
@@ -7102,7 +7076,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-est-saida')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarMovEstoque('saida')">💾 Registrar Saída</button>
+      <button class="btn-primary" onclick="salvarMovEstoque('saida')">Registrar Saída</button>
     </div>
   </div>
 </div>
@@ -7155,7 +7129,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-est-devolucao')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarMovEstoque('devolucao')">💾 Registrar Devolução</button>
+      <button class="btn-primary" onclick="salvarMovEstoque('devolucao')">Registrar Devolução</button>
     </div>
   </div>
 </div>
@@ -7210,7 +7184,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 <div class="modal-overlay" id="modal-com-ocorrencia">
   <div class="modal-box" style="max-width:480px">
     <div class="modal-header">
-      <h3>📋 Marcar PRODOC como Enviado</h3>
+      <h3>Marcar PRODOC como Enviado</h3>
       <button class="modal-close" onclick="fecharModal('modal-com-ocorrencia')">✕</button>
     </div>
     <div class="modal-body">
@@ -7235,7 +7209,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-com-ocorrencia')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarComOcorrencia()">✅ Marcar como Enviado</button>
+      <button class="btn-primary" onclick="salvarComOcorrencia()">Marcar como Enviado</button>
     </div>
   </div>
 </div>
@@ -7314,11 +7288,6 @@ function calcPrazoPOP(tipo, medida) {
   return sla ? sla.label : "";
 }
 
-function contarTentativas(contatos) {
-  if (!contatos || !contatos.trim()) return 0;
-  return contatos.split(",").filter(s => s.trim()).length;
-}
-
 function calcScore(status, idx) {
   if (status === "\u{2705} COMUNICADO" || status === "-") return 999999999;
   if (status === "\u{1F534} VENCIDO") return 1000000 + idx;
@@ -7391,10 +7360,6 @@ let _dbModoRpc = null; // null = ainda não testado · true = com login (RPC) ·
 function _dbRpcAusente(err) {
   const c = String((err && err.code) || ''), m = String((err && err.message) || '');
   return c === 'PGRST202' || c === '42883' || /could not find the function|function .* does not exist/i.test(m);
-}
-function _dbSemPermissao(err) {
-  const c = String((err && err.code) || ''), m = String((err && err.message) || '');
-  return c === '28000' || /nao autorizado|não autorizado/i.test(m);
 }
 // (21/10/2026) O banco (plano gratuito) cancela a consulta que passa de 3 s ("statement timeout", 57014) quando
 // fica lento por um instante. Ler ou gravar o valor inteiro de uma chave pode ser repetido sem risco (a consulta
@@ -7570,25 +7535,6 @@ async function hashSenhaPBKDF2(senha, saltHex) {
   return { hash: _bytesToHex(bits), salt: _bytesToHex(salt) };
 }
 
-async function verificarSenhaUsuario(senhaDigitada, usuario) {
-  // Versão 3: PBKDF2 (novo padrão)
-  if (usuario.senhaVersao === 3 && usuario.senhaSalt) {
-    const { hash } = await hashSenhaPBKDF2(senhaDigitada, usuario.senhaSalt);
-    return hash === usuario.senha;
-  }
-  // Versão 2: SHA-256 com salt global (legado)
-  if (!usuario.senhaVersao || usuario.senhaVersao === 2) {
-    const data = new TextEncoder().encode(_SHA_SALT + senhaDigitada);
-    const buf  = await crypto.subtle.digest('SHA-256', data);
-    return _bytesToHex(buf) === usuario.senha;
-  }
-  // Versão 1 (btoa) bloqueada — hash reversível, não aceito por segurança.
-  if (usuario.senhaVersao === 1 || _ehBase64Legado(usuario.senha)) {
-    return false;
-  }
-  return false;
-}
-
 /* ══ SEGURANÇA: Sanitização XSS ═════════════════════════════════
    Use esc() em TODOS os dados de usuário inseridos via innerHTML.
    ════════════════════════════════════════════════════════════════ */
@@ -7734,15 +7680,6 @@ const VARAS_PROCESSUAIS = [
 ];
 
 /* Gera <optgroup> + <option> para qualquer <select> */
-function _varasSelectOptions(valorSelecionado = '') {
-  return VARAS_PROCESSUAIS.map(g =>
-    `<optgroup label="${g.comarca}">${
-      g.varas.map(v =>
-        `<option value="${v}"${v === valorSelecionado ? ' selected' : ''}>${v}</option>`
-      ).join('')
-    }</optgroup>`
-  ).join('');
-}
 const USUARIOS_PADRAO = [
   { usuario: "admin",        senha: "a6b893f39bec5621db142a2fe3d2aa18e6f28878c2caf81ce033c42e11e0ef95", nome: "Administrador",          nivel: "admin"        },
   { usuario: "gerente",      senha: "4f903ad9e20314258f9d7e393be4db414a4d9c4a4b5ed7ee981f91dc094161c1", nome: "Gerência CME",          nivel: "gerencia"     },
@@ -8322,7 +8259,7 @@ function mudarAba(aba) {
   if (aba === "estatisticas") { estat_inicializar(); }
   if (aba === "mandado") { mp_inicializar(); }
   if (aba === "secretaria" && typeof sec_inicializar === "function") { sec_inicializar(); }
-  if (aba === "semcom") { renderizarSemCom('juridico'); atualizarBadgeSemCom(); }
+  if (aba === "semcom") { sc_verArea(_scAreaAtual); }
   if (aba === "estplantao" && typeof ep_renderizar === "function") ep_renderizar();
   try { if (location.hash !== '#' + aba) history.replaceState(null, '', '#' + aba); } catch (e) {} // (20/10/2026)
 }
@@ -8709,9 +8646,6 @@ function _ocRef(ref) {
   if (typeof ref === 'string' && ref.startsWith('id:')) { const id = parseInt(ref.slice(3)); return getOcorrencias().findIndex(o => o.id === id); }
   return ref;
 }
-// menu "⋯" de uma linha de Críticos (as ações que antes eram 5 botões coloridos)
-// (26/10/2026) só oferece "Gerar comunicação/relatório" a quem pode gerar — antes plantão e jurídico clicavam e recebiam "sem permissão"
-function _critMenuLinha(idx) { return _ocMenuLinha(idx); } // (27/10/2026) um menu só para as duas filas
 
 function filtrarCriticos(v) { filtroCrit = v; renderizarCriticos(); }
 function filtrarCriticosTipo(v) { filtroCritTipo = v; renderizarCriticos(); }
@@ -10179,6 +10113,19 @@ function importarExcelSemCom(input, area) {
 }
 
 // ── Sub-abas internas do Sem Comunicação ──────────────────
+// (27/10/2026) Sem Comunicação num lugar só: a aba mostra tornozeleiras OU DPP das vítimas (os dois painéis moraram aqui)
+let _scAreaAtual = 'juridico';
+function sc_verArea(area) {
+  _scAreaAtual = area === 'psicossocial' ? 'psicossocial' : 'juridico';
+  document.getElementById('jur-panel-semcom')?.classList.toggle('active', _scAreaAtual === 'juridico');
+  document.getElementById('psi-panel-semcom')?.classList.toggle('active', _scAreaAtual === 'psicossocial');
+  const dados = getSemCom();
+  ['juridico', 'psicossocial'].forEach(a => {
+    const b = document.getElementById('sc-area-' + a); if (b) { b.classList.toggle('ativo', a === _scAreaAtual); b.setAttribute('aria-pressed', String(a === _scAreaAtual)); }
+    const n = document.getElementById('sc-area-n-' + a); if (n) n.textContent = _scListaArea(dados, a).filter(_scEmAberto).length;
+  });
+  renderizarSemCom(_scAreaAtual); atualizarBadgeSemCom();
+}
 function mudarSubAbaSemCom(aba, area) {
   area = area || 'juridico';
   const cfg = _SC_CFG[area];
@@ -10439,6 +10386,7 @@ function renderizarSemCom(area) {
   kpi('4h',     aberto.filter(m => _diasSemComAtual(m) === 0).length);
   kpi('1d',     aberto.filter(m => { const d = _diasSemComAtual(m); return d >= 1 && d < 7; }).length);
   kpi('7d',     aberto.filter(m => { const d = _diasSemComAtual(m); return d >= 7 && d < 30; }).length);
+  kpi('menos7', aberto.filter(m => _diasSemComAtual(m) < 7).length); // (27/10/2026) "1 a 6 dias" + "menos de 1 dia" viraram um indicador
   kpi('30d',    aberto.filter(m => { const d = _diasSemComAtual(m); return d >= 30 && d < 180; }).length);
   kpi('180d',   aberto.filter(m => _diasSemComAtual(m) >= 180).length);
   kpi('desvinc', all.filter(m => m.situacao === 'desvinculado').length);
@@ -10770,9 +10718,6 @@ function _abrirViewer(title, bodyHtml, onEditar, onPdf) {
   }
   document.getElementById('modal-viewer').classList.add('open');
 }
-
-// ── Críticos / Comunicação — reutiliza modal de ocorrência ─
-function verOcorrenciaIdx(idx) { visualizarOcorrencia(idx); }
 
 // ── Relatório ───────────────────────────────────────────────
 function verRelatorio(id) {
@@ -11457,10 +11402,6 @@ function editarOcorrencia(idx) {
   document.getElementById("modal-ocorrencia").classList.add("open");
 }
 
-function toggleProdocFields() {
-  // PRODOC agora é gerenciado pela aba Comunicação — função mantida por compatibilidade
-}
-
 function recalcularStatus() {
   const data = document.getElementById("oc-data").value;
   const medida = document.getElementById("oc-medida").value;
@@ -11736,14 +11677,6 @@ function renderizarUsers() {
         ${grupos[n].map(_renderUser).join('')}
       </div>`;
     }).join('');
-}
-
-function alterarNivel(idx, novoNivel) {
-  const us = getUsuarios();
-  us[idx].nivel = novoNivel;
-  salvarUsuarios(us);
-  addLog(`Nível de ${us[idx].nome} \u{2192} ${novoNivel} (${usuarioAtual.nome})`);
-  renderizarUsers();
 }
 
 function removerUsuario(loginId) {
@@ -12089,19 +12022,6 @@ function _limparFotoAssinatura(srcDataUrl) {
 }
 
 /* Botão "\u{1F4F8} Limpar foto": processa a imagem do preview e atualiza o preview. */
-function ass_limparFoto() {
-  const el = document.getElementById('ass-preview-img');
-  const src = el && el.src;
-  if (!src || src === window.location.href) { _mostrarToast('Selecione ou tire uma foto primeiro.', 'erro'); return; }
-  _mostrarToast('\u{1F9FD} Limpando a foto...', 'sucesso');
-  const tratar = typeof assFoto_tratar === 'function' ? assFoto_tratar(src) : _limparFotoAssinatura(src).then(limpa => ({ ok: true, dataUrl: limpa }));
-  tratar.then(function (r) {
-    if (!r.ok) { _mostrarToast(r.motivo || 'Não consegui tratar a foto.', 'erro'); return; }
-    el.src = r.dataUrl;
-    document.getElementById('ass-preview-wrap').style.display = 'block';
-    _mostrarToast('\u{2705} Foto limpa. Confira o preview e salve.', 'sucesso');
-  });
-}
 
 /* Autoatendimento: o próprio servidor cadastra/atualiza a sua assinatura. */
 let _assSelfMode = false;
@@ -12130,29 +12050,6 @@ function ass_abrirMinha() {
 let _assIdx = null;
 let _assDesenhando = false;
 let _assUltimoX = 0, _assUltimoY = 0;
-
-function abrirModalAssinatura(idx) {
-  _assSelfMode = false;
-  _assIdx = idx;
-  const us = getUsuarios();
-  const u  = us[idx];
-  document.getElementById('ass-servidor-nome').textContent = `Servidor: ${u.nome} (${u.usuario})`;
-  document.getElementById('ass-preview-nome').textContent  = u.nome;
-  document.getElementById('ass-preview-cargo').textContent = u.cargo || '';
-  document.getElementById('ass-btn-remover').style.display = u.assinatura ? 'inline-flex' : 'none';
-  document.getElementById('ass-msg').innerHTML = '';
-  ass_mudarAba('draw');
-  ass_limpar();
-  // Se já tem assinatura, mostrar preview
-  if (u.assinatura) {
-    document.getElementById('ass-preview-img').src = u.assinatura;
-    document.getElementById('ass-preview-wrap').style.display = 'block';
-  } else {
-    document.getElementById('ass-preview-wrap').style.display = 'none';
-  }
-  abrirModal('modal-assinatura');
-  setTimeout(() => ass_iniciarCanvas(), 100);
-}
 
 function ass_mudarAba(aba) {
   document.getElementById('ass-panel-draw').style.display   = aba === 'draw'   ? '' : 'none';
@@ -12604,47 +12501,6 @@ function restaurarDados() {
 }
 
 /* ─── EXPORTAR CSV ───────────────────────────────────── */
-function exportarCSV() {
-  const ocs = getOcorrencias();
-  const header = ["ID","Data Alerta","Monitorado","Medida","Tipo Violação","Prazo POP",
-    "Status","CIODES","PRODOC","Nº PRODOC","Data PRODOC","Plantão","Operador","Contatos","Obs"];
-  const rows = ocs.map(o => {
-    const s = calcStatus(o.dataAlerta, o.tipo, o.medida, o.prodoc, o.restabelecidaEm);
-    const pp = calcPrazoPOP(o.tipo, o.medida);
-    return [o.id, formatDate(o.dataAlerta), o.monitorado, o.medida, o.tipo,
-      pp, s, o.ciodes||"", o.prodoc||"", o.prodocNum||"", o.prodocData||"",
-      o.plantao||"", o.operador||"", (o.contatos||"").replace(/,/g,";"), (o.obs||"").replace(/,/g,";")
-    ].map(v => `"${v}"`).join(",");
-  });
-  const csv = [header.join(","), ...rows].join("\n");
-  const blob = new Blob(["\uFEFF"+csv], { type: "text/csv;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "cme_ocorrencias_" + _isoLocal() + ".csv";
-  a.click();
-}
-
-function exportarCSVJur() {
-  const ocs = getOcorrencias().filter(o => o.prodoc === "SIM");
-  const header = ["ID","Monitorado","Medida","Tipo","Data Violação","Data PRODOC",
-    "Nº PRODOC","Dias/Violação","Dias/PRODOC","Via 60d","Via 180d","Autorizado","Status Caso"];
-  const rows = ocs.map(o => {
-    const jur = o.juridico || {};
-    const dv = o.dataAlerta ? Math.floor((new Date()-new Date(o.dataAlerta))/86400000) : "";
-    const dp = o.prodocData ? Math.floor((new Date()-_dataLocal(o.prodocData))/86400000) : "";
-    return [o.id, o.monitorado, o.medida, o.tipo, formatDate(o.dataAlerta),
-      o.prodocData, o.prodocNum, dv, dp,
-      calcVia60(dp, jur.interrompido), calcVia180(dv, jur.interrompido),
-      calcAutorizado(dv, dp, jur.interrompido), calcStatusCaso(o)
-    ].map(v => `"${v}"`).join(",");
-  });
-  const csv = [header.join(","), ...rows].join("\n");
-  const blob = new Blob(["\uFEFF"+csv], { type: "text/csv;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "cme_juridico_" + _isoLocal() + ".csv";
-  a.click();
-}
 
 /* ─── UTILITÁRIOS ────────────────────────────────────── */
 function abrirModal(id) {
@@ -12653,12 +12509,6 @@ function abrirModal(id) {
 function fecharModal(id) {
   document.getElementById(id).classList.remove("open");
 }
-function getPct(dataAlerta, tipo, medida) {
-  if (!dataAlerta || !tipo || !medida) return 0;
-  const sla = getSLA(tipo, medida);
-  if (!sla) return 0;
-  return (new Date() - new Date(dataAlerta)) / 3600000 / sla.h;
-}
 function getRowClass(status, medida) {
   if (status === "\u{2705} COMUNICADO" || status === "\u{2705} RESTABELECIDA") return "row-comunicado";
   if (status === "\u{1F534} VENCIDO") return "row-vencido";
@@ -12666,18 +12516,6 @@ function getRowClass(status, medida) {
   if (status === "\u{1F7E1} ATENÇÃO") return "row-atencao";
   if (medida === "Protetiva") return "row-protetiva";
   return "";
-}
-function getBadge(status) {
-  const map = {
-    "\u{1F7E2} NO PRAZO":      "badge-ok",
-    "\u{1F7E1} ATENÇÃO":       "badge-atencao",
-    "\u{1F7E0} VENCENDO":      "badge-vencendo",
-    "\u{1F534} VENCIDO":       "badge-vencido",
-    "\u{2705} COMUNICADO":    "badge-comunicado",
-    "\u{2705} RESTABELECIDA": "badge-comunicado",
-    "-":                "badge-neutro",
-  };
-  return `<span class="badge ${map[status]||'badge-neutro'}">${status}</span>`;
 }
 function formatDate(d) {
   if (!d) return "—";
@@ -13914,17 +13752,6 @@ async function salvarComOcorrencia() {
 }
 
 /* ── Críticos \u{2192} Encaminhar para Comunicação ──────────────────── */
-function abrirModalEncaminharCom(idx) {
-  const ocs = getOcorrencias();
-  const o = ocs[idx];
-  if (!o) return;
-  document.getElementById('enc-com-idx').value = idx;
-  document.getElementById('enc-com-id-display').textContent = 'ID #' + o.id + ' — ' + (o.tipo || '');
-  document.getElementById('enc-com-monitorado-display').textContent = o.monitorado || '';
-  document.getElementById('enc-com-prodoc-num').value = o.prodocNum || '';
-  document.getElementById('enc-com-obs').value = '';
-  document.getElementById('modal-enc-com').classList.add('open');
-}
 
 function salvarEncaminharCom() {
   const idx = parseInt(document.getElementById('enc-com-idx').value);
@@ -14555,13 +14382,12 @@ function getPsi()          { return carregarStore('psicossocial', { atendimentos
 function salvarPsi(dados)  { salvarStore('psicossocial', dados); }
 
 function mudarSubAbaPsi(aba) {
-  ['ativos','arquivados','semcom','botao'].forEach(a => {
+  ['ativos','arquivados','botao'].forEach(a => {
     document.getElementById('psi-stab-'+a)?.classList.toggle('active', a===aba);
     document.getElementById('psi-panel-'+a)?.classList.toggle('active', a===aba);
   });
   if (aba==='arquivados') renderizarPsiArquivados();
   if (aba==='ativos')     renderizarPsi();
-  if (aba==='semcom')     { renderizarSemCom('psicossocial'); atualizarBadgeSemCom(); }
   if (aba==='botao')      renderizarAkOc('botoes');
 }
 
@@ -15976,22 +15802,6 @@ function consultarSerial(valor) {
   }
 
   resultado.innerHTML = html;
-}
-
-function renderizarHistoricoConsulta(id, movs, container) {
-  // Mantido para compatibilidade — agora consultarSerial já inclui o histórico inline
-  const hist = movs.filter(m => (m.seriais || []).includes(id));
-  if (!hist.length) return;
-  const badgeMov = { 'Entrada':'badge-ok', 'Saída':'badge-vencido', 'Devolução':'badge-atencao', 'Baixa':'badge-vencendo' };
-  container.innerHTML += `<div class="est-section-title" style="margin-top:0">Histórico</div>
-    <div class="table-wrapper"><table class="data-table">
-      <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Responsável</th><th>Motivo</th></tr></thead>
-      <tbody>${hist.map(m=>`<tr style="cursor:pointer" onclick="verDetalheMovEstoque('${m.id}')">
-        <td style="white-space:nowrap;font-size:.8rem">${new Date(m.ts).toLocaleString('pt-BR')}</td>
-        <td><span class="badge ${badgeMov[m.tipo]||''}">${esc(m.tipo)}</span></td>
-        <td>${esc(m.item||'')}</td><td>${esc(m.responsavel||'')}</td><td>${esc(m.motivo||'—')}</td>
-      </tr>`).join('')}</tbody>
-    </table></div>`;
 }
 
 function _escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -19049,22 +18859,6 @@ function r2_filtrarMonitorados(q) {
 
 function r2_mudarPagina(delta) {} // mantido para compatibilidade
 
-function r2_atualizarPaginacao() {
-  const pg   = document.getElementById('r2-paginacao');
-  const info = document.getElementById('r2-pg-info');
-  const prev = document.getElementById('r2-pg-prev');
-  const next = document.getElementById('r2-pg-next');
-  if (!pg) return;
-  if (r2_state.totalPaginas <= 1 && !r2_state.buscaMon) {
-    pg.style.display = 'none';
-    return;
-  }
-  pg.style.display = 'flex';
-  info.textContent = `${r2_state.pagina} / ${r2_state.totalPaginas}  (${r2_state.totalMon})`;
-  prev.disabled = r2_state.pagina <= 1;
-  next.disabled = r2_state.pagina >= r2_state.totalPaginas;
-}
-
 /* ══════════════════════════════════════════════════════════
    RENOMEAR ARQUIVO
    ══════════════════════════════════════════════════════════ */
@@ -19611,12 +19405,6 @@ async function r2_abrirPainelRisco() {
    ══════════════════════════════════════════════════════════ */
 
 let _r2ImportData = null; // guarda os dados analisados entre etapas
-
-// Classifica a pasta com base no NOME DO ARQUIVO (remove acentos para comparar)
-function r2_mapearPastaPorNome(nomeArquivo) {
-  const { pasta } = r2_mapearCategoria(nomeArquivo);
-  return pasta;
-}
 
 // Retorna { pasta, catId } para uso no importador ZIP
 function r2_mapearCategoria(nomeArquivo) {
@@ -20754,7 +20542,7 @@ function r2_iconeArquivo(nome) {
 <div class="modal-overlay" id="modal-enc-com">
   <div class="modal" style="max-width:440px">
     <div class="modal-header">
-      <h3>📡 Encaminhar para Comunicação</h3>
+      <h3>Encaminhar para Comunicação</h3>
       <button class="modal-close" onclick="fecharModal('modal-enc-com')">✕</button>
     </div>
     <div class="modal-body">
@@ -20778,7 +20566,7 @@ function r2_iconeArquivo(nome) {
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-enc-com')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarEncaminharCom()">📡 Confirmar Encaminhamento</button>
+      <button class="btn-primary" onclick="salvarEncaminharCom()">Confirmar Encaminhamento</button>
     </div>
   </div>
 </div>
@@ -21277,73 +21065,6 @@ function _rvResetCancelBtn() {
   if (c) { c.disabled = false; c.innerHTML = '&times; Cancelar'; }
 }
 
-// Pede ao motor local para capturar os mapas dos IDs no AKILES e encaixa nos slots.
-async function rv_capturarViaMotor(ids) {
-  const btn = document.getElementById('rv-bulk-btn');
-  const txtOrig = btn ? btn.textContent : '';
-  const barra = document.getElementById('rv-progresso');
-  const _setBarra = (feitos, total) => {
-    const pct = total ? Math.round(feitos / total * 100) : 0;
-    const b = document.getElementById('rv-progresso-bar');
-    const t = document.getElementById('rv-progresso-txt');
-    const pc = document.getElementById('rv-progresso-pct');
-    if (b) b.style.width = pct + '%';
-    if (t) t.textContent = `Capturando ${feitos}/${total}…`;
-    if (pc) pc.textContent = pct + '%';
-  };
-  if (btn) { btn.disabled = true; btn.textContent = '\u{1F916} Capturando…'; }
-  if (barra) { barra.style.display = 'block'; _setBarra(0, ids.length); }
-  _rvResetCancelBtn();
-  _mostrarToast(`\u{1F916} Capturando ${ids.length} mapa(s) no AKILES… pode levar alguns minutos.`);
-
-  // Acompanha o progresso pelo /health do robô e atualiza a barra de %. Como o
-  // robô agora roda invisível (sem janela), é aqui que você acompanha. Se o
-  // usuário cancelar, aborta a requisição /capturar em andamento.
-  let _capturando = true;
-  const _ac = new AbortController();
-  (async () => {
-    while (_capturando) {
-      if (_rvCancelarFlag) { try { _ac.abort(); } catch (e) {} _capturando = false; break; }
-      try {
-        const h = await (await fetch(_RV_MOTOR + '/health')).json();
-        const p = h && h.progresso;
-        if (p && p.total && _capturando) _setBarra(p.feitos, p.total);
-      } catch {}
-      await new Promise(res => setTimeout(res, 1000));
-    }
-  })();
-
-  try {
-    const r = await fetch(_RV_MOTOR + '/capturar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids }),
-      signal: _ac.signal,
-    });
-    const data = await r.json();
-    if (!r.ok) { _mostrarToast(data.erro || 'Erro no motor do robô.', 'erro'); return; }
-
-    const resultados = data.resultados || {};
-    let casados = 0;
-    Object.keys(resultados).forEach(id => { _rvSetImg(id, resultados[id]); casados++; });
-
-    const falhas = data.falhas || [];
-    let msg = casados
-      ? `\u{2705} Captura concluída! ${casados} print(s) tirado(s)`
-      : 'Captura finalizada sem sucesso.';
-    if (falhas.length) msg += ` \u{2022} ${falhas.length} falha(s): ${falhas.slice(0,6).join(', ')}${falhas.length>6?'…':''}`;
-    _mostrarToast(msg, casados ? 'sucesso' : 'erro');
-    if (casados) _rvBeep();
-  } catch (e) {
-    if (_rvCancelarFlag || e.name === 'AbortError') _mostrarToast('\u{23F9}\u{FE0F} Captura cancelada.', 'erro');
-    else _mostrarToast('Não consegui falar com o robô. Ele ainda está ligado? (' + e.message + ')', 'erro');
-  } finally {
-    _capturando = false;
-    if (barra) barra.style.display = 'none';
-    if (btn) { btn.disabled = false; btn.textContent = txtOrig; }
-  }
-}
-
 // Captura pela NUVEM: cria um job no Worker; o robô (ligado) atende a fila,
 // captura no AKILES e devolve as imagens. Funciona no github.io, sem localhost.
 async function rv_capturarViaCloud(ids) {
@@ -21716,17 +21437,6 @@ function _rvOcorreuNorm(txt, dateObj, colUS){
   }
   return s;
 }
-function _rvOcorreuComHora(rawVal, fmtVal){
-  if(rawVal instanceof Date && !isNaN(rawVal)){
-    const p=n=>String(n).padStart(2,'0');
-    return `${p(rawVal.getDate())}/${p(rawVal.getMonth()+1)}/${rawVal.getFullYear()} ${p(rawVal.getHours())}:${p(rawVal.getMinutes())}`;
-  }
-  // Texto: normaliza para BR (corrigindo US quando inequívoco) em vez de ecoar cru.
-  const s=String(fmtVal||'').trim(), m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ T](\d{1,2}):(\d{2}))?/);
-  if(m){ let[D,Mo]=_rvDiaMes(+m[1],+m[2]); let Y=+m[3]; if(Y<100)Y+=2000; const p=n=>String(n).padStart(2,'0');
-    return m[4]!=null ? `${p(D)}/${p(Mo)}/${Y} ${p(+m[4])}:${m[5]}` : `${p(D)}/${p(Mo)}/${Y}`; }
-  return s;
-}
 function _rvFmtOcorreu(v){
   if(v==null||v===''||String(v).trim().toLowerCase()==='nan')return '';
   const dias=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
@@ -21742,16 +21452,6 @@ function _rvFmtOcorreu(v){
   return `${p(D)}/${p(Mo)}/${Y} (${dias[dt.getDay()]}) ${p(H)}:${p(Mi)}`;
 }
 
-function _rvParseDate(v){
-  if(v==null||v===''||String(v).trim().toLowerCase()==='nan')return null;
-  if(v instanceof Date)return isNaN(v)?null:v;
-  const s=String(v).trim(); let m,Y,Mo,D,H=0,Mi=0;
-  if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/))){Y=+m[1];Mo=+m[2];D=+m[3];H=+(m[4]||0);Mi=+(m[5]||0);}
-  else if((m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ T](\d{1,2}):(\d{2}))?/))){[D,Mo]=_rvDiaMes(+m[1],+m[2]);Y=+m[3];if(Y<100)Y+=2000;H=+(m[4]||0);Mi=+(m[5]||0);}
-  else return null;
-  const dt=new Date(Y,Mo-1,D,H,Mi); return isNaN(dt)?null:dt;
-}
-function _rvDataBR(dt){ return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`; }
 // Co-assinatura automática do gerente (réplica do interface.py)
 function _rvGetGerente(us){ return (us||[]).find(u => /gerente/i.test(u.cargo||'') && !/subgerente/i.test(u.cargo||'')) || null; }
 function _rvCoassinar(infoAss, us){
@@ -21964,231 +21664,6 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
   return await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',compression:'DEFLATE'});
 }
 
-// ── Gerador Word (.doc) — estrutura idêntica ao Python gerar_relatorios.py ──
-function rv_montarWordDoc(grupo, infoAss, infoGer) {
-  const r0      = grupo[0] || {};
-  const hoje    = new Date();
-  const dataExt = `Macapá, ${String(hoje.getDate()).padStart(2,'0')} de ${_RV_MESES[hoje.getMonth()]} de ${hoje.getFullYear()}.`;
-
-  // esc: escapa HTML + codifica não-ASCII como entidades \u{2192} resolve encoding no Word
-  function esc(s) {
-    return String(s||'')
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-      .replace(/[^\x00-\x7F]/g, c => `&#${c.charCodeAt(0)};`);
-  }
-  function fmtCpf(c) {
-    const d = String(c||'').replace(/\D/g,'').padStart(11,'0');
-    return d.length === 11 ? `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}` : String(c||'');
-  }
-
-  // ── helpers ──
-  function parseDurMin(s) {
-    s = String(s||'').trim();
-    if (!s || s==='nan') return 0;
-    const d = (s.match(/(\d+)\s*d/)||[0,0])[1]*1440;
-    const h = (s.match(/(\d+)\s*h/)||[0,0])[1]*60;
-    const m = (s.match(/(\d+)\s*min/)||[0,0])[1];
-    return d+h+m;
-  }
-  function fmtData(v) {
-    if (!v || v==='nan') return '';
-    const dias = ['Segunda-feira','Ter&#231;a-feira','Quarta-feira','Quinta-feira','Sexta-feira','S&#225;bado','Domingo'];
-    let s = String(v).trim();
-    // dd/mm/yyyy \u{2192} yyyy-mm-dd
-    s = s.replace(/^(\d{2})\/(\d{2})\/(\d{4})(.*)$/, '$3-$2-$1$4');
-    // espaço \u{2192} T para parse ISO correto
-    s = s.replace(/^(\d{4}-\d{2}-\d{2}) /, '$1T');
-    const dt = new Date(s);
-    if (isNaN(dt)) return v;
-    const dd = String(dt.getDate()).padStart(2,'0');
-    const mm = String(dt.getMonth()+1).padStart(2,'0');
-    const hh = String(dt.getHours()).padStart(2,'0');
-    const mi = String(dt.getMinutes()).padStart(2,'0');
-    const dow = dt.getDay(); // 0=Dom
-    return `${dd}/${mm}/${dt.getFullYear()} (${dias[dow===0?6:dow-1]}) ${hh}:${mi}`;
-  }
-
-  // ── dados do monitorado ──
-  const nome    = esc(r0.nome    || 'NÃO INFORMADO');
-  const proc    = esc(r0.processo|| 'NÃO INFORMADO');
-  const cpf     = esc(fmtCpf(r0.cpf) || 'NÃO INFORMADO');
-  const vara    = esc(r0.competencia || 'NÃO INFORMADO');
-  const comarca = esc(r0.comarca || 'NÃO INFORMADO');
-
-  // ── resumo por tipo (capa) ──
-  const contagem = {};
-  grupo.forEach(x => { contagem[x.tipo] = (contagem[x.tipo]||0)+1; });
-  const totalViol = Object.values(contagem).reduce((a,b)=>a+b,0);
-  const resumoRows = Object.entries(contagem).map(([t,q])=>`
-    <tr><td style="border:1px solid #999;padding:4pt 8pt">${esc(t)}</td>
-        <td style="border:1px solid #999;padding:4pt 8pt;text-align:center">${q}</td></tr>`).join('');
-
-  // ── tabela de violações (relatório) ──
-  const violRows = grupo.map(x=>`
-    <tr>
-      <td style="border:1px solid #999;padding:4pt 6pt;font-size:10pt">${esc(x.tipo)}</td>
-      <td style="border:1px solid #999;padding:4pt 6pt;font-size:10pt">${esc(x.idOc)}</td>
-      <td style="border:1px solid #999;padding:4pt 6pt;font-size:10pt">${esc(fmtData(x.ocorreu))}</td>
-      <td style="border:1px solid #999;padding:4pt 6pt;font-size:10pt">${esc(x.duracao)}</td>
-    </tr>
-    <tr><td colspan="4" style="border:1px solid #999;padding:2pt 6pt;font-size:9pt">&nbsp;</td></tr>`).join('');
-
-  // ── análise de bateria ──
-  const TIPO_BAT = 'Dispositivo desligado por falta de carga na bateria';
-  const bats = grupo.filter(x => x.tipo === TIPO_BAT);
-  let maxMin = -1, maxBat = null;
-  bats.forEach(x => { const m = parseDurMin(x.duracao); if(m>maxMin){maxMin=m;maxBat=x;} });
-
-  let batPar = '';
-  if (maxBat) {
-    const dur = esc(maxBat.duracao); const id = esc(maxBat.idOc);
-    const dt  = fmtData(maxBat.ocorreu);
-    const m   = dt.match(/(\d{2}\/\d{2}\/\d{4}).*?(\d{2}:\d{2})/);
-    const dataHora = m ? `${m[1]} às ${m[2]}` : dt;
-    batPar = maxMin > 1440
-      ? `<p style="text-align:justify;text-indent:1.25cm;font-size:11pt;margin:6pt 0">Entre as ocorrências de descarregamento do dispositivo, o maior período registrado foi de <b>${dur}</b>, referente à ocorrência ID ${id}, iniciada em ${esc(dataHora)}. Durante o período em que o equipamento permaneceu sem carga, a Central de Monitoramento Eletrônico ficou impossibilitada ou substancialmente limitada de fiscalizar de forma efetiva a localização do monitorado em tempo real, comprometendo a rastreabilidade dos deslocamentos e a verificação adequada do cumprimento das condições judiciais estabelecidas.</p>`
-      : `<p style="text-align:justify;text-indent:1.25cm;font-size:11pt;margin:6pt 0">Entre as ocorrências de descarregamento do dispositivo, o maior período registrado foi de <b>${dur}</b>, referente à ocorrência ID ${id}, iniciada em ${esc(dataHora)}. Tais eventos demandam atenção operacional, pois podem prejudicar temporariamente a continuidade do acompanhamento em tempo real.</p>`;
-  }
-
-  // ── assinaturas ──
-  function blocoAss(info) {
-    const img = info?.assinatura
-      ? `<p style="text-align:center;margin:0 0 6pt 0"><img src="${info.assinatura}" width="144" style="display:block;margin:0 auto"></p>` : '';
-    // padrão oficial CME/IAPEN: só o nome em negrito
-    const linhas = [info?.nome, info?.cargo, info?.decreto ? _fmtDecreto(info.decreto) : info?.cress, info?.nome ? 'Central de Monitoramento Eletrônico – CME/IAPEN' : ''].filter(Boolean).map((l, i) =>
-      `<p style="text-align:center;font-weight:${i === 0 ? 'bold' : 'normal'};margin:2pt 0">${esc(l)}</p>`).join('');
-    return `<div style="text-align:center;display:inline-block;vertical-align:top;margin:0 20pt">
-      ${img}${linhas}
-    </div>`;
-  }
-
-  const cmeSrc   = window._CME_LOGO_B64   ? `<img src="data:image/png;base64,${window._CME_LOGO_B64}"   height="60">` : '';
-  const iapenSrc = window._IAPEN_LOGO_B64 ? `<img src="data:image/png;base64,${window._IAPEN_LOGO_B64}" height="60">` : '';
-
-  return `<!DOCTYPE html>
-<html xmlns:o="urn:schemas-microsoft-com:office:office"
-      xmlns:w="urn:schemas-microsoft-com:office:word"
-      xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<xml><w:WordDocument>
-  <w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/>
-</w:WordDocument></xml>
-<style>
-@page Section1 {
-  size:210mm 297mm; margin:2cm;
-  mso-header-margin:1.2cm; mso-footer-margin:1.2cm;
-  mso-header:h1;
-}
-div.Section1{page:Section1}
-body{font-family:Arial;font-size:11pt;color:#000;margin:0}
-p{margin:0 0 6pt 0;line-height:1.4}
-table{border-collapse:collapse}
-.secao{font-weight:bold;text-decoration:underline;font-size:11pt;margin:10pt 0 4pt 0}
-.dado p{margin:2pt 0}
-.justify{text-align:justify;text-indent:1.25cm}
-.center{text-align:center}
-.quebra{mso-page-break-before:always;font-size:1pt;margin:0;padding:0}
-</style>
-</head><body>
-
-<!-- CABEÇALHO WORD -->
-<div style="mso-element:header" id="h1">
-  <table width="100%" style="border:none;border-collapse:collapse">
-    <tr>
-      <td width="14%" style="border:none;text-align:left;vertical-align:middle">${cmeSrc}</td>
-      <td width="72%" style="border:none;text-align:center;vertical-align:middle">
-        <p style="font-weight:bold;font-size:10pt;margin:1pt 0;line-height:1.35">
-          GOVERNO DO ESTADO DO AMAPÁ<br>
-          SECRETARIA DE ESTADO DE JUSTIÇA E SEGURANÇA PÚBLICA<br>
-          INSTITUTO DE ADMINISTRAÇÃO PENITENCIÁRIA DO AMAPÁ<br>
-          CENTRAL DE MONITORAMENTO ELETRÔNICO – CME
-        </p>
-      </td>
-      <td width="14%" style="border:none;text-align:right;vertical-align:middle">${iapenSrc}</td>
-    </tr>
-  </table>
-  <hr style="border:none;border-top:2pt solid #000;margin:3pt 0 0 0">
-</div>
-
-<div class="Section1">
-
-<!-- ════════════ CAPA ════════════ -->
-<p class="center" style="font-size:14pt;font-weight:bold;margin-top:30pt;margin-bottom:14pt">RELATÓRIO DE MONITORAÇÃO ELETRÔNICA</p>
-
-<p class="secao">DADOS PESSOAIS</p>
-<p><b>MONITORADO:</b> ${nome}</p>
-<p><b>CPF:</b> ${cpf}</p>
-<p><b>ENDEREÇO:</b> ${esc(_rvCapa(r0).endereco)||'___'}</p>
-<p><b>CONTATO:</b> ${esc(_rvCapa(r0).contato)||'___'}</p>
-
-<p class="secao">DADOS PROCESSUAIS</p>
-<p><b>PROCESSO Nº:</b> ${proc}</p>
-<p><b>VARA:</b> ${vara}</p>
-<p><b>COMARCA:</b> ${comarca}</p>
-
-<p class="secao">DADOS DA MONITORAÇÃO</p>
-<p><b>DATA DE INÍCIO:</b> ${esc(_rvCapa(r0).inicio)||'___'} &nbsp;&nbsp;&nbsp;&nbsp; <b>DATA DE TÉRMINO:</b> ${esc(_rvCapa(r0).termino)||'___'}</p>
-
-<p style="text-align:justify;margin-top:10pt">Este relatório contém registros de ocorrências relacionadas a possíveis descumprimentos dos deveres e obrigações do monitorado, gerados pelo sistema de monitoração eletrônica no período de ${esc(_rvCapa(r0).periodo)||'___ a ___'}.</p>
-
-<p style="font-weight:bold;margin-top:12pt;margin-bottom:4pt">RESUMO QUANTITATIVO DE VIOLAÇÕES:</p>
-<table style="border-collapse:collapse;width:55%">
-  <tr>
-    <th style="border:1px solid #999;padding:4pt 8pt;font-weight:bold;text-align:left">Tipo de Violação</th>
-    <th style="border:1px solid #999;padding:4pt 8pt;font-weight:bold;text-align:center">Qtd.</th>
-  </tr>
-  ${resumoRows}
-  <tr>
-    <td style="border:1px solid #999;padding:4pt 8pt;font-weight:bold">TOTAL</td>
-    <td style="border:1px solid #999;padding:4pt 8pt;font-weight:bold;text-align:center">${totalViol}</td>
-  </tr>
-</table>
-
-<!-- ════════════ QUEBRA DE PÁGINA ════════════ -->
-<br style="mso-page-break-before:always;clear:all">
-
-<!-- ════════════ RELATÓRIO ════════════ -->
-<p class="center" style="font-size:14pt;font-weight:bold;margin-bottom:12pt;mso-page-break-before:always;page-break-before:always">RELATÓRIO DE VIOLAÇÕES DE MONITORAMENTO ELETRÔNICO</p>
-
-<p style="margin:2pt 0"><b>Nome do Monitorado:</b> ${nome}</p>
-<p style="margin:2pt 0"><b>CPF:</b> ${cpf}</p>
-<p style="margin:2pt 0"><b>Número do Processo:</b> ${proc}</p>
-<p style="margin:2pt 0"><b>Competência:</b> ${vara}</p>
-<p style="margin:2pt 0"><b>Comarca:</b> ${comarca}</p>
-
-<table style="border-collapse:collapse;width:100%;margin-top:10pt">
-  <tr>
-    <th style="border:1px solid #999;padding:5pt 7pt;font-weight:bold;text-align:left;font-size:10pt">Tipo de Ocorrência</th>
-    <th style="border:1px solid #999;padding:5pt 7pt;font-weight:bold;text-align:left;font-size:10pt">ID da Ocorrência</th>
-    <th style="border:1px solid #999;padding:5pt 7pt;font-weight:bold;text-align:left;font-size:10pt">Ocorreu</th>
-    <th style="border:1px solid #999;padding:5pt 7pt;font-weight:bold;text-align:left;font-size:10pt">Duração</th>
-  </tr>
-  ${violRows}
-</table>
-
-<p class="justify" style="margin-top:14pt">As informações contidas neste relatório foram extraídas diretamente do Sistema AKILES AP, plataforma oficial de monitoramento eletrônico adotada pela Central de Monitoramento Eletrônico (CME/IAPEN-AP). Os dados são reproduzidos na íntegra, sem qualquer modificação, supressão ou acréscimo de conteúdo, refletindo fielmente os registros gerados e armazenados automaticamente pelo sistema. Este documento possui validade para fins administrativos e judiciais, nos termos da legislação vigente.</p>
-
-<p class="center" style="font-weight:bold;margin-top:16pt;margin-bottom:6pt">SÍNTESE TÉCNICA DAS OCORRÊNCIAS</p>
-
-<p class="justify">Da análise dos registros extraídos do Sistema AKILES AP, verifica-se que o presente relatório apresenta ocorrências relacionadas a possíveis descumprimentos dos deveres e obrigações do monitorado, conforme registros constantes nas tabelas acima.</p>
-
-${batPar}
-
-<p class="justify">Ressalta-se que o presente relatório possui finalidade técnica e informativa, limitando-se a apresentar os registros constantes no sistema oficial de monitoração eletrônica utilizado pela Central de Monitoramento Eletrônico — CME/IAPEN/AP, bem como a contextualizar tecnicamente as ocorrências identificadas. A análise jurídica quanto às consequências processuais, executórias ou administrativas decorrentes dos fatos comunicados compete ao Juízo competente.</p>
-
-<p class="justify">Dessa forma, encaminham-se as informações para conhecimento e deliberação da autoridade judicial, permanecendo esta Central à disposição para eventuais esclarecimentos complementares.</p>
-
-<p style="text-align:right;margin-top:24pt">${dataExt}</p>
-
-<p style="text-align:center;margin-top:28pt">
-  ${blocoAss(infoAss)}
-  ${infoGer ? blocoAss(infoGer) : ''}
-</p>
-
-</div>
-
-</body></html>`;
-}
 
 // ── Montar HTML completo (todos os monitorados, quebra de página entre eles) ──
 function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
@@ -23382,7 +22857,6 @@ function _comEnxugarAssinaturas(o) {
     });
   } catch (e) { console.warn('[CME] enxugar assinaturas falhou:', e); }
 }
-function com_salvarOficios(o) { _comEnxugarAssinaturas(o); salvarStore('oficios', o); }
 
 function com_anoForm() {
   const d = document.getElementById('com-of-data')?.value || '';
@@ -24771,11 +24245,6 @@ function _comRemoverAnexo(id) {
   com_renderizarAnexos();
 }
 
-function com_limparAnexos() {
-  _comAnexos = [];
-  com_renderizarAnexos();
-}
-
 /* ══════════════════════════════════════════════════════════════
    _bmon — Busca genérica de documentos (Plantão / Multi / Jurídico)
    Prefixos: 'pla' | 'mul' | 'jur'
@@ -26093,35 +25562,6 @@ async function com_usarLeituraAlternativa() {
 /* ── Roteador: abre seletor de páginas se houver PDFs, senão gera direto ── */
 /* Converte um arquivo de imagem em bytes JPEG (normalizado, máx. 1600px),
    para ser embutido como página no PDF final via pdf-lib (embedJpg). */
-function _comImagemParaJpegBytes(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        try {
-          const maxLado = 1600;
-          let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
-          const escala = Math.min(1, maxLado / Math.max(w, h));
-          w = Math.max(1, Math.round(w * escala)); h = Math.max(1, Math.round(h * escala));
-          const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
-          const ctx = cv.getContext('2d');
-          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
-          ctx.drawImage(img, 0, 0, w, h);
-          const dataUrl = cv.toDataURL('image/jpeg', 0.85);
-          const bin = atob(dataUrl.split(',')[1]);
-          const bytes = new Uint8Array(bin.length);
-          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-          resolve(bytes);
-        } catch (err) { reject(err); }
-      };
-      img.onerror = () => reject(new Error('imagem não decodificável'));
-      img.src = e.target.result;
-    };
-    r.onerror = () => reject(new Error('falha ao ler arquivo'));
-    r.readAsDataURL(file);
-  });
-}
 
 /* Normaliza um arquivo de imagem (redesenha em canvas \u{2192} JPEG baseline) e
    retorna { dataUrl, w, h }. JPEG de canvas é sempre aceito pelo jsPDF.addImage. */
@@ -29174,25 +28614,22 @@ async function r2_carregarEstat(tipo) {
   } catch(e) { return null; }
 }
 
-async function r2_listarSnapshots(tipo) {
-  const base = _r2Base(); const tok = _r2Token();
-  if (!base || !tok) return [];
-  try {
-    const r = await fetch(`${base}/estat-snapshots?tipo=${tipo}`, {
-      headers: { 'Authorization': `Bearer ${tok}` },
-    });
-    const j = await r.json();
-    return j.snapshots || [];
-  } catch(e) { return []; }
-}
-
 // Chamado quando o usuário abre a aba de Estatísticas pela primeira vez
 async function estat_inicializar() {
   // Tenta carregar dados salvos do R2
-  const [mon, psi] = await Promise.all([
+  let [mon, psi] = await Promise.all([
     r2_carregarEstat('monitorados'),
     r2_carregarEstat('psicossocial'),
   ]);
+  // (27/10/2026) o robô das 10h deixa no pacote do AKILES o cadastro compacto dos ATIVOS (15 colunas):
+  // a aba abre sem importar nada. Uma importação manual mais nova que o robô continua valendo até o próximo dia.
+  try {
+    const cad = (typeof _akilesPacote === 'function' ? _akilesPacote() : null)?.cadastro;
+    if (cad && Array.isArray(cad.linhas) && cad.linhas.length && Array.isArray(cad.colunas)
+        && (!mon || !mon.savedAt || String(cad.em) > String(mon.savedAt))) {
+      mon = { dados: cad.linhas.map(l => { const o = {}; cad.colunas.forEach((c, k) => { o[c] = l[k] || ''; }); return o; }), savedAt: cad.em, nome: 'robô', automatico: true };
+    }
+  } catch (e) { console.warn('estat: cadastro do robô', e); }
 
   if (mon) {
     _estatDados = mon.dados;
@@ -29200,7 +28637,7 @@ async function estat_inicializar() {
     document.getElementById('estat-content').style.display = 'block';
     document.getElementById('estat-btn-export').style.display = '';
     document.getElementById('estat-subtitle').textContent =
-      `${_estatDados.length} monitorados — salvo em ${mon.savedAt ? new Date(mon.savedAt).toLocaleDateString('pt-BR') : '?'}`;
+      `${_estatDados.length} monitorados${mon.automatico ? ' ativos — cadastro do AKILES de ' : ' — salvo em '}${mon.savedAt ? new Date(mon.savedAt).toLocaleDateString('pt-BR') : '?'}${mon.automatico ? ' (automático, pelo robô das 10h)' : ''}`;
     estat_renderizarCards();
     estat_renderizarFiltros();
     estat_aplicarFiltros();
