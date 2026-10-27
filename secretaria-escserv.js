@@ -115,7 +115,10 @@ function _secCartaoServico() {
   const porNome = (a, b) => linhas[a].nome.localeCompare(linhas[b].nome);
 
   // ── Plantão 24x96: um cartão por guarnição, nomes agrupados por posto ──
-  const trocaPosto = sid => { const p = linhas[sid].posto; return '<button type="button" class="escx-ic" onclick="event.stopPropagation();sec_servPosto(\'' + mes + '\',\'' + sid + '\')" title="Posto ' + (p || '—') + ' — clique para passar para o posto ' + (p === '1' ? '2' : '1') + '">\u{21C4}</button>'; };
+  // sem posto (ex.: quem entrou na escala pela linha "FÉRIAS" do papel, 27/10/2026): dois botões diretos em vez do ⇄
+  const trocaPosto = sid => { const p = linhas[sid].posto;
+    if (p !== '1' && p !== '2') return '<span class="escx-etqs" style="margin-left:auto">' + ['1', '2'].map(n => '<button type="button" class="escx-btn" style="padding:1px 8px;font-size:12px" onclick="event.stopPropagation();sec_servDefinirPosto(\'' + mes + '\',\'' + sid + '\',\'' + n + '\')" title="Colocar no Posto ' + n + ' neste mês">Posto ' + n + '</button>').join('') + '</span>';
+    return '<button type="button" class="escx-ic" onclick="event.stopPropagation();sec_servPosto(\'' + mes + '\',\'' + sid + '\')" title="Posto ' + p + ' — clique para passar para o posto ' + (p === '1' ? '2' : '1') + '">\u{21C4}</button>'; };
   const pessoa = (sid, i, apagado) => '<div class="escx-p' + (i % 2 ? ' z' : '') + (apagado ? ' apagado' : '') + '"' + arrasta(sid) + '>'
     + '<span class="escx-nome">' + esc(_secServNomeTela(linhas[sid])) + det(_secServAfastNoMes(sid, mes, d)) + '</span>' + trocaPosto(sid) + '</div>';
   const guarnicao = g => {
@@ -312,6 +315,11 @@ function sec_servPosto(mes, sid) {
   const novo = l.posto === '1' ? '2' : '1';
   // mês atual/futuro grava no cadastro o posto do mês-base (o rodízio mensal faz o resto); mês passado grava o do próprio mês
   return _secServAplicar(mes, sid, { posto: mes < _secServAtual() ? novo : _secPostoNoMes(novo, mes) }, { action: 'sec_serv_posto', detalhe: 'Posto ' + (l.posto || '—') + ' → ' + novo });
+}
+// botões "Posto 1 / Posto 2" de quem está sem posto: grava o posto DESTE mês (o rodízio mensal faz o resto)
+function sec_servDefinirPosto(mes, sid, n) {
+  const l = _secServLinhas(mes, _secDados())[sid]; if (!l || (n !== '1' && n !== '2')) return;
+  return _secServAplicar(mes, sid, { posto: mes < _secServAtual() ? n : _secPostoNoMes(n, mes) }, { action: 'sec_serv_posto', detalhe: 'Posto ' + (l.posto || '—') + ' → ' + n + ' (' + _secEscMesTxt(mes) + ')' });
 }
 function sec_servTurno(mes, sid) {
   const l = _secServLinhas(mes, _secDados())[sid]; if (!l) return;
