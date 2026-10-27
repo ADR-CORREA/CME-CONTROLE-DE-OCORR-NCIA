@@ -29,6 +29,8 @@ function _secEscSabados(mes) {
 }
 function _secEscDatas(mes, d) { return [...new Set(_secEscSabados(mes).concat(d.escalaSabado.filter(x => x.data.slice(0, 7) === mes).map(x => x.data)).concat(_secEscExtra && _secEscExtra.slice(0, 7) === mes ? [_secEscExtra] : []))].sort(); }
 function _secEscNome(x, d) { return x.servidorId ? _secNomeServ(x.servidorId, d) : (x.nome || '—'); }
+// nome de guerra do cadastro (27/10/2026: "JOSE LIMA" tinha que sair "JOSE AUGUSTO"); vazio = regra do nome curto
+function _secEscGuerra(sid, d) { const s = sid ? _secServ(sid, d) : null; return s && s.nomeGuerra ? String(s.nomeGuerra).trim() : ''; }
 function _secEscCurto(nome) { const p = String(nome).split(' ').filter(Boolean); return p.length > 2 ? p[0] + ' ' + p[p.length - 1] : nome; }
 function _secEscMesTxt(mes) { return new Date(mes + '-15T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); }
 function _secEscMesTit(mes) { const t = _secEscMesTxt(mes); return t.charAt(0).toUpperCase() + t.slice(1); } // "Outubro de 2026" (o capitalize do CSS dava "Outubro De 2026")
@@ -227,7 +229,7 @@ function _secCartaoEscala() {
     const linha = (x, i) => {
       const pres = x.status === 'presente', falta = x.status === 'falta';
       return '<div class="escx-ap-p' + (i % 2 && !on ? ' z' : '') + (s.passou ? ' passou' : '') + '" draggable="true" ondragstart="sec_escArrastar(event,\'item\',\'' + x.id + '\')">'
-        + '<span class="escx-nome"' + (s.passou ? ' onclick="sec_escPresenca(\'' + x.id + '\')" title="Clique: compareceu / faltou" style="cursor:pointer"' : '') + '>' + esc(_secEscCurto(_secEscNome(x, d))) + '</span>'
+        + '<span class="escx-nome"' + (s.passou ? ' onclick="sec_escPresenca(\'' + x.id + '\')" title="Clique: compareceu / faltou" style="cursor:pointer"' : '') + '>' + esc(_secEscGuerra(x.servidorId, d) || _secEscCurto(_secEscNome(x, d))) + '</span>'
         + (pres ? '<span class="escx-ap-ok" title="compareceu">\u{2713}</span>' : falta ? '<span class="escx-ap-falta" title="faltou">\u{2717}</span>' : '')
         + '<button type="button" class="escx-ic" onclick="sec_escLocal(\'' + x.id + '\')" title="Passar para ' + outro + '">\u{21C4}</button>'
         + '<button type="button" class="escx-ic" onclick="sec_escRemover(\'' + x.id + '\')" title="Tirar da escala">\u{2715}</button></div>';
@@ -259,7 +261,7 @@ function _secCartaoEscala() {
   const pend = situacao.filter(x => !fora.includes(x) && x.falta.length);
   const prontos = situacao.filter(x => !fora.includes(x) && !x.falta.length);
   const pessoa = (x, extra, botoes) => '<div class="escx-row col" draggable="true" ondragstart="sec_escArrastar(event,\'serv\',\'' + x.s.id + '\')" title="' + esc(x.s.nome) + ' — arraste para um sábado">'
-    + '<span class="escx-nome">' + esc(_secEscCurto(x.s.nome)) + '</span><span class="escx-etqs">' + extra + '</span>' + (botoes || '') + '</div>';
+    + '<span class="escx-nome">' + esc(x.s.nomeGuerra || _secEscCurto(x.s.nome)) + '</span><span class="escx-etqs">' + extra + '</span>' + (botoes || '') + '</div>';
   const grade = itens => '<div class="escx-grid" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:0 10px">' + itens.join('') + '</div>';
   // 27/10/2026 ("mais fácil para quem usa"): além de arrastar, um clique no dia escala a pessoa no sábado que ainda vem
   const sabsFuturos = datas.filter(dt => dt >= hoje);
@@ -476,7 +478,7 @@ function sec_escImprimir(mes) {
     + '<tr><th colspan="' + (n + 1) + '" style="font-size:16pt;padding:6px">ESCALA DE APOIO DO ADMINISTRATIVO DA CME - ' + mesAno + '</th></tr>'
     + '<tr><th colspan="' + (n + 1) + '" style="' + cinza + ';font-size:10pt;padding:6px">ADMINISTRATIVO DA CENTRAL DE MONITORAÇÃO ELETRÔNICA DO IAPEN</th></tr>'
     + '<tr><th style="' + cinza + ';width:26%;padding:12px 8px;font-size:9.5pt">SERVIDORES:</th><th colspan="' + n + '" style="font-size:9pt">DIAS E HORÁRIOS: ' + esc(diasTxt) + '</th></tr>'
-    + (lin.length ? lin.map(x => '<tr><td style="' + cinza + ';font-size:9.5pt">' + esc(_secEscNomePapel(_secEscNome(x, d))) + ' – ' + esc(x.local) + '</td>'
+    + (lin.length ? lin.map(x => '<tr><td style="' + cinza + ';font-size:9.5pt">' + esc((_secEscGuerra(x.servidorId, d) || _secEscNomePapel(_secEscNome(x, d))).toUpperCase()) + ' – ' + esc(x.local) + '</td>'
         + datas.map(dt => '<td style="font-weight:bold;font-size:10pt;text-align:center;width:' + (74 / Math.max(n, 1)).toFixed(1) + '%">' + (x.data === dt ? _secBR(dt) : '') + '</td>').join('') + '</tr>').join('')
       : '<tr><td style="' + cinza + '">&nbsp;</td>' + datas.map(() => '<td></td>').join('') + '</tr>')
     + '<tr><td colspan="' + Math.max(1, Math.ceil((n + 1) / 2)) + '" style="' + cinza + ';font-size:8.5pt;text-align:justify;vertical-align:top;height:64px">' + (ferias.length ? '<b>OBS:</b>' + grupo(ferias) : '<b>OBS:</b>') + '</td>'

@@ -236,6 +236,7 @@ function sec_editarServidor(id) {
   _secModal(id ? 'Editar servidor' : 'Novo servidor',
     '<div class="form-section"><div class="form-section-title">Identificação</div><div class="form-grid">'
     + _secCampo('sec-s-nome', 'Nome completo *', s.nome) + _secCampo('sec-s-matricula', 'Matrícula *', s.matricula)
+    + _secCampo('sec-s-guerra', 'Nome de guerra (como sai nas escalas; vazio = 1º e último nome)', s.nomeGuerra, 'placeholder="Ex.: JOSE AUGUSTO"')
     + _secCampo('sec-s-cpf', 'CPF', _secCpfFmt(s.cpf), 'inputmode="numeric" maxlength="14" oninput="this.value=_secCpfMascara(this.value)"') + _secCampo('sec-s-rg', 'RG', s.rg)
     + _secCampo('sec-s-nasc', 'Nascimento', s.nascimento, 'type="date"') + _secCampo('sec-s-cargo', 'Cargo', s.cargo, 'list="sec-cargos" placeholder="Ex.: Policial Penal, Educadora Social N/S"')
     + _secCampo('sec-s-formacao', 'Formação', s.formacao, 'placeholder="Ex.: Direito"') + _secCampo('sec-s-admissao', 'Admissão / lotação na CME', s.admissao, 'type="date"')
@@ -253,7 +254,7 @@ function sec_editarServidor(id) {
 }
 async function sec_salvarServidor(id) {
   const v = {
-    nome: _secVal('sec-s-nome').toUpperCase(), matricula: _secVal('sec-s-matricula'), cpf: _secVal('sec-s-cpf').replace(/\D/g, ''), rg: _secVal('sec-s-rg'),
+    nome: _secVal('sec-s-nome').toUpperCase(), nomeGuerra: _secVal('sec-s-guerra').toUpperCase().slice(0, 40), matricula: _secVal('sec-s-matricula'), cpf: _secVal('sec-s-cpf').replace(/\D/g, ''), rg: _secVal('sec-s-rg'),
     nascimento: _secVal('sec-s-nasc'), cargo: _secVal('sec-s-cargo'), formacao: _secVal('sec-s-formacao'), admissao: _secVal('sec-s-admissao'),
     equipe: _secVal('sec-s-equipe'), setor: _secVal('sec-s-setor'), posto: _secPostoNoMes(_secVal('sec-s-posto')), turno: _secVal('sec-s-turno'), apoioSabado: _secVal('sec-s-apoio'), telefone: _secVal('sec-s-tel'), email: _secVal('sec-s-email'),
     endereco: _secVal('sec-s-end'), emergencia: _secVal('sec-s-emerg'), situacao: _secVal('sec-s-sit') || 'ativo', obs: _secVal('sec-s-obs'),

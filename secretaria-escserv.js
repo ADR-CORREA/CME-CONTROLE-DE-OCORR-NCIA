@@ -46,9 +46,12 @@ function _secServDiasGuarnicao(mes) {
 function _secServDoCadastro(d, mes) {
   const linhas = {}, m = mes || _secServAtual();
   d.servidores.filter(s => (s.situacao || 'ativo') === 'ativo' && (_PL_EQUIPES_SEC.includes(s.equipe) || s.equipe === 'EXPEDIENTE'))
-    .forEach(s => { linhas[s.id] = { nome: s.nome, equipe: s.equipe, posto: _secPostoNoMes(s.posto, m, d), setor: s.setor || '', turno: s.turno || '' }; });
+    .forEach(s => { linhas[s.id] = { nome: s.nome, guerra: s.nomeGuerra || '', equipe: s.equipe, posto: _secPostoNoMes(s.posto, m, d), setor: s.setor || '', turno: s.turno || '' }; });
   return linhas;
 }
+// nome como sai na escala: nome de guerra do cadastro ou o nome curto (tela) / "PRIMEIRO ÚLTIMO" (papel)
+function _secServNomeTela(l) { return l.guerra || _secEscCurto(l.nome); }
+function _secServNomeFolha(l) { return (l.guerra || _secServNomePapel(l.nome)).toUpperCase(); }
 // a escala do mês: mês passado = o que foi guardado; mês atual/futuro = o cadastro de agora
 function _secServLinhas(mes, d) {
   const g = (d.escalaServico || {})[mes];
@@ -114,7 +117,7 @@ function _secCartaoServico() {
   // ── Plantão 24x96: um cartão por guarnição, nomes agrupados por posto ──
   const trocaPosto = sid => { const p = linhas[sid].posto; return '<button type="button" class="escx-ic" onclick="event.stopPropagation();sec_servPosto(\'' + mes + '\',\'' + sid + '\')" title="Posto ' + (p || '—') + ' — clique para passar para o posto ' + (p === '1' ? '2' : '1') + '">\u{21C4}</button>'; };
   const pessoa = (sid, i, apagado) => '<div class="escx-p' + (i % 2 ? ' z' : '') + (apagado ? ' apagado' : '') + '"' + arrasta(sid) + '>'
-    + '<span class="escx-nome">' + esc(_secEscCurto(linhas[sid].nome)) + det(_secServAfastNoMes(sid, mes, d)) + '</span>' + trocaPosto(sid) + '</div>';
+    + '<span class="escx-nome">' + esc(_secServNomeTela(linhas[sid])) + det(_secServAfastNoMes(sid, mes, d)) + '</span>' + trocaPosto(sid) + '</div>';
   const guarnicao = g => {
     const membros = ids.filter(id => linhas[id].equipe === g);
     const fora = membros.filter(id => _secServForaMes(_secServAfastNoMes(id, mes, d), mes));
@@ -139,7 +142,7 @@ function _secCartaoServico() {
   const turnoDe = id => ['M', 'T'].includes(linhas[id].turno) ? linhas[id].turno : '';
   const celPessoa = id => {
     const af = _secServAfastNoMes(id, mes, d), t = turnoDe(id);
-    return '<div class="escx-cel-p' + (af ? ' apagado' : '') + '"' + arrasta(id) + '><span class="escx-nome">' + esc(_secEscCurto(linhas[id].nome))
+    return '<div class="escx-cel-p' + (af ? ' apagado' : '') + '"' + arrasta(id) + '><span class="escx-nome">' + esc(_secServNomeTela(linhas[id]))
       + (af ? '<span class="escx-det">' + esc(af.tipo.toLowerCase()) + ' até <span class="mono">' + _secBRc(af.fim || af.inicio) + '</span></span>' : '') + '</span>'
       + '<button type="button" class="escx-ic" onclick="event.stopPropagation();sec_servTurno(\'' + mes + '\',\'' + id + '\')" title="Passar para o turno da ' + (t === 'M' ? 'tarde' : 'manhã') + '">\u{21C4}</button></div>';
   };
@@ -217,7 +220,7 @@ async function sec_servObsSugerir(mes) {
 function _secServSabados(mes, d) { return _secEscDatas(mes, d).filter(dt => d.escalaSabado.some(x => x.data === dt) || new Date(dt + 'T12:00:00').getDay() === 6); }
 function _secServApoioCopia(mes, d) {
   const r = {};
-  _secServSabados(mes, d).forEach(dt => { r[dt] = d.escalaSabado.filter(x => x.data === dt).sort((a, c) => a.local.localeCompare(c.local) || _secEscNome(a, d).localeCompare(_secEscNome(c, d))).map(x => _secServNomePapel(_secEscNome(x, d)) + ' – ' + x.local).join('\n'); });
+  _secServSabados(mes, d).forEach(dt => { r[dt] = d.escalaSabado.filter(x => x.data === dt).sort((a, c) => a.local.localeCompare(c.local) || _secEscNome(a, d).localeCompare(_secEscNome(c, d))).map(x => (_secEscGuerra(x.servidorId, d) || _secServNomePapel(_secEscNome(x, d))).toUpperCase() + ' – ' + x.local).join('\n'); });
   return r;
 }
 // o quadro do mês: o guardado; se ainda não há, uma cópia da escala de apoio (só para mostrar)
@@ -334,14 +337,14 @@ function sec_servImprimir(mes) {
   const nLin = Math.max(4, ...col.map(c => c.lista.length));
   let tabG = '<table style="width:100%;border-collapse:collapse;font-size:8.5pt"><tr><th style="' + b + ';background:#e7e7e7;width:34px">Nº</th>'
     + col.map(c => '<th style="' + b + ';background:#e7e7e7">GUARNIÇÃO ' + c.g + '<br>Dias: ' + (dias[c.g] || []).join(', ') + '</th>').join('') + '</tr>';
-  for (let i = 0; i < nLin; i++) tabG += '<tr><td style="' + b + ';text-align:center">' + String(i + 1).padStart(2, '0') + '</td>' + col.map(c => { const id = c.lista[i]; return '<td style="' + b + ';text-align:center;font-weight:bold">' + (id ? 'PP. ' + esc(_secServNomePapel(linhas[id].nome)) + posto(linhas[id].posto) : '') + '</td>'; }).join('') + '</tr>';
-  if (col.some(c => c.fora.length)) tabG += '<tr><td style="' + b + ';text-align:center">' + String(nLin + 1).padStart(2, '0') + '</td>' + col.map(c => '<td style="' + b + ';text-align:center;font-weight:bold">' + c.fora.map(id => { const a = _secServAfastNoMes(id, mes, d); return '<i>' + esc(String(a.tipo).toUpperCase()) + '</i>: PP. ' + esc(_secServNomePapel(linhas[id].nome)); }).join('<br>') + '</td>').join('') + '</tr>';
+  for (let i = 0; i < nLin; i++) tabG += '<tr><td style="' + b + ';text-align:center">' + String(i + 1).padStart(2, '0') + '</td>' + col.map(c => { const id = c.lista[i]; return '<td style="' + b + ';text-align:center;font-weight:bold">' + (id ? 'PP. ' + esc(_secServNomeFolha(linhas[id])) + posto(linhas[id].posto) : '') + '</td>'; }).join('') + '</tr>';
+  if (col.some(c => c.fora.length)) tabG += '<tr><td style="' + b + ';text-align:center">' + String(nLin + 1).padStart(2, '0') + '</td>' + col.map(c => '<td style="' + b + ';text-align:center;font-weight:bold">' + c.fora.map(id => { const a = _secServAfastNoMes(id, mes, d); return '<i>' + esc(String(a.tipo).toUpperCase()) + '</i>: PP. ' + esc(_secServNomeFolha(linhas[id])); }).join('<br>') + '</td>').join('') + '</tr>';
   tabG += '</table>';
   // setor administrativo (2 pares setor/nomes por linha, como no papel)
   const setores = {}; _secServSetoresConhecidos(d, linhas).forEach(k => { setores[k] = []; });
   ids.filter(id => linhas[id].equipe === 'EXPEDIENTE').forEach(id => { const k = _secServSetor(linhas[id]); (setores[k] = setores[k] || []).push(id); });
   const ks = Object.keys(setores).filter(k => k !== _SEC_SERV_SEM_SETOR || setores[k].length).sort((a, c) => _secServOrdemSetor(a).localeCompare(_secServOrdemSetor(c)));
-  const celNomes = k => setores[k].sort((a, c) => String(linhas[a].turno || 'Z').localeCompare(String(linhas[c].turno || 'Z')) || linhas[a].nome.localeCompare(linhas[c].nome)).map(id => '<span style="white-space:nowrap">PP. ' + esc(_secServNomePapel(linhas[id].nome)) + (linhas[id].turno ? ' (' + esc(linhas[id].turno) + ')' : '') + '</span>').join('<br>');
+  const celNomes = k => setores[k].sort((a, c) => String(linhas[a].turno || 'Z').localeCompare(String(linhas[c].turno || 'Z')) || linhas[a].nome.localeCompare(linhas[c].nome)).map(id => '<span style="white-space:nowrap">PP. ' + esc(_secServNomeFolha(linhas[id])) + (linhas[id].turno ? ' (' + esc(linhas[id].turno) + ')' : '') + '</span>').join('<br>');
   let tabS = '<table style="width:100%;border-collapse:collapse;font-size:8pt"><tr><th colspan="4" style="' + b + ';background:#e7e7e7;font-size:9.5pt">SETOR ADMINISTRATIVO: <span style="font-weight:normal">Manhã (M) - Tarde (T)</span></th></tr>';
   for (let i = 0; i < ks.length; i += 2) tabS += '<tr>' + [ks[i], ks[i + 1]].map(k => k ? '<td style="' + b + ';background:#e7e7e7;font-weight:bold;text-align:center;width:22%">' + esc(k) + ':</td><td style="' + b + ';width:28%">' + celNomes(k) + '</td>' : '<td style="' + b + '"></td><td style="' + b + '"></td>').join('') + '</tr>';
   tabS += '</table>';
