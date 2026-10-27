@@ -46,7 +46,7 @@ function _eppNomes() {
 
 function ep_abrirPassagem() {
   if (!ep_podeVer()) { _mostrarToast('Sem permissão para a passagem de serviço.', 'erro'); return; }
-  const ult = _eppUltima(), dia = _diaPlantao(), eq = _epEquipeHoje() || '';
+  const ult = _eppUltima(), dia = _diaPlantao(), eq = (typeof turno_equipe === 'function' ? turno_equipe() : _epEquipeHoje()) || ''; // (27/10/2026) equipe do turno assumido
   const opEq = sel => PLANTOES.map(p => '<option' + (p === sel ? ' selected' : '') + '>' + p + '</option>').join('');
   const campo = (lbl, html) => '<div class="form-field"><label>' + lbl + '</label>' + html + '</div>';
   const linhasItens = _EPP_ITENS.map(([rot, chave], i) => {
@@ -69,7 +69,7 @@ function ep_abrirPassagem() {
     + campo('Dia do serviço (08h às 08h)', '<input type="date" id="epp-dia" value="' + dia + '">') + '</div>'
     + '<div class="form-grid">' + campo('Plantão que passa', '<select id="epp-eq">' + opEq(eq) + '</select>')
     + campo('Plantão que recebe', '<select id="epp-eq2">' + opEq(_eppProxEquipe(eq)) + '</select>') + '</div>'
-    + '<div class="form-grid">' + campo('Servidor que passa o serviço', '<input type="text" id="epp-passa" value="' + esc(((usuarioAtual && usuarioAtual.nome) || '').toUpperCase()) + '" style="text-transform:uppercase">')
+    + '<div class="form-grid">' + campo('Servidor que passa o serviço', '<input type="text" id="epp-passa" list="cme-nomes" value="' + esc(((typeof turno_plantonista === 'function' && turno_plantonista()) || (usuarioAtual && usuarioAtual.nome) || '').toUpperCase()) + '" style="text-transform:uppercase">')
     + campo('Servidor que recebe o serviço', '<input type="text" id="epp-recebe" list="epp-nomes" value="" placeholder="Nome de quem assume" style="text-transform:uppercase">') + '</div>'
     + '<datalist id="epp-nomes">' + nomes.map(n => '<option>' + esc(n) + '</option>').join('') + '</datalist>'
     + '<div class="idv-secao">Material carga <span class="idv-mini" style="font-weight:400">— marque o que foi conferido; as 5 primeiras quantidades vêm do Estoque do Plantão</span></div>'
@@ -102,6 +102,12 @@ function ep_gerarPassagem() {
   _entregarDoc(new Blob([html], { type: 'text/html' }), 'Passagem de servico ' + dados.dia + ' ' + dados.eq + '.html');
   try { auditar({ modulo: 'Estoque Plantão', action: 'ep_passagem_imprimir', alvo: 'Passagem de serviço ' + _eppDataBR(dados.dia), detalhe: 'plantão ' + dados.eq + ' → ' + dados.eq2 }); } catch (e) {}
   fecharModal('ep-modal');
+  // (27/10/2026) a passagem já deixa o turno em nome de quem recebe — ele não precisa "assumir" de novo
+  if (dados.recebe && typeof salvarStore === 'function') {
+    salvarStore('turno', { equipe: dados.eq2 || dados.eq, dia: dados.dia, assumidoPor: dados.recebe, assumidoEm: new Date().toISOString(), recebidoDe: dados.passa, usuario: '', viaPassagem: true });
+    _mostrarToast('Turno passado a ' + dados.recebe + ' (equipe ' + (dados.eq2 || dados.eq) + ').');
+    try { _dashRenderPessoal(); } catch (e) {}
+  }
 }
 
 // texto corrido "como o do papel" (resumo de tudo em uma linha)

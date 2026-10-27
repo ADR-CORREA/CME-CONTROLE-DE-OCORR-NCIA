@@ -1366,6 +1366,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       <!-- Painel PESSOAL (servidores) — preenchido por _dashRenderPessoal() -->
       <div id="dash-pessoal" style="display:none"></div>
+      <datalist id="cme-nomes"></datalist>
 
       <!-- Painel OPERACIONAL (gerência/admin) -->
       <div id="dash-operacional">
@@ -1435,8 +1436,9 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
                 <th scope="col">Prior.</th>
                 <th scope="col" style="width:26%">Monitorado</th>
                 <th scope="col">Violação</th>
-                <th scope="col">Situação</th>
                 <th scope="col">Alerta</th>
+                <th scope="col">Situação</th>
+                <th scope="col">CIODES</th>
                 <th scope="col">PRODOC</th>
                 <th scope="col">Plantão</th>
                 <th scope="col">Andamento</th>
@@ -1727,8 +1729,8 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       </div>
       <div id="rel-term-aviso" onclick="mudarSubAbaRel('termino')" title="Abrir a lista de término da monitoração" style="display:none;cursor:pointer;margin:0 0 10px 0;padding:12px 16px;border-radius:6px;border:1px solid var(--idv-cr);border-left:4px solid var(--idv-cr);background:var(--idv-cr-f);font-size:15px;color:var(--idv-texto)"></div>
       <div class="sub-tabs">
-        <div class="sub-tab"        id="rel-stab-recebidos" onclick="mudarSubAbaRel('recebidos')">📥 Recebidos<span id="rel-rec-count" style="color:var(--idv-at);font-weight:600"></span></div>
-        <div class="sub-tab active" id="rel-stab-lista"      onclick="mudarSubAbaRel('lista')">📄 Relatórios</div>
+        <div class="sub-tab active" id="rel-stab-recebidos" onclick="mudarSubAbaRel('recebidos')">📥 Recebidos<span id="rel-rec-count" style="color:var(--idv-at);font-weight:600"></span></div>
+        <div class="sub-tab"        id="rel-stab-lista"      onclick="mudarSubAbaRel('lista')">📄 Relatórios</div>
         <div class="sub-tab"        id="rel-stab-aguardando" onclick="mudarSubAbaRel('aguardando')">⏳ Aguardando<span id="rel-aguard-count" style="color:var(--idv-at);font-weight:600"></span></div>
         <div class="sub-tab"        id="rel-stab-arquivadas" onclick="mudarSubAbaRel('arquivadas')">📁 Arquivadas</div>
         <div class="sub-tab"        id="rel-stab-gerador"    onclick="mudarSubAbaRel('gerador')">⚡ Gerador de Violações</div>
@@ -1737,9 +1739,9 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         <div class="sub-tab"        id="rel-stab-romp"       onclick="mudarSubAbaRel('romp')">⛓️ Rompimento<span id="rel-romp-badge" class="notif-badge" style="display:none">0</span></div>
       </div>
       <!-- ── Sub-painel: Recebidos dos Críticos (fluxo) ── -->
-      <div class="sub-panel" id="rel-panel-recebidos">
+      <div class="sub-panel active" id="rel-panel-recebidos">
         <div class="idv-barra" style="margin-top:12px">
-          <div class="idv-secao" style="margin:0">Casos recebidos dos Críticos — aguardando confecção do relatório</div>
+          <div class="idv-achado" id="rel-rec-achado">Casos recebidos dos Críticos — aguardando confecção do relatório</div>
           <div class="idv-acoes">
             <button type="button" class="idv-btn" onclick="renderizarRelRecebidos()">Atualizar</button>
           </div>
@@ -1754,7 +1756,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         </div>
       </div>
 
-      <div class="sub-panel active" id="rel-panel-lista">
+      <div class="sub-panel" id="rel-panel-lista">
         <div>
           <div class="idv-barra" style="margin-top:12px">
             <label class="idv-busca"><span aria-hidden="true">🔍</span><input type="text" placeholder="Buscar monitorado, servidor..." aria-label="Buscar relatório" oninput="filtrarRelatorio(this.value)"></label>
@@ -5654,7 +5656,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           </div>
           <div class="form-field">
             <label>Operador</label>
-            <input type="text" id="oc-operador" placeholder="Nome do operador">
+            <input type="text" id="oc-operador" list="cme-nomes" placeholder="Nome do operador">
           </div>
         </div>
         <div class="form-field full" style="margin-top:10px">
@@ -6220,7 +6222,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           </div>
           <div class="form-field">
             <label>Servidor responsável *</label>
-            <input type="text" id="trat-servidor" placeholder="Nome do servidor">
+            <input type="text" id="trat-servidor" list="cme-nomes" placeholder="Nome do servidor">
           </div>
         </div>
         <div class="form-field full">
@@ -6862,7 +6864,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
             </div>
             <div class="form-field">
               <label>Servidor Responsável *</label>
-              <input type="text" id="rel-servidor" placeholder="Nome do servidor que confeccionou">
+              <input type="text" id="rel-servidor" list="cme-nomes" placeholder="Nome do servidor que confeccionou">
             </div>
           </div>
           <div class="form-grid">
@@ -6918,7 +6920,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         </div>
         <div class="form-field">
           <label>Responsável</label>
-          <input type="text" id="ger-responsavel" placeholder="Nome do responsável">
+          <input type="text" id="ger-responsavel" list="cme-nomes" placeholder="Nome do responsável">
         </div>
       </div>
       <div class="form-field">
@@ -7082,11 +7084,11 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               <option>ECHO</option>
             </select></div>
           <div class="form-field"><label>Nome do Plantonista *</label>
-            <input type="text" id="sai-plantonista" placeholder="Quem está recebendo o item"></div>
+            <input type="text" id="sai-plantonista" list="cme-nomes" placeholder="Quem está recebendo o item"></div>
         </div>
         <div class="form-grid">
           <div class="form-field"><label>Responsável pela entrega *</label>
-            <input type="text" id="sai-responsavel" placeholder="Quem está entregando"></div>
+            <input type="text" id="sai-responsavel" list="cme-nomes" placeholder="Quem está entregando"></div>
           <div class="form-field"><label>Data da entrega *</label>
             <input type="date" id="sai-data-entrega" onchange="atualizarPlantaoSaida()"></div>
         </div>
@@ -8311,7 +8313,7 @@ function mudarAba(aba) {
   if (aba === "estoque") { _estHistPag = 1; renderizarEstoque(); }
   if (aba === "triagem") { renderizarTriagem(); atualizarBadgeTriagemArq(); }
   if (aba === "psicossocial") { renderizarPsi(); atualizarBadgePsiArq(); }
-  if (aba === "relatorio") { marcarRelVisto(); renderizarRelatorio(); }
+  if (aba === "relatorio") { marcarRelVisto(); renderizarRelRecebidos(); renderizarRelatorio(); } // (27/10/2026) abre na fila
   if (aba === "gerencia") { marcarGerVisto(); renderizarGerencia(); }
   if (aba === "links") renderizarLinks();
   if (aba === "modelos") renderizarModelos();
@@ -8663,36 +8665,42 @@ function renderizarCriticos() {
 
   const tbody = document.getElementById("tbody-criticos");
   if (!filtrados.length) {
-    tbody.innerHTML = `<tr><td colspan="9" class="idv-vazio">\u{2705} Nenhum caso crítico no momento</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="idv-vazio">\u{2705} Nenhum caso crítico no momento</td></tr>`;
     return;
   }
   // linhas no padrão da identidade visual (16/10/2026): nome forte, etiqueta de situação, "Abrir" + menu "⋯"
-  tbody.innerHTML = filtrados.map((oc, i) => {
-    const pr = calcPrazoRestante(oc.dataAlerta, oc.tipo, oc.medida);
-    const rowClass = getRowClass(oc._status, oc.medida);
-    const priorNum = i + 1, idx = findIdx(oc.id), cls = idv_sit(oc._status)[0];
-    const priorColor = priorNum === 1 ? "var(--idv-cr)" : priorNum <= 3 ? "var(--idv-at)" : "var(--idv-sec)";
-    return `<tr class="${rowClass}">
-      <td class="idv-data" style="text-align:center;font-weight:600;font-size:15px;color:${priorColor}">${priorNum}º</td>
-      <td><div class="idv-nome">${esc(oc.monitorado) || "—"}${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</div><div class="idv-mini"><span class="idv-mono">ID ${esc(oc.id)}</span>${_ocSeloAuto(oc)}${typeof po_selo === 'function' ? po_selo(oc) : ''} · ${esc(oc.medida) || "—"}${oc.oficioNum ? ' · <span class="idv-mono" title="Ofício já gerado — falta marcar o envio na Comunicação">Ofício ' + esc(oc.oficioNum) + '/' + esc(oc.oficioAno || '') + '</span>' : ''}</div>${oc.registroAkiles ? _akBateriaHtml(oc.registroAkiles) : ''}</td>
-      <td>${esc(oc.tipo) || "—"}</td>
-      <td>${idv_etiqueta(oc._status)}<div class="idv-det ${cls}">${esc(idv_prazoTxt(pr))}</div></td>
-      <td class="idv-data" style="font-size:13px;white-space:nowrap">${formatDate(oc.dataAlerta)}</td>
-      <td>${oc.prodoc === "SIM" ? '<span class="idv-ok-ic">\u{2713} sim</span>' : "—"}</td>
-      <td style="font-weight:600">${esc(oc.plantao) || "—"}</td>
-      <td style="white-space:nowrap">${(() => {
-        const et = _etapaOc(oc);
-        if (et === 'arquivado')   return '<span class="idv-etq ok">Arquivado</span>';
-        if (et === 'comunicacao') return '<span class="idv-etq de">Na Comunicação</span>';
-        if (et === 'relatorio')   return `<span class="idv-etq in">No Relatório</span><div class="idv-mini idv-data">${formatDate(oc.encRelEm)}</div>`;
-        return `<button type="button" class="idv-btn mini" onclick="encParaRelatorio(${idx})">Enc. p/ Relatório</button>`;
-      })()}</td>
-      <td style="white-space:nowrap;text-align:right">
-        <button type="button" class="idv-btn mini" onclick="verOcorrenciaIdx(${idx})">Abrir</button>
-        <button type="button" class="idv-btn mini icone" aria-label="Mais ações" aria-haspopup="menu" onclick="idv_menu(event, _critMenuLinha(${idx}))">\u{22EF}</button>
-      </td>
-    </tr>`;
-  }).join("");
+  tbody.innerHTML = filtrados.map((oc, i) => _ocLinhaHtml(oc, oc._status, { prior: i + 1 })).join("");
+}
+// (27/10/2026) UMA linha para as duas filas: Ocorrências e Críticos (a mesma fila, filtrada pela situação).
+// extra.prior = posição na fila dos Críticos — acrescenta a coluna de prioridade e a de andamento.
+function _ocLinhaHtml(oc, s, extra) {
+  extra = extra || {};
+  const pr = calcPrazoRestante(oc.dataAlerta, oc.tipo, oc.medida);
+  const rowClass = getRowClass(s, oc.medida);
+  const idx = findIdx(oc.id), cls = idv_sit(s)[0];
+  let prior = '', andamento = '';
+  if (extra.prior) {
+    const n = extra.prior, cor = n === 1 ? "var(--idv-cr)" : n <= 3 ? "var(--idv-at)" : "var(--idv-sec)";
+    prior = `<td class="idv-data" style="text-align:center;font-weight:600;font-size:15px;color:${cor}">${n}º</td>`;
+    const et = _etapaOc(oc);
+    andamento = '<td style="white-space:nowrap">' + (et === 'arquivado' ? '<span class="idv-etq ok">Arquivado</span>'
+      : et === 'comunicacao' ? '<span class="idv-etq de">Na Comunicação</span>'
+      : et === 'relatorio' ? `<span class="idv-etq in">No Relatório</span><div class="idv-mini idv-data">${formatDate(oc.encRelEm)}</div>`
+      : `<button type="button" class="idv-btn mini" onclick="encParaRelatorio(${idx})">Enc. p/ Relatório</button>`) + '</td>';
+  }
+  return `<tr class="${rowClass}">${prior}
+    <td><div class="idv-nome">${esc(oc.monitorado) || "—"}${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</div><div class="idv-mini"><span class="idv-mono">ID ${esc(oc.id)}</span>${_ocSeloAuto(oc)}${typeof po_selo === 'function' ? po_selo(oc) : ''} · ${esc(oc.medida) || "—"}${oc.oficioNum ? ' · <span class="idv-mono" title="Ofício já gerado — falta marcar o envio na Comunicação">Ofício ' + esc(oc.oficioNum) + '/' + esc(oc.oficioAno || '') + '</span>' : ''}</div>${oc.registroAkiles ? _akBateriaHtml(oc.registroAkiles) : ''}</td>
+    <td><div>${esc(oc.tipo) || "—"}</div><div class="idv-mini">prazo POP: ${esc(calcPrazoPOP(oc.tipo, oc.medida))} · decorrido: ${esc(calcTempoDecorrido(oc.dataAlerta))}</div></td>
+    <td class="idv-data" style="font-size:13px;white-space:nowrap">${formatDate(oc.dataAlerta)}</td>
+    <td>${idv_etiqueta(s)}<div class="idv-det ${cls}">${esc(idv_prazoTxt(pr))}</div></td>
+    <td>${oc.ciodes === "SIM" ? '<span class="idv-ok-ic">\u{2713} sim</span>' : "—"}</td>
+    <td>${oc.prodoc === "SIM" ? '<span class="idv-ok-ic">\u{2713}</span> <span class="idv-mono">' + (esc(oc.prodocNum) || 'sim') + '</span>' : (oc.prodocNum ? '<span class="idv-mono">' + esc(oc.prodocNum) + '</span>' : "—")}</td>
+    <td style="font-weight:600">${esc(oc.plantao) || "—"}</td>${andamento}
+    <td style="white-space:nowrap;text-align:right">
+      <button type="button" class="idv-btn mini" onclick="visualizarOcorrencia(${idx})">Abrir</button>
+      <button type="button" class="idv-btn mini icone" aria-label="Mais ações" aria-haspopup="menu" onclick="idv_menu(event, _ocMenuLinha(${idx}))">\u{22EF}</button>
+    </td>
+  </tr>`;
 }
 // (26/10/2026) As ações de linha recebem 'id:<id>' em vez da posição: entre o desenho da lista e o clique o
 // Realtime pode reordenar a lista, e a posição apontaria para outra ocorrência. Quem ainda passa número continua funcionando.
@@ -8703,14 +8711,7 @@ function _ocRef(ref) {
 }
 // menu "⋯" de uma linha de Críticos (as ações que antes eram 5 botões coloridos)
 // (26/10/2026) só oferece "Gerar comunicação/relatório" a quem pode gerar — antes plantão e jurídico clicavam e recebiam "sem permissão"
-function _critMenuLinha(idx) {
-  const r = _ocRefDe(idx), nivel = usuarioAtual?.nivel || '';
-  const itens = [['Editar', 'editarOcorrencia(' + r + ')'], ['Parecer da violação', 'po_abrir(' + r + ')']];
-  if (['comunicacao', 'admin', 'gerencia'].includes(nivel)) itens.push(['Gerar comunicação (COM)', 'gerarComunicacaoDeOcorrencia(' + r + ')']);
-  if (['juridico', 'admin', 'gerencia'].includes(nivel)) itens.push(['Gerar relatório (REL)', 'gerarRelatorioDeOcorrencia(' + r + ')']);
-  itens.push(['Relatório de violações', 'rv_relatorioDaOcorrencia(' + r + ')']);
-  return itens;
-}
+function _critMenuLinha(idx) { return _ocMenuLinha(idx); } // (27/10/2026) um menu só para as duas filas
 
 function filtrarCriticos(v) { filtroCrit = v; renderizarCriticos(); }
 function filtrarCriticosTipo(v) { filtroCritTipo = v; renderizarCriticos(); }
@@ -8854,27 +8855,7 @@ function renderizarOcorrencias() {
     tbody.innerHTML = `<tr><td colspan="8" class="idv-vazio">Nenhuma ocorrência encontrada</td></tr>`;
   } else {
     // linhas no padrão da identidade visual (16/10/2026): nome forte, etiqueta de situação, "Abrir" + menu "⋯"
-    tbody.innerHTML = pagOcs.map(oc => {
-      const s = calcStatus(oc.dataAlerta, oc.tipo, oc.medida, oc.prodoc, oc.restabelecidaEm);
-      const pr = calcPrazoRestante(oc.dataAlerta, oc.tipo, oc.medida);
-      const td = calcTempoDecorrido(oc.dataAlerta);
-      const pp = calcPrazoPOP(oc.tipo, oc.medida);
-      const rowClass = getRowClass(s, oc.medida);
-      const idx = findIdx(oc.id), cls = idv_sit(s)[0];
-      return `<tr class="${rowClass}">
-        <td><div class="idv-nome">${esc(oc.monitorado) || "—"}${oc.vdAkiles ? _scSeloVD({ grupo: '9.' }) : ''}</div><div class="idv-mini"><span class="idv-mono">ID ${esc(oc.id)}</span>${_ocSeloAuto(oc)}${typeof po_selo === 'function' ? po_selo(oc) : ''} · ${esc(oc.medida) || "—"}${oc.oficioNum ? ' · <span class="idv-mono" title="Ofício já gerado — falta marcar o envio na Comunicação">Ofício ' + esc(oc.oficioNum) + '/' + esc(oc.oficioAno || '') + '</span>' : ''}</div>${oc.registroAkiles ? _akBateriaHtml(oc.registroAkiles) : ''}</td>
-        <td><div>${esc(oc.tipo) || "—"}</div><div class="idv-mini">prazo POP: ${esc(pp)} · decorrido: ${esc(td)}</div></td>
-        <td class="idv-data" style="font-size:13px;white-space:nowrap">${formatDate(oc.dataAlerta)}</td>
-        <td>${idv_etiqueta(s)}<div class="idv-det ${cls}">${esc(idv_prazoTxt(pr))}</div></td>
-        <td>${oc.ciodes === "SIM" ? '<span class="idv-ok-ic">\u{2713} sim</span>' : "—"}</td>
-        <td>${oc.prodoc === "SIM" ? '<span class="idv-ok-ic">\u{2713}</span> <span class="idv-mono">' + (esc(oc.prodocNum) || 'sim') + '</span>' : (oc.prodocNum ? '<span class="idv-mono">' + esc(oc.prodocNum) + '</span>' : "—")}</td>
-        <td style="font-weight:600">${esc(oc.plantao) || "—"}</td>
-        <td style="white-space:nowrap;text-align:right">
-          <button type="button" class="idv-btn mini" onclick="visualizarOcorrencia(${idx})">Abrir</button>
-          <button type="button" class="idv-btn mini icone" aria-label="Mais ações" aria-haspopup="menu" onclick="idv_menu(event, _ocMenuLinha(${idx}))">\u{22EF}</button>
-        </td>
-      </tr>`;
-    }).join("");
+    tbody.innerHTML = pagOcs.map(oc => _ocLinhaHtml(oc, calcStatus(oc.dataAlerta, oc.tipo, oc.medida, oc.prodoc, oc.restabelecidaEm))).join("");
   }
 
   // Paginação: páginas em volta da atual (antes só as 5 primeiras de ~22)
@@ -8901,8 +8882,11 @@ function filtrarOcorrenciasSit(c) { filtroOcSit = c; paginaAtual = 1; renderizar
 
 // menus "⋯" da linha e "Mais ▾" do cabeçalho (o que antes eram botões soltos e coloridos)
 function _ocMenuLinha(idx) {
-  const r = _ocRefDe(idx);
-  const itens = [['Editar', 'editarOcorrencia(' + r + ')'], ['Parecer da violação', 'po_abrir(' + r + ')'], ['Relatório de violações', 'rv_relatorioDaOcorrencia(' + r + ')']];
+  const r = _ocRefDe(idx), nivel = usuarioAtual?.nivel || '';
+  const itens = [['Editar', 'editarOcorrencia(' + r + ')'], ['Parecer da violação', 'po_abrir(' + r + ')']];
+  if (['comunicacao', 'admin', 'gerencia'].includes(nivel)) itens.push(['Gerar comunicação (COM)', 'gerarComunicacaoDeOcorrencia(' + r + ')']);
+  if (['juridico', 'admin', 'gerencia'].includes(nivel)) itens.push(['Gerar relatório (REL)', 'gerarRelatorioDeOcorrencia(' + r + ')']);
+  itens.push(['Relatório de violações', 'rv_relatorioDaOcorrencia(' + r + ')']);
   if (_podeExcluirOc()) itens.push('hr', ['Excluir ocorrência', 'excluirOcorrencia(' + r + ')', true]);
   return itens;
 }
@@ -10976,6 +10960,60 @@ function getPlantaoParaData(dataStr) {
   return PLANTOES[idx];
 }
 
+/* ── TURNO (27/10/2026): quem assumiu o plantão agora. Store `turno` (chave cme_turno — qualquer nível grava;
+   não pode começar por plantao_, que o banco reserva à gerência). Vale 26 h a partir de "assumidoEm"; depois o
+   painel volta a pedir "Assumir turno". É o que pré-preenche a equipe na ocorrência, o plantonista na saída de
+   estoque e os dois nomes da passagem de serviço — e a passagem gerada já deixa o turno em nome de quem recebe. ── */
+const _TURNO_VALIDADE_MS = 26 * 3600 * 1000;
+function turno_atual() {
+  const t = carregarStore('turno', null);
+  if (!t || !t.equipe || !t.assumidoEm) return null;
+  const ms = Date.now() - new Date(t.assumidoEm).getTime();
+  return (isNaN(ms) || ms < 0 || ms > _TURNO_VALIDADE_MS) ? null : t;
+}
+function turno_equipe() { const t = turno_atual(); return (t && t.equipe) || getPlantaoParaData(_diaPlantao()); }
+function turno_plantonista() { const t = turno_atual(); return (t && t.assumidoPor) || ''; }
+function turno_ehMeu() { const t = turno_atual(); return !!(t && usuarioAtual && t.usuario && t.usuario === usuarioAtual.usuario); }
+function turno_abrirAssumir() {
+  if (typeof _epModal !== 'function') { _mostrarToast('Janela do turno indisponível.', 'erro'); return; }
+  _nomesDatalist();
+  const t = turno_atual(), eu = String((usuarioAtual && usuarioAtual.nome) || '').toUpperCase(), eq = turno_equipe();
+  const anterior = t && t.assumidoPor && t.assumidoPor !== eu ? t.assumidoPor : '';
+  const opEq = PLANTOES.map(p => '<option' + (p === eq ? ' selected' : '') + '>' + p + '</option>').join('');
+  const campo = (lbl, html) => '<div class="form-field"><label>' + lbl + '</label>' + html + '</div>';
+  const corpo = '<p class="idv-mini" style="margin:0 0 12px">A partir de agora, ocorrências, saídas de estoque e a passagem de serviço saem no seu nome e na sua equipe.</p>'
+    + '<div class="form-grid">' + campo('Equipe', '<select id="turno-eq">' + opEq + '</select>')
+    + campo('Quem assume', '<input type="text" id="turno-nome" list="cme-nomes" value="' + esc(eu) + '" style="text-transform:uppercase">') + '</div>'
+    + campo('Recebido de (quem passou o serviço)', '<input type="text" id="turno-de" list="cme-nomes" value="' + esc(anterior) + '" placeholder="Opcional" style="text-transform:uppercase">');
+  _epModal('Assumir o turno', corpo, _epBtn('Cancelar', "fecharModal('ep-modal')") + _epBtn('Assumir', 'turno_assumir()', 'btn-primary'));
+}
+function turno_assumir() {
+  const v = id => ((document.getElementById(id) || {}).value || '').trim().toUpperCase();
+  const nome = v('turno-nome'), eq = v('turno-eq');
+  if (!nome) { _mostrarToast('Informe quem assume o turno.', 'erro'); return; }
+  const novo = { equipe: eq, dia: _diaPlantao(), assumidoPor: nome, assumidoEm: new Date().toISOString(), recebidoDe: v('turno-de'), usuario: (usuarioAtual && usuarioAtual.usuario) || '' };
+  salvarStore('turno', novo);
+  try { auditar({ modulo: 'Plantão', action: 'turno_assumir', alvo: nome, detalhe: 'equipe ' + eq + (novo.recebidoDe ? ' — recebido de ' + novo.recebidoDe : '') }); } catch (e) {}
+  fecharModal('ep-modal');
+  _mostrarToast('Turno assumido: ' + nome + ' — equipe ' + eq + '.', 'sucesso');
+  try { _dashRenderPessoal(); } catch (e) {}
+}
+// faixa do painel do plantonista
+function turno_faixaHtml() {
+  const t = turno_atual(), est = 'display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px';
+  const passar = typeof ep_abrirPassagem === 'function' ? '<button type="button" class="idv-btn" onclick="ep_abrirPassagem()">Passar o serviço</button>' : '';
+  if (!t) return '<div class="idv-faixa at" style="' + est + '"><div><b>Ninguém assumiu o turno de hoje.</b> Equipe pelo calendário: <b>' + esc(getPlantaoParaData(_diaPlantao())) + '</b>.</div><div class="idv-acoes"><button type="button" class="idv-btn criar" onclick="turno_abrirAssumir()">Assumir turno</button></div></div>';
+  const h = new Date(t.assumidoEm), p2 = n => String(n).padStart(2, '0');
+  const hora = isNaN(h) ? '' : ' às ' + p2(h.getHours()) + ':' + p2(h.getMinutes());
+  return '<div class="idv-faixa ok" style="' + est + '"><div>Turno da equipe <b>' + esc(t.equipe) + '</b> — assumido por <b>' + esc(t.assumidoPor) + '</b>' + hora + (t.recebidoDe ? ', recebido de ' + esc(t.recebidoDe) : '') + '.</div><div class="idv-acoes"><button type="button" class="idv-btn" onclick="turno_abrirAssumir()">' + (turno_ehMeu() ? 'Trocar' : 'Assumir no meu nome') + '</button>' + passar + '</div></div>';
+}
+// (27/10/2026) lista de nomes dos campos "servidor/responsável": o logado já vem preenchido; a lista evita digitar o resto
+function _nomesDatalist() {
+  const dl = document.getElementById('cme-nomes'); if (!dl || typeof _eppNomes !== 'function') return;
+  const nomes = _eppNomes(); if (!nomes.length) return;
+  dl.innerHTML = nomes.map(n => '<option value="' + esc(n) + '">').join('');
+}
+
 /* ═══════ DESEMPENHO DOS PLANTÕES (Gerência → Produtividade Servidores) ═══════
    O robô lê a auditoria do AKILES às 08h10 (só leitura) e grava a chave
    cme_plantao_auto, que o banco só entrega à gerência e ao administrador (SQL passo 6). Um plantão vai das
@@ -11197,12 +11235,13 @@ function pl_ajustarEquipe(op, valor, eq, dia) {
 const PLANTAO_CORES = { ALFA:'#16a34a', BRAVO:'#2563eb', CHARLIE:'#d97706', DELTA:'#7c3aed', ECHO:'#dc2626' };
 function _dashRenderPlantaoHoje() {
   const hoje = new Date();
-  const p    = getPlantaoParaData(_diaPlantao(hoje));
+  const t    = typeof turno_atual === 'function' ? turno_atual() : null; // (27/10/2026) quem assumiu o turno manda; sem turno, o calendário
+  const p    = (t && t.equipe) || getPlantaoParaData(_diaPlantao(hoje));
   const prox = getPlantaoParaData(_diaPlantao(new Date(hoje.getTime() + 864e5))); // quem assume na próxima troca das 08h
   const nomeEl = document.getElementById('dash-plantao-nome');
   const dataEl = document.getElementById('dash-plantao-data');
   if (nomeEl) nomeEl.textContent = p;
-  if (dataEl) dataEl.textContent = hoje.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' }) + ' · próxima troca: ' + prox + ', às 08h';
+  if (dataEl) dataEl.textContent = (t ? 'turno assumido por ' + t.assumidoPor + ' · ' : '') + hoje.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' }) + ' · próxima troca: ' + prox + ', às 08h';
 }
 
 /* ═══════ DASHBOARD PESSOAL (por servidor) — gerência/admin veem o operacional ═══════ */
@@ -11274,6 +11313,7 @@ function _dashRenderPessoal() {
     : `<div class="idv-kpi ${cls}"><span class="idv-num">${num}</span><span class="idv-rot">${titulo}</span>${sub?`<span class="idv-leg">${sub}</span>`:''}</div>`;
 
   let html = `<p class="idv-ola">Olá, <b>${esc(primeiro)}</b>. Este é o seu painel — setor <b>${esc(setorLabel)}</b>.</p>`;
+  if (nivel === 'plantao') { try { html += turno_faixaHtml(); } catch (e) { console.warn('turno', e); } }
 
   if (pend.length) {
     html += `<h2 class="idv-secao">Pendências do meu setor</h2>
@@ -11306,6 +11346,7 @@ function _dashAplicarModoPessoal() {
   const ehGestor = ['gerencia','admin'].includes(usuarioAtual?.nivel);
   if (oper) oper.style.display = ehGestor ? '' : 'none';
   if (pess) pess.style.display = ehGestor ? 'none' : 'block';
+  try { _nomesDatalist(); } catch (e) {}
   if (!ehGestor) { try { _dashRenderPessoal(); } catch(e){ console.warn('dash pessoal', e); } }
 }
 
@@ -11328,7 +11369,7 @@ function abrirModalNovaOcorrencia() {
   document.getElementById("oc-monitorado").value = "";
   document.getElementById("oc-medida").value = "";
   document.getElementById("oc-tipo").value = "";
-  const _plantaoAuto = getPlantaoParaData(_diaPlantao());
+  const _plantaoAuto = turno_equipe(); // (27/10/2026) equipe de quem assumiu o turno; sem turno, o calendário
   document.getElementById("oc-plantao").value = _plantaoAuto;
   document.getElementById("oc-operador").value = usuarioAtual?.nome || "";
   document.getElementById("oc-descricao").value = "";
@@ -13036,6 +13077,19 @@ function renderizarRelRecebidos() {
   const recebidos = getOcorrencias().filter(o => _etapaOc(o) === 'relatorio');
   const cnt = document.getElementById('rel-rec-count');
   if (cnt) cnt.textContent = recebidos.length ? ` (${recebidos.length})` : '';
+  { // (27/10/2026) linha do achado: o fato que pede ação
+    const a = document.getElementById('rel-rec-achado');
+    if (a) {
+      const pend = recebidos.filter(o => !_relTemRelatorio(o.id));
+      if (!pend.length) a.innerHTML = 'Nenhum caso aguardando relatório.';
+      else {
+        const velho = pend.reduce((m, o) => (!m || new Date(o.encRelEm) < new Date(m.encRelEm)) ? o : m, null);
+        const dias = velho && velho.encRelEm ? Math.max(0, Math.floor((Date.now() - new Date(velho.encRelEm)) / 864e5)) : null;
+        a.innerHTML = '<b style="color:var(--idv-cr)">' + pend.length + '</b> caso' + (pend.length > 1 ? 's' : '') + ' aguardando relatório'
+          + (dias != null ? ' — o mais antigo recebido há ' + dias + ' dia' + (dias !== 1 ? 's' : '') + ' (' + esc(velho.monitorado || '') + ')' : '') + '.';
+      }
+    }
+  }
   const tbody = document.getElementById('tbody-rel-recebidos');
   if (!tbody) return;
   if (!recebidos.length) {
@@ -15972,7 +16026,9 @@ function abrirModalEstoque(tipo) {
   // Auto-preenche plantão para saída
   if (tipo === 'saida') {
     const plantaoEl = document.getElementById('sai-plantao');
-    if (plantaoEl) plantaoEl.value = getPlantaoParaData(_diaPlantao());
+    if (plantaoEl) plantaoEl.value = turno_equipe(); // (27/10/2026) equipe e plantonista de quem assumiu o turno
+    const plEl = document.getElementById('sai-plantonista');
+    if (plEl) plEl.value = turno_plantonista();
   }
   atualizarTiposEst(pfx);
   document.getElementById(ids[tipo]).classList.add('open');
@@ -30082,7 +30138,7 @@ function estat_exportarResultado() {
 <script src="rv-justificativas.js?v=20261022b"></script>
 <script src="estoque-plantao.js?v=20261026est"></script>
 <script src="estoque-plantao-tela.js?v=20261026est"></script>
-<script src="passagem-servico.js?v=20261021b"></script>
+<script src="passagem-servico.js?v=20261027b"></script>
 <script src="upload-imagem-pdf.js?v=20261020f4"></script>
 <script src="assinatura-foto.js?v=20261021a"></script>
 <script src="rv-conferencia.js?v=20261026a"></script>
