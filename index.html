@@ -21715,6 +21715,9 @@ function _rvCapa(r0){
 // Monitorado com TODAS as violações retiradas na conferência (espelhamento, horário da decisão…) ou nas
 // justificativas: sai o relatório "sem violação" (capa + aviso + síntese), sem a página de violações.
 let _rv_semViolPend = [];
+// (27/10/2026) linha que vai na tabela do resumo do relatório sem violação: o importador da pasta Relatório
+// (_relParseTexto) exige ao menos uma linha "tipo + quantidade" na capa — sem ela, avisava "não consegui ler a capa".
+const _RV_SEM_VIOL_LINHA = 'Nenhuma violação no período';
 function _rvSemViolacao(g){ return !!(g && g.length && g.every(x => x._retirada)); }
 function _rvAdiarSemViolacao(grupos){ _rv_semViolPend = _rv_semViolPend.concat(grupos.map(g => g.map(v => Object.assign({}, v, { _retirada: true })))); }
 function _rvSemViolTextos(capa, nome){
@@ -21783,7 +21786,7 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
     body.push(_rvPara([_ar(tx.intro)],{jc:'both',after:8,line:16.5}));
     body.push(`<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>${_RV_TBLBORDERS}</w:tblPr><w:tblGrid><w:gridCol w:w="9638"/></w:tblGrid><w:tr>${_rvTcTxt(tx.destaque,{b:true,jc:'center',font:A,size:SZ})}</w:tr></w:tbl>`);
     body.push(_rvPara([_ar('RESUMO QUANTITATIVO DE VIOLAÇÕES:',{b:true})],{before:10,after:4,line:16.5}));
-    body.push(`<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>${_RV_TBLBORDERS}</w:tblPr><w:tblGrid><w:gridCol w:w="6500"/><w:gridCol w:w="1200"/></w:tblGrid><w:tr>${_rvTcTxt('Tipo de Violação',{b:true,font:A,size:10})}${_rvTcTxt('Qtd.',{b:true,jc:'center',font:A,size:10})}</w:tr><w:tr>${_rvTcTxt('TOTAL',{b:true,font:A,size:10})}${_rvTcTxt('0',{b:true,jc:'center',font:A,size:10})}</w:tr></w:tbl>`);
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>${_RV_TBLBORDERS}</w:tblPr><w:tblGrid><w:gridCol w:w="6500"/><w:gridCol w:w="1200"/></w:tblGrid><w:tr>${_rvTcTxt('Tipo de Violação',{b:true,font:A,size:10})}${_rvTcTxt('Qtd.',{b:true,jc:'center',font:A,size:10})}</w:tr><w:tr>${_rvTcTxt(_RV_SEM_VIOL_LINHA,{font:A,size:10})}${_rvTcTxt('0',{jc:'center',font:A,size:10})}</w:tr><w:tr>${_rvTcTxt('TOTAL',{b:true,font:A,size:10})}${_rvTcTxt('0',{b:true,jc:'center',font:A,size:10})}</w:tr></w:tbl>`);
     body.push(_p(tx.fonte,{before:10}));
     body.push(secao('SÍNTESE TÉCNICA'));
     body.push(_p(tx.sintese)); body.push(_p(tx.ressalva));
@@ -22212,7 +22215,7 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
     grupo.forEach(r => { contagem[r.tipo] = (contagem[r.tipo]||0) + 1; });
     const totalViol = semV ? 0 : grupo.length;
 
-    const resumoRows = semV ? '' : Object.entries(contagem).map(([tipo, qtd]) =>
+    const resumoRows = semV ? `<tr><td>${_RV_SEM_VIOL_LINHA}</td><td style="text-align:center">0</td></tr>` : Object.entries(contagem).map(([tipo, qtd]) =>
       `<tr><td>${esc(tipo)}</td><td style="text-align:center">${qtd}</td></tr>`
     ).join('');
 
