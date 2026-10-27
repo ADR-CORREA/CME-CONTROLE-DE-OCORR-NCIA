@@ -173,7 +173,42 @@ function _secCartaoServico() {
     + '<div class="escx-sec">Setor administrativo</div>'
     + tabelaAdm
     + '<div class="escx-nota">Nome em cinza = afastado no mês (férias ou licença). Arraste o nome para mudar de setor, turno ou guarnição; \u{21C4} troca o posto ou o turno; clique no nome para abrir o cadastro.</div>'
-    + _secServHtmlQuadroApoio(mes, d) + '</div>';
+    + _secServHtmlQuadroApoio(mes, d) + _secServHtmlObs(mes, d) + '</div>';
+}
+
+// ── OBS da escala de serviço (27/10/2026: "já venha sugerido, mas que possamos editar") ──
+// A sugestão sai das férias e licenças do mês (aba Férias e Licenças); o texto editado fica em
+// cme_secretaria.escalaServObs[mes] e é o que sai na impressão. "Sugerir de novo" apaga a edição.
+function _secServEquipeDe(sid, d) { const s = _secServ(sid, d); return s ? (s.equipe === 'EXPEDIENTE' ? (_secServSetor(s) === _SEC_SERV_SEM_SETOR ? '' : _secServSetor(s)) : s.equipe ? s.equipe.charAt(0) + s.equipe.slice(1).toLowerCase() : '') : ''; }
+function _secServObsSugestao(mes, d) {
+  const porTipo = {}; _secEscAfastadosMes(mes, d).forEach(a => (porTipo[a.tipo] = porTipo[a.tipo] || []).push(a));
+  return Object.entries(porTipo).map(([t, l]) => t.toUpperCase() + ': ' + l.map(a => 'PP. ' + _secNomeServ(a.servidorId, d).toUpperCase() + (_secServEquipeDe(a.servidorId, d) ? ' (' + _secServEquipeDe(a.servidorId, d) + ')' : '') + ' – ' + _secBR(a.inicio) + ' a ' + _secBR(a.fim || a.inicio)).join('; ') + ';').join('\n');
+}
+function _secServObsTexto(mes, d) { const g = (d.escalaServObs || {})[mes]; return g && typeof g.texto === 'string' ? g.texto : _secServObsSugestao(mes, d); }
+// impressão: "RÓTULO:" em negrito sublinhado e "PP. NOME" em negrito, como no papel
+function _secServObsHtml(texto) {
+  return String(texto || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => esc(l)
+    .replace(/^([^:]{2,40}):/, '<b><u>$1</u>:</b>')
+    .replace(/PP\. ([A-ZÀ-Ú][A-ZÀ-Ú ]+?)(?=\s*[(–\-;]|$)/g, '<b>PP. $1</b>')).join('<br>');
+}
+function _secServHtmlObs(mes, d) {
+  const g = (d.escalaServObs || {})[mes], texto = _secServObsTexto(mes, d);
+  const origem = g && typeof g.texto === 'string' ? 'Editada' + (g.editadoPor ? ' por ' + esc(g.editadoPor) : '') + (g.editadoEm ? ' em ' + _secBR(g.editadoEm) : '') + '.' : 'Sugestão automática (férias e licenças do mês) — ainda não editada.';
+  return '<div class="escx-sec">Observações (OBS) que saem na impressão</div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px"><div style="font-size:13px;color:var(--mu)">' + origem + ' Uma linha por tipo (ex.: FÉRIAS: PP. NOME (Equipe) – 01/11/2026 a 30/11/2026;). O texto é salvo ao sair do campo.</div>'
+    + '<button type="button" class="escx-btn" onclick="sec_servObsSugerir(\'' + mes + '\')">Sugerir de novo (das férias e licenças)</button></div>'
+    + '<textarea rows="6" onchange="sec_servObsSalvar(\'' + mes + '\',this.value)" style="width:100%;padding:8px 10px;resize:vertical;font-size:14px">' + esc(texto) + '</textarea>';
+}
+async function sec_servObsSalvar(mes, valor) {
+  const texto = String(valor || '').split('\n').map(l => l.trim()).filter(Boolean).join('\n').slice(0, 4000);
+  const ok = await _secMutar(d => { d.escalaServObs = Object.assign({}, d.escalaServObs, { [mes]: { texto, editadoEm: new Date().toISOString(), editadoPor: usuarioAtual ? usuarioAtual.nome : '' } }); },
+    { action: 'sec_serv_obs', alvo: _secEscMesTxt(mes), detalhe: texto.replace(/\n/g, ' | ').slice(0, 200) });
+  if (ok) { _mostrarToast('Observações da escala de serviço salvas.', 'sucesso'); _secEscAtualizar(); }
+}
+async function sec_servObsSugerir(mes) {
+  if (!confirm('Trocar as observações de ' + _secEscMesTxt(mes) + ' pela sugestão feita das férias e licenças cadastradas? O texto editado será apagado.')) return;
+  const ok = await _secMutar(d => { const o = Object.assign({}, d.escalaServObs); delete o[mes]; d.escalaServObs = o; }, { action: 'sec_serv_obs', alvo: _secEscMesTxt(mes), detalhe: 'voltou para a sugestão automática' });
+  if (ok) { _mostrarToast('Observações refeitas pela sugestão.', 'sucesso'); _secEscAtualizar(); }
 }
 
 // ── Quadro "Escala de apoio" da escala de serviço: nomes FIXOS (pedido de 14/10/2026) ──
@@ -197,14 +232,14 @@ function _secServApoioCongelar(mes) {
 }
 function _secServHtmlQuadroApoio(mes, d) {
   const q = _secServQuadroApoio(mes, d), dts = Object.keys(q).sort(), fixo = !!(d.escalaServApoio || {})[mes];
-  return '<details><summary>Quadro "Escala de apoio" que sai na impressão <span class="n">(nomes fixos' + (fixo ? '' : ' — ainda não guardado') + ')</span></summary><div class="dentro">'
+  return '<div class="escx-sec">Escala de apoio do administrativo que sai na impressão <span style="font-weight:400;color:var(--mu)">(' + (fixo ? 'nomes guardados' : 'sugestão do apoio de sábado — ainda não guardada') + ')</span></div><div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
-    + '<div style="font-size:13px;color:var(--mu)">Mudar o apoio de sábado <b style="color:var(--tx)">não</b> muda este quadro. Um nome por linha (ex.: BRUNA SANTOS – CME).</div>'
+    + '<div style="font-size:13px;color:var(--mu)">Edite direto nos campos (um nome por linha, ex.: BRUNA SANTOS – CME); o texto é salvo ao sair do campo. Mudar o apoio de sábado <b style="color:var(--tx)">não</b> muda este quadro.</div>'
     + '<button type="button" class="escx-btn" onclick="sec_servApoioRecopiar(\'' + mes + '\')">Copiar de novo do apoio de sábado</button></div>'
     + '<div class="escx-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">'
     + dts.map(dt => '<div><div class="escx-rot" style="margin-bottom:4px">Dia ' + _secBR(dt) + '</div>'
       + '<textarea rows="5" onchange="sec_servApoioSalvar(\'' + mes + '\',\'' + dt + '\',this.value)" style="width:100%;padding:6px 8px;resize:vertical">' + esc(q[dt] || '') + '</textarea></div>').join('')
-    + '</div></div></details>';
+    + '</div></div>';
 }
 async function sec_servApoioSalvar(mes, dt, valor) {
   const txt = String(valor || '').split('\n').map(l => l.trim()).filter(Boolean).join('\n').slice(0, 1000);
@@ -315,10 +350,8 @@ function sec_servImprimir(mes) {
   const nomesSab = dt => esc(quadro[dt] || '').replace(/\n/g, '<br>');
   const tabA = '<table style="width:100%;border-collapse:collapse;font-size:7.5pt"><tr><th colspan="' + sabs.length + '" style="' + b + ';background:#e7e7e7;font-size:8.5pt">ESCALA DE APOIO DO ADMINISTRATIVO<br>Horário: ' + esc(cfg.escalaHorario || _SEC_ESC_HORARIO) + '</th></tr>'
     + '<tr>' + sabs.map(dt => '<th style="' + b + '">DIA: ' + _secBR(dt) + '</th>').join('') + '</tr><tr>' + sabs.map(dt => '<td style="' + b + ';vertical-align:top">' + nomesSab(dt) + '</td>').join('') + '</tr></table>';
-  // observações: férias, licenças… do mês
-  const porTipo = {}; _secEscAfastadosMes(mes, d).forEach(a => (porTipo[a.tipo] = porTipo[a.tipo] || []).push(a));
-  const equipeDe = sid => { const s = _secServ(sid, d); return s ? (s.equipe === 'EXPEDIENTE' ? (_secServSetor(s) === _SEC_SERV_SEM_SETOR ? '' : _secServSetor(s)) :s.equipe ? s.equipe.charAt(0) + s.equipe.slice(1).toLowerCase() : '') : ''; };
-  const obs = Object.entries(porTipo).map(([t, l]) => '<b><u>' + esc(t.toUpperCase()) + '</u>:</b> ' + l.map(a => '<b>PP. ' + esc(_secNomeServ(a.servidorId, d).toUpperCase()) + '</b>' + (equipeDe(a.servidorId) ? ' (' + esc(equipeDe(a.servidorId)) + ')' : '') + ' – ' + _secBR(a.inicio) + ' a ' + _secBR(a.fim || a.inicio)).join('; ') + ';').join('<br>');
+  // observações: o texto editado do mês ou, sem edição, a sugestão (férias, licenças… do mês)
+  const obs = _secServObsHtml(_secServObsTexto(mes, d));
   // data: o dia em que o documento é gerado
   const dataTxt = _secDataEmissao();
   const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>Escala de Serviço - ' + MESES[mesNum - 1] + '/' + ano + '</title>'
@@ -338,4 +371,4 @@ function sec_servImprimir(mes) {
   _entregarDoc(new Blob([html], { type: 'text/html' }), 'Escala de Servico ' + mes + '.html');
   auditar({ modulo: 'Secretaria', action: 'sec_serv_imprimir', alvo: MESES[mesNum - 1] + '/' + ano });
 }
-Object.assign(_SEC_ACOES, { sec_serv_mover: 'Mudou servidor de guarnição/setor na escala de serviço', sec_serv_posto: 'Trocou o posto na escala de serviço', sec_serv_turno: 'Trocou o turno na escala de serviço', sec_serv_imprimir: 'Imprimiu a escala de serviço', sec_serv_apoio: 'Editou o quadro de apoio da escala de serviço', sec_serv_setor: 'Removeu setor da escala de serviço' });
+Object.assign(_SEC_ACOES, { sec_serv_mover: 'Mudou servidor de guarnição/setor na escala de serviço', sec_serv_posto: 'Trocou o posto na escala de serviço', sec_serv_turno: 'Trocou o turno na escala de serviço', sec_serv_imprimir: 'Imprimiu a escala de serviço', sec_serv_apoio: 'Editou o quadro de apoio da escala de serviço', sec_serv_setor: 'Removeu setor da escala de serviço', sec_serv_obs: 'Editou as observações da escala de serviço' });
