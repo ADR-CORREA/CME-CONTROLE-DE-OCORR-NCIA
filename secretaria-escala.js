@@ -450,10 +450,14 @@ function sec_escImprimir(mes) {
   const d = _secDados(), cfg = d.config || {};
   const MESES = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
   const mesNum = +mes.slice(5, 7), ano = mes.slice(0, 4), mesAno = MESES[mesNum - 1] + '/' + ano;
-  const datas = _secEscDatas(mes, d).filter(dt => d.escalaSabado.some(x => x.data === dt) || new Date(dt + 'T12:00:00').getDay() === 6);
+  // 27/10/2026 (pedido dele): o papel sai do quadro FIXO do mês (o oficial, gerado no começo do mês), não do controle
+  // real — se a pessoa tinha que vir dia 03 e só veio dia 31, o controle fica em 31, mas no papel ela continua no dia 03.
+  const quadro = typeof _secServQuadroApoio === 'function' ? _secServQuadroApoio(mes, d) : {};
+  const datas = [...new Set(Object.keys(quadro).concat(_secEscSabados(mes)))].sort();
   const horario = String(cfg.escalaHorario || _SEC_ESC_HORARIO).replace(/0(\d)h/g, '$1h');
-  const lin = d.escalaSabado.filter(x => x.data.slice(0, 7) === mes)
-    .sort((a, b) => a.data.localeCompare(b.data) || a.local.localeCompare(b.local) || _secEscNome(a, d).localeCompare(_secEscNome(b, d)));
+  const lin = Object.keys(quadro).sort().flatMap(dt => String(quadro[dt] || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+    const m = l.match(/^(.*?)\s*[–\-]\s*([A-Z]{2,5})$/); return { data: dt, nome: (m ? m[1] : l).trim(), local: m ? m[2] : '' };
+  })).sort((a, b) => a.data.localeCompare(b.data) || a.local.localeCompare(b.local) || a.nome.localeCompare(b.nome));
   const img = (b64, tipo, alt) => b64 ? '<img src="data:' + tipo + ';base64,' + b64 + '" alt="' + alt + '" style="height:76px;width:auto">' : '';
   const cinza = 'background:#d9d9d9', bd = 'border:1px solid #000';
   // OBS: só férias/licenças de quem é do administrativo (expediente)
@@ -478,7 +482,7 @@ function sec_escImprimir(mes) {
     + '<tr><th colspan="' + (n + 1) + '" style="font-size:16pt;padding:6px">ESCALA DE APOIO DO ADMINISTRATIVO DA CME - ' + mesAno + '</th></tr>'
     + '<tr><th colspan="' + (n + 1) + '" style="' + cinza + ';font-size:10pt;padding:6px">ADMINISTRATIVO DA CENTRAL DE MONITORAÇÃO ELETRÔNICA DO IAPEN</th></tr>'
     + '<tr><th style="' + cinza + ';width:26%;padding:12px 8px;font-size:9.5pt">SERVIDORES:</th><th colspan="' + n + '" style="font-size:9pt">DIAS E HORÁRIOS: ' + esc(diasTxt) + '</th></tr>'
-    + (lin.length ? lin.map(x => '<tr><td style="' + cinza + ';font-size:9.5pt">' + esc((_secEscGuerra(x.servidorId, d) || _secEscNomePapel(_secEscNome(x, d))).toUpperCase()) + ' – ' + esc(x.local) + '</td>'
+    + (lin.length ? lin.map(x => '<tr><td style="' + cinza + ';font-size:9.5pt">' + esc(x.nome.toUpperCase()) + (x.local ? ' – ' + esc(x.local) : '') + '</td>'
         + datas.map(dt => '<td style="font-weight:bold;font-size:10pt;text-align:center;width:' + (74 / Math.max(n, 1)).toFixed(1) + '%">' + (x.data === dt ? _secBR(dt) : '') + '</td>').join('') + '</tr>').join('')
       : '<tr><td style="' + cinza + '">&nbsp;</td>' + datas.map(() => '<td></td>').join('') + '</tr>')
     + '<tr><td colspan="' + Math.max(1, Math.ceil((n + 1) / 2)) + '" style="' + cinza + ';font-size:8.5pt;text-align:justify;vertical-align:top;height:64px">' + (ferias.length ? '<b>OBS:</b>' + grupo(ferias) : '<b>OBS:</b>') + '</td>'
