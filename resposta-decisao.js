@@ -154,11 +154,11 @@ function rd_montar() {
   regsEq.filter(r => /SUBSTITUI|TROCA D[OEA]\s*(?:EQUIPAMENTO|TORNOZELEIRA|DISPOSITIVO)|TROCADO|TROCOU/i.test(r.texto)).forEach(r => {
     const m = r.texto.match(/DISPOSITIVO\s*N[ºo°.]?\s*0*(\d{4,})\s*PELO(?:\s*DE)?\s*N[ºo°.]?\s*0*(\d{4,})/i), iso = rd_dataISO(r.data);
     const antigo = (r.texto.match(/(?:TORNOZELEIRA|DISPOSITIVO|EQUIPAMENTO)\s*(?:N[ºo°.]?\s*)?0*(\d{4,})/i) || [])[1] || ''; // "INSPEÇÃO DA TORNOZELEIRA 0058187 … TROCA" = o que saiu
-    const mot = (r.texto.match(/(?:EM RAZ[ÃA]O D[EAO]|DEVIDO(?:\s+A(?=\s))?|POR APRESENTAR|MOTIVO:?)\s*(.{5,300}?)(?:\.|$)/i) || [])[1] || '';
+    const mot = ((r.texto.match(/(?:EM RAZ[ÃA]O D[EAO]|DEVIDO(?:\s+A(?=\s))?|POR APRESENTAR|MOTIVO:?)\s*(.{5,300}?)(?:\.|$)/i) || [])[1] || '').replace(/^APRESENTAR\s+/i, '');
     let t = m ? cadeia.find(x => String(x.serie).replace(/^0+/, '') === m[2].replace(/^0+/, '')) : null;
     if (!t && iso) t = cadeia.find(x => x.iso && dias(x.iso, iso) <= 3);
     // a data do Registro do AKILES vale mais que a data lida por OCR no termo (o OCR erra "dezesseis"/"dezessete")
-    if (t) { if (m) t.anterior = m[1]; else if (antigo && !t.anterior) t.anterior = antigo; if (mot && !t.motivo) t.motivo = mot; if (iso) { t.data = r.data.slice(0, 10); t.iso = iso; } t.fonte += '; Registro do AKILES de ' + r.data.slice(0, 16); }
+    if (t) { if (m) t.anterior = m[1]; else if (antigo && !t.anterior) t.anterior = antigo; if (mot && !t.motivo) t.motivo = mot; if (iso) { t.fonte = t.fonte.replace(t.data, r.data.slice(0, 10)); t.data = r.data.slice(0, 10); t.iso = iso; } t.fonte += '; Registro do AKILES de ' + r.data.slice(0, 16); }
     else cadeia.push({ data: r.data.slice(0, 10), iso, serie: m ? m[2] : '(ver termo de guarda)', anterior: m ? m[1] : antigo, motivo: mot, fonte: 'Registro do AKILES de ' + r.data.slice(0, 16) });
   });
   cadeia.sort((x, y) => (x.iso || '').localeCompare(y.iso || '')); cadeia.forEach((t, i) => { if (!t.anterior && i > 0) t.anterior = cadeia[i - 1].serie; });
