@@ -44,7 +44,9 @@ async function rd_pdfTexto(buf, ocrSePreciso, maxOcrPag) {
     for (let p = 1; p <= Math.min(pdf.numPages, maxOcrPag || 4); p++) { // OCR local leva até 90 s por página — termo de guarda é 1 página
       const pg = await pdf.getPage(p), vp = pg.getViewport({ scale: 1.6 }), cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
       await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
-      const t = await _comOcrCanvas(cv); txt += '\n' + (typeof t === 'string' ? t : (t && t.texto) || '');
+      // termos da pasta: direto no leitor de imagem da nuvem (o OCR local leva até 90 s por página e trava a tela)
+      const t = (maxOcrPag && typeof _comOcrViaWorker === 'function') ? await _comOcrViaWorker(cv.toDataURL('image/jpeg', 0.8).split(',')[1]) : await _comOcrCanvas(cv);
+      txt += '\n' + (typeof t === 'string' ? t : (t && t.texto) || '');
     }
   }
   return txt.replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim();
