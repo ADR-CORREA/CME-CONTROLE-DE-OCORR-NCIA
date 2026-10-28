@@ -9661,7 +9661,36 @@ function vigia_abrir() {
       + '<div style="color:var(--idv-sec);margin-top:2px">a <b style="color:var(--idv-cr)">' + esc(a.d) + ' m</b> do ' + esc(a.ponto) + ' · posição de <span class="idv-data">' + hm(a.posicaoEm) + '</span> · alerta às <span class="idv-data">' + hm(a.em) + '</span></div>'
       + (isFinite(a.lat) && isFinite(a.lon) ? '<div style="margin-top:8px"><a class="idv-btn mini" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + (+a.lat) + ',' + (+a.lon) + '">Abrir no mapa</a></div>' : '')
       + '</div>').join('');
-  _abrirViewer('Vigia — área atrás do IAPEN', '<p style="margin:0 0 10px;color:var(--idv-sec)">Monitorados que chegaram perto dos pontos A e B (mais recente primeiro). A posição é a do momento do alerta — confira a atual no AKILES.</p>' + corpo);
+  const temMapa = lista.some(a => isFinite(a.lat) && isFinite(a.lon));
+  _abrirViewer('Vigia — área atrás do IAPEN', '<p style="margin:0 0 10px;color:var(--idv-sec)">Monitorados que chegaram perto dos pontos A e B (mais recente primeiro). A posição é a do momento do alerta — confira a atual no AKILES. <a class="idv-btn mini" target="_blank" rel="noopener" href="https://akiles.ap.uetecnologia.com.br">Abrir o AKILES</a></p>'
+    + (temMapa ? '<div id="vigia-mapa" style="height:340px;border-radius:6px;overflow:hidden;border:1px solid var(--idv-borda);margin-bottom:10px;background:var(--idv-fundo)"></div>' : '') + corpo);
+  if (temMapa) _vigiaMapa(lista, v.pontos || [], v.raios || []);
+}
+// Mapa da janela do vigia: o mais recente em vermelho com o nome, os anteriores menores; pontos A/B com os raios.
+function _vigiaMapa(lista, pontos, raios) {
+  const desenhar = () => {
+    const el = document.getElementById('vigia-mapa'); if (!el || typeof L === 'undefined') return;
+    const m = L.map(el), g = [];
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '\u{00A9} OpenStreetMap' }).addTo(m);
+    pontos.forEach(p => {
+      if (!Array.isArray(p.centro)) return;
+      raios.forEach(r => L.circle(p.centro, { radius: +r, color: '#855800', weight: 1, fillOpacity: 0.04 }).addTo(m));
+      L.circleMarker(p.centro, { radius: 6, color: '#1d3048', fillColor: '#e3b65c', fillOpacity: 1 }).addTo(m).bindTooltip(esc(p.nome));
+      g.push(p.centro);
+    });
+    lista.filter(a => isFinite(a.lat) && isFinite(a.lon)).forEach((a, i) => {
+      const mk = L.circleMarker([+a.lat, +a.lon], { radius: i ? 7 : 10, color: '#fff', weight: 3, fillColor: i ? '#4d5967' : '#b91c27', fillOpacity: 1 }).addTo(m);
+      mk.bindTooltip(esc(a.nome) + ' · ' + esc(a.d) + ' m', i ? {} : { permanent: true, direction: 'top', offset: [0, -10] });
+      g.push([+a.lat, +a.lon]);
+    });
+    m.fitBounds(g, { padding: [40, 40], maxZoom: 17 });
+    setTimeout(() => { try { m.invalidateSize(); } catch (e) {} }, 250);
+  };
+  if (typeof L !== 'undefined') return setTimeout(desenhar, 50);
+  if (!document.getElementById('leaflet-css')) {
+    const lk = document.createElement('link'); lk.id = 'leaflet-css'; lk.rel = 'stylesheet'; lk.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(lk);
+  }
+  const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; s.onload = desenhar; document.head.appendChild(s);
 }
 window.addEventListener('hashchange', () => { if (location.hash === '#vigia') location.reload(); }); // recarrega para buscar o alerta novo
 // pacote.bateria = { em, indicadores:{pul,case,btd,zni,zne,online}, porReg:{ registro: [% bateria, operadora] } }.
