@@ -9671,7 +9671,9 @@ function _vigiaMapa(lista, pontos, raios) {
   const desenhar = () => {
     const el = document.getElementById('vigia-mapa'); if (!el || typeof L === 'undefined') return;
     const m = L.map(el), g = [];
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '\u{00A9} OpenStreetMap' }).addTo(m);
+    const esri = t => L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' + t + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '\u{00A9} Esri' });
+    const sat = esri('World_Imagery').addTo(m);
+    L.control.layers({ 'Sat\u{E9}lite': sat, 'Ruas': esri('World_Street_Map') }).addTo(m);
     pontos.forEach(p => {
       if (!Array.isArray(p.centro)) return;
       raios.forEach(r => L.circle(p.centro, { radius: +r, color: '#855800', weight: 1, fillOpacity: 0.04 }).addTo(m));
