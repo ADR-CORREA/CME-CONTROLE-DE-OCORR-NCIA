@@ -1258,6 +1258,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         </button>
       </div>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:-4px 0 12px;cursor:pointer"><input type="checkbox" id="input-manter"> Manter conectado neste aparelho por 7 dias</label>
     <button class="btn-login" onclick="fazerLogin()">Entrar no Sistema</button>
     <div class="login-error" id="login-error" role="alert">Usuário ou senha incorretos. Tente novamente.</div>
     <div class="login-footer">
@@ -7910,6 +7911,8 @@ function _salvarSessao(usuario) {
       // continuarem funcionando após F5, sem precisar logar de novo.
       _su: _sessionUser || null,
       _sh: _sessionHash || null,
+      // "Manter conectado neste aparelho" marcado no login: a sessão vale 7 dias em vez de 8 h
+      manter: !!document.getElementById('input-manter')?.checked,
       loginAt: Date.now()
     }));
   } catch (e) { console.warn('[CME] não foi possível salvar a sessão:', e.message); }
@@ -20564,12 +20567,12 @@ function r2_iconeArquivo(nome) {
   if (sessaoSalva) {
     try {
       const s = JSON.parse(sessaoSalva);
-      const TIMEOUT_SESSAO = 8 * 60 * 60 * 1000; // 8 horas
+      const TIMEOUT_SESSAO = (s.manter ? 7 * 24 : 8) * 60 * 60 * 1000; // 8 horas; 7 dias se marcou "manter conectado"
       const sessaoExpirada = s.loginAt && (Date.now() - s.loginAt) > TIMEOUT_SESSAO;
       if (!sessaoExpirada && s.usuario) {
         // Repõe as credenciais de sessão para os RPCs autenticados (gerenciar
         // usuários, salvar, etc.) voltarem a funcionar após o F5.
-        const { loginAt, _su, _sh, ...snapshot } = s;
+        const { loginAt, manter, _su, _sh, ...snapshot } = s;
         if (_su) _sessionUser = _su;
         if (_sh) _sessionHash = _sh;
         // Reemite o token de sessão do Worker (arquivos R2) — sem isso, ao
