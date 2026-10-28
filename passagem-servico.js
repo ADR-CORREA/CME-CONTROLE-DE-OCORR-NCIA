@@ -63,15 +63,13 @@ function ep_abrirPassagem() {
       + '<td><input type="text" inputmode="numeric" id="epp-km-' + i + '" value="' + esc(g.km || '') + '" placeholder="KM" style="width:110px;height:32px;padding:0 8px;border:1px solid var(--idv-borda);border-radius:6px" aria-label="KM da ' + esc(v) + '"></td>'
       + '<td><select id="epp-cb-' + i + '" class="idv-select" style="height:32px" aria-label="Combustível da ' + esc(v) + '">' + _EPP_COMB.map(c => '<option' + (c === (g.comb || '') ? ' selected' : '') + ' value="' + c + '">' + (c || '—') + '</option>').join('') + '</select></td></tr>';
   }).join('');
-  const nomes = _eppNomes();
   const corpo = '<div class="idv-secao" style="margin-top:0">Serviço</div>'
     + '<div class="form-grid">' + campo('Data e hora da passagem', '<input type="datetime-local" id="epp-dh" value="' + _eppAgoraLocal() + '">')
     + campo('Dia do serviço (08h às 08h)', '<input type="date" id="epp-dia" value="' + dia + '">') + '</div>'
     + '<div class="form-grid">' + campo('Plantão que passa', '<select id="epp-eq">' + opEq(eq) + '</select>')
     + campo('Plantão que recebe', '<select id="epp-eq2">' + opEq(_eppProxEquipe(eq)) + '</select>') + '</div>'
-    + '<div class="form-grid">' + campo('Servidor que passa o serviço', '<input type="text" id="epp-passa" list="cme-nomes" value="' + esc(((typeof turno_plantonista === 'function' && turno_plantonista()) || (usuarioAtual && usuarioAtual.nome) || '').toUpperCase()) + '" style="text-transform:uppercase">')
-    + campo('Servidor que recebe o serviço', '<input type="text" id="epp-recebe" list="epp-nomes" value="" placeholder="Nome de quem assume" style="text-transform:uppercase">') + '</div>'
-    + '<datalist id="epp-nomes">' + nomes.map(n => '<option>' + esc(n) + '</option>').join('') + '</datalist>'
+    + '<div class="form-grid">' + campo('Servidor que passa o serviço', '<input type="text" id="epp-passa" value="' + esc(((usuarioAtual && usuarioAtual.nome) || '').toUpperCase()) + '" style="text-transform:uppercase">')
+    + campo('Servidor que recebe o serviço', '<input type="text" id="epp-recebe" value="" autocomplete="off" placeholder="Digite o nome de quem assume" style="text-transform:uppercase">') + '</div>'
     + '<div class="idv-secao">Material carga <span class="idv-mini" style="font-weight:400">— marque o que foi conferido; as 5 primeiras quantidades vêm do Estoque do Plantão</span></div>'
     + '<div class="table-scroll" style="max-height:44vh"><table class="data-table idv-tabela"><thead><tr><th>Item</th><th>Qtd.</th><th></th><th>Observação</th></tr></thead><tbody>' + linhasItens + '</tbody></table></div>'
     + '<div class="idv-secao">Viaturas</div>'
@@ -104,7 +102,7 @@ function ep_gerarPassagem() {
   fecharModal('ep-modal');
   // (27/10/2026) a passagem já deixa o turno em nome de quem recebe — ele não precisa "assumir" de novo
   if (dados.recebe && typeof salvarStore === 'function') {
-    salvarStore('turno', { equipe: dados.eq2 || dados.eq, dia: dados.dia, assumidoPor: dados.recebe, assumidoEm: new Date().toISOString(), recebidoDe: dados.passa, usuario: '', viaPassagem: true });
+    salvarStore('turno', { equipe: dados.eq2 || dados.eq, dia: _eppMaisUmDia(dados.dia), assumidoPor: dados.recebe, /* vale no dia de plantão de quem recebe */ assumidoEm: new Date().toISOString(), recebidoDe: dados.passa, usuario: '', viaPassagem: true });
     _mostrarToast('Turno passado a ' + dados.recebe + ' (equipe ' + (dados.eq2 || dados.eq) + ').');
     try { _dashRenderPessoal(); } catch (e) {}
   }

@@ -10916,6 +10916,9 @@ const _TURNO_VALIDADE_MS = 26 * 3600 * 1000;
 function turno_atual() {
   const t = carregarStore('turno', null);
   if (!t || !t.equipe || !t.assumidoEm) return null;
+  // (28/10/2026) o turno vale só no PRÓPRIO dia de plantão (08h às 08h): depois das 08h volta a guarnição do calendário
+  // (antes valia 26 h e a equipe de ontem aparecia hoje na passagem de serviço)
+  if (t.dia && t.dia !== _diaPlantao()) return null;
   const ms = Date.now() - new Date(t.assumidoEm).getTime();
   return (isNaN(ms) || ms < 0 || ms > _TURNO_VALIDADE_MS) ? null : t;
 }
@@ -29579,7 +29582,7 @@ function estat_exportarResultado() {
 <script src="rv-justificativas.js?v=20261022b"></script>
 <script src="estoque-plantao.js?v=20261026est"></script>
 <script src="estoque-plantao-tela.js?v=20261026est"></script>
-<script src="passagem-servico.js?v=20261027b"></script>
+<script src="passagem-servico.js?v=20261028a"></script>
 <script src="upload-imagem-pdf.js?v=20261020f4"></script>
 <script src="assinatura-foto.js?v=20261021a"></script>
 <script src="rv-conferencia.js?v=20261026a"></script>
