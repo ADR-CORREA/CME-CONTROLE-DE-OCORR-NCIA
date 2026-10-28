@@ -8224,7 +8224,7 @@ function _iniciarAppTela() {
   try { const _h = location.hash.slice(1); if (/^[a-z]{3,20}$/.test(_h) && document.getElementById('panel-' + _h)) mudarAba(_h); } catch (e) {}
   // (28/10/2026) aviso do vigia no celular abre o CME em #vigia
   // (o hash é lido no carregamento: com a sessão salva, a tela inicial troca o endereço p/ #dashboard antes de chegar aqui)
-  if (location.hash === '#vigia' || _vigiaPeloAviso) { _vigiaPeloAviso = false; try { if (location.hash === '#vigia') history.replaceState(null, '', location.pathname + location.search); } catch (e) {} setTimeout(() => { try { vigia_abrir(); } catch (e) { console.error('[CME] vigia:', e); } }, 400); }
+  if (location.hash === '#vigia' || _vigiaPeloAviso) { _vigiaPeloAviso = false; try { history.replaceState(null, '', location.pathname); } catch (e) {} setTimeout(() => { try { vigia_abrir(); } catch (e) { console.error('[CME] vigia:', e); } }, 400); }
 
   // Pré-carrega monitorados em background após login — busca instantânea quando abrir Arquivos
   setTimeout(() => {
@@ -9655,7 +9655,8 @@ function _akilesPacote() { return carregarStore('akiles_auto', null); }
 // Bateria e indicadores do AKILES (robô bateria-akiles.js, de hora em hora, pela API interna do AKILES):
 // (28/10/2026) Vigia de área (robô vigia-area.js): pacote.vigia = { em, dia, alertas:[{ em, nome, d, ponto, lat, lon, posicaoEm, raio }] }.
 // O aviso do celular é genérico (vai por servidor público); tocar nele abre o CME em #vigia, que mostra quem é e onde está.
-let _vigiaPeloAviso = location.hash === '#vigia'; // a página foi aberta pelo aviso do celular
+// a página foi aberta pelo aviso do celular (?vigia=<hora> muda o endereço a cada aviso: o navegador não usa a página do cache)
+let _vigiaPeloAviso = location.hash === '#vigia' || /[?&]vigia=/.test(location.search);
 function vigia_abrir() {
   const v = (_akilesPacote() || {}).vigia;
   const lista = v && Array.isArray(v.alertas) && Date.now() - new Date(v.em) < 24 * 3600e3 ? v.alertas.slice().reverse() : [];
