@@ -16196,7 +16196,9 @@ function salvarMovEstoque(tipo) {
 // (20/10/2026) se algo foi digitado na janela, pergunta antes de descartar — _accPodeFechar em acessibilidade.js
 document.addEventListener('click', e => {
   if (e.target.classList && e.target.classList.contains('modal-overlay')) {
-    if (typeof _accPodeFechar !== 'function' || _accPodeFechar(e.target)) e.target.classList.remove('open');
+    // (28/10/2026) janela com algo digitado: clique fora NÃO fecha nem pergunta (a pergunta atrapalhava ao registrar a saída
+    // do estoque); fecha só pelo ✕, por Cancelar ou ao salvar. Janela sem nada digitado fecha normalmente.
+    if (e.target.dataset.accSuja !== '1') e.target.classList.remove('open');
   }
 });
 // Fechar modal com tecla Escape (só a de cima; o menu "⋯" aberto fecha primeiro)
