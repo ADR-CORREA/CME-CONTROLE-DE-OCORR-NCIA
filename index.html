@@ -8212,9 +8212,11 @@ function _iniciarAppTela() {
   };
   document.getElementById("role-badge").textContent = nivelLabel[nivel] || nivel.toUpperCase();
 
-  atualizarTudo();
+  // (28/10/2026) um erro em qualquer tela no atualizarTudo impedia de aplicar as abas do nível: o menu ficava no padrão
+  // e o "Estoque Plantão" (escondido por padrão) sumia para o admin. As abas são aplicadas de qualquer jeito.
+  try { atualizarTudo(); } catch (e) { console.error('[CME] atualizarTudo no login falhou:', e); }
   aplicarVisibilidadeTabs(nivel);
-  if (nivel === 'admin') { renderizarUsers(); renderizarLogs(); }
+  if (nivel === 'admin') { try { renderizarUsers(); renderizarLogs(); } catch (e) { console.error('[CME] admin:', e); } }
   // (20/10/2026) volta à aba que estava no endereço (#ocorrencias etc.); mudarAba confere a permissão do nível
   try { const _h = location.hash.slice(1); if (/^[a-z]{3,20}$/.test(_h) && document.getElementById('panel-' + _h)) mudarAba(_h); } catch (e) {}
 
