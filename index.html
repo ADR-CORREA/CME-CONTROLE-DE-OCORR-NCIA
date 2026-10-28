@@ -8219,6 +8219,8 @@ function _iniciarAppTela() {
   if (nivel === 'admin') { try { renderizarUsers(); renderizarLogs(); } catch (e) { console.error('[CME] admin:', e); } }
   // (20/10/2026) volta à aba que estava no endereço (#ocorrencias etc.); mudarAba confere a permissão do nível
   try { const _h = location.hash.slice(1); if (/^[a-z]{3,20}$/.test(_h) && document.getElementById('panel-' + _h)) mudarAba(_h); } catch (e) {}
+  // (28/10/2026) aviso do vigia no celular abre o CME em #vigia
+  if (location.hash === '#vigia') { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} setTimeout(() => { try { vigia_abrir(); } catch (e) { console.error('[CME] vigia:', e); } }, 400); }
 
   // Pré-carrega monitorados em background após login — busca instantânea quando abrir Arquivos
   setTimeout(() => {
@@ -9647,6 +9649,21 @@ function _scAplicarLinhas(linhas, opts) {
 // primeiro aplica o pacote — uma vez só, com o MESMO núcleo do Excel.
 function _akilesPacote() { return carregarStore('akiles_auto', null); }
 // Bateria e indicadores do AKILES (robô bateria-akiles.js, de hora em hora, pela API interna do AKILES):
+// (28/10/2026) Vigia de área (robô vigia-area.js): pacote.vigia = { em, dia, alertas:[{ em, nome, d, ponto, lat, lon, posicaoEm, raio }] }.
+// O aviso do celular é genérico (vai por servidor público); tocar nele abre o CME em #vigia, que mostra quem é e onde está.
+function vigia_abrir() {
+  const v = (_akilesPacote() || {}).vigia;
+  const lista = v && Array.isArray(v.alertas) && Date.now() - new Date(v.em) < 24 * 3600e3 ? v.alertas.slice().reverse() : [];
+  const hm = s => { try { return new Date(s).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
+  const corpo = !lista.length ? '<div class="idv-vazio">Nenhum alerta do vigia nas últimas 24 horas.</div>'
+    : lista.map(a => '<div class="idv-bloco" style="padding:12px 14px;margin-bottom:8px;box-shadow:inset 3px 0 0 var(--idv-cr)">'
+      + '<div style="font-size:16px;font-weight:600">' + esc(a.nome) + (a.teste ? ' <span class="idv-etq ne">teste</span>' : '') + '</div>'
+      + '<div style="color:var(--idv-sec);margin-top:2px">a <b style="color:var(--idv-cr)">' + esc(a.d) + ' m</b> do ' + esc(a.ponto) + ' · posição de <span class="idv-data">' + hm(a.posicaoEm) + '</span> · alerta às <span class="idv-data">' + hm(a.em) + '</span></div>'
+      + (isFinite(a.lat) && isFinite(a.lon) ? '<div style="margin-top:8px"><a class="idv-btn mini" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + (+a.lat) + ',' + (+a.lon) + '">Abrir no mapa</a></div>' : '')
+      + '</div>').join('');
+  _abrirViewer('Vigia — área atrás do IAPEN', '<p style="margin:0 0 10px;color:var(--idv-sec)">Monitorados que chegaram perto dos pontos A e B (mais recente primeiro). A posição é a do momento do alerta — confira a atual no AKILES.</p>' + corpo);
+}
+window.addEventListener('hashchange', () => { if (location.hash === '#vigia') location.reload(); }); // recarrega para buscar o alerta novo
 // pacote.bateria = { em, indicadores:{pul,case,btd,zni,zne,online}, porReg:{ registro: [% bateria, operadora] } }.
 // Leitura com mais de 6 h não aparece (o robô parou ou o PC desligou).
 function _akBateria() { const b = (_akilesPacote() || {}).bateria; return b && b.em && Date.now() - new Date(b.em) < 6 * 3600e3 ? b : null; }
