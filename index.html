@@ -17824,7 +17824,7 @@ function limparModelo() {
 // Define quais sub-abas cada nível pode ver
 const MODELOS_POR_NIVEL = {
   plantao:     ['plantao'],
-  relatorio:   ['multi'],
+  relatorio:   ['multi', 'comunicacao'], // (28/10/2026) Relatório também emite ofício numerado (ex.: impossibilidade de cumprimento)
   comunicacao: ['comunicacao'],
   juridico:    ['juridico-mod'],   // sub-aba própria do jurídico
   psicossocial: ['multi'],         // equipe multidisciplinar (26/10/2026: antes caía nos modelos do plantão)
@@ -22366,6 +22366,16 @@ const COM_MODELOS = [
     corpo:c=>[
       `Com os cumprimentos de estilo, neste ato representado pela Central de Monitoramento Eletrônica – CME, informa que foi prorrogado a monitoração eletrônica de <b>${c.nomes_vinc}</b> em cumprimento à Decisão contida nos Autos.`,
       `Na oportunidade, informo que não será possível prorrogar a monitoração de <b>${c.nome_monitorado}</b>, devido a ${c.motivo_impossib}, e consequentemente, vinculação ao Sistema.`,
+    ]},
+  // (28/10/2026) modelo do setor Relatório — Ofício 2602/2026 (Vara Única de Calçoene): decisão manda revogar/desvincular quem nunca foi vinculado
+  { id:'impossib-cumprimento-nunca-vinc', cat:'Informativo', nome:'Impossibilidade de Cumprimento de Decisão — Nunca Foi Vinculado',
+    assunto:'Impossibilidade de cumprimento da decisão judicial',
+    campos:[
+      {id:'determinacao', label:'O que a decisão determinou (em branco = revogação das MPU)', tipo:'text', placeholder:'a revogação das medidas protetivas de urgência'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, a Central de Monitoramento Eletrônico – CME/IAPEN informa a impossibilidade de cumprimento da decisão judicial que determinou ${c.determinacao || 'a revogação das medidas protetivas de urgência'} em desfavor de <b>${c.nome_monitorado}</b>, tendo em vista que o referido indivíduo jamais foi vinculado ao Sistema de Monitoramento Eletrônico desta Central.`,
+      `Dessa forma, esclarece-se que não há qualquer registro de monitoramento eletrônico em nome do requerido.`,
     ]},
   { id:'comunica-descump', cat:'Informativo', nome:'Comunicação de Violação / Descumprimento de Medida',
     assunto:'Comunicação de Descumprimento das Condições da Monitoração Eletrônica',
