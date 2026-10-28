@@ -18638,16 +18638,13 @@ async function r2_api(method, path, headers = {}, body = null) {
   if (!_r2Pronto()) throw new Error('R2 não configurado.');
   await _garantirTokenSessao(); // renova o token de sessão do Worker se tiver expirado
   const base = r2_state.url.replace(/\/$/, '');
-  const pedir = () => fetch(base + path, {
-    method,
-    headers: {
-      'Authorization': `Bearer ${_workerToken()}`,
-      'X-Usuario': usuarioAtual?.nome || 'desconhecido',
-      'X-Nivel':   usuarioAtual?.nivel || '',
-      ...headers,
-    },
-    body,
-  });
+  // (28/10/2026) cabeçalho só aceita Latin-1 sem quebra de linha. Valor fora disso: nome/pasta/arquivo vão codificados
+  // (o Worker já faz decodeURIComponent neles); o resto perde o caractere. Valores válidos seguem iguais.
+  const _ok = v => /^[\x20-\x7E\xA0-\xFF]*$/.test(v);
+  const hdr = {};
+  Object.entries(Object.assign({ 'Authorization': `Bearer ${_workerToken()}`, 'X-Usuario': usuarioAtual?.nome || 'desconhecido', 'X-Nivel': usuarioAtual?.nivel || '' }, headers))
+    .forEach(([k, v]) => { v = String(v == null ? '' : v); hdr[k] = _ok(v) ? v : /^X-(Monitorado|Pasta|Filename)$/i.test(k) ? encodeURIComponent(v.trim()) : v.replace(/[^\x20-\x7E\xA0-\xFF]/g, ''); });
+  const pedir = () => fetch(base + path, { method, headers: hdr, body });
   // 20/10/2026: falha passageira do servidor/R2 (500–599 ou queda de rede) aparecia direto na tela
   // ("Erro interno no servidor"). Consulta (GET) é só leitura → tenta de novo sozinha; envio/exclusão não repete.
   let res;
@@ -19617,10 +19614,17 @@ function _r2GuessMime(nome) {
   return map[ext] || 'application/octet-stream';
 }
 
+// (28/10/2026) nome colado de PDF/WhatsApp trazia caractere invisível ou tipográfico (espaço de largura zero, travessão,
+// aspas curvas) que não pode ir num cabeçalho HTTP: o fetch recusava ("Failed to execute 'fetch'… Invalid value").
+function _r2LimparNome(s) {
+  return String(s || '').normalize('NFC').replace(/[​-‍⁠﻿­]/g, '').replace(/[‘’ʼ´`]/g, "'")
+    .replace(/[‐-―−]/g, '-').replace(/[“”]/g, '"').replace(/[\s ]+/g, ' ').replace(/[^\x20-\xFF]/g, '').trim();
+}
 async function r2_novoMonitorado() {
   const nome = prompt('Nome do monitorado:');
   if (!nome || !nome.trim()) return;
-  const nomeTrimmed = nome.trim();
+  const nomeTrimmed = _r2LimparNome(nome);
+  if (nomeTrimmed.length < 3) { _mostrarToast('\u{26A0}\u{FE0F} Nome inválido — digite o nome do monitorado.', 'erro'); return; }
   if (!_r2Pronto()) {
     _mostrarToast('\u{26A0}\u{FE0F} Armazenamento (R2) não configurado. Recarregue a página e tente de novo.', 'erro');
     return;
