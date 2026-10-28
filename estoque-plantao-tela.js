@@ -95,8 +95,10 @@ function _epHtmlPendencias(lado, pode) {
   const p = ep_pendenciasDe(lado), outro = lado === 'plantao' ? 'Estoque do CME' : 'Plantão';
   const b = (txt, js, cls) => pode ? _epBtn(txt, js, cls) : '';
   const sec = (tit, lista, botoes, cor) => lista.length ? '<div class="idv-secao"' + (cor ? ' style="color:' + cor + '"' : '') + '>' + tit + ' (' + lista.length + ')</div>' + lista.map(botoes).join('') : '';
-  return sec('\u{1F4E5} A receber do ' + outro + ' — confira os números e clique em Receber', p.aReceber,
-      t => _epHtmlTransf(t, b('\u{2705} Receber', "ep_receberTransf('" + _jsq(t.id) + "')", 'btn-primary') + b('Recusar', "ep_perguntarRecusa('" + _jsq(t.id) + "')")))
+  const rb = lado === 'plantao';  // "Receber e dar baixa" só no painel do plantão
+  return (rb && pode && p.aReceber.length > 1 ? '<div style="margin:8px 0 -4px">' + _epBtn('Receber todos e dar baixa (' + p.aReceber.length + ')', 'ep_abrirReceberBaixa()') + '</div>' : '')
+    + sec('\u{1F4E5} A receber do ' + outro + ' — confira os números e clique em Receber', p.aReceber,
+      t => _epHtmlTransf(t, b('\u{2705} Receber', "ep_receberTransf('" + _jsq(t.id) + "')", 'btn-primary') + (rb ? b('Receber e dar baixa', "ep_abrirReceberBaixa('" + _jsq(t.id) + "')") : '') + b('Recusar', "ep_perguntarRecusa('" + _jsq(t.id) + "')")))
     + sec('\u{21A9} Recusado pelo ' + outro + ' — receba de volta no seu estoque', p.receberDeVolta,
       t => _epHtmlTransf(t, b('\u{21A9} Receber de volta', "ep_receberDeVolta('" + _jsq(t.id) + "')", 'btn-primary')), 'var(--idv-at)')
     + sec('\u{26A0}\u{FE0F} Transferências pela metade — conclua para o saldo ficar certo', p.concluir,
@@ -136,6 +138,30 @@ async function ep_renderizarVisaoCme() {
 function _epRenderSetorPendentes() {
   const el = document.getElementById('ep-setor-pendentes'); if (!el) return;
   el.innerHTML = ep_podeVerCme() ? _epHtmlPendencias('setor', podeAlterarEstoque()) : '';
+}
+// receber e já dar baixa: um item (id) ou todos os "a receber" (sem id). O motivo vem sugerido pela observação de quem enviou.
+let _epRB = [];
+function ep_abrirReceberBaixa(id) {
+  if (!ep_podeMover()) { alert('Sem permissão.'); return; }
+  const lista = ep_pendenciasDe('plantao').aReceber.filter(t => !id || t.id === id); if (!lista.length) return;
+  _epRB = lista.map(t => t.id);
+  const conta = {}; lista.forEach(t => { if (t.obs) conta[t.obs] = (conta[t.obs] || 0) + 1; });
+  const sugerido = Object.keys(conta).sort((a, b) => conta[b] - conta[a])[0] || '';
+  const campo = (lbl, html) => '<div class="form-field"><label>' + lbl + '</label>' + html + '</div>';
+  _epModal('Receber e dar baixa', '<p style="font-size:14px;margin:0 0 8px">Entra no estoque do Plantão e sai logo em seguida como <b>Baixa</b>:</p>'
+    + '<ul style="margin:0 0 12px 18px;font-size:14px">' + lista.map(t => '<li>' + esc(_epDesc(t)) + '</li>').join('') + '</ul>'
+    + '<div class="form-grid">' + campo('Motivo da baixa *', '<input type="text" id="ep-rb-mot" value="' + esc(sugerido) + '" placeholder="Ex.: material enviado ao município de Amapá">') + '</div>'
+    + '<div class="form-grid">' + campo('Observação', '<input type="text" id="ep-rb-obs" placeholder="Ex.: plantão deu baixa para o Amapá">') + '</div>',
+    _epBtn('Cancelar', "fecharModal('ep-modal')") + _epBtn('Receber e dar baixa (' + lista.length + ')', 'ep_confirmarReceberBaixa(this)', 'btn-primary'));
+}
+async function ep_confirmarReceberBaixa(btn) {
+  const motivo = ((document.getElementById('ep-rb-mot') || {}).value || '').trim(), obs = ((document.getElementById('ep-rb-obs') || {}).value || '').trim();
+  if (!motivo) return alert('Informe o motivo da baixa.');
+  if (btn) { btn.disabled = true; btn.textContent = 'Lançando...'; }
+  const r = await ep_receberEBaixar(_epRB, motivo, obs);
+  fecharModal('ep-modal');
+  if (r.falhas) alert(r.feitos + ' recebido(s) e baixado(s); ' + r.falhas + ' não foi(ram). Confira o painel e o histórico.');
+  else _mostrarToast('\u{2705} ' + r.feitos + ' recebido(s) e baixado(s).', 'ok');
 }
 function ep_perguntarRecusa(id) {
   const motivo = (prompt('Por que recusar? (ex.: número de série não confere, item com defeito)') || '').trim();

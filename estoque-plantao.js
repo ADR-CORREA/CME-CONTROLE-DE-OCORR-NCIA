@@ -289,7 +289,7 @@ function _epPodeLado(lado) { return lado === 'plantao' ? ep_podeMover() : podeAl
 function _epRender() { try { ep_renderizar(); } catch (e) {} try { renderizarEstoque(); } catch (e) {} try { _dashEstoqueDisp(); } catch (e) {} }
 
 /* ── decidir uma transferência: recebida / recusada (quem recebe) ou devolvida (quem enviou, depois da recusa) ── */
-async function ep_decidirTransf(id, status, motivo) {
+async function ep_decidirTransf(id, status, motivo, quieto) {
   const t0 = ep_getTransf().transferencias.find(x => x.id === id); if (!t0) { _epRender(); return; }
   const destino = t0.sentido === EP_SETOR_PARA_PLANTAO ? 'plantao' : 'setor', origem = destino === 'plantao' ? 'setor' : 'plantao';
   const lado = status === 'devolvida' ? origem : destino;
@@ -300,12 +300,28 @@ async function ep_decidirTransf(id, status, motivo) {
   if (!(await _epDecisaoFicou(t))) { alert('Outro computador decidiu essa transferência no mesmo instante. Atualize a tela e confira.'); _epRender(); return; }
   const lugar = lado === 'plantao' ? 'Plantão' : 'setor de Estoque';
   addLog('Estoque — transferência ' + (_EP_PALAVRA[status] || status).toUpperCase() + ' pelo ' + lugar + ': ' + _epDesc(t) + (motivo ? ' — ' + motivo : '') + ' (' + _epQuem() + ')');
+  let lancou = false;
   if (status === 'recusada') _mostrarToast('Recusado — quem enviou vai ver "Recusado — receber de volta".', 'ok');
-  else if (await _epLancar(t)) _mostrarToast('\u{2705} Lançado no estoque do ' + lugar + '.', 'ok');
+  else if (await _epLancar(t)) { lancou = true; if (!quieto) _mostrarToast('\u{2705} Lançado no estoque do ' + lugar + '.', 'ok'); }
   else alert('A transferência foi marcada, mas não consegui lançar no estoque do ' + lugar + ' agora. Ela aparece como "pela metade" com o botão "Concluir".');
   _epRender();
+  return lancou ? t : null;
 }
 function ep_receberTransf(id) { return ep_decidirTransf(id, 'recebida'); }
+/* ── Receber e já dar baixa (pedido de 28/10/2026): material que o CME manda ao plantão só de passagem (ex.: para o
+   município de Amapá). Cada transferência é recebida (entra no saldo) e sai logo em seguida como Baixa. ── */
+async function ep_receberEBaixar(ids, motivo, obs) {
+  if (!ep_podeMover()) { alert('Sem permissão.'); return { feitos: 0, falhas: ids.length }; }
+  let feitos = 0, falhas = 0;
+  for (const id of ids) {
+    const t = await ep_decidirTransf(id, 'recebida', '', true);
+    if (!t) { falhas++; continue; }
+    const op = { categoria: t.categoria, item: t.item, tamanho: t.tamanho || '', qtd: t.quantidade, estado: t.estado || '', seriais: (t.unidades || []).map(u => u.id) };
+    if (await ep_salvarMov('baixa', op, { motivo, obs, transferenciaBaixa: t.id })) feitos++; else falhas++;
+  }
+  _epRender();
+  return { feitos, falhas };
+}
 function ep_receberDeVolta(id) { return ep_decidirTransf(id, 'devolvida'); }
 async function ep_concluirPendencia(id) {
   const t = ep_getTransf().transferencias.find(x => x.id === id); if (!t) return;
