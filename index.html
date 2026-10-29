@@ -9683,7 +9683,7 @@ function vigia_abrir() {
       + '<div style="color:var(--idv-sec);margin-top:2px">a <b style="color:var(--idv-cr)">' + esc(a.d) + ' m</b> do ' + esc(a.ponto) + ' · posição de <span class="idv-data">' + _vigiaHm(a.posicaoEm) + '</span> · alerta às <span class="idv-data">' + _vigiaHm(a.em) + '</span></div>'
       + (isFinite(a.lat) && isFinite(a.lon) ? '<div style="margin-top:8px"><a class="idv-btn mini" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + (+a.lat) + ',' + (+a.lon) + '">Abrir no mapa</a></div>' : '')
       + '</div>').join('');
-  _abrirViewer('Vigia — área atrás do IAPEN', '<p style="margin:0 0 8px;color:var(--idv-sec)">Posição atual dos monitorados do vigia. Passe o mouse sobre um ponto para ver a distância e a hora; quem está a até 300 m fica com o nome no mapa. <a class="idv-btn mini" target="_blank" rel="noopener" href="https://akiles.ap.uetecnologia.com.br">Abrir o AKILES</a></p>'
+  _abrirViewer('Vigia — área atrás do IAPEN', '<p style="margin:0 0 8px;color:var(--idv-sec)">Onde estão agora os monitorados que chegaram perto da área (a até 500 m dos pontos), com a distância e a hora da posição. O aviso no celular chega ao entrar a 500 m, a 300 m e a cada visita a 80 m. <a class="idv-btn mini" target="_blank" rel="noopener" href="https://akiles.ap.uetecnologia.com.br">Abrir o AKILES</a></p>'
     + '<div id="vigia-status"></div><div id="vigia-mapa" style="height:380px;border-radius:6px;overflow:hidden;border:1px solid var(--idv-borda);margin-bottom:10px;background:var(--idv-fundo)"></div><div id="vigia-tabela"></div>'
     + '<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600;font-size:15px">Alertas das últimas 24 horas (' + lista.length + ')</summary><div style="margin-top:8px">' + corpo + '</div></details>');
   const vv = _vigiaVivo() || {};
@@ -9727,13 +9727,30 @@ function _vigiaAoVivo() {
   const st = document.getElementById('vigia-status'), tb = document.getElementById('vigia-tabela');
   if (!st || !tb || !_vigiaM || !_vigiaCamada || !_vigiaAberto()) return;
   const vv = _vigiaVivo();
-  if (!vv || !Array.isArray(vv.pos)) { st.innerHTML = '<div class="idv-faixa at" style="margin-bottom:8px">A posição ao vivo ainda não chegou ao CME. O vigia precisa estar rodando no PC do robô e a gravação precisa estar liberada no banco.</div>'; tb.innerHTML = ''; return; }
+  // (29/10/2026, pedido do Adriano) no mapa só aparece quem está PERTO da área (até o maior raio, 500 m); os outros viram uma linha
+  const perto = Math.max(...((vv && vv.raios) || [500]).map(Number).filter(isFinite), 0) || 500;
+  if (!vv || !Array.isArray(vv.pos) || Date.now() - new Date(vv.em) > 3 * 3600e3) {
+    // sem posição ao vivo: mostra onde cada um estava no alerta das últimas 2 h (o mais recente de cada um)
+    const al = ((_akilesPacote() || {}).vigia || {}).alertas || [], ult = {};
+    al.filter(a => Date.now() - new Date(a.em) < 2 * 3600e3 && isFinite(a.lat) && isFinite(a.lon)).forEach(a => { if (!ult[a.nome] || a.em > ult[a.nome].em) ult[a.nome] = a; });
+    const lst = Object.values(ult);
+    st.innerHTML = '<div class="idv-faixa at" style="margin-bottom:8px">Sem posição ao vivo no CME (falta liberar no banco). '
+      + (lst.length ? 'O mapa mostra onde cada um estava no alerta das últimas 2 horas.' : 'Nenhum alerta nas últimas 2 horas — ninguém chegou perto da área.') + '</div>';
+    _vigiaCamada.clearLayers();
+    const pv = (((_akilesPacote() || {}).vigia || {}).pontos || []).filter(p => Array.isArray(p.centro)).map(p => p.centro);
+    if (!_vigiaM._enquadrado && pv.length + lst.length) { _vigiaM._enquadrado = true; _vigiaM.fitBounds(pv.concat(lst.map(a => [+a.lat, +a.lon])), { paddingTopLeft: [40, 90], paddingBottomRight: [40, 30], maxZoom: 17 }); }
+    lst.forEach(a => L.circleMarker([+a.lat, +a.lon], { radius: 10, color: '#fff', weight: 3, fillColor: +a.d <= 80 ? '#b91c27' : '#855800', fillOpacity: 1 }).addTo(_vigiaCamada)
+      .bindTooltip('<b>' + esc(a.nome) + '</b><br>' + esc(a.d) + ' m do ' + esc(a.ponto) + '<br>posição de ' + _vigiaHm(a.posicaoEm) + ' (alerta)', { permanent: true, direction: 'top', offset: [0, -10] }));
+    tb.innerHTML = '';
+    return;
+  }
   const idade = Date.now() - new Date(vv.em);
   st.innerHTML = idade > _VIGIA_VELHO_MS
     ? '<div class="idv-faixa at" style="margin-bottom:8px">Última leitura do vigia às <span class="idv-data">' + _vigiaHm(vv.em) + '</span> (há ' + Math.round(idade / 60000) + ' min). O robô pode estar parado ou sem acesso ao AKILES.</div>'
-    : '<div style="color:var(--idv-sec);margin-bottom:6px">Ao vivo · última leitura às <b class="idv-data">' + _vigiaHm(vv.em) + '</b> · atualiza sozinho a cada 2 min</div>';
+    : '<div style="color:var(--idv-sec);margin-bottom:6px">Ao vivo · última leitura às <b class="idv-data">' + _vigiaHm(vv.em) + '</b> · atualiza sozinho a cada 2 min · no mapa só quem está a até ' + perto + ' m</div>';
   _vigiaCamada.clearLayers();
-  const ord = vv.pos.filter(p => isFinite(p.lat) && isFinite(p.lon)).sort((a, b) => a.d - b.d);
+  const todos = vv.pos.filter(p => isFinite(p.lat) && isFinite(p.lon)).sort((a, b) => a.d - b.d);
+  const ord = todos.filter(p => p.d <= perto), fora = todos.length - ord.length;
   // 1ª leitura: enquadra os pontos e quem está a até 600 m, com folga em cima para os nomes (depois não mexe no zoom do usuário)
   if (!_vigiaM._enquadrado) {
     _vigiaM._enquadrado = true;
@@ -9743,12 +9760,14 @@ function _vigiaAoVivo() {
   ord.forEach(p => {
     const cor = p.d <= 80 ? '#b91c27' : p.d <= 300 ? '#855800' : '#4d5967';
     const mk = L.circleMarker([+p.lat, +p.lon], { radius: p.d <= 300 ? 10 : 7, color: '#fff', weight: 3, fillColor: cor, fillOpacity: 1 }).addTo(_vigiaCamada);
-    mk.bindTooltip('<b>' + esc(p.nome) + '</b><br>' + esc(p.d) + ' m do ' + esc(p.ponto) + '<br>posição de ' + _vigiaHm(p.comunicacao),
-      p.d <= 300 ? { permanent: true, direction: 'top', offset: [0, -10] } : { direction: 'top', offset: [0, -8] });
+    mk.bindTooltip('<b>' + esc(p.nome) + '</b><br>' + esc(p.d) + ' m do ' + esc(p.ponto) + '<br>posição de ' + _vigiaHm(p.comunicacao), { permanent: true, direction: 'top', offset: [0, -10] });
   });
   const faixa = d => d <= 80 ? 'box-shadow:inset 3px 0 0 var(--idv-cr)' : d <= 300 ? 'box-shadow:inset 3px 0 0 var(--idv-at)' : '';
   const km = d => d >= 1000 ? (d / 1000).toFixed(1).replace('.', ',') + ' km' : esc(d) + ' m';
-  tb.innerHTML = '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Monitorado</th><th>Distância</th><th>Ponto mais perto</th><th>Posição de</th><th></th></tr></thead><tbody>'
+  const prox = todos[ord.length];
+  const linhaFora = fora ? '<div style="color:var(--idv-sec);margin-top:6px">Longe da área (a mais de ' + perto + ' m): ' + fora + ' monitorado(s) — o mais perto é ' + esc(prox.nome) + ', a ' + km(prox.d) + '.</div>' : '';
+  if (!ord.length) { tb.innerHTML = '<div class="idv-vazio">Ninguém perto da área agora.</div>' + linhaFora; return; }
+  tb.innerHTML = linhaFora.replace('margin-top:6px', 'margin-bottom:6px') + '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Monitorado</th><th>Distância</th><th>Ponto mais perto</th><th>Posição de</th><th></th></tr></thead><tbody>'
     + ord.map(p => '<tr style="' + faixa(p.d) + '"><td>' + esc(p.nome) + '</td><td class="idv-data"' + (p.d <= 300 ? ' style="font-weight:600"' : '') + '>' + km(p.d) + '</td><td>' + esc(String(p.ponto || '').replace(/\s*\(.*$/, '')) + '</td>'
       + '<td class="idv-data">' + _vigiaHm(p.comunicacao) + '</td><td><a class="idv-btn mini" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + (+p.lat) + ',' + (+p.lon) + '">Mapa</a></td></tr>').join('')
     + '</tbody></table></div>';
