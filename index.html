@@ -2092,6 +2092,8 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       <!-- Identidade visual (20/10/2026): cabeçalho, legenda, botões e tabelas do guia (identidade.css) -->
       <div class="idv-cab">
         <div><h1>Gerência</h1><div class="idv-sub">Agenda de demandas, compromissos, arquivados, produtividade, VD sem zona de exclusão e saída temporária × zona</div></div>
+        <!-- (29/10/2026) o vigia só abria pelo aviso do celular (#vigia); aqui fica o acesso fixo -->
+        <div class="idv-acoes"><button type="button" class="idv-btn" onclick="vigia_abrir()">Vigia — área atrás do IAPEN</button></div>
       </div>
       <div class="sub-tabs">
         <div class="sub-tab active" id="ger-stab-agenda" onclick="mudarSubAbaGer('agenda')">Agenda</div>
@@ -2101,6 +2103,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         <div class="sub-tab" id="ger-stab-vdzona" onclick="mudarSubAbaGer('vdzona')">VD sem zona de exclusão</div>
         <div class="sub-tab" id="ger-stab-saidatemp" onclick="mudarSubAbaGer('saidatemp')">Saída temporária × zona</div>
         <div class="sub-tab" id="ger-stab-graves" onclick="mudarSubAbaGer('graves')">Violações graves</div>
+        <div class="sub-tab" id="ger-stab-siapen" onclick="mudarSubAbaGer('siapen')">SIAPEN × AKILES</div>
       </div>
       <div class="sub-panel active" id="ger-panel-agenda">
         <div class="idv-barra">
@@ -2168,6 +2171,12 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       <div class="sub-panel" id="ger-panel-graves">
         <div class="idv-secao" style="margin:0 0 10px">Violações graves do plantão</div>
         <div id="vgr-corpo"></div>
+      </div>
+
+      <!-- ── Sub-painel: SIAPEN × AKILES — monitorado ativo que aparece preso no SIAPEN (robô siapen-robo.js, só leitura) — siapen.js ── -->
+      <div class="sub-panel" id="ger-panel-siapen">
+        <div class="idv-secao" style="margin:0 0 10px">Monitorados ativos × SIAPEN</div>
+        <div id="spn-corpo"></div>
       </div>
 
       <!-- ── Sub-painel: Produtividade dos servidores (plantões em cima, administrativo embaixo) ── -->
@@ -13310,7 +13319,7 @@ function _relSemComDocHTML(m, infoAss, isWord) {
 
 // Navegação sub-abas Gerência
 function mudarSubAbaGer(aba) {
-  ['agenda','arquivados','calendario','produtividade','vdzona','saidatemp','graves'].forEach(a => {
+  ['agenda','arquivados','calendario','produtividade','vdzona','saidatemp','graves','siapen'].forEach(a => {
     document.getElementById('ger-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('ger-panel-' + a)?.classList.toggle('active', a === aba);
   });
@@ -13321,6 +13330,7 @@ function mudarSubAbaGer(aba) {
   if (aba === 'vdzona' && typeof vdz_render === 'function') vdz_render();
   if (aba === 'saidatemp' && typeof stz_render === 'function') stz_render();
   if (aba === 'graves' && typeof vgr_render === 'function') vgr_render();
+  if (aba === 'siapen' && typeof spn_render === 'function') spn_render();
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -29648,6 +29658,7 @@ function estat_exportarResultado() {
 <script src="plantoes-detalhe.js?v=20261020f4"></script>
 <script src="plantoes-servidores.js?v=20261020f4"></script>
 <script src="vd-zonas.js?v=20261020f4"></script>
+<script src="siapen.js?v=20261029a"></script>
 <script src="saida-temp.js?v=20261022a"></script>
 <script src="violacoes-graves.js?v=20261022a"></script>
 <script src="radar-mandado.js?v=20261020f4"></script>
