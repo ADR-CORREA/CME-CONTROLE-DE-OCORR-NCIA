@@ -9734,6 +9734,12 @@ function _vigiaAoVivo() {
     : '<div style="color:var(--idv-sec);margin-bottom:6px">Ao vivo · última leitura às <b class="idv-data">' + _vigiaHm(vv.em) + '</b> · atualiza sozinho a cada 2 min</div>';
   _vigiaCamada.clearLayers();
   const ord = vv.pos.filter(p => isFinite(p.lat) && isFinite(p.lon)).sort((a, b) => a.d - b.d);
+  // 1ª leitura: enquadra os pontos e quem está a até 600 m, com folga em cima para os nomes (depois não mexe no zoom do usuário)
+  if (!_vigiaM._enquadrado) {
+    _vigiaM._enquadrado = true;
+    const g = (vv.pontos || []).filter(p => Array.isArray(p.centro)).map(p => p.centro).concat(ord.filter(p => p.d <= 600).map(p => [+p.lat, +p.lon]));
+    if (g.length) _vigiaM.fitBounds(g, { paddingTopLeft: [40, 90], paddingBottomRight: [40, 30], maxZoom: 17 });
+  }
   ord.forEach(p => {
     const cor = p.d <= 80 ? '#b91c27' : p.d <= 300 ? '#855800' : '#4d5967';
     const mk = L.circleMarker([+p.lat, +p.lon], { radius: p.d <= 300 ? 10 : 7, color: '#fff', weight: 3, fillColor: cor, fillOpacity: 1 }).addTo(_vigiaCamada);
