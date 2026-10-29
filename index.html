@@ -9666,48 +9666,86 @@ function _akilesPacote() { return carregarStore('akiles_auto', null); }
 // O aviso do celular é genérico (vai por servidor público); tocar nele abre o CME em #vigia, que mostra quem é e onde está.
 // a página foi aberta pelo aviso do celular (?vigia=<hora> muda o endereço a cada aviso: o navegador não usa a página do cache)
 let _vigiaPeloAviso = location.hash === '#vigia' || /[?&]vigia=/.test(location.search);
+// (29/10/2026) MAPA AO VIVO: o robô do vigia grava a cada leitura (2 min) a posição atual dos alvos na chave cme_vigia_vivo
+// ({ em, pontos, raios, pos:[{ id, nome, lat, lon, d, ponto, comunicacao }] }). A janela mostra só a posição atual
+// (passe o mouse: distância e hora; quem está a até 300 m fica com o nome fixo) e se atualiza sozinha. Os alertas ficam embaixo.
+let _vigiaM = null, _vigiaCamada = null, _vigiaTimer = null;
+const _VIGIA_VELHO_MS = 6 * 60e3;
+const _vigiaHm = s => { try { return new Date(s).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
+function _vigiaAberto() { return !!document.getElementById('vigia-mapa') && !!document.getElementById('modal-viewer')?.classList.contains('open'); }
+function _vigiaVivo() { return carregarStore('vigia_vivo', null); }
 function vigia_abrir() {
   const v = (_akilesPacote() || {}).vigia;
   const lista = v && Array.isArray(v.alertas) && Date.now() - new Date(v.em) < 24 * 3600e3 ? v.alertas.slice().reverse() : [];
-  const hm = s => { try { return new Date(s).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
   const corpo = !lista.length ? '<div class="idv-vazio">Nenhum alerta do vigia nas últimas 24 horas.</div>'
     : lista.map(a => '<div class="idv-bloco" style="padding:12px 14px;margin-bottom:8px;box-shadow:inset 3px 0 0 var(--idv-cr)">'
       + '<div style="font-size:16px;font-weight:600">' + esc(a.nome) + (a.teste ? ' <span class="idv-etq ne">teste</span>' : '') + '</div>'
-      + '<div style="color:var(--idv-sec);margin-top:2px">a <b style="color:var(--idv-cr)">' + esc(a.d) + ' m</b> do ' + esc(a.ponto) + ' · posição de <span class="idv-data">' + hm(a.posicaoEm) + '</span> · alerta às <span class="idv-data">' + hm(a.em) + '</span></div>'
+      + '<div style="color:var(--idv-sec);margin-top:2px">a <b style="color:var(--idv-cr)">' + esc(a.d) + ' m</b> do ' + esc(a.ponto) + ' · posição de <span class="idv-data">' + _vigiaHm(a.posicaoEm) + '</span> · alerta às <span class="idv-data">' + _vigiaHm(a.em) + '</span></div>'
       + (isFinite(a.lat) && isFinite(a.lon) ? '<div style="margin-top:8px"><a class="idv-btn mini" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + (+a.lat) + ',' + (+a.lon) + '">Abrir no mapa</a></div>' : '')
       + '</div>').join('');
-  const temMapa = lista.some(a => isFinite(a.lat) && isFinite(a.lon));
-  _abrirViewer('Vigia — área atrás do IAPEN', '<p style="margin:0 0 10px;color:var(--idv-sec)">Monitorados que chegaram perto dos pontos A e B (mais recente primeiro). A posição é a do momento do alerta — confira a atual no AKILES. <a class="idv-btn mini" target="_blank" rel="noopener" href="https://akiles.ap.uetecnologia.com.br">Abrir o AKILES</a></p>'
-    + (temMapa ? '<div id="vigia-mapa" style="height:340px;border-radius:6px;overflow:hidden;border:1px solid var(--idv-borda);margin-bottom:10px;background:var(--idv-fundo)"></div>' : '') + corpo);
-  if (temMapa) _vigiaMapa(lista, v.pontos || [], v.raios || []);
+  _abrirViewer('Vigia — área atrás do IAPEN', '<p style="margin:0 0 8px;color:var(--idv-sec)">Posição atual dos monitorados do vigia. Passe o mouse sobre um ponto para ver a distância e a hora; quem está a até 300 m fica com o nome no mapa. <a class="idv-btn mini" target="_blank" rel="noopener" href="https://akiles.ap.uetecnologia.com.br">Abrir o AKILES</a></p>'
+    + '<div id="vigia-status"></div><div id="vigia-mapa" style="height:380px;border-radius:6px;overflow:hidden;border:1px solid var(--idv-borda);margin-bottom:10px;background:var(--idv-fundo)"></div><div id="vigia-tabela"></div>'
+    + '<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600;font-size:15px">Alertas das últimas 24 horas (' + lista.length + ')</summary><div style="margin-top:8px">' + corpo + '</div></details>');
+  const vv = _vigiaVivo() || {};
+  _vigiaMapa(vv.pontos || (v && v.pontos) || [], vv.raios || (v && v.raios) || []);
+  // ao abrir busca a leitura mais nova; enquanto aberta, confere de minuto em minuto (o aviso em tempo real do banco também atualiza)
+  clearInterval(_vigiaTimer);
+  const buscar = async () => {
+    if (!_vigiaAberto()) { clearInterval(_vigiaTimer); return; }
+    try { const r = await _dbLerChave('cme_vigia_vivo'); if (!r.error && r.data) { _cache.vigia_vivo = r.data.value; _vigiaAoVivo(); } } catch (e) {}
+  };
+  setTimeout(buscar, 300); _vigiaTimer = setInterval(buscar, 60000);
 }
-// Mapa da janela do vigia: o mais recente em vermelho com o nome, os anteriores menores; pontos A/B com os raios.
-function _vigiaMapa(lista, pontos, raios) {
+// Mapa da janela do vigia: pontos A/B/C com os raios e uma camada com a posição atual de cada monitorado.
+function _vigiaMapa(pontos, raios) {
   const desenhar = () => {
     const el = document.getElementById('vigia-mapa'); if (!el || typeof L === 'undefined') return;
-    const m = L.map(el), g = [];
+    _vigiaM = L.map(el); _vigiaCamada = L.layerGroup().addTo(_vigiaM);
     const esri = t => L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' + t + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '\u{00A9} Esri' });
-    const sat = esri('World_Imagery').addTo(m);
-    L.control.layers({ 'Sat\u{E9}lite': sat, 'Ruas': esri('World_Street_Map') }).addTo(m);
+    const sat = esri('World_Imagery').addTo(_vigiaM);
+    L.control.layers({ 'Sat\u{E9}lite': sat, 'Ruas': esri('World_Street_Map') }).addTo(_vigiaM);
+    const cs = [];
     pontos.forEach(p => {
       if (!Array.isArray(p.centro)) return;
-      raios.forEach(r => L.circle(p.centro, { radius: +r, color: '#855800', weight: 1, fillOpacity: 0.04 }).addTo(m));
-      L.circleMarker(p.centro, { radius: 6, color: '#1d3048', fillColor: '#e3b65c', fillOpacity: 1 }).addTo(m).bindTooltip(esc(p.nome));
-      g.push(p.centro);
+      raios.forEach(r => L.circle(p.centro, { radius: +r, color: '#855800', weight: 1, fillOpacity: 0.03 }).addTo(_vigiaM));
+      L.circleMarker(p.centro, { radius: 6, color: '#1d3048', fillColor: '#e3b65c', fillOpacity: 1 }).addTo(_vigiaM).bindTooltip(esc(p.nome));
+      cs.push(p.centro);
     });
-    lista.filter(a => isFinite(a.lat) && isFinite(a.lon)).forEach((a, i) => {
-      const mk = L.circleMarker([+a.lat, +a.lon], { radius: i ? 7 : 10, color: '#fff', weight: 3, fillColor: i ? '#4d5967' : '#b91c27', fillOpacity: 1 }).addTo(m);
-      mk.bindTooltip(esc(a.nome) + ' · ' + esc(a.d) + ' m', i ? {} : { permanent: true, direction: 'top', offset: [0, -10] });
-      g.push([+a.lat, +a.lon]);
-    });
-    m.fitBounds(g, { padding: [40, 40], maxZoom: 17 });
-    setTimeout(() => { try { m.invalidateSize(); } catch (e) {} }, 250);
+    if (cs.length) _vigiaM.setView([cs.reduce((s, c) => s + c[0], 0) / cs.length, cs.reduce((s, c) => s + c[1], 0) / cs.length], 16);
+    else _vigiaM.setView([0.0437, -51.1128], 15);
+    setTimeout(() => { try { _vigiaM.invalidateSize(); } catch (e) {} }, 250);
+    _vigiaAoVivo();
   };
   if (typeof L !== 'undefined') return setTimeout(desenhar, 50);
   if (!document.getElementById('leaflet-css')) {
     const lk = document.createElement('link'); lk.id = 'leaflet-css'; lk.rel = 'stylesheet'; lk.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(lk);
   }
   const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; s.onload = desenhar; document.head.appendChild(s);
+}
+// Redesenha só a posição atual (marcadores + tabela) com a leitura que está no cache.
+function _vigiaAoVivo() {
+  const st = document.getElementById('vigia-status'), tb = document.getElementById('vigia-tabela');
+  if (!st || !tb || !_vigiaM || !_vigiaCamada || !_vigiaAberto()) return;
+  const vv = _vigiaVivo();
+  if (!vv || !Array.isArray(vv.pos)) { st.innerHTML = '<div class="idv-faixa at" style="margin-bottom:8px">A posição ao vivo ainda não chegou ao CME. O vigia precisa estar rodando no PC do robô e a gravação precisa estar liberada no banco.</div>'; tb.innerHTML = ''; return; }
+  const idade = Date.now() - new Date(vv.em);
+  st.innerHTML = idade > _VIGIA_VELHO_MS
+    ? '<div class="idv-faixa at" style="margin-bottom:8px">Última leitura do vigia às <span class="idv-data">' + _vigiaHm(vv.em) + '</span> (há ' + Math.round(idade / 60000) + ' min). O robô pode estar parado ou sem acesso ao AKILES.</div>'
+    : '<div style="color:var(--idv-sec);margin-bottom:6px">Ao vivo · última leitura às <b class="idv-data">' + _vigiaHm(vv.em) + '</b> · atualiza sozinho a cada 2 min</div>';
+  _vigiaCamada.clearLayers();
+  const ord = vv.pos.filter(p => isFinite(p.lat) && isFinite(p.lon)).sort((a, b) => a.d - b.d);
+  ord.forEach(p => {
+    const cor = p.d <= 80 ? '#b91c27' : p.d <= 300 ? '#855800' : '#4d5967';
+    const mk = L.circleMarker([+p.lat, +p.lon], { radius: p.d <= 300 ? 10 : 7, color: '#fff', weight: 3, fillColor: cor, fillOpacity: 1 }).addTo(_vigiaCamada);
+    mk.bindTooltip('<b>' + esc(p.nome) + '</b><br>' + esc(p.d) + ' m do ' + esc(p.ponto) + '<br>posição de ' + _vigiaHm(p.comunicacao),
+      p.d <= 300 ? { permanent: true, direction: 'top', offset: [0, -10] } : { direction: 'top', offset: [0, -8] });
+  });
+  const faixa = d => d <= 80 ? 'box-shadow:inset 3px 0 0 var(--idv-cr)' : d <= 300 ? 'box-shadow:inset 3px 0 0 var(--idv-at)' : '';
+  const km = d => d >= 1000 ? (d / 1000).toFixed(1).replace('.', ',') + ' km' : esc(d) + ' m';
+  tb.innerHTML = '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Monitorado</th><th>Distância</th><th>Ponto mais perto</th><th>Posição de</th><th></th></tr></thead><tbody>'
+    + ord.map(p => '<tr style="' + faixa(p.d) + '"><td>' + esc(p.nome) + '</td><td class="idv-data"' + (p.d <= 300 ? ' style="font-weight:600"' : '') + '>' + km(p.d) + '</td><td>' + esc(String(p.ponto || '').replace(/\s*\(.*$/, '')) + '</td>'
+      + '<td class="idv-data">' + _vigiaHm(p.comunicacao) + '</td><td><a class="idv-btn mini" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + (+p.lat) + ',' + (+p.lon) + '">Mapa</a></td></tr>').join('')
+    + '</tbody></table></div>';
 }
 window.addEventListener('hashchange', () => { if (location.hash === '#vigia') location.reload(); }); // recarrega para buscar o alerta novo
 // pacote.bateria = { em, indicadores:{pul,case,btd,zni,zne,online}, porReg:{ registro: [% bateria, operadora] } }.
@@ -20523,6 +20561,8 @@ function r2_iconeArquivo(nome) {
         if (_dbModoRpc !== true || !usuarioAtual || !_dadosCarregados) return;
         const k = (payload.new || payload.old || {}).key;
         if (!k || k === 'cme_usuarios') return;
+        // posição ao vivo do vigia (a cada 2 min): só busca se a janela do vigia estiver aberta e não redesenha o resto do CME
+        if (k === 'cme_vigia_vivo') { if (_vigiaAberto()) { const rv = await _dbLer([k]); if (!rv.error && rv.data && rv.data[0]) { _cache.vigia_vivo = rv.data[0].value; _vigiaAoVivo(); } } return; }
         const r = await _dbLer([k]);
         if (r.error) return;
         const row = (r.data || [])[0], chave = k.replace('cme_', '');
@@ -20538,6 +20578,7 @@ function r2_iconeArquivo(nome) {
         const row = payload.new || payload.old;
         if (!row?.key) return;
         const chave = row.key.replace('cme_', '');
+        if (chave === 'vigia_vivo') { _cache.vigia_vivo = row.value; try { _vigiaAoVivo(); } catch (e) {} return; }
         if (payload.eventType === 'DELETE') {
           delete _cache[chave];
         } else {
