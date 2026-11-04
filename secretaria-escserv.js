@@ -366,8 +366,13 @@ function sec_servImprimir(mes) {
   // data: o dia em que o documento é gerado
   const dataTxt = _secDataEmissao();
   const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>Escala de Serviço - ' + MESES[mesNum - 1] + '/' + ano + '</title>'
-    + '<style>html,body{background:#fff}@page{size:A4 landscape;margin:8mm 10mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:9pt}@media screen{body{padding:12px 18px}}@media print{.np{display:none}}</style></head><body>'
-    + '<div class="np" style="text-align:right;margin-bottom:6px"><button onclick="print()" style="padding:6px 16px;font-size:11pt;cursor:pointer">Imprimir</button></div>'
+    + '<style>html,body{background:#fff}@page{size:A4 landscape;margin:8mm 10mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:9pt}@media screen{body{padding:12px 18px}}@media print{.np{display:none}}</style>'
+    // (04/11/2026) a folha sempre numa página só: ao imprimir, mede o conteúdo na largura útil do A4 deitado e reduz só o necessário
+    // (as letras arredondam ao reduzir: mede de novo até a altura real caber)
+    + '<script>(function(){var W=1045,H=700;function aj(){var f=document.getElementById("folha");if(!f)return;f.style.zoom=1;f.style.width=W+"px";var z=1;'
+    + 'for(var i=0;i<6;i++){var h=f.getBoundingClientRect().height;if(h<=H)break;z=z*H/h*0.99;f.style.zoom=z;f.style.width=(W/z)+"px"}}'
+    + 'function vt(){var f=document.getElementById("folha");if(f){f.style.zoom="";f.style.width=""}}addEventListener("beforeprint",aj);addEventListener("afterprint",vt)})()</script></head><body>'
+    + '<div class="np" style="text-align:right;margin-bottom:6px"><button onclick="print()" style="padding:6px 16px;font-size:11pt;cursor:pointer">Imprimir</button></div><div id="folha">'
     + '<div style="display:flex;align-items:center;gap:14px;margin:0 0 4px 30px">' + (iapen ? '<img src="' + iapen + '" style="height:86px;width:auto">' : '')
     + '<div style="flex:1;font-size:10pt;line-height:1.3">GOVERNO DO ESTADO DO AMAPÁ<br>Secretaria de Estado da Justiça e Segurança Pública<br>Instituto de Administração Penitenciária do Estado do Amapá<br>Central de Monitoramento Eletrônico – CME/IAPEN<br>Av.: Machado de Assis, nº. 372, Bairro: Central – Macapá/AP – CEP: 68.900-066.<br><span style="font-size:8.5pt">Email: <u style="color:#1f5fd6">cme.iapen.ap@gmail.com</u> – Fone: (96) 98415-2844 ou (96) 98409-9906.</span></div>'
     + (cme ? '<img src="' + cme + '" style="height:80px;width:auto;margin-right:20px">' : '') + '</div>'
@@ -376,9 +381,9 @@ function sec_servImprimir(mes) {
     + '<div style="font-size:8.5pt;margin:4px 0 8px"><b style="color:#e00000">Postos de Serviço: 01</b> – Instalação, Inspeção, Criação de zona; <b style="color:#1f5fd6">Postos de Serviço: 02</b> – Tratamento de ocorrência, Mudança de endereço, Alimentação do drive, Livro.</div>'
     + '<div style="display:flex;gap:12px;align-items:flex-start"><div style="flex:1 1 50%">' + tabS + '</div>'
     + '<div style="flex:1 1 50%">' + tabA + (obs ? '<div style="font-size:8pt;margin-top:5px;text-align:justify;line-height:1.35"><b><u>OBS:</u></b> ' + obs + '</div>' : '') + '</div></div>'
-    + '<div style="text-align:right;margin-top:10px;font-size:9.5pt">' + dataTxt + '</div>'
-    + '<div style="text-align:center;margin-top:16px;font-size:9.5pt;line-height:1.35"><b>' + esc(_secGerente(d).toUpperCase()) + '</b><br>Gerente da Central de Monitoramento Eletrônico<br>' + esc(cfg.gerenteDecreto || _SEC_SERV_DECRETO) + '</div>'
-    + '</body></html>';
+    + '<div style="text-align:right;margin-top:4px;font-size:9.5pt">' + dataTxt + '</div>'
+    + '<div style="text-align:center;margin-top:8px;font-size:9.5pt;line-height:1.35;page-break-inside:avoid"><b>' + esc(_secGerente(d).toUpperCase()) + '</b><br>Gerente da Central de Monitoramento Eletrônico<br>' + esc(cfg.gerenteDecreto || _SEC_SERV_DECRETO) + '</div>'
+    + '</div></body></html>';
   _entregarDoc(new Blob([html], { type: 'text/html' }), 'Escala de Servico ' + mes + '.html');
   auditar({ modulo: 'Secretaria', action: 'sec_serv_imprimir', alvo: MESES[mesNum - 1] + '/' + ano });
 }
