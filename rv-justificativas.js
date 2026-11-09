@@ -239,7 +239,7 @@ async function _rvjLer(arq, r) {
     let texto = '';
     if (ext === 'pdf') {
       const pdfjs = await _secCarregarPdfJs(), buf = await blob.arrayBuffer();
-      const pdf = await pdfjs.getDocument({ data: buf.slice(0) }).promise, jpegs = _secJpegsEmOrdem(new Uint8Array(buf));
+      const pdf = await pdfjs.getDocument({ data: buf.slice(0), isEvalSupported: false }).promise, jpegs = _secJpegsEmOrdem(new Uint8Array(buf));
       for (let p = 1, ocrs = 0; p <= Math.min(pdf.numPages, 3); p++) {
         const page = await pdf.getPage(p), txt = (await page.getTextContent()).items.map(i => i.str).join(' ');
         if (txt.replace(/\s/g, '').length >= 40) { texto += '\n' + txt; continue; }
