@@ -818,3 +818,12 @@ input[type="email"], input[type="password"], select, textarea, .role-select { ba
   #app > .main { margin: 0; border: 0; border-radius: 0; }
   #app > .nav-tabs { background: var(--idv-quadro); }
 }
+/* celular (09/11/2026): a barra de cima cabe em 360 px. Saem só os itens informativos (nome do sistema, perfil, avatar);
+   ficam o menu, o logo, o tema, "Minha assinatura" e "Sair". A barra cheia precisa de ~705 px (daí 720).
+   O margin-right inline dos botões precisa do !important. */
+@media (max-width: 720px) {
+  #app > .topbar { padding: 0 8px 0 6px; }
+  #app > .topbar .topbar-brand > div, #app > .topbar .role-badge, #app > .topbar .user-chip { display: none; }
+  #app > .topbar .topbar-right { gap: 6px; }
+  #app > .topbar .btn-logout { margin-right: 0 !important; padding: 0 10px; white-space: nowrap; }
+}
