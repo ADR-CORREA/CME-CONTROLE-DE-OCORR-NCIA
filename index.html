@@ -2228,6 +2228,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         <div class="sub-tab"        id="mod-stab-multi"          onclick="mudarSubAbaModelos('multi')">Equipe Multidisciplinar</div>
         <div class="sub-tab"        id="mod-stab-comunicacao"    onclick="mudarSubAbaModelos('comunicacao')">Comunicação</div>
         <div class="sub-tab"        id="mod-stab-juridico-mod"   onclick="mudarSubAbaModelos('juridico-mod')">Jurídico</div>
+        <div class="sub-tab"        id="mod-stab-compactar"      onclick="mudarSubAbaModelos('compactar')">Compactar PDF</div>
       </div>
 
       <!-- Sub-panel Plantão -->
@@ -3140,6 +3141,40 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
         </div><!-- /grid -->
       </div><!-- /mod-panel-juridico-mod -->
+
+      <!-- Sub-panel Compactar PDF (09/11/2026) — compressão no próprio navegador, como o iLovePDF -->
+      <div id="mod-panel-compactar" style="display:none">
+        <style>
+          #cpdf-drop{border:1px dashed var(--idv-borda);border-radius:6px;background:var(--idv-cartao);padding:28px 16px;text-align:center;cursor:pointer}
+          #cpdf-drop:hover,#cpdf-drop.cpdf-sobre{background:var(--idv-zebra);border-color:var(--idv-cab)}
+          #cpdf-drop:focus-visible{outline:2px solid var(--idv-in);outline-offset:2px}
+          .cpdf-niveis{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+          .cpdf-niveis label{flex:1 1 180px;border:1px solid var(--idv-borda);border-radius:6px;padding:10px 12px;background:var(--idv-cartao);cursor:pointer}
+          .cpdf-niveis label:has(input:checked){border-color:var(--idv-cab);box-shadow:inset 3px 0 0 var(--idv-cab)}
+          .cpdf-niveis b{font-weight:600}.cpdf-niveis small{display:block;color:var(--idv-sec);font-size:12px;margin-top:2px}
+        </style>
+        <div class="idv-bloco" style="margin-top:16px">
+          <h3 style="font-size:16px;font-weight:600;margin:0 0 4px">Compactar PDF</h3>
+          <p style="color:var(--idv-sec);margin:0 0 12px">Diminui o tamanho do PDF para anexar no PRODOC, e-mail ou WhatsApp. O arquivo é processado aqui no computador e não é enviado para nenhum lugar.</p>
+          <div id="cpdf-drop" role="button" tabindex="0" onclick="document.getElementById('cpdf-input').click()">
+            <b style="font-weight:600">Arraste os PDFs aqui</b> ou clique para escolher
+            <div style="color:var(--idv-sec);font-size:12px;margin-top:4px">Pode escolher vários de uma vez · até 150 MB cada</div>
+          </div>
+          <input type="file" id="cpdf-input" accept="application/pdf,.pdf" multiple style="display:none" onchange="cpdf_adicionar([...this.files])">
+          <div class="cpdf-niveis" role="radiogroup" aria-label="Nível de compressão">
+            <label><input type="radio" name="cpdf-nivel" value="extrema"> <b>Extrema</b><small>Menor arquivo, qualidade menor. Bom para WhatsApp.</small></label>
+            <label><input type="radio" name="cpdf-nivel" value="recomendada" checked> <b>Recomendada</b><small>Bom tamanho com leitura nítida.</small></label>
+            <label><input type="radio" name="cpdf-nivel" value="baixa"> <b>Pouca compressão</b><small>Qualidade alta, reduz menos.</small></label>
+          </div>
+          <label style="display:inline-flex;gap:6px;align-items:center;margin-bottom:12px"><input type="checkbox" id="cpdf-cinza"> Converter para preto e branco (reduz mais)</label>
+          <div class="idv-faixa at" style="margin-bottom:12px">Depois de compactado, o texto do PDF vira imagem: dá para ler e imprimir, mas não dá para selecionar ou copiar o texto. Guarde o original.</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <button type="button" class="idv-btn criar" id="cpdf-btn" onclick="cpdf_compactar()" disabled>Compactar PDF</button>
+            <button type="button" class="idv-btn" id="cpdf-limpar" onclick="cpdf_limpar()" style="display:none">Limpar lista</button>
+          </div>
+          <div id="cpdf-lista" class="table-scroll"></div>
+        </div>
+      </div><!-- /mod-panel-compactar -->
 
     </div>
 
@@ -17950,20 +17985,20 @@ function limparModelo() {
 
 // Define quais sub-abas cada nível pode ver
 const MODELOS_POR_NIVEL = {
-  plantao:     ['plantao'],
-  relatorio:   ['multi', 'comunicacao'], // (28/10/2026) Relatório também emite ofício numerado (ex.: impossibilidade de cumprimento)
-  comunicacao: ['comunicacao'],
-  juridico:    ['juridico-mod'],   // sub-aba própria do jurídico
-  psicossocial: ['multi'],         // equipe multidisciplinar (26/10/2026: antes caía nos modelos do plantão)
-  gerencia:    ['comunicacao', 'juridico-mod'], // (26/10/2026) "Gerar comunicação/relatório" nos Críticos levava a gerência ao Painel
-  admin:       ['plantao', 'multi', 'comunicacao', 'juridico-mod'],
+  plantao:     ['plantao', 'compactar'],
+  relatorio:   ['multi', 'comunicacao', 'compactar'], // (28/10/2026) Relatório também emite ofício numerado (ex.: impossibilidade de cumprimento)
+  comunicacao: ['comunicacao', 'compactar'],
+  juridico:    ['juridico-mod', 'compactar'],   // sub-aba própria do jurídico
+  psicossocial: ['multi', 'compactar'],         // equipe multidisciplinar (26/10/2026: antes caía nos modelos do plantão)
+  gerencia:    ['comunicacao', 'juridico-mod', 'compactar'], // (26/10/2026) "Gerar comunicação/relatório" nos Críticos levava a gerência ao Painel
+  admin:       ['plantao', 'multi', 'comunicacao', 'juridico-mod', 'compactar'],
 };
 
-const _TODAS_MODELOS_ABAS = ['plantao', 'multi', 'comunicacao', 'juridico-mod'];
+const _TODAS_MODELOS_ABAS = ['plantao', 'multi', 'comunicacao', 'juridico-mod', 'compactar'];
 
 function aplicarVisibilidadeModelos() {
   const nivel = usuarioAtual?.nivel || 'plantao';
-  const permitidas = MODELOS_POR_NIVEL[nivel] || ['plantao'];
+  const permitidas = MODELOS_POR_NIVEL[nivel] || ['plantao', 'compactar'];
 
   _TODAS_MODELOS_ABAS.forEach(a => {
     const stab = document.getElementById('mod-stab-' + a);
@@ -17982,6 +18017,7 @@ function mudarSubAbaModelos(aba) {
   });
   if (aba === 'comunicacao') { com_init(); com_sugerirNumero(); com_atualizarAvisoNumero(); com_atualizarCentral(); }
   if (aba === 'juridico-mod') jur_init();
+  if (aba === 'compactar' && typeof cpdf_init === 'function') cpdf_init();
 }
 
 /* ═══════════════════ MODELOS — EQUIPE MULTIDISCIPLINAR ══════════════════ */
@@ -29738,5 +29774,6 @@ function estat_exportarResultado() {
 <script src="rv-conferencia-horario.js?v=20261022a"></script>
 <script src="parecer-ocorrencia.js?v=20261026a"></script>
 <script src="resposta-decisao.js?v=20261027g"></script>
+<script src="compactar-pdf.js?v=20261109a"></script>
 </body>
 </html>
