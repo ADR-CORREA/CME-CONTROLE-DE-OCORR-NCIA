@@ -24240,7 +24240,10 @@ let _comAnexos = []; // { id, file, nome, tipo, tamanho, texto, status }
    Trocou a versão na URL? Troque o hash junto, senão o navegador recusa o script. */
 const _SRI_CDN = {
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js': 'sha512-q+4liFwdPC/bNdhUpZx6aXDx/h77yEQtn4I1slHydcbZK34nLaR3cAeYSJshoxIOq3mjEf7xJE8YWIUHMn+oCQ==',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js': 'sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA=='
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js': 'sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==',
+  // jsDelivr com versão EXATA (S-4, 09/11/2026): o hash confere com o pacote do npm. Antes era @4 / @5 (flutuante).
+  'https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js': 'sha384-Emf5ZVIUiarAdhkgtqK+5/Z5qIvM6QoVrS+qAVtfyZVuD5lIHrac0me485+Antp0',
+  'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js': 'sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F'
 };
 /* Carrega um script CDN de forma lazy (uma vez só); integrity = o 3º parâmetro ou o da tabela acima */
 function _carregarScriptSE(url, globalCheck, integrity) {
@@ -25559,7 +25562,7 @@ async function _getTessWorker() {
   if (_tessWorker) return _tessWorker;
   if (!_tessLoading) {
     _tessLoading = (async () => {
-      await _carregarScriptSE('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js', 'Tesseract');
+      await _carregarScriptSE('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js', 'Tesseract');
       _tessWorker = await Tesseract.createWorker('por');
       return _tessWorker;
     })();
@@ -27225,7 +27228,7 @@ function estat_toggleGraficos() {
 function estat_renderizarGraficos() {
   if (typeof Chart === 'undefined') {
     const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js';
+    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js'; s.integrity = _SRI_CDN[s.src]; s.crossOrigin = 'anonymous';
     s.onload = _estat_desenharGraficos;
     document.head.appendChild(s);
   } else {
@@ -27688,7 +27691,7 @@ function _indDesenharTendencia() {
   }
   const desenhar = () => { try { _estat_criarChart('ind-chart-tendencia', 'bar', labels, values, '#d97706'); } catch(e) {} };
   if (typeof Chart === 'undefined') {
-    const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js'; s.onload = desenhar; document.head.appendChild(s);
+    const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js'; s.integrity = _SRI_CDN[s.src]; s.crossOrigin = 'anonymous'; s.onload = desenhar; document.head.appendChild(s);
   } else { desenhar(); }
 }
 
@@ -29222,7 +29225,7 @@ function psi_toggleGraficos() {
 function psi_renderizarGraficos() {
   if (typeof Chart === 'undefined') {
     const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js';
+    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js'; s.integrity = _SRI_CDN[s.src]; s.crossOrigin = 'anonymous';
     s.onload = _psi_desenharGraficos;
     document.head.appendChild(s);
   } else {
