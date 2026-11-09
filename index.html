@@ -20262,7 +20262,7 @@ async function _relParseCapa(arrayBuffer) {
   await _carregarScriptSE('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'pdfjsLib');
   if (!window.pdfjsLib) throw new Error('pdf.js indisponível');
   try { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; } catch(e) {}
-  const pdf  = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pdf  = await pdfjsLib.getDocument({ data: arrayBuffer, isEvalSupported: false }).promise;
   const page = await pdf.getPage(1);
   const cont = await page.getTextContent();
   const txt  = cont.items.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim();
@@ -24236,11 +24236,19 @@ function com_atualizarPreview() {
 
 let _comAnexos = []; // { id, file, nome, tipo, tamanho, texto, status }
 
-/* Carrega um script CDN de forma lazy (uma vez só) */
-function _carregarScriptSE(url, globalCheck) {
+/* SRI (09/11/2026, S-2): hash oficial do cdnjs (api.cdnjs.com, conferido com o arquivo baixado).
+   Trocou a versão na URL? Troque o hash junto, senão o navegador recusa o script. */
+const _SRI_CDN = {
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js': 'sha512-q+4liFwdPC/bNdhUpZx6aXDx/h77yEQtn4I1slHydcbZK34nLaR3cAeYSJshoxIOq3mjEf7xJE8YWIUHMn+oCQ==',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js': 'sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA=='
+};
+/* Carrega um script CDN de forma lazy (uma vez só); integrity = o 3º parâmetro ou o da tabela acima */
+function _carregarScriptSE(url, globalCheck, integrity) {
   if (window[globalCheck]) return Promise.resolve();
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
+    const sri = integrity || _SRI_CDN[url];
+    if (sri) { s.integrity = sri; s.crossOrigin = 'anonymous'; }
     s.src = url;
     s.onload  = resolve;
     s.onerror = () => reject(new Error('Falha ao carregar script: ' + url));
@@ -24294,7 +24302,7 @@ async function com_processarArquivos(files) {
           pdfjsLib.GlobalWorkerOptions.workerSrc =
             'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
           const buf    = await file.arrayBuffer();
-          const pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+          const pdfDoc = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
           anexo._totalPages = pdfDoc.numPages;
           const parts  = [];
           for (let p = 1; p <= pdfDoc.numPages; p++) {
@@ -24572,7 +24580,7 @@ async function _bmonExtrairTexto(file) {
       await _carregarScriptSE('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'pdfjsLib');
       if (window.pdfjsLib) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        const pdfDoc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+        const pdfDoc = await pdfjsLib.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false }).promise;
         const parts = [];
         for (let p = 1; p <= pdfDoc.numPages; p++) {
           const content = await (await pdfDoc.getPage(p)).getTextContent();
@@ -25402,7 +25410,7 @@ async function com_carregarSemIA() {
           await _carregarScriptSE('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'pdfjsLib');
           if (window.pdfjsLib) {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-            anexo._totalPages = (await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise).numPages;
+            anexo._totalPages = (await pdfjsLib.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false }).promise).numPages;
           }
         } catch (_e) {}
       }
@@ -26268,7 +26276,7 @@ async function com_abrirPrevGenModal() {
     (async () => {
       try {
         const buf    = await anexo.file.arrayBuffer();
-        const pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+        const pdfDoc = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
         const total  = pdfDoc.numPages;
         anexo._totalPages = total;
 
@@ -26501,7 +26509,7 @@ async function com_abrirOrganizador(id) {
   }
 
   const buf    = await anexo.file.arrayBuffer();
-  const pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+  const pdfDoc = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
   _pdfOrgDoc   = pdfDoc;
   const total  = pdfDoc.numPages;
   anexo._totalPages = total; // garante que a lista mostra o total correto
@@ -27319,7 +27327,7 @@ function estat_gerarPDF() {
   function _carregar(cb) {
     if (typeof window.jspdf !== 'undefined' || typeof window.jsPDF !== 'undefined') { cb(); return; }
     const s1 = document.createElement('script');
-    s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; s1.integrity = _SRI_CDN[s1.src]; s1.crossOrigin = 'anonymous';
     s1.onload = () => {
       const s2 = document.createElement('script');
       s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
@@ -29256,7 +29264,7 @@ function psi_gerarPDF() {
   function _carregar(cb) {
     if (typeof window.jspdf !== 'undefined') { cb(); return; }
     const s1 = document.createElement('script');
-    s1.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s1.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; s1.integrity = _SRI_CDN[s1.src]; s1.crossOrigin = 'anonymous';
     s1.onload = () => {
       const s2 = document.createElement('script');
       s2.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
@@ -29515,7 +29523,7 @@ function cruz_gerarPDF() {
   function _carregar(cb) {
     if (typeof window.jspdf !== 'undefined') { cb(); return; }
     const s1 = document.createElement('script');
-    s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; s1.integrity = _SRI_CDN[s1.src]; s1.crossOrigin = 'anonymous';
     s1.onload = () => {
       const s2 = document.createElement('script');
       s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';

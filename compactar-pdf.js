@@ -106,7 +106,7 @@ async function cpdf_carregarLibs() {
 
 async function cpdf_compactarUm(item, nivel, cinza, aoProgredir) {
   const dados = new Uint8Array(await item.file.arrayBuffer());
-  const pdf = await pdfjsLib.getDocument({ data: dados }).promise;
+  const pdf = await pdfjsLib.getDocument({ data: dados, isEvalSupported: false }).promise;
   const escala = nivel.dpi / 72;
   let doc = null;
   const canvas = document.createElement('canvas');

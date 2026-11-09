@@ -14,7 +14,7 @@ function _secSoDigitos(s) { return String(s || '').replace(/\D/g, ''); }
 function _secCarregarPdfJs() {
   if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
   return new Promise((ok, erro) => {
-    const s = document.createElement('script'); s.src = _SEC_PDFJS + 'pdf.min.js';
+    const s = document.createElement('script'); s.src = _SEC_PDFJS + 'pdf.min.js'; s.integrity = _SRI_CDN[s.src]; s.crossOrigin = 'anonymous';
     s.onload = () => { try { window.pdfjsLib.GlobalWorkerOptions.workerSrc = _SEC_PDFJS + 'pdf.worker.min.js'; ok(window.pdfjsLib); } catch (e) { erro(e); } };
     s.onerror = () => erro(new Error('não consegui carregar o leitor de PDF (sem internet?)'));
     document.head.appendChild(s);

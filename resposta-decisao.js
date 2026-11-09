@@ -37,7 +37,7 @@ function rd_dataExtenso(t) {
 async function rd_pdfTexto(buf, ocrSePreciso, maxOcrPag) {
   await _carregarScriptSE(_RD_PDFJS, 'pdfjsLib');
   try { pdfjsLib.GlobalWorkerOptions.workerSrc = _RD_PDFJS.replace('pdf.min.js', 'pdf.worker.min.js'); } catch (e) {}
-  const pdf = await pdfjsLib.getDocument({ data: buf }).promise; let txt = '';
+  const pdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise; let txt = '';
   for (let p = 1; p <= Math.min(pdf.numPages, 30); p++) { const pg = await pdf.getPage(p); const c = await pg.getTextContent(); txt += '\n' + c.items.map(x => x.str).join(' '); }
   if (txt.replace(/\s/g, '').length < 80 && ocrSePreciso && typeof _comOcrCanvas === 'function') {
     txt = '';

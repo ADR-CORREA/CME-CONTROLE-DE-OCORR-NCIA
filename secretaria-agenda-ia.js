@@ -27,7 +27,7 @@ async function _secTextoDoArquivo(file, onProgresso) {
   // PDF: página por página, NA ORDEM. Página com texto → usa o texto; página escaneada (sem texto) → OCR.
   // (antes: só as 2 maiores imagens do arquivo, fora de ordem, e o OCR podia travar para sempre)
   const pdfjs = await _secCarregarPdfJs(), buf = await file.arrayBuffer();
-  const pdf = await pdfjs.getDocument({ data: buf.slice(0) }).promise, total = Math.min(pdf.numPages, _SEC_IA_MAX_PAGS);
+  const pdf = await pdfjs.getDocument({ data: buf.slice(0), isEvalSupported: false }).promise, total = Math.min(pdf.numPages, _SEC_IA_MAX_PAGS);
   const jpegs = _secJpegsEmOrdem(new Uint8Array(buf)), paginas = [], partes = [];
   for (let p = 1; p <= total; p++) {
     const page = await pdf.getPage(p);
