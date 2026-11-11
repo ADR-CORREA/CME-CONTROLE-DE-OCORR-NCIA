@@ -17632,6 +17632,91 @@ function _anexInjetarNoHtml(docHtml, ctx, subtitulo) {
   return out;
 }
 
+// Ajuste de página dos documentos impressos (Plantão, Multidisciplinar, Comunicação, Jurídico).
+// Esta função roda DENTRO do documento gerado (vai como texto no <script>): não pode usar nada de fora
+// e não pode ter crase nem a sequência de fechamento do script.
+// - Mede o conteúdo como ele fica na FOLHA (sem a margem de tela, na largura útil do A4). Antes media com a
+//   margem de tela (texto espremido em ~415 px) e o corpo saía com ~5 pt em todos os modelos.
+// - Cabe em 1 página: reduz o zoom só o necessário. Não cabe: o zoom para em ~10 pt (corpo de 12 pt) e o
+//   documento passa para a página 2, 3… com o rodapé repetido em cada página e a assinatura sem rachar.
+function _ajustePaginaDoc(phPx, pwPx, imprimir) {
+  var MIN = 10 / 12;
+  var b = document.body;
+  var anexos = [].slice.call(b.querySelectorAll('.anexo-page'));
+  var pd = b.style.padding, w = b.style.width;
+  anexos.forEach(function (a) { a.style.display = 'none'; });   // páginas de anexo não entram na medida
+  b.style.padding = '0'; b.style.width = pwPx + 'px';
+  var h = b.scrollHeight;
+  b.style.padding = pd; b.style.width = w;
+  anexos.forEach(function (a) { a.style.display = ''; });
+  var z = 1;
+  if (h > phPx) {
+    // Com o zoom o texto reflui (linhas mais largas): a altura real é menor que h × zoom.
+    // Procura o MAIOR zoom que ainda cabe em 1 página; se nem o piso cabe, z = 0 (vai para várias páginas).
+    // Na impressão o rodapé é fixo (não ocupa linha) e cobre os últimos ~18 mm (68 px) da folha: o texto tem de acabar antes dele.
+    var rod = [].slice.call(b.querySelectorAll('.rodape,.rodape-doc,.no-print'));
+    var cabe = function (zz) {
+      var p0 = b.style.padding, w0 = b.style.width, z0 = b.style.zoom;
+      anexos.concat(rod).forEach(function (a) { a.style.display = 'none'; });
+      b.style.padding = '0'; b.style.width = (pwPx / zz) + 'px'; b.style.zoom = zz;
+      var ok = b.getBoundingClientRect().height <= (phPx - 68) * 0.98;
+      b.style.padding = p0; b.style.width = w0; b.style.zoom = z0;
+      anexos.concat(rod).forEach(function (a) { a.style.display = ''; });
+      return ok;
+    };
+    if (!cabe(MIN)) z = 0;
+    else { var lo = MIN, hi = 1; for (var i = 0; i < 7; i++) { var m = (lo + hi) / 2; if (cabe(m)) lo = m; else hi = m; } z = lo; }
+    if (z < MIN) {
+      z = MIN;
+      b.classList.add('multi-pag');
+      b.style.display = 'block'; b.style.minHeight = '0';
+      // flex atrapalha a quebra de página: vira bloco (menos a assinatura e as páginas de anexo)
+      [].forEach.call(b.querySelectorAll('*'), function (e) {
+        if (!e.classList.contains('ass-bloco') && !e.closest('.anexo-page') && getComputedStyle(e).display === 'flex') e.style.display = 'block';
+      });
+      // assinatura inteira numa página só, junto das duas últimas linhas de texto
+      var blocos = [].slice.call(b.querySelectorAll('.ass-area,.ass-bloco'));
+      blocos.forEach(function (e) { e.style.breakInside = 'avoid'; });
+      var e = blocos[0], n = 0, guarda = 0, achou = false;   // vai voltando até pegar um parágrafo de verdade (≥ 40 letras), no máx. 3 linhas
+      while (e && !achou && n < 3 && guarda++ < 60) {
+        while (e && !e.previousElementSibling && e.parentElement && e.parentElement !== b) e = e.parentElement;
+        e = e && e.previousElementSibling;
+        while (e && e.lastElementChild && !e.classList.contains('cabecalho')) e = e.lastElementChild;
+        if (!e || e.classList.contains('cabecalho')) break;
+        e.style.breakAfter = 'avoid';
+        var tam = e.textContent.trim().length;
+        if (tam) { n++; if (tam >= 40) achou = true; }
+      }
+      // título de seção (linha curta antes de um parágrafo longo) não fica sozinho no fim da página
+      [].forEach.call(b.querySelectorAll('p'), function (p) {
+        var tt = p.textContent.trim();
+        if (!tt || tt.length > 80 || p.closest('.ass-area,.ass-bloco,.anexo-page,.no-print,.rodape,.rodape-doc')) return;
+        var vazios = [], nx = p.nextElementSibling;
+        while (nx && !nx.textContent.trim() && !nx.querySelector('img')) { vazios.push(nx); nx = nx.nextElementSibling; }
+        if (nx && nx.tagName === 'P' && nx.textContent.trim().length > 80) {
+          p.style.breakAfter = 'avoid';
+          vazios.forEach(function (v) { v.style.breakAfter = 'avoid'; });
+        }
+      });
+      // rodapé repetido em TODAS as páginas, na margem de baixo (o fixo cobriria o texto)
+      var rp = document.querySelector('.rodape,.rodape-doc');
+      if (rp) {
+        var txt = [].map.call(rp.querySelectorAll('p'), function (p) { return p.textContent.replace(/\s+/g, ' ').trim(); }).filter(Boolean);
+        var st = document.createElement('style');
+        st.textContent = '@page{@bottom-center{content:"' + txt.join('\\A ').replace(/"/g, '\\"') + '";white-space:pre-wrap;font:8pt "Times New Roman",Times,serif;color:#444;text-align:center;vertical-align:top;background:linear-gradient(#000,#000) left 8px top/100% 1px no-repeat;padding-top:14px;width:100%}}'
+          + '@media print{.rodape,.rodape-doc{display:none !important}}';
+        document.head.appendChild(st);
+      }
+    }
+    b.style.zoom = z.toFixed(4);
+    anexos.forEach(function (a) { a.style.zoom = (1 / z).toFixed(4); });   // anexo continua em tamanho de folha
+  }
+  if (imprimir) setTimeout(function () { window.print(); }, 750);
+}
+function _scriptAjustePagina(phPx, pwPx, imprimir) {
+  return '<script>window.onload=function(){(' + _ajustePaginaDoc.toString() + ')(' + phPx + ',' + pwPx + ',' + (imprimir ? 'true' : 'false') + ');};<\/script>';
+}
+
 function baixarModeloPDF() {
   const assunto    = document.getElementById('mod-assunto')?.value;
   if (!assunto) { _mostrarToast('\u{26A0}\u{FE0F} Selecione um assunto primeiro.', 'erro'); return; }
@@ -17950,7 +18035,7 @@ function baixarModeloPDF() {
   </p>
 </div>
 
-<script>window.onload=function(){var b=document.body;var phPx=914,pwPx=604;var p=b.style.width;b.style.width=pwPx+'px';var h=b.scrollHeight;b.style.width=p;if(h>phPx){b.style.zoom=((phPx*0.97)/h).toFixed(4);}setTimeout(function(){window.print();},750);};<\/script>
+${_scriptAjustePagina(914, 604, true)}
 </body></html>`;
 
   // Usar Blob URL em vez de document.write — garante que imagens base64 renderizem
@@ -18677,7 +18762,7 @@ ${bodyHtml}
   </p>
 </div>
 
-<script>window.onload=function(){var b=document.body;var phPx=914,pwPx=604;var p=b.style.width;b.style.width=pwPx+'px';var h=b.scrollHeight;b.style.width=p;if(h>phPx){b.style.zoom=((phPx*0.97)/h).toFixed(4);}setTimeout(function(){window.print();},750);};<\/script>
+${_scriptAjustePagina(941, 642, true)}
 </body></html>`;
 
   const blob2 = new Blob([_anexInjetarNoHtml(docHtml, 'multi', tituloDoc)], { type: 'text/html;charset=utf-8' });
@@ -24056,7 +24141,7 @@ function com_gerarOficio(ov) {
   <p style="font-size:9pt;color:#777;margin-top:6px">Revise o documento acima. Quando estiver certo, clique no botão para <strong>"Salvar como PDF"</strong>.<br>Desative <em>Cabe&#231;alhos e rodap&#233;s</em> do navegador para resultado mais limpo.</p>
 </div>
 
-<script>window.onload=function(){var b=document.body;var phPx=914,pwPx=604;var p=b.style.width;b.style.width=pwPx+'px';var h=b.scrollHeight;b.style.width=p;if(h>phPx){b.style.zoom=((phPx*0.97)/h).toFixed(4);}};<\/script>
+${_scriptAjustePagina(914, 604, false)}
 </body>
 </html>`;
 
@@ -25147,7 +25232,7 @@ function jur_gerarPDF() {
   <p style="font-size:9pt;color:#777;margin-top:6px">No diálogo de impressão, escolha <strong>"Salvar como PDF"</strong>.<br>Desative <em>Cabeçalhos e rodapés</em> do navegador para resultado mais limpo.</p>
 </div>
 
-<script>window.onload=function(){var b=document.body;var phPx=914,pwPx=604;var p=b.style.width;b.style.width=pwPx+'px';var h=b.scrollHeight;b.style.width=p;if(h>phPx){b.style.zoom=((phPx*0.97)/h).toFixed(4);}setTimeout(function(){window.print();},750);};<\/script>
+${_scriptAjustePagina(914, 604, true)}
 </body></html>`;
 
   const _subJur = (document.getElementById('jur-nome')?.value || '').trim().toUpperCase();
