@@ -17637,8 +17637,9 @@ function _anexInjetarNoHtml(docHtml, ctx, subtitulo) {
 // e não pode ter crase nem a sequência de fechamento do script.
 // - Mede o conteúdo como ele fica na FOLHA (sem a margem de tela, na largura útil do A4). Antes media com a
 //   margem de tela (texto espremido em ~415 px) e o corpo saía com ~5 pt em todos os modelos.
-// - Cabe em 1 página: reduz o zoom só o necessário. Não cabe: o zoom para em ~10 pt (corpo de 12 pt) e o
-//   documento passa para a página 2, 3… com o rodapé repetido em cada página e a assinatura sem rachar.
+// - Se o documento não cabe em 1 página a 12 pt, entra no modo "multi-pag": rodapé na margem de baixo (repete em
+//   cada página), assinatura sem rachar, e o zoom é o MAIOR que ainda cabe em 1 página, nunca abaixo de ~10 pt.
+//   Se nem 10 pt cabe, o documento passa para a página 2, 3…
 function _ajustePaginaDoc(phPx, pwPx, imprimir) {
   var MIN = 10 / 12;
   var b = document.body;
@@ -17651,62 +17652,60 @@ function _ajustePaginaDoc(phPx, pwPx, imprimir) {
   anexos.forEach(function (a) { a.style.display = ''; });
   var z = 1;
   if (h > phPx) {
-    // Com o zoom o texto reflui (linhas mais largas): a altura real é menor que h × zoom.
-    // Procura o MAIOR zoom que ainda cabe em 1 página; se nem o piso cabe, z = 0 (vai para várias páginas).
-    // Na impressão o rodapé é fixo (não ocupa linha) e cobre os últimos ~18 mm (68 px) da folha: o texto tem de acabar antes dele.
+    b.classList.add('multi-pag');
+    b.style.display = 'block'; b.style.minHeight = '0';
+    // flex atrapalha a quebra de página: vira bloco (menos a assinatura e as páginas de anexo)
+    [].forEach.call(b.querySelectorAll('*'), function (e) {
+      if (!e.classList.contains('ass-bloco') && !e.closest('.anexo-page') && getComputedStyle(e).display === 'flex') e.style.display = 'block';
+    });
+    // O rodapé (fixo ou em fluxo) e o bloco do botão não entram na medida: o rodapé vai para a margem de baixo.
     var rod = [].slice.call(b.querySelectorAll('.rodape,.rodape-doc,.no-print'));
+    // Com o zoom o texto reflui (linhas mais largas). Mede com a largura da folha dividida pelo zoom; o Chrome
+    // devolve a altura em unidades do zoom (multiplica por zz) ou já visual (largura == pwPx): trata os dois.
     var cabe = function (zz) {
       var p0 = b.style.padding, w0 = b.style.width, z0 = b.style.zoom;
       anexos.concat(rod).forEach(function (a) { a.style.display = 'none'; });
       b.style.padding = '0'; b.style.width = (pwPx / zz) + 'px'; b.style.zoom = zz;
-      var ok = b.getBoundingClientRect().height <= (phPx - 68) * 0.98;
+      var r = b.getBoundingClientRect();
+      var hv = Math.abs(r.width - pwPx) < 2 ? r.height : r.height * zz;
       b.style.padding = p0; b.style.width = w0; b.style.zoom = z0;
       anexos.concat(rod).forEach(function (a) { a.style.display = ''; });
-      return ok;
+      return hv <= phPx * 0.97;
     };
-    if (!cabe(MIN)) z = 0;
+    if (!cabe(MIN)) z = MIN;
     else { var lo = MIN, hi = 1; for (var i = 0; i < 7; i++) { var m = (lo + hi) / 2; if (cabe(m)) lo = m; else hi = m; } z = lo; }
-    if (z < MIN) {
-      z = MIN;
-      b.classList.add('multi-pag');
-      b.style.display = 'block'; b.style.minHeight = '0';
-      // flex atrapalha a quebra de página: vira bloco (menos a assinatura e as páginas de anexo)
-      [].forEach.call(b.querySelectorAll('*'), function (e) {
-        if (!e.classList.contains('ass-bloco') && !e.closest('.anexo-page') && getComputedStyle(e).display === 'flex') e.style.display = 'block';
-      });
-      // assinatura inteira numa página só, junto das duas últimas linhas de texto
-      var blocos = [].slice.call(b.querySelectorAll('.ass-area,.ass-bloco'));
-      blocos.forEach(function (e) { e.style.breakInside = 'avoid'; });
-      var e = blocos[0], n = 0, guarda = 0, achou = false;   // vai voltando até pegar um parágrafo de verdade (≥ 40 letras), no máx. 3 linhas
-      while (e && !achou && n < 3 && guarda++ < 60) {
-        while (e && !e.previousElementSibling && e.parentElement && e.parentElement !== b) e = e.parentElement;
-        e = e && e.previousElementSibling;
-        while (e && e.lastElementChild && !e.classList.contains('cabecalho')) e = e.lastElementChild;
-        if (!e || e.classList.contains('cabecalho')) break;
-        e.style.breakAfter = 'avoid';
-        var tam = e.textContent.trim().length;
-        if (tam) { n++; if (tam >= 40) achou = true; }
+    // assinatura inteira numa página só, junto de um parágrafo de verdade
+    var blocos = [].slice.call(b.querySelectorAll('.ass-area,.ass-bloco'));
+    blocos.forEach(function (e) { e.style.breakInside = 'avoid'; });
+    var e = blocos[0], n = 0, guarda = 0, achou = false;   // vai voltando até pegar um parágrafo de verdade (≥ 40 letras), no máx. 3 linhas
+    while (e && !achou && n < 3 && guarda++ < 60) {
+      while (e && !e.previousElementSibling && e.parentElement && e.parentElement !== b) e = e.parentElement;
+      e = e && e.previousElementSibling;
+      while (e && e.lastElementChild && !e.classList.contains('cabecalho')) e = e.lastElementChild;
+      if (!e || e.classList.contains('cabecalho')) break;
+      e.style.breakAfter = 'avoid';
+      var tam = e.textContent.trim().length;
+      if (tam) { n++; if (tam >= 40) achou = true; }
+    }
+    // título de seção (linha curta antes de um parágrafo longo) não fica sozinho no fim da página
+    [].forEach.call(b.querySelectorAll('p'), function (p) {
+      var tt = p.textContent.trim();
+      if (!tt || tt.length > 80 || p.closest('.ass-area,.ass-bloco,.anexo-page,.no-print,.rodape,.rodape-doc')) return;
+      var vazios = [], nx = p.nextElementSibling;
+      while (nx && !nx.textContent.trim() && !nx.querySelector('img')) { vazios.push(nx); nx = nx.nextElementSibling; }
+      if (nx && nx.tagName === 'P' && nx.textContent.trim().length > 80) {
+        p.style.breakAfter = 'avoid';
+        vazios.forEach(function (v) { v.style.breakAfter = 'avoid'; });
       }
-      // título de seção (linha curta antes de um parágrafo longo) não fica sozinho no fim da página
-      [].forEach.call(b.querySelectorAll('p'), function (p) {
-        var tt = p.textContent.trim();
-        if (!tt || tt.length > 80 || p.closest('.ass-area,.ass-bloco,.anexo-page,.no-print,.rodape,.rodape-doc')) return;
-        var vazios = [], nx = p.nextElementSibling;
-        while (nx && !nx.textContent.trim() && !nx.querySelector('img')) { vazios.push(nx); nx = nx.nextElementSibling; }
-        if (nx && nx.tagName === 'P' && nx.textContent.trim().length > 80) {
-          p.style.breakAfter = 'avoid';
-          vazios.forEach(function (v) { v.style.breakAfter = 'avoid'; });
-        }
-      });
-      // rodapé repetido em TODAS as páginas, na margem de baixo (o fixo cobriria o texto)
-      var rp = document.querySelector('.rodape,.rodape-doc');
-      if (rp) {
-        var txt = [].map.call(rp.querySelectorAll('p'), function (p) { return p.textContent.replace(/\s+/g, ' ').trim(); }).filter(Boolean);
-        var st = document.createElement('style');
-        st.textContent = '@page{@bottom-center{content:"' + txt.join('\\A ').replace(/"/g, '\\"') + '";white-space:pre-wrap;font:8pt "Times New Roman",Times,serif;color:#444;text-align:center;vertical-align:top;background:linear-gradient(#000,#000) left 8px top/100% 1px no-repeat;padding-top:14px;width:100%}}'
-          + '@media print{.rodape,.rodape-doc{display:none !important}}';
-        document.head.appendChild(st);
-      }
+    });
+    // rodapé repetido em TODAS as páginas, na margem de baixo (o fixo cobriria o texto)
+    var rp = document.querySelector('.rodape,.rodape-doc');
+    if (rp) {
+      var txt = [].map.call(rp.querySelectorAll('p'), function (p) { return p.textContent.replace(/\s+/g, ' ').trim(); }).filter(Boolean);
+      var st = document.createElement('style');
+      st.textContent = '@page{@bottom-center{content:"' + txt.join('\\A ').replace(/"/g, '\\"') + '";white-space:pre-wrap;font:8pt "Times New Roman",Times,serif;color:#444;text-align:center;vertical-align:top;background:linear-gradient(#000,#000) left 8px top/100% 1px no-repeat;padding-top:14px;width:100%}}'
+        + '@media print{.rodape,.rodape-doc{display:none !important}}';
+      document.head.appendChild(st);
     }
     b.style.zoom = z.toFixed(4);
     anexos.forEach(function (a) { a.style.zoom = (1 / z).toFixed(4); });   // anexo continua em tamanho de folha
@@ -17957,6 +17956,22 @@ function baixarModeloPDF() {
   .ass-bloco + .ass-bloco { margin-top: 30pt; }
   .recebido { margin: 16pt 0 0 0; font-size: 9.5pt; text-align: center; }
 
+  /* ── Termo do DPP: UMA página a >= 10 pt, compactando o espaçamento (e não a letra) ── */
+  body.compacto .div-main-bar2 { margin-bottom: 10px; }
+  body.compacto .titulo-assunto { margin-bottom: 8px; }
+  body.compacto .meta-bloco { padding: 5px 14px; margin-bottom: 10px; line-height: 1.35; }
+  body.compacto .meta-linha { margin: 1px 0; }
+  body.compacto .div-light { margin: 8px 0; }
+  body.compacto .spacer { height: 6pt; }
+  body.compacto .bullet { margin: 3pt 0; }
+  body.compacto .corpo { margin-bottom: 8pt; }
+  body.compacto .ass-area { margin-top: 12px; padding-top: 0; }
+  body.compacto .data-extenso { margin-bottom: 6pt; }
+  body.compacto .ass-bloco { margin-top: 2pt; }
+  body.compacto .ass-bloco + .ass-bloco { margin-top: 12pt; }
+  body.compacto .ass-meta { margin-top: 6pt; }
+  body.compacto .recebido { margin-top: 8pt; }
+
   /* ── Data por extenso ── */
   .data-extenso { margin-top: 0; margin-bottom: 14pt; text-align: right; font-size: 11pt; }
 
@@ -17991,7 +18006,7 @@ function baixarModeloPDF() {
     }
   }
 </style>
-</head><body>
+</head><body${assunto === 'TERMO DE DEVOLUÇÃO – DPP' ? ' class="compacto"' : ''}>
 
 <div class="cabecalho">
   <div class="cab-col cab-logo">${cmeSrc ? `<img src="${cmeSrc}" alt="CME">` : ''}</div>
