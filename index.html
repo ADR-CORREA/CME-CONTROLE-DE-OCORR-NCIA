@@ -9112,8 +9112,10 @@ function _scTempoLegivel(t) {
    marcações dos outros: dois operadores marcando monitorados diferentes nunca sobrescrevem um ao outro (a regra
    "a última gravação da chave vence" só vale para o MESMO monitorado, e aí o histórico é relido do banco antes).
    Forma da chave: { id, ativo, motivo, obs, por, quando, nome, registro, historico: [{acao, por, quando, motivo, obs}] } */
-const _SC_AUT_NIVEIS = ['gerencia', 'admin', 'plantao'];   // quem marca/edita/remove: gerência, administrador e os plantonistas (nível 'plantao' = OPERADOR, quem faz as ligações; decisão do Adriano 12/11/2026). Todos veem a etiqueta e o filtro
-function _scAutPode() { return _SC_AUT_NIVEIS.includes(usuarioAtual && usuarioAtual.nivel); }
+// (12/11/2026, decisão do Adriano: "todos vão poder marcar") Quem VÊ a aba Sem Comunicação pode marcar, editar e remover: todos os níveis de
+// TABS_POR_NIVEL que têm 'semcom'. Nível que não existe nessa tabela (ex.: um "visitante" cadastrado à mão) só vê. O nome e a data de quem marcou
+// ficam no registro e no histórico. ATENÇÃO: isso é só da tela; o banco não restringe a chave por nível (S-20) e o campo "por" vem do navegador.
+function _scAutPode() { const t = TABS_POR_NIVEL[usuarioAtual && usuarioAtual.nivel]; return Array.isArray(t) && t.includes('semcom'); }
 // o banco só aceita chaves cme_[a-z0-9_]{1,80}: o id do monitorado vira minúsculas/underscore (id real: "sc_<hora>_<5 letras>")
 function _scAutChave(id) { return 'semcom_aut_' + String(id == null ? '' : id).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 60); }
 // Chave ANTIGA (única, com todas as marcações): o commit da647dd ficou ~15 min no ar (12/11/2026) gravando aqui antes de passar para uma chave por
@@ -9186,7 +9188,7 @@ function _scFiltrarAutorizado() {
   renderizarSemCom('juridico');
 }
 function abrirModalAutDesvinc(monId) {
-  if (!_scAutPode()) { _mostrarToast('Seu acesso não permite marcar "Autorizado desvincular" (gerência, administrador e plantonistas marcam).', 'erro'); return; }
+  if (!_scAutPode()) { _mostrarToast('Seu acesso não permite marcar "Autorizado desvincular" (só quem vê a aba Sem Comunicação marca).', 'erro'); return; }
   const m = (getSemCom().monitorados || []).find(x => x.id === monId); if (!m) return;
   const x = _scAutManual(m);
   document.getElementById('aut-monit-id').value = monId;
@@ -9216,7 +9218,7 @@ async function salvarAutDesvinc() {
   _mostrarToast('Marcado: autorizado desvincular. Nada foi desvinculado no AKILES.', 'sucesso');
 }
 async function removerAutDesvinc(monId) {
-  if (!_scAutPode()) { _mostrarToast('Seu acesso não permite remover a autorização (gerência, administrador e plantonistas removem).', 'erro'); return; }
+  if (!_scAutPode()) { _mostrarToast('Seu acesso não permite remover a autorização (só quem vê a aba Sem Comunicação remove).', 'erro'); return; }
   const m = (getSemCom().monitorados || []).find(x => x.id === monId); if (!m) return;
   if (!confirm('Remover a autorização de desvincular de ' + m.nome + '?' + (_diasSemComAtual(m) >= 180 ? '\n\nEle continua aparecendo como autorizado porque tem 180 dias ou mais sem comunicar.' : ''))) return;
   const ok = await _scAutMutar(monId, x => {
