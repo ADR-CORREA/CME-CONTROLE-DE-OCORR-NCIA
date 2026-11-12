@@ -15,6 +15,22 @@ const _EP_MOTIVOS = {
 const _EP_TITULO = { entrada: '\u{2B06} Inventário inicial do Plantão', saida: '\u{2B07} Saída — instalação / entrega', devolucao: '\u{21A9} Devolução ao plantão (retirado do monitorado)', baixa: '\u{2715} Baixa (defeito, perda, dano)', envio: '\u{1F4E6} Enviar ao setor de Estoque' };
 const _EP_BADGE = { 'Entrada': 'ok', 'Recebimento': 'ok', 'Saída': 'cr', 'Devolução': 'at', 'Baixa': 'at', 'Envio ao setor': 'at' };
 const _EP_ETQ = { ok: 'ok', baixo: 'at', zero: 'cr' }; // estStatusCls → cor da etiqueta do guia
+/* (12/11/2026) lotações: o texto da tela acompanha a lotação em uso (ep_lot): "Estoque do Plantão" ou "Estoque CCO" */
+const _epE = () => ep_lot().estoque, _epe = () => ep_lot().estoque.replace(/^Estoque/, 'estoque'), _epN = () => ep_lot().nome;
+function _epTitulo(t) { const n = _epN(); return _EP_TITULO[t].replace('do Plantão', 'do ' + n).replace('ao plantão', 'ao ' + n); }
+function _epEtqCco(m) { return typeof _etqLotacao === 'function' ? _etqLotacao(m && m.lotacao) : ''; }
+// gerência e admin alternam entre os estoques (Plantão | CCO | …) por aqui; os outros nem veem o seletor
+function _epSeletor() {
+  const ids = ep_lotsVisiveis(); if (ids.length < 2) return '';
+  const atual = ep_lotAtual();
+  return '<div class="idv-chips" role="group" aria-label="Escolha o estoque" style="margin-bottom:12px">'
+    + ids.map(i => '<button type="button" class="idv-chip' + (i === atual ? ' ativo' : '') + '" aria-pressed="' + (i === atual) + '" onclick="ep_selecionarLot(\'' + i + '\')">' + esc(EP_LOTS[i].nome) + '</button>').join('') + '</div>';
+}
+function _epSub() {
+  return ep_lotAtual() === 'plantao'
+    ? 'Um estoque só para as equipes ALFA a ECHO, separado do Estoque do CME. Lance na hora tudo que entra e sai. Equipe de hoje: <b>' + esc(_epEquipeHoje() || '—') + '</b>'
+    : 'Estoque só dos policiais do ' + esc(_epN()) + ', separado do Estoque do CME e dos demais. Lance na hora tudo que entra e sai.';
+}
 
 function _epMin(d, chave) {
   const m = (d.configuracoes.minimos || {})[chave];
@@ -38,8 +54,9 @@ function ep_renderizar() {
   const kpi = (n, l, cls, dica) => '<div class="idv-kpi' + (cls ? ' ' + cls : '') + '"' + (dica ? ' title="' + esc(dica) + '"' : '') + '><div class="idv-num">' + n + '</div><div class="idv-rot">' + l + '</div></div>';
   const equipe = _epEquipeHoje();
   const html = [];
-  html.push('<div class="idv-cab"><div><h1>\u{1F6E1}\u{FE0F} Estoque do Plantão</h1>'
-    + '<div class="idv-sub">Um estoque só para as equipes ALFA a ECHO, separado do Estoque do CME. Lance na hora tudo que entra e sai. Equipe de hoje: <b>' + esc(equipe || '—') + '</b></div></div>'
+  html.push(_epSeletor());
+  html.push('<div class="idv-cab"><div><h1>\u{1F6E1}\u{FE0F} ' + _epE() + '</h1>'
+    + '<div class="idv-sub">' + _epSub() + '</div></div>'
     + '<div class="idv-acoes">' + _epBtn('\u{1F504} Atualizar', 'ep_renderizar()', '', 'Recarrega a tela com os números mais recentes')
     + (typeof ep_abrirPassagem === 'function' ? _epBtn('\u{1F5A8}\u{FE0F} Passagem de serviço', 'ep_abrirPassagem()', '', 'Folha da troca de plantão para imprimir: material, viaturas e as assinaturas de quem passa e de quem recebe') : '')
     + _epBtn('\u{1F4CB} Auditoria (PDF)', 'ep_relatorioAuditoria()', '', 'Levantamento para auditoria: saldos, cintas por tamanho, travas e a lista de cada tornozeleira (nº de série) e DPP (nº de estoque)')
@@ -50,7 +67,7 @@ function ep_renderizar() {
       + _epBtn('\u{2715} Baixa', "ep_abrirMov('baixa')", 'btn-danger', 'Item perdido, quebrado ou inutilizado que sai de vez do estoque')
       + _epBtn('\u{2699}\u{FE0F} Mínimos', 'ep_abrirMinimos()', '', 'Quantidade mínima de cada item; abaixo disso aparece o alerta de estoque baixo') : '')
     + (admin && d.inventarioEncerradoEm ? _epBtn('Reabrir inventário', 'ep_reabrirInventario()', 'btn-secondary', 'Libera de novo o cadastro de inventário pelo plantão') : '')
-    + (ep_podeCadastrar() ? _epBtn('\u{2795} Cadastrar dispositivos', 'ep_abrirCadastro()', 'btn-primary', 'Gerência e admin: cadastra módulo ou DPP novo direto no estoque do plantão, digitando o nº de série ou nº de estoque') : '')
+    + (ep_podeCadastrar() ? _epBtn('\u{2795} Cadastrar dispositivos', 'ep_abrirCadastro()', 'btn-primary', 'Gerência e admin: cadastra módulo ou DPP novo direto no ' + _epe() + ', digitando o nº de série ou nº de estoque') : '')
     + (ep_podeCadastrar() ? _epBtn('\u{1F50D} Conferência física', 'ep_abrirConferencia()', '', 'Gerência e admin: cole os números que estão na sala; quem está cadastrado e não foi achado recebe Baixa de uma vez') : '')
     + '</div></div>');
   if (!pode) html.push('<div class="idv-faixa at" style="margin-bottom:12px"><span>\u{1F512} <strong>Modo visualização:</strong> só o plantão lança movimentações aqui.' + (ep_podeCadastrar() ? ' A gerência pode cadastrar dispositivos novos pelo botão "Cadastrar dispositivos".' : '') + '</span></div>');
@@ -59,19 +76,19 @@ function ep_renderizar() {
     ? '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:12px">\u{2714} Inventário inicial encerrado em <span class="idv-data">' + new Date(d.inventarioEncerradoEm).toLocaleString('pt-BR') + '</span>' + (d.inventarioEncerradoPor ? ' por ' + esc(d.inventarioEncerradoPor) : '') + '. Item novo chega pelo Estoque do CME, em "A receber", ou pelo cadastro de dispositivos (gerência e admin).</div>'
     : '<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:12px"><span>\u{1F4CB} <strong>Primeiro passo — inventário inicial:</strong> cadastre em "Inventário inicial" tudo que o plantão já tem na sala (com o nº de estoque de cada DPP e o nº de série de cada módulo). Quando terminar, clique em <b>Encerrar inventário</b>. Depois disso, item novo só entra pelo que o Estoque do CME enviar ("A receber").</span></div>');
   if (d.recontagemEm) html.push('<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:12px"><span>\u{1F9EE} <strong>Recontagem em <span class="idv-data">' + new Date(d.recontagemEm).toLocaleString('pt-BR') + '</span>:</strong> o saldo conta só o que foi lançado a partir dessa data.</span></div>');
-  html.push(_epHtmlPendencias('plantao', pode));
+  html.push(_epHtmlPendencias('plantao', pode, ep_lotAtual()));
   html.push('<div class="idv-kpis" style="margin-bottom:16px">' + kpi(it[M] || 0, 'Módulo Eletrônico', '', 'Tornozeleiras (o aparelho) na sala do plantão')
     + kpi(cinta, 'Cintas (total)', '', 'Cintas de todos os tamanhos somadas') + kpi(it['Trava'] || 0, 'Pares de travas', '', 'Pares de travas para fechar a cinta na instalação')
     + kpi(it['Carregador da tornozeleira'] || 0, 'Carregadores Tornozeleira', '', 'Carregadores da tornozeleira disponíveis')
     + kpi(it[D] || 0, 'Dispositivos DPP', '', 'Aparelhos de botão do pânico para a vítima (DPP)')
     + kpi(pe.novo[M] || 0, 'Tornozeleiras Novas', '', 'Tornozeleiras que nunca foram usadas')
     + kpi(pe.reutilizado[M] || 0, 'Tornozeleiras Reutilizadas', '', 'Tornozeleiras que já foram usadas e voltaram para o estoque')
-    + kpi(total, 'Total Geral', '', 'Soma de todos os itens do estoque do plantão')
+    + kpi(total, 'Total Geral', '', 'Soma de todos os itens do ' + _epe() + '')
     + kpi(baixo, 'Estoque Baixo', 'at', 'Itens abaixo da quantidade mínima definida em Mínimos') + kpi(zero, 'Sem Estoque', 'cr', 'Itens que acabaram (quantidade zero)') + '</div>');
   // busca no topo, igual à "Buscar no estoque" do Estoque do CME (pedido de 26/10/2026)
   html.push('<div style="margin:0 0 20px"><div style="max-width:640px"><label for="ep-busca" style="display:block;font-size:16px;font-weight:600;color:var(--idv-texto)">Buscar no estoque</label>'
     + '<input type="text" id="ep-busca" placeholder="Nº de estoque (DPP), nº de série, monitorado, plantonista, equipe, motivo..." oninput="ep_consultar(this.value)" autocomplete="off" style="width:100%;padding:10px 14px;font-size:15px;margin-top:6px;border:1px solid var(--idv-borda);border-radius:6px;background:var(--idv-campo)">'
-    + '<span style="font-size:13px;color:var(--idv-sec);margin-top:4px;display:block">Pesquisa nas unidades do estoque do Plantão e em todo o histórico de movimentações</span></div>'
+    + '<span style="font-size:13px;color:var(--idv-sec);margin-top:4px;display:block">Pesquisa nas unidades do ' + _epe() + ' e em todo o histórico de movimentações</span></div>'
     + '<div id="ep-busca-res" style="margin-top:10px"></div></div>');
   html.push(_epHtmlTabelas(d, pe));
   html.push(_epHtmlHistorico(d, admin));
@@ -91,43 +108,44 @@ function _epHtmlTransf(t, botoes, nota) {
     + botoes + '</div>';
 }
 // pendências de UM lado ('plantao' no painel do plantão, 'setor' dentro da aba Estoque do CME)
-function _epHtmlPendencias(lado, pode) {
-  const p = ep_pendenciasDe(lado), outro = lado === 'plantao' ? 'Estoque do CME' : 'Plantão';
+function _epHtmlPendencias(lado, pode, lot) {
+  const p = ep_pendenciasDe(lado, lot), outro = lado === 'plantao' ? 'Estoque do CME' : ep_lot(lot).nome, L = lot ? "'" + lot + "'" : '';  // os botões levam a lotação: a ação vale para ela mesmo que o seletor mude
   const b = (txt, js, cls) => pode ? _epBtn(txt, js, cls) : '';
   const sec = (tit, lista, botoes, cor) => lista.length ? '<div class="idv-secao"' + (cor ? ' style="color:' + cor + '"' : '') + '>' + tit + ' (' + lista.length + ')</div>' + lista.map(botoes).join('') : '';
   const rb = lado === 'plantao';  // "Receber e dar baixa" só no painel do plantão
   return (rb && pode && p.aReceber.length > 1 ? '<div style="margin:8px 0 -4px">' + _epBtn('Receber todos e dar baixa (' + p.aReceber.length + ')', 'ep_abrirReceberBaixa()') + '</div>' : '')
     + sec('\u{1F4E5} A receber do ' + outro + ' — confira os números e clique em Receber', p.aReceber,
-      t => _epHtmlTransf(t, b('\u{2705} Receber', "ep_receberTransf('" + _jsq(t.id) + "')", 'btn-primary') + (rb ? b('Receber e dar baixa', "ep_abrirReceberBaixa('" + _jsq(t.id) + "')") : '') + b('Recusar', "ep_perguntarRecusa('" + _jsq(t.id) + "')")))
+      t => _epHtmlTransf(t, b('\u{2705} Receber', "ep_receberTransf('" + _jsq(t.id) + "'" + (L ? ',' + L : '') + ")", 'btn-primary') + (rb ? b('Receber e dar baixa', "ep_abrirReceberBaixa('" + _jsq(t.id) + "')") : '') + b('Recusar', "ep_perguntarRecusa('" + _jsq(t.id) + "'" + (L ? ',' + L : '') + ")")))
     + sec('\u{21A9} Recusado pelo ' + outro + ' — receba de volta no seu estoque', p.receberDeVolta,
-      t => _epHtmlTransf(t, b('\u{21A9} Receber de volta', "ep_receberDeVolta('" + _jsq(t.id) + "')", 'btn-primary')), 'var(--idv-at)')
+      t => _epHtmlTransf(t, b('\u{21A9} Receber de volta', "ep_receberDeVolta('" + _jsq(t.id) + "'" + (L ? ',' + L : '') + ")", 'btn-primary')), 'var(--idv-at)')
     + sec('\u{26A0}\u{FE0F} Transferências pela metade — conclua para o saldo ficar certo', p.concluir,
-      t => _epHtmlTransf(t, b('Concluir (lançar no meu estoque)', "ep_concluirPendencia('" + _jsq(t.id) + "')", 'btn-primary'), 'A transferência foi marcada, mas o lançamento no estoque não chegou ao banco.'), 'var(--idv-cr)')
+      t => _epHtmlTransf(t, b('Concluir (lançar no meu estoque)', "ep_concluirPendencia('" + _jsq(t.id) + "'" + (L ? ',' + L : '') + ")", 'btn-primary'), 'A transferência foi marcada, mas o lançamento no estoque não chegou ao banco.'), 'var(--idv-cr)')
     + sec('\u{26A0}\u{FE0F} Saiu do seu estoque e não chegou ao ' + outro, p.reenviar,
       m => _epHtmlTransf({ item: m.item, tamanho: m.tamanho, quantidade: m.quantidade, estado: m.estado, unidades: m.unidades || (m.seriais || []).map(id => ({ id })), enviadoPor: m.responsavel, ts: m.ts, equipe: m.plantao || m.equipe, plantonista: m.plantonista },
-        b('Reenviar ao ' + outro, "ep_reenviar('" + lado + "','" + _jsq(m.id) + "')", 'btn-primary')), 'var(--idv-cr)')
+        b('Reenviar ao ' + outro, "ep_reenviar('" + lado + "','" + _jsq(m.id) + "'" + (L ? ',' + L : '') + ")", 'btn-primary')), 'var(--idv-cr)')
     + sec('\u{1F69A} Enviado ao ' + outro + ' — aguardando receber', p.aguardando, t => _epHtmlTransf(t, ''))
     + sec('\u{23F3} Você recusou — aguardando o ' + outro + ' receber de volta', p.recuseiAguardando, t => _epHtmlTransf(t, ''));
 }
 /* Aba Estoque do CME › sub-aba "Estoque do Plantão" (pedido de 22/10/2026): o setor VÊ o estoque do plantão,
    sem nenhum botão de alterar. Relê do banco ao abrir (o cache pode estar velho); sem conexão, mostra o que tem. */
-async function ep_renderizarVisaoCme() {
-  const el = document.getElementById('est-panel-plantao-ver'); if (!el) return;
-  el.innerHTML = '<div class="idv-vazio">Carregando o estoque do Plantão...</div>';
+async function ep_renderizarVisaoCme(lot) {
+  lot = lot || EP_LOT_PADRAO; const L = ep_lot(lot);
+  const el = document.getElementById('est-panel-' + lot + '-ver'); if (!el) return;
+  el.innerHTML = '<div class="idv-vazio">Carregando o ' + L.estoque.replace(/^Estoque/, 'estoque') + '...</div>';
   let base = null, aoVivo = true;
-  try { base = await _epLerFresco(EP_STORE); } catch (e) { aoVivo = false; base = carregarStore(EP_STORE, null); }
+  try { base = await _epLerFresco(L.store); } catch (e) { aoVivo = false; base = carregarStore(L.store, null); }
   const d = ep_normalizar(base, EST_PADRAO.itens), it = d.itens, pe = ep_porEstado(d, EST_PADRAO.itens, ITENS_COM_SERIAL);
   const M = 'Módulo eletrônico de monitoração', D = 'Dispositivo DPP';
   const cinta = EST_TAMANHOS.reduce((s, t) => s + (it['Cinta_' + t] || 0), 0);
   const total = Object.keys(EST_PADRAO.itens).reduce((s, k) => s + (it[k] || 0), 0);
-  const aCaminho = ep_pendentes(ep_getTransf(), EP_SETOR_PARA_PLANTAO);
+  const aCaminho = ep_pendentes(ep_getTransf(lot), EP_SETOR_PARA_PLANTAO);
   const kpi = (n, l, leg) => '<div class="idv-kpi"><span class="idv-num">' + n + '</span><span class="idv-rot">' + l + '</span>' + (leg ? '<span class="idv-leg">' + leg + '</span>' : '') + '</div>';
   const ult = d.movimentacoes[0];
-  el.innerHTML = '<div class="idv-faixa" style="margin:12px 0"><span>\u{1F441}\u{FE0F} <strong>Somente visualização:</strong> o que está hoje na sala do Plantão. Quem lança é o próprio Plantão.'
+  el.innerHTML = '<div class="idv-faixa" style="margin:12px 0"><span>\u{1F441}\u{FE0F} <strong>Somente visualização:</strong> o que está hoje na sala do ' + esc(L.nome) + '. Quem lança é o próprio ' + esc(L.nome) + '.'
       + (ult ? ' Último lançamento em <span class="idv-data">' + new Date(ult.ts).toLocaleString('pt-BR') + '</span>' + (ult.responsavel ? ' por ' + esc(ult.responsavel) : '') + '.' : ' Nenhum lançamento ainda.')
       + (aoVivo ? '' : ' <b>Sem conexão com o banco agora — números do último carregamento.</b>') + '</span>'
-      + _epBtn('\u{1F504} Atualizar', 'ep_renderizarVisaoCme()', '', 'Busca os números mais recentes do Plantão') + '</div>'
-    + (aCaminho.length ? '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:8px">\u{1F69A} ' + aCaminho.length + ' envio(s) do CME ainda não recebido(s) pelo Plantão — não entram nos números abaixo.</div>' : '')
+      + _epBtn('\u{1F504} Atualizar', "ep_renderizarVisaoCme('" + lot + "')", '', 'Busca os números mais recentes do ' + L.nome) + '</div>'
+    + (aCaminho.length ? '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:8px">\u{1F69A} ' + aCaminho.length + ' envio(s) do CME ainda não recebido(s) pelo ' + esc(L.nome) + ' — não entram nos números abaixo.</div>' : '')
     + '<div class="idv-kpis" style="margin-bottom:16px">' + kpi(it[M] || 0, 'Módulo eletrônico', 'novas <b class="idv-mono">' + (pe.novo[M] || 0) + '</b> · reutilizadas <b class="idv-mono">' + (pe.reutilizado[M] || 0) + '</b>')
     + kpi(cinta, 'Cintas (total)') + kpi(it['Trava'] || 0, 'Pares de travas') + kpi(it['Carregador da tornozeleira'] || 0, 'Carregadores')
     + kpi(it[D] || 0, 'Dispositivos DPP') + kpi(total, 'Total geral', 'todas as peças') + '</div>'
@@ -137,7 +155,7 @@ async function ep_renderizarVisaoCme() {
 // dentro da aba Estoque do CME: as transferências (o estoque do plantão em si fica na sub-aba "Estoque do Plantão", só leitura)
 function _epRenderSetorPendentes() {
   const el = document.getElementById('ep-setor-pendentes'); if (!el) return;
-  el.innerHTML = ep_podeVerCme() ? _epHtmlPendencias('setor', podeAlterarEstoque()) : '';
+  el.innerHTML = ep_podeVerCme() ? Object.keys(EP_LOTS).map(l => _epHtmlPendencias('setor', podeAlterarEstoque(), l)).join('') : '';
 }
 // receber e já dar baixa: um item (id) ou todos os "a receber" (sem id). O motivo vem sugerido pela observação de quem enviou.
 let _epRB = [];
@@ -148,7 +166,7 @@ function ep_abrirReceberBaixa(id) {
   const conta = {}; lista.forEach(t => { if (t.obs) conta[t.obs] = (conta[t.obs] || 0) + 1; });
   const sugerido = Object.keys(conta).sort((a, b) => conta[b] - conta[a])[0] || '';
   const campo = (lbl, html) => '<div class="form-field"><label>' + lbl + '</label>' + html + '</div>';
-  _epModal('Receber e dar baixa', '<p style="font-size:14px;margin:0 0 8px">Entra no estoque do Plantão e sai logo em seguida como <b>Baixa</b>:</p>'
+  _epModal('Receber e dar baixa', '<p style="font-size:14px;margin:0 0 8px">Entra no ' + _epe() + ' e sai logo em seguida como <b>Baixa</b>:</p>'
     + '<ul style="margin:0 0 12px 18px;font-size:14px">' + lista.map(t => '<li>' + esc(_epDesc(t)) + '</li>').join('') + '</ul>'
     + '<div class="form-grid">' + campo('Motivo da baixa *', '<input type="text" id="ep-rb-mot" value="' + esc(sugerido) + '" placeholder="Ex.: material enviado ao município de Amapá">') + '</div>'
     + '<div class="form-grid">' + campo('Observação', '<input type="text" id="ep-rb-obs" placeholder="Ex.: plantão deu baixa para o Amapá">') + '</div>',
@@ -163,9 +181,9 @@ async function ep_confirmarReceberBaixa(btn) {
   if (r.falhas) alert(r.feitos + ' recebido(s) e baixado(s); ' + r.falhas + ' não foi(ram). Confira o painel e o histórico.');
   else _mostrarToast('\u{2705} ' + r.feitos + ' recebido(s) e baixado(s).', 'ok');
 }
-function ep_perguntarRecusa(id) {
+function ep_perguntarRecusa(id, lot) {
   const motivo = (prompt('Por que recusar? (ex.: número de série não confere, item com defeito)') || '').trim();
-  if (motivo) ep_decidirTransf(id, 'recusada', motivo);
+  if (motivo) ep_decidirTransf(id, 'recusada', motivo, undefined, lot);
 }
 
 function _epHtmlTabelas(d, pe) {
@@ -198,11 +216,11 @@ function _epHtmlHistorico(d, admin) {
     const antes = d.recontagemEm && (m.ts || '') < d.recontagemEm;
     return '<tr' + (antes ? ' style="background:var(--idv-fundo);color:var(--idv-sec)" title="Anterior à recontagem — não entra no saldo"' : '') + '><td class="idv-data" style="white-space:nowrap;font-size:13px">' + new Date(m.ts).toLocaleString('pt-BR') + '</td>'
       + '<td><span class="idv-etq ' + (_EP_BADGE[m.tipo] || 'ne') + '">' + esc(m.tipo) + '</span></td><td>' + esc(m.item) + '</td><td>' + esc(m.tamanho || '—') + '</td><td style="text-align:center">' + esc(m.quantidade) + '</td>'
-      + '<td class="idv-mono" style="font-size:12px">' + esc((m.seriais || []).join(', ') || '—') + '</td><td>' + esc(m.equipe || '—') + '</td><td>' + esc(m.plantonista || m.responsavel || '—') + '</td>'
+      + '<td class="idv-mono" style="font-size:12px">' + esc((m.seriais || []).join(', ') || '—') + '</td><td>' + esc(m.equipe || '—') + '</td><td>' + esc(m.plantonista || m.responsavel || '—') + _epEtqCco(m) + '</td>'
       + '<td>' + esc(m.monitorado || '—') + '</td><td>' + esc(m.motivo || '—') + '</td><td>' + esc(m.obs || '—') + '</td>'
       + '<td style="white-space:nowrap">' + _epBtn('\u{1F441}', "ep_verMov('" + _jsq(m.id) + "')", 'btn-sm') + (admin ? _epBtn('\u{1F5D1}', "ep_excluirMov('" + _jsq(m.id) + "')", 'btn-sm btn-danger') : '') + '</td></tr>';
-  }).join('') : '<tr><td colspan="12" class="idv-vazio">Nenhuma movimentação no estoque do Plantão ainda. Comece pelo inventário: botão "Entrada" → "Inventário inicial".</td></tr>';
-  return '<div class="idv-secao" style="margin-top:28px">Histórico do Plantão</div><div class="table-scroll"><table class="data-table idv-tabela"><thead><tr>'
+  }).join('') : '<tr><td colspan="12" class="idv-vazio">Nenhuma movimentação no ' + _epe() + ' ainda. Comece pelo inventário: botão "Entrada" → "Inventário inicial".</td></tr>';
+  return '<div class="idv-secao" style="margin-top:28px">Histórico do ' + esc(_epN()) + '</div><div class="table-scroll"><table class="data-table idv-tabela"><thead><tr>'
     + '<th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Tam.</th><th>Qtd</th><th>Série/Nº estoque</th><th>Equipe</th><th>Plantonista</th><th>Monitorado</th><th>Motivo</th><th>Obs.</th><th>Ações</th></tr></thead><tbody>' + corpo + '</tbody></table></div>';
 }
 
@@ -218,7 +236,7 @@ function ep_consultar(valor) {
     if ((qn && _epSoDig(u.id).includes(qn)) || txt(u.id).includes(ql) || txt(u.estado).includes(ql)) unids.push(Object.assign({ item }, u));
   }));
   // 2. número que não está no Plantão: onde ele está (setor, a caminho, saiu, baixa)
-  const onde = unids.length ? null : ep_onde(q, ep_podeVerCme() ? getEstoque() : null, p, ITENS_COM_SERIAL, ep_getTransf());
+  const onde = unids.length ? null : ep_onde(q, ep_podeVerCme() ? getEstoque() : null, p, ITENS_COM_SERIAL, ep_getTransf(), _epN());
   // 3. movimentações do Plantão que citam o termo, em qualquer campo
   const movs = p.movimentacoes.filter(m => [m.tipo, m.categoria, m.item, m.tamanho, m.estado, m.monitorado, m.processo, m.motivo, m.obs,
     m.equipe, m.plantonista, m.responsavel, m.dataEntrega, ...(m.seriais || [])].some(v => txt(v).includes(ql)) || (qn.length >= 4 && (m.seriais || []).some(s => _epSoDig(s).includes(qn))));
@@ -228,7 +246,7 @@ function ep_consultar(valor) {
   }
   const linhaMov = m => '<div onclick="ep_verMov(\'' + _jsq(m.id) + '\')" title="Ver detalhes" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 0;border-bottom:1px solid var(--idv-linha);cursor:pointer">'
     + '<span class="idv-etq ' + (_EP_BADGE[m.tipo] || 'ne') + '">' + esc(m.tipo) + '</span><span class="idv-data" style="color:var(--idv-texto)">' + new Date(m.ts).toLocaleString('pt-BR') + '</span>'
-    + '<span>' + esc(m.plantonista || m.responsavel || '') + '</span>' + (m.equipe ? '<span>' + esc(m.equipe) + '</span>' : '') + (m.monitorado ? '<span>' + esc(m.monitorado) + '</span>' : '')
+    + '<span>' + esc(m.plantonista || m.responsavel || '') + _epEtqCco(m) + '</span>' + (m.equipe ? '<span>' + esc(m.equipe) + '</span>' : '') + (m.monitorado ? '<span>' + esc(m.monitorado) + '</span>' : '')
     + '<span class="idv-link" style="margin-left:auto;font-size:13px">ver detalhe</span></div>';
   let h = '';
   if (onde) h += '<div class="idv-faixa" style="border-color:var(--idv-in);background:var(--idv-in-f);margin-bottom:10px"><span><b class="idv-mono">' + esc(q) + '</b> — ' + esc(onde.item) + ': <b>' + esc(onde.texto) + '</b></span></div>';
@@ -238,7 +256,7 @@ function ep_consultar(valor) {
       const dpp = u.item === 'Dispositivo DPP', hist = p.movimentacoes.filter(m => (m.seriais || []).includes(u.id));
       h += '<div style="background:var(--idv-cartao);border:1px solid var(--idv-borda);border-radius:6px;padding:14px 16px;margin-bottom:10px">'
         + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px"><span style="font-weight:600;font-size:15px">' + esc(u.item) + '</span>'
-        + '<span class="idv-etq ' + (u.estado === 'Novo' ? 'ok' : u.estado === 'Reutilizado' ? 'at' : 'ne') + '">' + esc(u.estado || '—') + '</span><span class="idv-etq ok">No estoque do Plantão</span></div>'
+        + '<span class="idv-etq ' + (u.estado === 'Novo' ? 'ok' : u.estado === 'Reutilizado' ? 'at' : 'ne') + '">' + esc(u.estado || '—') + '</span><span class="idv-etq ok">No ' + _epe() + '</span></div>'
         + '<div style="font-size:14px"><strong>' + (dpp ? 'Nº de estoque' : 'Nº de série') + ':</strong> <code class="idv-mono" style="background:var(--idv-fundo);border:1px solid var(--idv-linha);padding:2px 8px;border-radius:3px">' + esc(u.id) + '</code>'
         + (dpp ? '<span style="margin-left:12px">' + (u.temCarregador ? 'Com carregador' : 'Sem carregador') + ' · ' + (u.temChip ? 'Com chip' : 'Sem chip') + '</span>' : '') + '</div>'
         + (hist.length ? '<div style="margin-top:10px;font-size:13px;color:var(--idv-sec);border-top:1px solid var(--idv-linha);padding-top:8px"><strong>Movimentações (' + hist.length + '):</strong>' + hist.slice(0, 20).map(linhaMov).join('') + '</div>' : '')
@@ -250,7 +268,7 @@ function ep_consultar(valor) {
       + '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Estado</th><th>Plantonista</th><th>Equipe</th><th>Monitorado</th><th>Motivo</th><th>Série/Nº estoque</th></tr></thead><tbody>'
       + movs.slice(0, 100).map(m => '<tr style="cursor:pointer" onclick="ep_verMov(\'' + _jsq(m.id) + '\')" title="Clique para ver detalhes">'
         + '<td class="idv-data" style="white-space:nowrap;font-size:13px">' + new Date(m.ts).toLocaleString('pt-BR') + '</td><td><span class="idv-etq ' + (_EP_BADGE[m.tipo] || 'ne') + '">' + esc(m.tipo) + '</span></td>'
-        + '<td>' + esc(m.item) + (m.tamanho ? ' ' + esc(m.tamanho) : '') + '</td><td>' + esc(m.estado || '—') + '</td><td>' + esc(m.plantonista || m.responsavel || '—') + '</td><td>' + esc(m.equipe || '—') + '</td>'
+        + '<td>' + esc(m.item) + (m.tamanho ? ' ' + esc(m.tamanho) : '') + '</td><td>' + esc(m.estado || '—') + '</td><td>' + esc(m.plantonista || m.responsavel || '—') + _epEtqCco(m) + '</td><td>' + esc(m.equipe || '—') + '</td>'
         + '<td>' + esc(m.monitorado || '—') + '</td><td>' + esc(m.motivo || '—') + '</td><td class="idv-mono" style="font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc((m.seriais || []).join(', ') || '—') + '</td></tr>').join('')
       + '</tbody></table></div>' + (movs.length > 100 ? '<div style="font-size:13px;color:var(--idv-sec);margin-top:4px">Mostrando as 100 mais recentes — refine a busca.</div>' : '');
   }
@@ -260,16 +278,16 @@ function ep_consultar(valor) {
 function ep_verMov(id) {
   const m = ep_get().movimentacoes.find(x => x.id === id); if (!m) return;
   const html = _vsec('Item', _vf('Tipo', m.tipo) + _vf('Item', m.item) + (m.tamanho ? _vf('Tamanho', m.tamanho) : '') + _vf('Quantidade', m.quantidade) + _vf('Estado', m.estado || '—'))
-    + _vsec('Quem e quando', _vf('Data/Hora', new Date(m.ts).toLocaleString('pt-BR')) + _vf('Plantonista', m.plantonista || m.responsavel || '—') + _vf('Equipe', m.equipe || '—') + _vf('Motivo', m.motivo || '—'))
+    + _vsec('Quem e quando', _vf('Data/Hora', new Date(m.ts).toLocaleString('pt-BR')) + _vf('Plantonista', (m.plantonista || m.responsavel || '—') + (String(m.lotacao || '').toUpperCase() === 'CCO' ? ' (CCO)' : '')) + _vf('Equipe', m.equipe || '—') + _vf('Motivo', m.motivo || '—'))
     + (m.monitorado ? _vsec('Monitorado', _vf('Nome', m.monitorado) + (m.processo ? _vf('Processo', m.processo) : '')) : '')
     + ((m.seriais || []).length ? _vsec('Nº de série / Nº de estoque', _vf('', m.seriais.join(' · '))) : '')
     + (m.obs ? _vsec('Observações', _vta('', m.obs)) : '');
-  _abrirViewer('Estoque do Plantão — ' + esc(m.tipo) + ' de ' + esc(m.item), html, null);
+  _abrirViewer('' + _epE() + ' — ' + esc(m.tipo) + ' de ' + esc(m.item), html, null);
 }
 async function ep_excluirMov(id) {
   if (!usuarioAtual || usuarioAtual.nivel !== 'admin') return;
-  if (!confirm('Excluir esta movimentação do histórico do Plantão?\n\nO saldo NÃO é desfeito (igual ao setor de Estoque).')) return;
-  if (await _epMutar(d => { d.movimentacoes = d.movimentacoes.filter(m => m.id !== id); })) { addLog('Estoque do Plantão: movimentação excluída (' + _epQuem() + ')'); ep_renderizar(); }
+  if (!confirm('Excluir esta movimentação do histórico do ' + _epN() + '?\n\nO saldo NÃO é desfeito (igual ao setor de Estoque).')) return;
+  if (await _epMutar(d => { d.movimentacoes = d.movimentacoes.filter(m => m.id !== id); })) { addLog('' + _epE() + ': movimentação excluída (' + _epQuem() + ')'); ep_renderizar(); }
 }
 
 /* ── inventário inicial: aberto até o plantão encerrar; depois, item novo só pelo Estoque do CME ── */
@@ -278,13 +296,13 @@ async function ep_encerrarInventario() {
   const d = ep_get(), n = Object.values(d.itens).reduce((s, v) => s + (v || 0), 0);
   if (!confirm('ENCERRAR O INVENTÁRIO INICIAL DO PLANTÃO\n\nForam cadastrados ' + n + ' item(ns).\nDepois de encerrar, o plantão não usa mais a "Entrada": item novo chega pelo Estoque do CME ("A receber").\n\nConfirma que já cadastrou tudo o que existe na sala?')) return;
   const ok = await _epMutar(x => { if (x.inventarioEncerradoEm) return 'ja'; x.inventarioEncerradoEm = new Date().toISOString(); x.inventarioEncerradoPor = _epQuem(); });
-  if (ok) { addLog('Estoque do Plantão: inventário inicial ENCERRADO com ' + n + ' item(ns) (' + _epQuem() + ')'); _mostrarToast('\u{2714} Inventário encerrado. Daqui em diante o material vem do Estoque do CME.', 'ok'); }
+  if (ok) { addLog('' + _epE() + ': inventário inicial ENCERRADO com ' + n + ' item(ns) (' + _epQuem() + ')'); _mostrarToast('\u{2714} Inventário encerrado. Daqui em diante o material vem do Estoque do CME.', 'ok'); }
   ep_renderizar();
 }
 async function ep_reabrirInventario() {
   if (!usuarioAtual || usuarioAtual.nivel !== 'admin') return;
   if (!confirm('Reabrir o inventário do plantão?\n\nO plantão volta a poder cadastrar pela "Inventário inicial" até encerrar de novo.')) return;
-  if (await _epMutar(x => { x.inventarioEncerradoEm = null; x.inventarioEncerradoPor = ''; })) addLog('Estoque do Plantão: inventário REABERTO (' + _epQuem() + ')');
+  if (await _epMutar(x => { x.inventarioEncerradoEm = null; x.inventarioEncerradoPor = ''; })) addLog('' + _epE() + ': inventário REABERTO (' + _epQuem() + ')');
   ep_renderizar();
 }
 
@@ -300,7 +318,7 @@ function _epPodeMinimos() { return ep_podeMover(); }
 function ep_abrirMinimos() {
   if (!_epPodeMinimos()) return;
   const d = ep_get(), linhas = Object.keys(EST_PADRAO.itens).map(k => '<div style="font-size:14px">' + esc(k.replace('Cinta_', 'Cinta ')) + '</div><input type="number" min="0" class="ep-min" data-chave="' + esc(k) + '" value="' + _epMin(d, k) + '" style="padding:5px 8px;border:1px solid var(--idv-borda);border-radius:6px;width:100%;font-size:14px">').join('');
-  _epModal('\u{2699}\u{FE0F} Mínimos do estoque do Plantão', '<p style="color:var(--idv-sec);font-size:14px;margin-bottom:12px">Quando o saldo do plantão ficar igual ou abaixo do mínimo, a linha fica vermelha.</p><div style="display:grid;grid-template-columns:1fr 120px;gap:8px 16px;align-items:center">' + linhas + '</div>',
+  _epModal('\u{2699}\u{FE0F} Mínimos do ' + _epe() + '', '<p style="color:var(--idv-sec);font-size:14px;margin-bottom:12px">Quando o saldo do plantão ficar igual ou abaixo do mínimo, a linha fica vermelha.</p><div style="display:grid;grid-template-columns:1fr 120px;gap:8px 16px;align-items:center">' + linhas + '</div>',
     _epBtn('Cancelar', "fecharModal('ep-modal')") + _epBtn('Salvar', 'ep_salvarMinimos()', 'btn-primary'));
 }
 async function ep_salvarMinimos() {
@@ -320,7 +338,7 @@ function ep_abrirMov(tipo) {
   const cats = Object.keys(EST_TIPOS).map(c => '<option value="' + esc(c) + '">' + esc(c) + '</option>').join('');
   const motivos = _EP_MOTIVOS[tipo].map(m => '<option>' + esc(m) + '</option>').join('');
   const campo = (lbl, html, id) => '<div class="form-field"' + (id ? ' id="' + id + '"' : '') + '><label>' + lbl + '</label>' + html + '</div>';
-  const corpo = '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:8px">Plantonista: <b>' + esc(_epQuem()) + '</b> · equipe <b>' + esc(_epEquipeHoje() || '—') + '</b> · <span class="idv-data">' + new Date().toLocaleString('pt-BR') + '</span></div>'
+  const corpo = '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:8px">Plantonista: <b>' + esc(_epQuem()) + '</b>' + (typeof _etqLotacao === 'function' ? ' ' + _etqLotacao(usuarioAtual && usuarioAtual.lotacao) : '') + ' · equipe <b>' + esc(_epEquipeHoje() || '—') + '</b> · <span class="idv-data">' + new Date().toLocaleString('pt-BR') + '</span></div>'
     + '<div class="form-grid">' + campo('Categoria *', '<select id="ep-f-cat" onchange="_epAtualizarTipos()"><option value="">Selecione...</option>' + cats + '</select>')
     + campo('Tipo de Item *', '<select id="ep-f-item" onchange="_epAtualizarForm()"><option value="">Selecione a categoria...</option></select>') + '</div>'
     + '<div class="form-grid">' + campo('Tamanho da Cinta *', '<select id="ep-f-tam"><option value="">Selecione...</option>' + EST_TAMANHOS.map(t => '<option>' + t + '</option>').join('') + '</select>', 'ep-row-tam')
@@ -332,7 +350,7 @@ function ep_abrirMov(tipo) {
     + '<div class="form-grid">' + (tipo === 'baixa' ? '' : campo('Motivo *', '<select id="ep-f-motsel" onchange="_epAtualizarMotivo()">' + motivos + '</select>'))
     + campo(tipo === 'baixa' ? 'Motivo da baixa *' : 'Descreva', '<input type="text" id="ep-f-mottxt" placeholder="' + (tipo === 'baixa' ? 'Defeito, perda, dano...' : 'Qual motivo?') + '">', 'ep-row-mottxt') + '</div>'
     + '<div class="form-grid">' + campo('Observação', '<input type="text" id="ep-f-obs" placeholder="Opcional">') + '</div>';
-  _epModal(_EP_TITULO[tipo], corpo, _epBtn('Cancelar', "fecharModal('ep-modal')") + _epBtn('Registrar', 'ep_confirmarMov()', tipo === 'baixa' ? 'btn-danger' : 'btn-primary'));
+  _epModal(_epTitulo(tipo), corpo, _epBtn('Cancelar', "fecharModal('ep-modal')") + _epBtn('Registrar', 'ep_confirmarMov()', tipo === 'baixa' ? 'btn-danger' : 'btn-primary'));
   // instalação nova é o caso comum da Saída: já abre no kit (dá para trocar para um item só)
   if (tipo === 'saida') { document.getElementById('ep-f-cat').value = 'Tornozeleira'; _epAtualizarTipos(); document.getElementById('ep-f-item').value = _EP_KIT; }
   _epAtualizarForm(); _epAtualizarMotivo();
@@ -346,7 +364,7 @@ function _epAtualizarTipos() {
 // lista de unidades com busca pelo nº: "60499" acha "60499-1"; Enter marca quando sobra uma só
 function _epSoDig(s) { return String(s || '').toLowerCase().replace(/[^0-9a-z]/g, ''); }
 function _epHtmlListaUnid(us, tipoInput, cls, lbl) {
-  if (!us.length) return '<p style="color:var(--idv-at);font-size:13px">\u{26A0}\u{FE0F} Nenhuma unidade deste item no estoque do Plantão.</p>';
+  if (!us.length) return '<p style="color:var(--idv-at);font-size:13px">\u{26A0}\u{FE0F} Nenhuma unidade deste item no ' + _epe() + '.</p>';
   return '<input type="search" class="ep-busca" placeholder="Buscar ' + lbl + '..." autocomplete="off" oninput="_epFiltrarUnid(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();_epFiltrarUnid(this,true)}"'
     + ' style="width:100%;padding:6px 10px;border:1px solid var(--idv-borda);border-radius:6px;font-family:var(--idv-mono);font-size:14px;margin:4px 0 6px">'
     + '<div class="ep-lista" style="max-height:240px;overflow:auto;border:1px solid var(--idv-linha);border-radius:6px;padding:4px 8px">'
@@ -463,7 +481,7 @@ async function ep_confirmarMov() {
   if (!ok) return;
   fecharModal('ep-modal');
   _mostrarToast(kit ? '\u{2713} Saída do kit registrada para ' + mon + ': ' + ops.map(o => o.item === _EP_MOD ? 'módulo ' + o.seriais[0] : o.item === 'Cinta' ? 'cinta ' + o.tamanho : (o.item === 'Trava' ? 'pares de travas' : 'carregador') + ' ×' + o.qtd).join(', ') + '.'
-    : '\u{2713} ' + EP_TIPO[tipo] + ' registrada no estoque do Plantão.' + (tipo === 'envio' ? ' Fica "a receber" no Estoque do CME.' : ''), 'ok');
+    : '\u{2713} ' + EP_TIPO[tipo] + ' registrada no ' + _epe() + '.' + (tipo === 'envio' ? ' Fica "a receber" no Estoque do CME.' : ''), 'ok');
   ep_renderizar(); try { _dashEstoqueDisp(); } catch (e) {}
 }
 
@@ -473,7 +491,7 @@ const _EP_MOTIVOS_CAD = ['Dispositivo novo recebido do fornecedor', 'Acerto de i
 function ep_abrirCadastro() {
   if (!ep_podeCadastrar()) { alert('Só a gerência e o administrador cadastram dispositivos.'); return; }
   const campo = (lbl, html, id) => '<div class="form-field"' + (id ? ' id="' + id + '"' : '') + '><label>' + lbl + '</label>' + html + '</div>';
-  const corpo = '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:8px">Cadastrado por <b>' + esc(_epQuem()) + '</b> · <span class="idv-data">' + new Date().toLocaleString('pt-BR') + '</span> · entra direto no estoque do Plantão</div>'
+  const corpo = '<div style="font-size:13px;color:var(--idv-sec);margin-bottom:8px">Cadastrado por <b>' + esc(_epQuem()) + '</b> · <span class="idv-data">' + new Date().toLocaleString('pt-BR') + '</span> · entra direto no ' + _epe() + '</div>'
     + '<div class="form-grid">' + campo('Dispositivo *', '<select id="ep-c-item" onchange="_epPreviaCadastro()"><option value="' + esc(_EP_MOD) + '">Módulo eletrônico (tornozeleira)</option><option value="Dispositivo DPP">Dispositivo DPP (botão do pânico)</option></select>')
     + campo('Estado *', '<select id="ep-c-estado"><option>Novo</option><option>Reutilizado</option></select>') + '</div>'
     + campo('<span id="ep-c-rot">Nº de série</span> — um por linha (pode colar uma lista) *', '<textarea id="ep-c-ids" rows="6" oninput="_epPreviaCadastro()" placeholder="63316-4&#10;63625-8" style="width:100%;padding:8px 10px;border:1px solid var(--idv-borda);border-radius:6px;font-family:var(--idv-mono);font-size:14px;resize:vertical"></textarea>')
@@ -482,7 +500,7 @@ function ep_abrirCadastro() {
     + '<div class="form-grid">' + campo('Motivo *', '<select id="ep-c-motsel" onchange="document.getElementById(\'ep-c-row-mottxt\').style.display=this.value===\'Outro\'?\'\':\'none\'">' + _EP_MOTIVOS_CAD.map(m => '<option>' + esc(m) + '</option>').join('') + '</select>')
     + campo('Qual motivo? *', '<input type="text" id="ep-c-mottxt" placeholder="Descreva">', 'ep-c-row-mottxt') + '</div>'
     + '<div class="form-grid">' + campo('Observação', '<input type="text" id="ep-c-obs" placeholder="Opcional (ex.: nº da nota, lote, quem entregou)">') + '</div>';
-  _epModal('\u{2795} Cadastrar dispositivos no estoque do Plantão', corpo, _epBtn('Cancelar', "fecharModal('ep-modal')") + '<button type="button" class="btn-primary" id="ep-c-ok" onclick="ep_confirmarCadastro()" disabled>Cadastrar</button>');
+  _epModal('\u{2795} Cadastrar dispositivos no ' + _epe() + '', corpo, _epBtn('Cancelar', "fecharModal('ep-modal')") + '<button type="button" class="btn-primary" id="ep-c-ok" onclick="ep_confirmarCadastro()" disabled>Cadastrar</button>');
   document.getElementById('ep-c-row-mottxt').style.display = 'none';
   _epPreviaCadastro();
   document.getElementById('ep-c-ids').focus();
@@ -517,7 +535,7 @@ async function ep_confirmarCadastro() {
   const ok = await ep_cadastrarDispositivos(op, { motivo: 'Cadastro manual — ' + motivo, obs: v('ep-c-obs') });
   if (!ok) { _epPreviaCadastro(); return; }
   fecharModal('ep-modal');
-  _mostrarToast('\u{2713} ' + ids.length + ' ' + (dpp ? 'DPP' : 'módulo(s)') + ' cadastrado(s) no estoque do Plantão.', 'ok');
+  _mostrarToast('\u{2713} ' + ids.length + ' ' + (dpp ? 'DPP' : 'módulo(s)') + ' cadastrado(s) no ' + _epe() + '.', 'ok');
   ep_renderizar(); try { _dashEstoqueDisp(); } catch (e) {}
 }
 
@@ -557,7 +575,7 @@ function ep_relatorioAuditoria() {
   const tabDpp = dpps.map((a, i) => '<tr><td class="c">' + (i + 1) + '</td><td class="m">' + e(a.id) + '</td><td>' + e(a.estado || '—') + '</td><td class="c">' + (a.temCarregador ? 'sim' : 'não') + '</td><td class="c">' + (a.temChip ? 'sim' : 'não') + '</td><td class="c">' + dataBR(a.entradaEm) + '</td><td class="c cf"></td></tr>').join('')
     || '<tr><td colspan="7"><i>Nenhum botão do pânico cadastrado com nº de estoque.</i></td></tr>';
   const agora = new Date(), quem = ((usuarioAtual && usuarioAtual.nome) || '').toUpperCase();
-  const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>Estoque do Plantão - levantamento para auditoria</title>'
+  const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>' + _epE() + ' - levantamento para auditoria</title>'
     + '<style>html,body{background:#fff}@page{size:A4 portrait;margin:12mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:9.5pt}'
     + 'h1{font-size:14pt;margin:0 0 2px}h2{font-size:11pt;margin:14px 0 4px;border-bottom:1.5px solid #000;padding-bottom:2px}.s{font-size:9pt;margin-bottom:8px}'
     + 'table{border-collapse:collapse;width:100%;margin-bottom:4px}th,td{border:1px solid #000;padding:3px 5px;vertical-align:top}th{background:#e6e6e6;font-size:8.5pt}'
@@ -566,7 +584,7 @@ function ep_relatorioAuditoria() {
     + '.ass{display:flex;gap:30px;margin-top:28px}.ass div{flex:1;text-align:center;border-top:1px solid #000;padding-top:3px;font-size:9pt}'
     + '@media screen{body{padding:10px 16px;max-width:900px}}@media print{.np{display:none}}</style></head><body>'
     + '<div class="np" style="text-align:right;margin-bottom:6px"><button onclick="print()" style="padding:6px 16px;font-size:11pt;cursor:pointer">Imprimir / salvar em PDF</button></div>'
-    + '<h1>CME/IAPEN – Estoque do Plantão – levantamento para auditoria</h1>'
+    + '<h1>CME/IAPEN – ' + _epE() + ' – levantamento para auditoria</h1>'
     + '<div class="s">Situação registrada no sistema em ' + agora.toLocaleString('pt-BR') + (quem ? ' · emitido por ' + e(quem) : '') + '</div>'
     + '<h2>1. Resumo</h2><table><thead><tr><th>Item</th><th>No sistema</th><th>Contado</th><th>Observação</th></tr></thead><tbody>' + resumo + '</tbody></table>'
     + aviso('Tornozeleira', it[M] || 0, mods.length) + aviso('DPP', it[D] || 0, dpps.length)
@@ -616,7 +634,7 @@ function _epcPrevia() {
   el.innerHTML = '<div style="font-size:14px">Cadastrados no sistema: <b>' + r.cad.length + '</b> · achados na sala: <b style="color:var(--idv-ok)">' + r.achados.length + '</b> · '
     + 'não achados: <b style="color:var(--idv-cr)">' + r.faltam.length + '</b></div>'
     + (r.faltam.length ? '<div style="margin-top:6px;font-size:13px;font-weight:600;color:var(--idv-cr)">Vão receber baixa:</div>' + lista(r.faltam) : '')
-    + (r.foraDoSistema.length ? '<div class="idv-faixa at" style="margin-top:8px;font-size:13px">Estes números da sala <b>não estão cadastrados</b> no estoque do Plantão (confira se foram digitados certo ou cadastre-os): ' + r.foraDoSistema.map(esc).join(', ') + '</div>' : '');
+    + (r.foraDoSistema.length ? '<div class="idv-faixa at" style="margin-top:8px;font-size:13px">Estes números da sala <b>não estão cadastrados</b> no ' + _epe() + ' (confira se foram digitados certo ou cadastre-os): ' + r.foraDoSistema.map(esc).join(', ') + '</div>' : '');
   btn.disabled = !r.faltam.length || r.achados.length === 0;  // sem nenhum achado é quase certo erro de digitação: não deixa zerar o estoque
   btn.textContent = r.faltam.length ? 'Dar baixa em ' + r.faltam.length : 'Dar baixa';
 }
@@ -631,6 +649,6 @@ async function ep_confirmarConferencia() {
   const ok = await ep_salvarMov('baixa', op, { motivo, obs: 'Conferência física: ' + r.achados.length + ' achado(s) na sala (' + r.achados.join(', ') + ').' });
   if (!ok) { _epcPrevia(); return; }
   fecharModal('ep-modal');
-  _mostrarToast('\u{2713} Baixa de ' + r.faltam.length + ' registrada. Ficaram ' + r.achados.length + ' no estoque do Plantão.', 'ok');
+  _mostrarToast('\u{2713} Baixa de ' + r.faltam.length + ' registrada. Ficaram ' + r.achados.length + ' no ' + _epe() + '.', 'ok');
   ep_renderizar(); try { _dashEstoqueDisp(); } catch (e) {}
 }

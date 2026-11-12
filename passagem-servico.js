@@ -70,7 +70,7 @@ function ep_abrirPassagem() {
     + campo('Plantão que recebe', '<select id="epp-eq2">' + opEq(_eppProxEquipe(eq)) + '</select>') + '</div>'
     + '<div class="form-grid">' + campo('Servidor que passa o serviço', '<input type="text" id="epp-passa" value="' + esc(((usuarioAtual && usuarioAtual.nome) || '').toUpperCase()) + '" style="text-transform:uppercase">')
     + campo('Servidor que recebe o serviço', '<input type="text" id="epp-recebe" value="" autocomplete="off" placeholder="Digite o nome de quem assume" style="text-transform:uppercase">') + '</div>'
-    + '<div class="idv-secao">Material carga <span class="idv-mini" style="font-weight:400">— marque o que foi conferido; as 5 primeiras quantidades vêm do Estoque do Plantão</span></div>'
+    + '<div class="idv-secao">Material carga <span class="idv-mini" style="font-weight:400">— marque o que foi conferido; as 5 primeiras quantidades vêm do ' + esc(ep_lot().estoque) + '</span></div>'
     + '<div class="table-scroll" style="max-height:44vh"><table class="data-table idv-tabela"><thead><tr><th>Item</th><th>Qtd.</th><th></th><th>Observação</th></tr></thead><tbody>' + linhasItens + '</tbody></table></div>'
     + '<div class="idv-secao">Viaturas</div>'
     + '<div class="table-scroll"><table class="data-table idv-tabela"><thead><tr><th>Viatura</th><th>KM</th><th>Combustível</th></tr></thead><tbody>' + linhasViat + '</tbody></table></div>'
@@ -128,11 +128,13 @@ function _eppDocumento(d) {
   // _IMPRIMIR_ASSINATURA_NOS_DOCS desligado para os ofícios; só sai se quem passa o serviço for o próprio servidor logado
   const ass = (() => { try { return (usuarioAtual && usuarioAtual.usuario && _getAssinaturaDe(usuarioAtual.usuario)) || null; } catch (e) { return null; } })();
   const quemGerou = ((usuarioAtual && usuarioAtual.nome) || '').toUpperCase();
+  // (12/11/2026) quem é do CCO sai com a marca "CCO" ao lado do nome (no documento: quadradinho simples, sem cor)
+  const marcaCco = typeof _ehCCO === 'function' && _ehCCO(usuarioAtual) ? ' <span style="display:inline-block;border:1px solid #000;padding:0 4px;margin-left:4px;font-size:8pt;font-weight:bold">CCO</span>' : '';
   const assPassa = ass && /^data:image\/(png|jpe?g|webp);base64,/.test(ass) && d.passa === quemGerou ? '<img src="' + esc(ass) + '" alt="Assinatura" style="max-height:52px;max-width:220px">' : '';
-  const assinatura = (tit, nome, eq, imgAss) => '<td style="width:50%;vertical-align:top;padding:0 10px">'
+  const assinatura = (tit, nome, eq, imgAss, marca) => '<td style="width:50%;vertical-align:top;padding:0 10px">'
     + '<div style="font-size:8pt;font-weight:bold;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">' + tit + '</div>'
     + '<div style="border:1px solid #000;height:64px;display:flex;align-items:center;justify-content:center">' + (imgAss || '') + '</div>' // sem imagem: quadro em branco para assinar à caneta
-    + '<div style="text-align:center;margin-top:4px;font-size:9.5pt;font-weight:bold">' + (nome ? esc(nome) : '&nbsp;') + '</div>'
+    + '<div style="text-align:center;margin-top:4px;font-size:9.5pt;font-weight:bold">' + (nome ? esc(nome) + (marca || '') : '&nbsp;') + '</div>'
     + '<div style="text-align:center;font-size:8.5pt">Plantão ' + esc(eq || '—') + ' · Central de Monitoramento Eletrônico – CME/IAPEN</div></td>';
   return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>Passagem de serviço - ' + esc(_eppDataBR(d.dia)) + ' - ' + esc(d.eq) + '</title>'
     + '<style>html,body{background:#fff}@page{size:A4 portrait;margin:8mm 10mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:9.5pt}'
@@ -144,7 +146,7 @@ function _eppDocumento(d) {
     + img(window._IAPEN_LOGO_B64, 'image/png', 'IAPEN') + img(window._PPENAL_LOGO_B64, 'image/jpeg', 'Polícia Penal')
     + '<div style="flex:1;text-align:center;font-weight:bold;font-size:8.5pt;line-height:1.7">GOVERNO DO ESTADO DO AMAPÁ<br>SECRETARIA DE ESTADO DE JUSTIÇA E SEGURANÇA PÚBLICA - SEJUSP<br>INSTITUTO DE ADMINISTRAÇÃO PENITENCIÁRIA - IAPEN<br>CENTRAL DE MONITORAMENTO ELETRÔNICO - CME</div>'
     + img(window._CME_LOGO_B64, 'image/png', 'CME') + '</div>'
-    + '<div style="text-align:center;font-weight:bold;font-size:14pt;margin:10px 0 6px">PASSAGEM DE SERVIÇO — PLANTÃO</div>'
+    + '<div style="text-align:center;font-weight:bold;font-size:14pt;margin:10px 0 6px">PASSAGEM DE SERVIÇO — ' + esc(ep_lot().nome.toUpperCase()) + '</div>'
     + '<table class="g"><tr>' + box('Data e hora', esc(dhTxt)) + box('Dia do serviço', esc(_eppDataBR(d.dia)) + ' 08h às ' + esc(_eppDataBR(diaFim)) + ' 08h')
     + box('Plantão que passa', esc(d.eq || '—')) + box('Plantão que recebe', esc(d.eq2 || '—')) + '</tr></table>'
     + '<div class="tit">Material carga</div>'
@@ -157,9 +159,9 @@ function _eppDocumento(d) {
     + '<div style="border:1px solid #000;padding:6px 8px;font-size:8.5pt;line-height:1.45;text-align:justify">' + esc(_eppTextoAuto(d)) + '</div>'
     + '<div class="tit">Observações</div>'
     + '<div style="border:1px solid #000;padding:6px 8px;min-height:48px;font-size:9pt;white-space:pre-wrap">' + (esc(d.obs) || '&nbsp;') + '</div>'
-    + '<table style="margin-top:16px"><tr>' + assinatura('Servidor que passa o serviço', d.passa, d.eq, assPassa) + assinatura('Servidor que recebe o serviço', d.recebe, d.eq2, '') + '</tr></table>'
+    + '<table style="margin-top:16px"><tr>' + assinatura('Servidor que passa o serviço', d.passa, d.eq, assPassa, d.passa === quemGerou ? marcaCco : '') + assinatura('Servidor que recebe o serviço', d.recebe, d.eq2, '') + '</tr></table>'
     + '<div style="border-top:1.5px solid #000;margin-top:14px;padding-top:5px;text-align:center;font-size:7.5pt;line-height:1.6"><b>CENTRAL DE MONITORAMENTO ELETRÔNICO – CME -</b> Av. Machado de Assis, 372 – Centro - CEP: 68900-066, Macapá-AP.<br>Email: cme@iapen.ap.gov.br - Telefone (96) 98415 2844'
-    + '<br><span style="color:#555">Documento gerado no sistema do CME por ' + esc(quemGerou || '—') + ' em ' + esc(new Date().toLocaleString('pt-BR')) + '</span></div>'
+    + '<br><span style="color:#555">Documento gerado no sistema do CME por ' + esc(quemGerou || '—') + marcaCco + ' em ' + esc(new Date().toLocaleString('pt-BR')) + '</span></div>'
     + '</body></html>';
 }
 

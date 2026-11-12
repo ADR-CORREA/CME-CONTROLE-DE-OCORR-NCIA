@@ -14,7 +14,15 @@
    Depende das constantes do Estoque no index.html (EST_PADRAO, ITENS_COM_SERIAL, EST_TIPOS...).
    A tela fica em estoque-plantao-tela.js. Emojis só por \u{...}. Prefixo ep_ / _ep / EP_. */
 
-const EP_STORE = 'estoque_plantao';
+/* (12/11/2026) LOTAÇÕES: o mesmo módulo serve a mais de um estoque, um por lotação, cada um com a SUA store e o SEU registro de
+   transferências. "plantao" = Macapá (as 5 equipes; chaves de sempre). "cco" = policiais do CCO. Um estoque regional futuro
+   (Oiapoque, Jari…) é só mais uma linha aqui: o nome da lotação do usuário (campo lotacao, sem maiúscula) escolhe a linha.
+   ⚠️ As chaves NÃO podem começar com "plantao_" (cme_plantao_* só abre para gerência/admin) e seguem ^cme_[a-z0-9_]{1,80}$. */
+const EP_LOTS = {
+  plantao: { id: 'plantao', nome: 'Plantão', estoque: 'Estoque do Plantão', aba: 'Estoque Plantão', store: 'estoque_plantao', transf: 'estoque_transferencias', destinoSetor: 'Estoque do Plantão' },
+  cco:     { id: 'cco',     nome: 'CCO',     estoque: 'Estoque CCO',       aba: 'Estoque CCO',     store: 'estoque_cco',     transf: 'estoque_transferencias_cco', destinoSetor: 'Estoque CCO' },
+};
+const EP_LOT_PADRAO = 'plantao';
 const EP_TIPO = { entrada: 'Entrada', saida: 'Saída', devolucao: 'Devolução', baixa: 'Baixa', envio: 'Envio ao setor', recebimento: 'Recebimento' };
 const EP_SOMA = ['Entrada', 'Devolução', 'Recebimento'];  // tipos que entram no saldo
 const EP_LIMITE_MOV = 1000, EP_LIMITE_TRANSF = 400;
@@ -161,16 +169,17 @@ function ep_porEstado(d, itensPadrao, comSerialLista) {
 
 // onde está uma unidade (nº de série / nº de estoque): plantão, setor, a caminho, ou o último destino conhecido
 // setor = null quando quem consulta não pode ver o estoque do CME (plantonista)
-function ep_onde(id, setor, plantao, comSerialLista, transf) {
+function ep_onde(id, setor, plantao, comSerialLista, transf, nomeLot) {
+  nomeLot = nomeLot || 'Plantão';
   id = String(id || '').trim(); if (!id) return null;
   const tem = (d, item) => !!d && ep_unidades(d, item).some(u => u.id === id);
   for (const item of comSerialLista) {
-    if (tem(plantao, item)) return { onde: 'plantao', item, texto: 'No estoque do Plantão' };
+    if (tem(plantao, item)) return { onde: 'plantao', item, texto: 'No estoque do ' + nomeLot };
     if (tem(setor, item)) return { onde: 'setor', item, texto: 'No setor de Estoque' };
   }
   const t = ((transf || {}).transferencias || []).find(x => (x.status === 'pendente' || x.status === 'recusada') && (x.unidades || []).some(u => u.id === id));
   if (t) return { onde: 'caminho', item: t.item, texto: t.status === 'recusada' ? 'Recusado — aguardando quem enviou receber de volta'
-    : t.sentido === EP_SETOR_PARA_PLANTAO ? 'A caminho do Plantão (aguarda o plantonista receber)' : 'A caminho do setor de Estoque (aguarda o setor receber)' };
+    : t.sentido === EP_SETOR_PARA_PLANTAO ? 'A caminho do ' + nomeLot + ' (aguarda o plantonista receber)' : 'A caminho do setor de Estoque (aguarda o setor receber)' };
   const ult = [...(plantao.movimentacoes || []), ...((setor && setor.movimentacoes) || [])].filter(m => (m.seriais || []).includes(id)).sort((a, b) => (b.ts || '').localeCompare(a.ts || ''))[0];
   if (!ult) return null;
   const quando = new Date(ult.ts).toLocaleDateString('pt-BR');
@@ -179,16 +188,58 @@ function ep_onde(id, setor, plantao, comSerialLista, transf) {
   return { onde: 'fora', item: ult.item, texto: 'Última movimentação: ' + ult.tipo + ' em ' + quando };
 }
 
-if (typeof module !== 'undefined') module.exports = { ep_normalizar, ep_unidades, ep_aplicar, ep_mov, ep_registrarMov, ep_novaTransf, ep_decidir, ep_ladoQueLanca, ep_pendentes, ep_opDaTransf, ep_porEstado, ep_onde, ep_chave, EP_SETOR_PARA_PLANTAO, EP_PLANTAO_PARA_SETOR };
+if (typeof module !== 'undefined') module.exports = { EP_LOTS, ep_normalizar, ep_unidades, ep_aplicar, ep_mov, ep_registrarMov, ep_novaTransf, ep_decidir, ep_ladoQueLanca, ep_pendentes, ep_opDaTransf, ep_porEstado, ep_onde, ep_chave, EP_SETOR_PARA_PLANTAO, EP_PLANTAO_PARA_SETOR };
 
 /* ───────────────────────── leitura e gravação no banco ─────────────────────────
    Regra (20/10/2026): cada lado só ALTERA o próprio estoque. O plantão nunca grava no estoque do CME e o setor
    nunca grava no estoque do Plantão. As transferências ficam num registro neutro ("estoque_transferencias"):
    quem recebe lança no próprio estoque; se recusar, quem enviou clica "Receber de volta" e lança no seu. */
-const EP_STORE_TR = 'estoque_transferencias';
-// (12/11/2026) lotação CCO não lê nem grava o estoque do Plantão: a leitura devolve vazio e a gravação recusa (_epMutarStore)
-function ep_get() { return ep_normalizar(_ehCCO(usuarioAtual) ? null : carregarStore(EP_STORE, null), EST_PADRAO.itens); }
-function ep_getTransf() { const d = _ehCCO(usuarioAtual) ? null : carregarStore(EP_STORE_TR, null); return { transferencias: _epCopia((d && d.transferencias) || []) }; }
+
+/* ── lotação em uso ──
+   • plantonista (nível plantao): SÓ o estoque da lotação dele (CCO → "cco"; qualquer outra → "plantao");
+   • gerência e admin: o que estiver escolhido no seletor da tela (_epLotSel) — veem e controlam todos;
+   • uma operação em andamento fixa a lotação (_epComLot) até terminar: trocar o seletor no meio não muda o destino da gravação. */
+let _epLotSel = EP_LOT_PADRAO, _epLotForca = null, _epCtxFila = Promise.resolve();
+function ep_lotDoUsuario(u) {
+  const k = String((u && u.lotacao) || '').trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(EP_LOTS, k) ? k : EP_LOT_PADRAO;
+}
+function ep_ehPlantonista(u) { return !!u && u.nivel === 'plantao'; }
+function ep_lotAtual() {
+  if (_epLotForca) return _epLotForca;
+  if (usuarioAtual && (usuarioAtual.nivel === 'admin' || usuarioAtual.nivel === 'gerencia')) return _epLotSel;
+  return ep_lotDoUsuario(usuarioAtual);
+}
+function ep_lot(id) { return EP_LOTS[id || ep_lotAtual()] || EP_LOTS[EP_LOT_PADRAO]; }
+function _epMin1(l) { return l.estoque.replace(/^Estoque/, 'estoque'); } // "estoque do Plantão" / "estoque CCO", para dentro de uma frase
+function ep_lotsVisiveis() { return usuarioAtual && (usuarioAtual.nivel === 'admin' || usuarioAtual.nivel === 'gerencia') ? Object.keys(EP_LOTS) : []; }
+function ep_selecionarLot(id) {
+  if (!ep_lotsVisiveis().includes(id)) return;
+  _epLotSel = id;
+  try { ep_renderizar(); } catch (e) {}
+}
+// quem pode mexer/ler a lotação `id`: o plantonista só a própria; os demais seguem as permissões de sempre
+function _epLotLiberada(id) { return !ep_ehPlantonista(usuarioAtual) || ep_lotDoUsuario(usuarioAtual) === id; }
+// de qual lotação é a chave do banco (null = não é de estoque de lotação)
+function _epLotDaChave(chave) { const l = Object.values(EP_LOTS).find(x => x.store === chave || x.transf === chave); return l ? l.id : null; }
+// roda fn (síncrona) como se a lotação em uso fosse `lot`
+function _epSync(lot, fn) { const ant = _epLotForca; if (lot) _epLotForca = lot; try { return fn(); } finally { _epLotForca = ant; } }
+// roda a operação assíncrona fn presa à lotação `lot`: operações de lotações diferentes nunca se misturam (esperam a vez)
+function _epComLot(lot, fn) {
+  lot = lot || ep_lotAtual();
+  if (lot === _epLotForca) return fn();
+  const run = async () => { const ant = _epLotForca; _epLotForca = lot; try { return await fn(); } finally { _epLotForca = ant; try { if (ep_lotAtual() !== lot) ep_renderizar(); } catch (e) {} } };
+  const p = _epCtxFila.then(run, run); _epCtxFila = p.catch(() => {}); return p;
+}
+// os OUTROS estoques que o usuário consegue ler (para conferir que um nº de série não está em dois lugares)
+function ep_outrosEstoques() {
+  const eu = ep_lotAtual();
+  return Object.keys(EP_LOTS).filter(l => l !== eu && _epLotLiberada(l)).map(l => ({ nome: _epMin1(EP_LOTS[l]), d: ep_get(l), transf: ep_getTransf(l) }));
+}
+
+// Leitura: o plantonista de uma lotação não enxerga o estoque da outra (devolve vazio, como se não existisse).
+function ep_get(lot) { lot = lot || ep_lotAtual(); return ep_normalizar(_epLotLiberada(lot) ? carregarStore(ep_lot(lot).store, null) : null, EST_PADRAO.itens); }
+function ep_getTransf(lot) { lot = lot || ep_lotAtual(); const d = _epLotLiberada(lot) ? carregarStore(ep_lot(lot).transf, null) : null; return { transferencias: _epCopia((d && d.transferencias) || []) }; }
 function _epSerial(item) { return ITENS_COM_SERIAL.includes(item); }
 async function _epLerFresco(chave) {
   if (!window._db) return carregarStore(chave, null);
@@ -217,7 +268,8 @@ let _epFila = Promise.resolve();
 function _epNaFila(fn) { const p = _epFila.then(fn, fn); _epFila = p.catch(() => {}); return p; }
 // relê do banco, aplica fn (false = desiste, 'ja' = nada a fazer, { erro } = avisa) e grava
 function _epMutarStore(chave, normalizar, fn) {
-  if (_ehCCO(usuarioAtual)) { alert('A lotação CCO não usa o estoque do Plantão.'); return Promise.resolve(false); }
+  const dono = _epLotDaChave(chave);
+  if (dono && !_epLotLiberada(dono)) { alert('Seu perfil não usa o ' + EP_LOTS[dono].estoque + '.'); return Promise.resolve(false); }
   return _epNaFila(async () => {
     let base;
     try { base = await _epLerFresco(chave); } catch (e) { _mostrarToast('Sem conexão com o banco — nada foi salvo. Tente de novo.', 'erro'); return false; }
@@ -228,13 +280,13 @@ function _epMutarStore(chave, normalizar, fn) {
     return _epGravar(chave, d);
   });
 }
-// estoque do PLANTÃO — só o plantão (e o admin) chama; o cadastro manual passa a própria permissão (gerência e admin)
+// estoque da lotação em uso — só o plantonista dela (e o admin) chama; o cadastro manual passa a própria permissão (gerência e admin)
 function _epMutar(fn, pode) {
-  if (!(pode === undefined ? ep_podeMover() : pode)) { alert('Sem permissão para alterar o estoque do Plantão.'); return Promise.resolve(false); }
-  return _epMutarStore(EP_STORE, b => ep_normalizar(b, EST_PADRAO.itens), fn);
+  if (!(pode === undefined ? ep_podeMover() : pode)) { alert('Sem permissão para alterar o ' + ep_lot().estoque + '.'); return Promise.resolve(false); }
+  return _epMutarStore(ep_lot().store, b => ep_normalizar(b, EST_PADRAO.itens), fn);
 }
-// registro de transferências (neutro: não é estoque de ninguém)
-function _epMutarTransf(fn) { return _epMutarStore(EP_STORE_TR, b => ({ transferencias: _epCopia((b && b.transferencias) || []) }), fn); }
+// registro de transferências da lotação (neutro: não é estoque de ninguém)
+function _epMutarTransf(fn) { return _epMutarStore(ep_lot().transf, b => ({ transferencias: _epCopia((b && b.transferencias) || []) }), fn); }
 // estoque do SETOR — só o setor (e o admin) chama; só ACRESCENTA movimentação
 function _epMutarSetor(fn) {
   if (!podeAlterarEstoque()) { alert('Sem permissão para alterar o estoque do CME.'); return Promise.resolve(false); }
@@ -256,26 +308,28 @@ function _epMutarSetor(fn) {
 // depois de gravar a decisão, confere no banco se ela ficou (outro computador pode ter decidido no mesmo instante)
 async function _epDecisaoFicou(t) {
   try {
-    const b = await _epLerFresco(EP_STORE_TR), x = ((b && b.transferencias) || []).find(y => y.id === t.id);
+    const b = await _epLerFresco(ep_lot().transf), x = ((b && b.transferencias) || []).find(y => y.id === t.id);
     return !!x && x.status === t.status && (x.decididoEm || '') === (t.decididoEm || '') && (x.devolvidaEm || '') === (t.devolvidaEm || '');
   } catch (e) { return false; }
 }
 function _epQuem() { return (usuarioAtual && usuarioAtual.nome) || ''; }
+// quem lança é do CCO? vai gravado no movimento para a etiqueta "CCO" ao lado do nome (o nome fica como sempre)
+function _epLotacaoOper() { return typeof _ehCCO === 'function' && _ehCCO(usuarioAtual) ? 'CCO' : undefined; }
 function _epEquipeHoje() { try { return getPlantaoParaData(_diaPlantao()); } catch (e) { return ''; } }
 function _epDesc(t) { return t.item + (t.tamanho ? ' ' + t.tamanho : '') + ' ×' + t.quantidade + ((t.unidades || []).length ? ' (' + t.unidades.map(u => u.id).join(', ') + ')' : ''); }
 
 /* ── lançar a parte de uma transferência no PRÓPRIO estoque (idempotente pelo transferenciaId) ── */
 function _epMotivoLanc(t) {
   if (t.status === 'recebida') return t.sentido === EP_SETOR_PARA_PLANTAO ? 'Recebido do setor de Estoque (enviado por ' + (t.enviadoPor || '?') + ')'
-    : 'Devolvido pelo plantão' + (t.motivo ? ': ' + t.motivo : '') + ' (enviado por ' + (t.enviadoPor || '?') + ')';
-  return (t.sentido === EP_SETOR_PARA_PLANTAO ? 'Recusado pelo plantão' : 'Recusado pelo setor de Estoque') + (t.motivoDecisao ? ': ' + t.motivoDecisao : '') + ' — recebido de volta';
+    : 'Devolvido pelo ' + ep_lot().nome.toLowerCase() + (t.motivo ? ': ' + t.motivo : '') + ' (enviado por ' + (t.enviadoPor || '?') + ')';
+  return (t.sentido === EP_SETOR_PARA_PLANTAO ? 'Recusado pelo ' + ep_lot().nome.toLowerCase() : 'Recusado pelo setor de Estoque') + (t.motivoDecisao ? ': ' + t.motivoDecisao : '') + ' — recebido de volta';
 }
 function _epLancarNoPlantao(t) {
   return _epMutar(d => {
     if (d.movimentacoes.some(m => m.transferenciaId === t.id)) return 'ja';
     const op = ep_opDaTransf(t), ap = ep_aplicar(d, op, _epSerial(t.item)); if (ap.erro) return ap;
     ep_registrarMov(d, ep_mov(t.status === 'recebida' ? EP_TIPO.recebimento : EP_TIPO.devolucao, op, ap.unidades,
-      { responsavel: _epQuem(), plantonista: _epQuem(), equipe: _epEquipeHoje(), motivo: _epMotivoLanc(t), obs: t.obs || '', transferenciaId: t.id }));
+      { responsavel: _epQuem(), plantonista: _epQuem(), equipe: _epEquipeHoje(), lotacao: _epLotacaoOper(), motivo: _epMotivoLanc(t), obs: t.obs || '', transferenciaId: t.id }));
   });
 }
 function _epLancarNoSetor(t) {
@@ -291,7 +345,8 @@ function _epPodeLado(lado) { return lado === 'plantao' ? ep_podeMover() : podeAl
 function _epRender() { try { ep_renderizar(); } catch (e) {} try { renderizarEstoque(); } catch (e) {} try { _dashEstoqueDisp(); } catch (e) {} }
 
 /* ── decidir uma transferência: recebida / recusada (quem recebe) ou devolvida (quem enviou, depois da recusa) ── */
-async function ep_decidirTransf(id, status, motivo, quieto) {
+function ep_decidirTransf(id, status, motivo, quieto, lot) { return _epComLot(lot, () => _epDecidirTransf(id, status, motivo, quieto)); }
+async function _epDecidirTransf(id, status, motivo, quieto) {
   const t0 = ep_getTransf().transferencias.find(x => x.id === id); if (!t0) { _epRender(); return; }
   const destino = t0.sentido === EP_SETOR_PARA_PLANTAO ? 'plantao' : 'setor', origem = destino === 'plantao' ? 'setor' : 'plantao';
   const lado = status === 'devolvida' ? origem : destino;
@@ -300,7 +355,7 @@ async function ep_decidirTransf(id, status, motivo, quieto) {
   const ok = await _epMutarTransf(d => { const r = ep_decidir(d, id, status, _epQuem(), motivo, status === 'devolvida' ? 'recusada' : 'pendente'); if (r.erro) return r; t = r.t; });
   if (!ok) { _epRender(); return; }
   if (!(await _epDecisaoFicou(t))) { alert('Outro computador decidiu essa transferência no mesmo instante. Atualize a tela e confira.'); _epRender(); return; }
-  const lugar = lado === 'plantao' ? 'Plantão' : 'setor de Estoque';
+  const lugar = lado === 'plantao' ? ep_lot().nome : 'setor de Estoque';
   addLog('Estoque — transferência ' + (_EP_PALAVRA[status] || status).toUpperCase() + ' pelo ' + lugar + ': ' + _epDesc(t) + (motivo ? ' — ' + motivo : '') + ' (' + _epQuem() + ')');
   let lancou = false;
   if (status === 'recusada') _mostrarToast('Recusado — quem enviou vai ver "Recusado — receber de volta".', 'ok');
@@ -309,10 +364,11 @@ async function ep_decidirTransf(id, status, motivo, quieto) {
   _epRender();
   return lancou ? t : null;
 }
-function ep_receberTransf(id) { return ep_decidirTransf(id, 'recebida'); }
+function ep_receberTransf(id, lot) { return ep_decidirTransf(id, 'recebida', undefined, undefined, lot); }
 /* ── Receber e já dar baixa (pedido de 28/10/2026): material que o CME manda ao plantão só de passagem (ex.: para o
    município de Amapá). Cada transferência é recebida (entra no saldo) e sai logo em seguida como Baixa. ── */
-async function ep_receberEBaixar(ids, motivo, obs) {
+function ep_receberEBaixar(ids, motivo, obs, lot) { return _epComLot(lot, () => _epReceberEBaixar(ids, motivo, obs)); }
+async function _epReceberEBaixar(ids, motivo, obs) {
   if (!ep_podeMover()) { alert('Sem permissão.'); return { feitos: 0, falhas: ids.length }; }
   let feitos = 0, falhas = 0;
   for (const id of ids) {
@@ -324,8 +380,9 @@ async function ep_receberEBaixar(ids, motivo, obs) {
   _epRender();
   return { feitos, falhas };
 }
-function ep_receberDeVolta(id) { return ep_decidirTransf(id, 'devolvida'); }
-async function ep_concluirPendencia(id) {
+function ep_receberDeVolta(id, lot) { return ep_decidirTransf(id, 'devolvida', undefined, undefined, lot); }
+function ep_concluirPendencia(id, lot) { return _epComLot(lot, () => _epConcluirPendencia(id)); }
+async function _epConcluirPendencia(id) {
   const t = ep_getTransf().transferencias.find(x => x.id === id); if (!t) return;
   if (!_epPodeLado(ep_ladoQueLanca(t))) return;
   if (await _epLancar(t)) { addLog('Estoque: transferência concluída — ' + _epDesc(t) + ' (' + _epQuem() + ')'); _mostrarToast('\u{2705} Lançado.', 'ok'); }
@@ -342,13 +399,16 @@ async function _epCriarTransf(sentido, mov, unidades) {
   });
 }
 // Setor → Plantão: chamada pelo salvarMovEstoque do index depois da Saída com destino "Estoque do Plantão"
-async function ep_enviarDoSetor(mov, unidades) {
-  if (await _epCriarTransf(EP_SETOR_PARA_PLANTAO, mov, unidades)) { _mostrarToast('\u{1F4E6} Enviado ao Plantão — fica "a receber" até o plantonista conferir.', 'ok'); addLog('Estoque → Plantão (a receber): ' + _epDesc(mov) + ' (' + _epQuem() + ')'); }
-  else alert('ATENÇÃO: a Saída foi registrada no estoque do CME, mas não consegui avisar o Plantão agora.\n\n' + _epDesc(mov) + '\n\nEm 1 minuto ela aparece no painel do Estoque com o botão "Reenviar ao Plantão".');
+function ep_enviarDoSetor(mov, unidades, lot) { return _epComLot(lot, () => _epEnviarDoSetor(mov, unidades)); }
+async function _epEnviarDoSetor(mov, unidades) {
+  const nome = ep_lot().nome;
+  if (await _epCriarTransf(EP_SETOR_PARA_PLANTAO, mov, unidades)) { _mostrarToast('\u{1F4E6} Enviado ao ' + nome + ' — fica "a receber" até o plantonista conferir.', 'ok'); addLog('Estoque → ' + nome + ' (a receber): ' + _epDesc(mov) + ' (' + _epQuem() + ')'); }
+  else alert('ATENÇÃO: a Saída foi registrada no estoque do CME, mas não consegui avisar o ' + nome + ' agora.\n\n' + _epDesc(mov) + '\n\nEm 1 minuto ela aparece no painel do Estoque com o botão "Reenviar ao ' + nome + '".');
   _epRender();
 }
 // reenvio de uma saída/envio que não virou transferência (rede caiu entre as duas gravações)
-async function ep_reenviar(lado, movId) {
+function ep_reenviar(lado, movId, lot) { return _epComLot(lot, () => _epReenviar(lado, movId)); }
+async function _epReenviar(lado, movId) {
   if (!_epPodeLado(lado)) return;
   const lista = lado === 'setor' ? (getEstoque().movimentacoes || []) : ep_get().movimentacoes, m = lista.find(x => x.id === movId); if (!m) return;
   const un = m.unidades || (m.seriais || []).map(id => ({ id, estado: m.estado || '' }));
@@ -358,7 +418,8 @@ async function ep_reenviar(lado, movId) {
 
 /* ── pendências de um lado: o que ele precisa fazer ── */
 const _EP_JANELA_CONCILIA_MS = 7 * 864e5, _EP_ESPERA_CONCILIA_MS = 60000;
-function ep_pendenciasDe(lado) {
+function ep_pendenciasDe(lado, lot) { return _epSync(lot, () => _epPendenciasDe(lado)); }
+function _epPendenciasDe(lado) {
   const tr = ep_getTransf().transferencias, agora = Date.now();
   const recente = iso => { const x = Date.parse(iso || ''); return x && agora - x < _EP_JANELA_CONCILIA_MS && agora - x > _EP_ESPERA_CONCILIA_MS; };
   const meuSentidoEntrada = lado === 'plantao' ? EP_SETOR_PARA_PLANTAO : EP_PLANTAO_PARA_SETOR, meuSentidoSaida = lado === 'plantao' ? EP_PLANTAO_PARA_SETOR : EP_SETOR_PARA_PLANTAO;
@@ -370,19 +431,22 @@ function ep_pendenciasDe(lado) {
     receberDeVolta: tr.filter(t => t.status === 'recusada' && t.sentido === meuSentidoSaida),
     recuseiAguardando: tr.filter(t => t.status === 'recusada' && t.sentido === meuSentidoEntrada),
     concluir: tr.filter(t => ep_ladoQueLanca(t) === lado && recente(t.devolvidaEm || t.decididoEm) && !lancadas.has(t.id)),
-    reenviar: movs.filter(m => (lado === 'setor' ? m.tipo === 'Saída' && m.destino === 'Estoque do Plantão' : m.tipo === EP_TIPO.envio) && recente(m.ts) && !viraram.has(m.id)),
+    reenviar: movs.filter(m => (lado === 'setor' ? m.tipo === 'Saída' && m.destino === ep_lot().destinoSetor : m.tipo === EP_TIPO.envio) && recente(m.ts) && !viraram.has(m.id)),
   };
 }
 
 /* ── Movimentação do plantão (Entrada, Saída, Devolução, Baixa, Envio ao setor) — só no estoque do Plantão ── */
-async function ep_salvarMov(tipo, op, extra) {
-  if (!ep_podeMover()) { alert('Sem permissão para mexer no estoque do Plantão.'); return false; }
+function ep_salvarMov(tipo, op, extra, lot) { return _epComLot(lot, () => _epSalvarMov(tipo, op, extra)); }
+async function _epSalvarMov(tipo, op, extra) {
+  if (!ep_podeMover()) { alert('Sem permissão para mexer no ' + ep_lot().estoque + '.'); return false; }
   const soma = tipo === 'entrada' || tipo === 'devolucao';
   const opF = Object.assign({}, op, { soma });
   // inventário/entrada: uma unidade que está no CME (ou a caminho) não pode aparecer nos dois estoques
   if (tipo === 'entrada' && _epSerial(op.item)) {
     const noCme = new Set(ep_unidades(getEstoque(), op.item).map(u => u.id));
     ep_getTransf().transferencias.filter(t => t.status === 'pendente' || t.status === 'recusada').forEach(t => (t.unidades || []).forEach(u => noCme.add(u.id)));
+    // e nunca nos dois estoques de lotação ao mesmo tempo (só dá para conferir os que o usuário consegue ler)
+    ep_outrosEstoques().forEach(o => { ep_unidades(o.d, op.item).forEach(u => noCme.add(u.id)); o.transf.transferencias.filter(t => t.status === 'pendente' || t.status === 'recusada').forEach(t => (t.unidades || []).forEach(u => noCme.add(u.id))); });
     const dup = (op.unidades || []).find(u => noCme.has(String(u.id || '').trim()));
     if (dup) { alert('O ' + (op.item === 'Dispositivo DPP' ? 'nº de estoque' : 'nº de série') + ' "' + dup.id + '" está registrado no estoque do CME (ou a caminho). Peça ao Estoque a Saída para o Plantão e receba por "A receber".'); return false; }
   }
@@ -391,12 +455,12 @@ async function ep_salvarMov(tipo, op, extra) {
     // depois do inventário inicial, item novo só entra pelo que vem do Estoque do CME ("A receber")
     if (tipo === 'entrada' && d.inventarioEncerradoEm) return { erro: 'O inventário inicial do plantão já foi encerrado. Item novo chega pelo Estoque do CME, em "A receber".' };
     const ap = ep_aplicar(d, opF, _epSerial(op.item)); if (ap.erro) return ap;
-    mov = ep_mov(EP_TIPO[tipo], opF, ap.unidades, Object.assign({ responsavel: _epQuem(), plantonista: _epQuem(), equipe: _epEquipeHoje() }, extra || {}));
+    mov = ep_mov(EP_TIPO[tipo], opF, ap.unidades, Object.assign({ responsavel: _epQuem(), plantonista: _epQuem(), equipe: _epEquipeHoje(), lotacao: _epLotacaoOper() }, extra || {}));
     if (tipo === 'envio') mov.unidades = ap.unidades; // para o "Reenviar ao setor" se o aviso falhar
     ep_registrarMov(d, mov);
   });
   if (!ok) return false;
-  addLog('Estoque do Plantão — ' + mov.tipo + ': ' + mov.item + (mov.tamanho ? ' ' + mov.tamanho : '') + ' ×' + mov.quantidade + (mov.monitorado ? ' — ' + mov.monitorado : '') + ' (' + _epQuem() + ', ' + (mov.equipe || '') + ')');
+  addLog(ep_lot().estoque + ' — ' + mov.tipo + ': ' + mov.item + (mov.tamanho ? ' ' + mov.tamanho : '') + ' ×' + mov.quantidade + (mov.monitorado ? ' — ' + mov.monitorado : '') + ' (' + _epQuem() + ', ' + (mov.equipe || '') + ')');
   if (tipo === 'envio' && !(await _epCriarTransf(EP_PLANTAO_PARA_SETOR, mov, mov.unidades)))
     alert('Saiu do estoque do Plantão, mas não consegui avisar o Estoque do CME agora. Em 1 minuto aparece o botão "Reenviar ao setor" no painel do Plantão.');
   return true;
@@ -404,20 +468,21 @@ async function ep_salvarMov(tipo, op, extra) {
 
 /* ── Saída do kit de instalação: vários itens para o mesmo monitorado numa gravação só.
    Tudo ou nada: se faltar saldo de um item, nenhum sai. Uma movimentação por item, ligadas pelo kitId. ── */
-async function ep_salvarKit(ops, extra) {
-  if (!ep_podeMover()) { alert('Sem permissão para mexer no estoque do Plantão.'); return false; }
+function ep_salvarKit(ops, extra, lot) { return _epComLot(lot, () => _epSalvarKit(ops, extra)); }
+async function _epSalvarKit(ops, extra) {
+  if (!ep_podeMover()) { alert('Sem permissão para mexer no ' + ep_lot().estoque + '.'); return false; }
   const kitId = _epId('kit-'), movs = [];
   const ok = await _epMutar(d => {
     movs.length = 0;
     for (const op of ops) {
       const opF = Object.assign({}, op, { soma: false });
       const ap = ep_aplicar(d, opF, _epSerial(op.item)); if (ap.erro) return ap;
-      movs.push(ep_mov(EP_TIPO.saida, opF, ap.unidades, Object.assign({ responsavel: _epQuem(), plantonista: _epQuem(), equipe: _epEquipeHoje(), kitId }, extra || {})));
+      movs.push(ep_mov(EP_TIPO.saida, opF, ap.unidades, Object.assign({ responsavel: _epQuem(), plantonista: _epQuem(), equipe: _epEquipeHoje(), lotacao: _epLotacaoOper(), kitId }, extra || {})));
     }
     movs.slice().reverse().forEach(m => ep_registrarMov(d, m)); // o 1º item (módulo) fica no topo do histórico
   });
   if (!ok) return false;
-  addLog('Estoque do Plantão — Saída (kit): ' + movs.map(m => m.item + (m.tamanho ? ' ' + m.tamanho : '') + ' ×' + m.quantidade + (m.seriais.length ? ' (' + m.seriais.join(', ') + ')' : '')).join('; ')
+  addLog(ep_lot().estoque + ' — Saída (kit): ' + movs.map(m => m.item + (m.tamanho ? ' ' + m.tamanho : '') + ' ×' + m.quantidade + (m.seriais.length ? ' (' + m.seriais.join(', ') + ')' : '')).join('; ')
     + ' — ' + ((extra || {}).monitorado || '') + ' (' + _epQuem() + ', ' + _epEquipeHoje() + ')');
   return true;
 }
@@ -431,9 +496,14 @@ function ep_formatoEstranho(id, item) {
   return item === 'Dispositivo DPP' ? false : !/^\d{5,6}-\d$/.test(id); // DPP é pelo nº de estoque (26/10/2026): sem formato fixo
 }
 // devolve [{ id, problema, aviso }]: problema impede o cadastro; aviso (formato diferente do usual) não impede
-function ep_conferirCadastro(ids, item, plantao, setor, transf) {
+function ep_conferirCadastro(ids, item, plantao, setor, transf, outros, nomeProprio) {
   const onde = new Map();
-  ep_unidades(plantao, item).forEach(u => onde.set(_epNormId(u.id), 'já está no estoque do Plantão (' + u.id + ')'));
+  (outros || []).forEach(o => {   // estoques das OUTRAS lotações: o mesmo nº não pode estar em dois lugares
+    ep_unidades(o.d, item).forEach(u => onde.set(_epNormId(u.id), 'já está no ' + o.nome + ' (' + u.id + ')'));
+    ((o.transf && o.transf.transferencias) || []).filter(t => (t.status === 'pendente' || t.status === 'recusada') && t.item === item)
+      .forEach(t => (t.unidades || []).forEach(u => onde.set(_epNormId(u.id), 'está a caminho entre o CME e o ' + o.nome + ' (' + u.id + ')')));
+  });
+  ep_unidades(plantao, item).forEach(u => onde.set(_epNormId(u.id), 'já está no ' + (nomeProprio || 'estoque do Plantão') + ' (' + u.id + ')'));
   if (setor) ep_unidades(setor, item).forEach(u => onde.set(_epNormId(u.id), 'está no estoque do CME (' + u.id + ')'));
   ((transf && transf.transferencias) || []).filter(t => (t.status === 'pendente' || t.status === 'recusada') && t.item === item)
     .forEach(t => (t.unidades || []).forEach(u => onde.set(_epNormId(u.id), 'está a caminho entre o CME e o Plantão (' + u.id + ')')));
@@ -446,31 +516,32 @@ function ep_conferirCadastro(ids, item, plantao, setor, transf) {
   });
 }
 // op = { categoria, item, estado, unidades:[{ id, estado, temCarregador, temChip }] }
-async function ep_cadastrarDispositivos(op, extra) {
+function ep_cadastrarDispositivos(op, extra, lot) { return _epComLot(lot, () => _epCadastrarDispositivos(op, extra)); }
+async function _epCadastrarDispositivos(op, extra) {
   if (!ep_podeCadastrar()) { alert('Só a gerência e o administrador cadastram dispositivos.'); return false; }
   if (!_epSerial(op.item)) { alert('O cadastro manual é só para módulo e DPP (itens com nº de série ou nº de estoque).'); return false; }
   const ids = (op.unidades || []).map(u => u.id);
   if (!ids.length) { alert('Digite ao menos um nº de série ou nº de estoque.'); return false; }
-  const ruim = ep_conferirCadastro(ids, op.item, ep_get(), getEstoque(), ep_getTransf()).find(r => r.problema);
+  const ruim = ep_conferirCadastro(ids, op.item, ep_get(), getEstoque(), ep_getTransf(), ep_outrosEstoques(), _epMin1(ep_lot())).find(r => r.problema);
   if (ruim) { alert('"' + ruim.id + '": ' + ruim.problema + '. Nada foi cadastrado.'); return false; }
   let mov = null;
   const ok = await _epMutar(d => {
     // relido do banco: confere de novo o que está no plantão (outro computador pode ter lançado no mesmo instante)
-    const r = ep_conferirCadastro(ids, op.item, d, null, null).find(x => x.problema);
+    const r = ep_conferirCadastro(ids, op.item, d, null, null, ep_outrosEstoques(), _epMin1(ep_lot())).find(x => x.problema);
     if (r) return { erro: '"' + r.id + '": ' + r.problema + '. Nada foi cadastrado.' };
     const opF = Object.assign({}, op, { soma: true, qtd: ids.length });
     const ap = ep_aplicar(d, opF, true); if (ap.erro) return ap;
-    mov = ep_mov(EP_TIPO.entrada, opF, ap.unidades, Object.assign({ responsavel: _epQuem(), cadastroManual: true }, extra || {}));
+    mov = ep_mov(EP_TIPO.entrada, opF, ap.unidades, Object.assign({ responsavel: _epQuem(), lotacao: _epLotacaoOper(), cadastroManual: true }, extra || {}));
     ep_registrarMov(d, mov);
   }, ep_podeCadastrar());
   if (!ok) return false;
-  addLog('Estoque do Plantão — ' + (mov.motivo || 'Cadastro manual') + ': ' + mov.item + ' ×' + mov.quantidade + ' (' + mov.seriais.join(', ') + ') (' + _epQuem() + ')');
+  addLog(ep_lot().estoque + ' — ' + (mov.motivo || 'Cadastro manual') + ': ' + mov.item + ' ×' + mov.quantidade + ' (' + mov.seriais.join(', ') + ') (' + _epQuem() + ')');
   return true;
 }
 
-// resumo para o Dashboard (todos veem): módulos e DPP no CME e no plantão + o que está a caminho
-function ep_resumo() {
-  const p = ep_get(), s = getEstoque(), tr = ep_getTransf(), M = 'Módulo eletrônico de monitoração', D = 'Dispositivo DPP';
+// resumo para o Dashboard: módulos e DPP no CME e na lotação `lot` + o que está a caminho
+function ep_resumo(lot) {
+  const p = ep_get(lot), s = getEstoque(), tr = ep_getTransf(lot), M = 'Módulo eletrônico de monitoração', D = 'Dispositivo DPP';
   return {
     setor: { mod: s.itens[M] || 0, dpp: s.itens[D] || 0 },
     plantao: { mod: p.itens[M] || 0, dpp: p.itens[D] || 0 },
@@ -480,7 +551,8 @@ function ep_resumo() {
 }
 
 /* ── Permissões: cada lado altera só o seu; admin e gerência veem os dois ── */
-function ep_podeMover() { return !!usuarioAtual && !_ehCCO(usuarioAtual) && ['plantao', 'admin'].includes(usuarioAtual.nivel); }
-function ep_podeVer() { return !!usuarioAtual && !_ehCCO(usuarioAtual) && ['plantao', 'admin', 'gerencia'].includes(usuarioAtual.nivel); }
+// (12/11/2026) por lotação: o plantonista mexe e vê só o estoque da lotação dele (CCO ≠ Macapá); admin mexe nos dois; gerência vê os dois
+function ep_podeMover() { return !!usuarioAtual && (usuarioAtual.nivel === 'admin' || (ep_ehPlantonista(usuarioAtual) && _epLotLiberada(ep_lotAtual()))); }
+function ep_podeVer() { return !!usuarioAtual && (usuarioAtual.nivel === 'admin' || usuarioAtual.nivel === 'gerencia' || (ep_ehPlantonista(usuarioAtual) && _epLotLiberada(ep_lotAtual()))); }
 function ep_podeVerCme() { return !!usuarioAtual && usuarioAtual.nivel !== 'plantao'; }
 function ep_podeCadastrar() { return !!usuarioAtual && ['admin', 'gerencia'].includes(usuarioAtual.nivel); }
