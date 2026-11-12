@@ -9107,13 +9107,17 @@ function _scTempoLegivel(t) {
    MARCAÇÃO SÓ NO CME: nada é escrito no AKILES e nada desvincula de verdade; é o aviso de quem já pode ser
    desvinculado. Aparece em dois casos: AUTOMÁTICO (180 dias ou mais sem comunicar) e MANUAL (a gerência marcou,
    com motivo e observação, ex.: "preso desde 10/11 — confirmado por ligação" para quem tem menos de 180 dias).
-   A marcação manual fica numa chave PRÓPRIA e pequena (semcom_autorizados), por id do monitorado: marcar não
-   regrava o pacote inteiro da Sem Comunicação (~1 MB) e a importação do AKILES não passa por cima dela.
-   Forma: { itens: { [id]: { ativo, motivo, obs, por, quando, nome, registro, historico: [{acao, por, quando, motivo, obs}] } } } */
+   Cada marcação manual fica numa CHAVE PRÓPRIA do banco, uma por monitorado (semcom_aut_<id>): marcar grava só o
+   registro daquele monitorado (alguns KB). Não regrava o pacote da Sem Comunicação (~1 MB), nem uma chave com as
+   marcações dos outros: dois operadores marcando monitorados diferentes nunca sobrescrevem um ao outro (a regra
+   "a última gravação da chave vence" só vale para o MESMO monitorado, e aí o histórico é relido do banco antes).
+   Forma da chave: { id, ativo, motivo, obs, por, quando, nome, registro, historico: [{acao, por, quando, motivo, obs}] } */
 const _SC_AUT_NIVEIS = ['gerencia', 'admin'];   // quem marca/edita/remove; todos veem a etiqueta e o filtro
 function _scAutPode() { return _SC_AUT_NIVEIS.includes(usuarioAtual && usuarioAtual.nivel); }
-function _scAutDados() { const d = carregarStore('semcom_autorizados', null); return (d && d.itens && typeof d.itens === 'object') ? d : { itens: {} }; }
-function _scAutManual(m) { const x = m && _scAutDados().itens[m.id]; return (x && x.ativo) ? x : null; }
+// o banco só aceita chaves cme_[a-z0-9_]{1,80}: o id do monitorado vira minúsculas/underscore (id real: "sc_<hora>_<5 letras>")
+function _scAutChave(id) { return 'semcom_aut_' + String(id == null ? '' : id).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 60); }
+function _scAutItem(m) { const x = m && m.id != null ? carregarStore(_scAutChave(m.id), null) : null; return (x && typeof x === 'object') ? x : null; }
+function _scAutManual(m) { const x = _scAutItem(m); return (x && x.ativo) ? x : null; }
 function _scAutorizado(m) { return !!m && _scEmAberto(m) && (_diasSemComAtual(m) >= 180 || !!_scAutManual(m)); }
 function _scAutQuando(iso) { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
 // etiqueta verde ao lado do nome (canto reto, nunca pílula — .idv-etq)
@@ -9133,30 +9137,32 @@ function _scLinhaAut(m) {
 }
 // histórico completo (ficha do monitorado): quem autorizou, quem removeu, quando e por quê
 function _scHtmlAut(m) {
-  const x = m && _scAutDados().itens[m.id];
+  const x = _scAutItem(m);
   const h = ((x && x.historico) || []).slice().reverse();
   const topo = _scAutorizado(m) ? '<div style="border-left:3px solid #1a7f37;padding:6px 10px;margin-bottom:6px;background:#dafbe1;border-radius:0 6px 6px 0"><div style="font-weight:600;color:#17702f;font-size:.82rem">AUTORIZADO DESVINCULAR' + (_scAutManual(m) ? '' : ' — 180 dias ou mais sem comunicar') + '</div></div>' : '';
   return topo + h.map(e => '<div style="border-left:3px solid ' + (e.acao === 'removeu' ? '#8c959f' : '#1a7f37') + ';padding:6px 10px;margin-bottom:6px;background:' + (e.acao === 'removeu' ? '#f6f8fa' : '#dafbe1') + ';border-radius:0 6px 6px 0">'
     + '<div style="font-weight:600;color:#17702f;font-size:.82rem">' + esc(_scAutQuando(e.quando)) + ' — ' + esc(e.por || '') + ' · ' + (e.acao === 'removeu' ? 'removeu a autorização' : 'autorizou desvincular') + (e.motivo ? ' (' + esc(e.motivo) + ')' : '') + '</div>'
     + (e.obs ? '<div style="margin-top:3px;color:#374151;white-space:pre-wrap">' + esc(e.obs) + '</div>' : '') + '</div>').join('');
 }
-// Relê a chave no banco ANTES de gravar (outra pessoa pode ter marcado outro monitorado) e AGUARDA a gravação.
-async function _scAutMutar(fn) {
-  let base = _scAutDados();
+// Relê SÓ a chave deste monitorado no banco ANTES de gravar (o histórico pode ter mudado em outro PC) e AGUARDA a gravação;
+// a tela só muda se o banco aceitar. fn(item) devolve false para desistir.
+async function _scAutMutar(id, fn) {
+  const chave = _scAutChave(id);
+  let base = carregarStore(chave, null);
   if (window._db) {
     try {
-      const r = await _dbLerChave('cme_semcom_autorizados');
+      const r = await _dbLerChave('cme_' + chave);
       if (r.error) throw r.error;
-      if (r.data && r.data.value && r.data.value.itens && typeof r.data.value.itens === 'object') base = r.data.value;
+      if (r.data && r.data.value && typeof r.data.value === 'object') base = r.data.value;
     } catch (e) { _mostrarToast('Sem conexão com o banco — nada foi salvo. Tente de novo.', 'erro'); return false; }
   }
-  const novo = JSON.parse(JSON.stringify(base)); novo.itens = novo.itens || {};
+  const novo = base ? JSON.parse(JSON.stringify(base)) : { id: id, ativo: false, historico: [] };
   if (fn(novo) === false) return false;
   if (window._db) {
-    const { error } = await _dbGravar('cme_semcom_autorizados', novo);
+    const { error } = await _dbGravar('cme_' + chave, novo);
     if (error) { _mostrarToast('Não consegui salvar a autorização (' + (error.message || error) + '). Nada foi marcado. Tente de novo.', 'erro'); return false; }
   }
-  _cache['semcom_autorizados'] = novo;
+  _cache[chave] = novo;
   return true;
 }
 // chip da barra: liga/desliga o filtro "Autorizado desvincular" (o mesmo do select)
@@ -9183,12 +9189,11 @@ async function salvarAutDesvinc() {
   const motivo = document.getElementById('aut-motivo').value;
   const obs = document.getElementById('aut-obs').value.trim();
   if (obs.length < 5) { _mostrarToast('Escreva a observação (ex.: "preso desde 10/11 — confirmado por ligação").', 'erro'); return; }
-  let m = (getSemCom().monitorados || []).find(x => x.id === monId); if (!m) return;
-  const ok = await _scAutMutar(d => {
-    const antes = d.itens[monId] || { historico: [] };
+  const m = (getSemCom().monitorados || []).find(x => x.id === monId); if (!m) return;
+  const ok = await _scAutMutar(monId, x => {
     const agora = new Date().toISOString(), por = (usuarioAtual && usuarioAtual.nome) || '';
-    d.itens[monId] = { ativo: true, motivo, obs, por, quando: agora, nome: m.nome, registro: m.registro || '',
-      historico: (antes.historico || []).concat([{ acao: 'autorizou', por, quando: agora, motivo, obs }]) };
+    x.id = monId; x.ativo = true; x.motivo = motivo; x.obs = obs; x.por = por; x.quando = agora; x.nome = m.nome; x.registro = m.registro || '';
+    x.historico = (x.historico || []).concat([{ acao: 'autorizou', por, quando: agora, motivo, obs }]);
   });
   if (!ok) return;
   try { auditar({ modulo: 'Sem Comunicação', action: 'semcom_autorizar_desvinc', alvo: m.nome, detalhe: (motivo + ': ' + obs).slice(0, 200) }); } catch (e) {}
@@ -9200,8 +9205,8 @@ async function removerAutDesvinc(monId) {
   if (!_scAutPode()) { _mostrarToast('Só a gerência e o administrador removem a autorização.', 'erro'); return; }
   const m = (getSemCom().monitorados || []).find(x => x.id === monId); if (!m) return;
   if (!confirm('Remover a autorização de desvincular de ' + m.nome + '?' + (_diasSemComAtual(m) >= 180 ? '\n\nEle continua aparecendo como autorizado porque tem 180 dias ou mais sem comunicar.' : ''))) return;
-  const ok = await _scAutMutar(d => {
-    const x = d.itens[monId]; if (!x || !x.ativo) return false;
+  const ok = await _scAutMutar(monId, x => {
+    if (!x.ativo) return false;
     const agora = new Date().toISOString(), por = (usuarioAtual && usuarioAtual.nome) || '';
     x.ativo = false; x.historico = (x.historico || []).concat([{ acao: 'removeu', por, quando: agora, motivo: x.motivo, obs: x.obs }]);
   });
