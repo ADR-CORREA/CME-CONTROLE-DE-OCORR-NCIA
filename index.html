@@ -1356,12 +1356,14 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
             <div><span class="idv-grande idv-data" id="dash-est-mod">—</span><span class="idv-mini">módulos de tornozeleira</span></div>
             <div><span class="idv-grande idv-data" id="dash-est-dpp">—</span><span class="idv-mini">dispositivos DPP</span></div>
           </div>
+          <div id="dash-estoque-plantao">
           <div class="idv-bloco-cab" style="margin-top:8px"><span>Estoque disponível — Plantão</span></div>
           <div class="idv-bloco-corpo lado">
             <div><span class="idv-grande idv-data" id="dash-estp-mod">—</span><span class="idv-mini">módulos de tornozeleira</span></div>
             <div><span class="idv-grande idv-data" id="dash-estp-dpp">—</span><span class="idv-mini">dispositivos DPP</span></div>
           </div>
           <div id="dash-estp-aviso" class="idv-mini" style="display:none;margin-top:4px;color:#b45309;font-weight:600"></div>
+          </div>
         </div>
       </div>
 
@@ -3259,6 +3261,40 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
               </div>
               <div id="admin-msg" style="margin-bottom:6px;font-size:12px"></div>
               <button class="btn-primary" onclick="criarUsuario()" style="width:100%">+ Criar servidor</button>
+            </div>
+          </div>
+
+          <!-- Criar vários de uma vez (12/11/2026) — usuarios-lote.js -->
+          <div class="admin-card">
+            <div class="admin-card-header">Criar em lote</div>
+            <div class="admin-card-body" style="padding:14px">
+              <div class="form-field" style="margin-bottom:8px">
+                <label style="font-size:12px" for="ul-nomes">Nomes completos <span style="color:var(--idv-sec);font-weight:400">(um por linha)</span></label>
+                <textarea id="ul-nomes" rows="6" placeholder="Lana Vanessa Magalhães de Souza&#10;Carlos Alberto Pereira" style="font-size:13px;width:100%;box-sizing:border-box"></textarea>
+              </div>
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px">
+                <div class="form-field" style="margin-bottom:8px">
+                  <label style="font-size:12px" for="ul-nivel">Nível</label>
+                  <select id="ul-nivel" style="font-size:13px;width:100%;min-width:0;box-sizing:border-box"></select>
+                </div>
+                <div class="form-field" style="margin-bottom:8px">
+                  <label style="font-size:12px" for="ul-lotacao">Lotação / obs.</label>
+                  <input type="text" id="ul-lotacao" maxlength="40" placeholder="Ex: CCO" style="font-size:13px;width:100%;min-width:0;box-sizing:border-box">
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px">
+                <div class="form-field" style="margin-bottom:8px">
+                  <label style="font-size:12px" for="ul-cargo">Cargo (opcional)</label>
+                  <input type="text" id="ul-cargo" placeholder="Ex: Policial Penal" style="font-size:13px;width:100%;min-width:0;box-sizing:border-box">
+                </div>
+                <div class="form-field" style="margin-bottom:8px">
+                  <label style="font-size:12px" for="ul-senha">Senha provisória</label>
+                  <input type="password" id="ul-senha" placeholder="Mín. 8 car." autocomplete="new-password" style="font-size:13px;width:100%;min-width:0;box-sizing:border-box">
+                </div>
+              </div>
+              <div class="idv-mini" style="color:var(--idv-sec);margin-bottom:8px">Login = primeiro + último nome, minúsculo e sem acento. A senha provisória precisa ter 8+ caracteres, maiúscula, número e símbolo; cada um define a própria no 1º acesso.</div>
+              <div id="ul-msg" style="margin-bottom:6px;font-size:12px"></div>
+              <button type="button" class="btn-primary" onclick="ul_previa()" style="width:100%">Ver prévia</button>
             </div>
           </div>
 
@@ -5882,6 +5918,20 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 </div>
 
 <!-- MODAL: EDITAR USUÁRIO (admin) -->
+<div class="modal-overlay" id="modal-usuarios-lote">
+  <div class="modal-box" style="max-width:640px">
+    <div class="modal-header">
+      <div class="modal-title">Criar em lote — prévia</div>
+      <button class="modal-close" onclick="ul_fechar()" aria-label="Fechar">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:70vh;overflow-y:auto" id="ul-previa"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="ul-cancelar" onclick="ul_fechar()">Cancelar</button>
+      <button class="btn-primary" id="ul-criar" onclick="ul_criar()">Criar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-editar-usuario">
   <div class="modal-box" style="max-width:480px">
     <div class="modal-header">
@@ -5906,6 +5956,10 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       <div class="form-field">
         <label>Cargo / Função <span style="color:var(--idv-sec);font-weight:400;font-size:12px">(aparece na assinatura)</span></label>
         <input type="text" id="edit-cargo" placeholder="Ex: Policial Penal, Assistente Social...">
+      </div>
+      <div class="form-field">
+        <label>Lotação <span style="color:var(--idv-sec);font-weight:400;font-size:12px">(opcional — "CCO" não usa o estoque do Plantão)</span></label>
+        <input type="text" id="edit-lotacao" maxlength="40" placeholder="Ex: CCO">
       </div>
       <div class="form-field">
         <label>CRESS / Registro Profissional <span style="color:var(--idv-sec);font-weight:400;font-size:12px">(opcional)</span></label>
@@ -7846,18 +7900,26 @@ function _limparFalhas(u) { delete _loginTentativas[u]; }
 function getUsuarios() {
   return carregarStore("usuarios", USUARIOS_PADRAO);
 }
+// (12/11/2026) devolve uma Promise (true = o banco confirmou, false = falhou) para o "criar em lote" esperar;
+// os chamadores antigos ignoram o retorno e continuam como antes.
 function salvarUsuarios(u) {
   _cache['usuarios'] = u;
   if (window._db && _sessionHash && _sessionUser) {
-    window._db.rpc('cme_save_usuarios', { p_username: _sessionUser, p_hash: _sessionHash, p_usuarios: JSON.parse(JSON.stringify(u)) })
-      .then(({ error }) => { if (error) { console.error('[CME] Erro ao salvar usuários:', error); _mostrarToast('\u{26A0}\u{FE0F} Erro ao salvar usuários: ' + error.message, 'erro'); } });
+    return window._db.rpc('cme_save_usuarios', { p_username: _sessionUser, p_hash: _sessionHash, p_usuarios: JSON.parse(JSON.stringify(u)) })
+      .then(({ error }) => { if (error) { console.error('[CME] Erro ao salvar usuários:', error); _mostrarToast('\u{26A0}\u{FE0F} Erro ao salvar usuários: ' + error.message, 'erro'); return false; } return true; });
   } else if (window._db) {
     // Sem credenciais de sessão (ex.: estado inesperado) — não dá para persistir.
     // Avisa em vez de falhar em silêncio (o que parecia "travar" o cadastro).
     console.warn('[CME] salvarUsuarios sem credenciais de sessão — alteração não persistida.');
     _mostrarToast('\u{26A0}\u{FE0F} Sessão sem credenciais para salvar. Faça login novamente para gerenciar usuários.', 'erro');
+    return Promise.resolve(false);
   }
+  return Promise.resolve(true);
 }
+
+// (12/11/2026) lotação "CCO": o policial do CCO não usa o estoque do Plantão (Macapá usa; o CCO não).
+// Fica no cadastro do usuário (campo lotacao) e vem no login junto com o resto do cadastro.
+function _ehCCO(u) { return !!u && String(u.lotacao || '').trim().toUpperCase() === 'CCO'; }
 
 /* ── TRAVA DE SEGURANÇA contra sobrescrita da lista de usuários ──────
    Só permitimos cadastrar/editar/excluir DEPOIS que a lista completa foi
@@ -8177,6 +8239,13 @@ async function definirPrimeiraSenha() {
   } catch (e) { console.error('[CME] definirPrimeiraSenha:', e); }
   if (!ok) return mostrarErro('Não foi possível salvar a senha. Tente novamente.');
 
+  // (12/11/2026) tira a marca primeiroLogin do cadastro NO BANCO (senão o login seguinte pede a troca de novo).
+  // Idempotente e validada com a senha nova; se a função ainda não existir no banco, só avisa no console.
+  try {
+    const r = await window._db.rpc('cme_concluir_primeiro_login', { p_username: _sessionUser, p_hash: hash });
+    if (r && r.error) console.warn('[CME] cme_concluir_primeiro_login:', r.error.message);
+  } catch (e) { console.warn('[CME] cme_concluir_primeiro_login:', e); }
+
   _sessionHash = hash;
   const { senha, senhaSalt, ...limpo } = _usuarioPrimeiroLogin;
   const eu = { ...limpo, primeiroLogin: false };
@@ -8205,11 +8274,13 @@ async function _sessaoConferirNivel(u, h) {
     return;
   }
   const novo = r.data.nivel || '';
-  if (!usuarioAtual || novo === (usuarioAtual.nivel || '')) return;
+  if (!usuarioAtual || (novo === (usuarioAtual.nivel || '') && String(r.data.lotacao || '') === String(usuarioAtual.lotacao || ''))) return;
   const { senha, senhaSalt, senhaVersao, ...limpo } = r.data;
   usuarioAtual = Object.assign({}, usuarioAtual, limpo);
+  if (!limpo.lotacao) delete usuarioAtual.lotacao; // lotação retirada pelo admin
   try {
     const s = JSON.parse(localStorage.getItem('cme_sessao') || '{}');
+    if (!limpo.lotacao) delete s.lotacao;
     localStorage.setItem('cme_sessao', JSON.stringify(Object.assign({}, s, limpo)));
   } catch (e) {}
   addLog('Nível de acesso atualizado na sessão: ' + usuarioAtual.nome + ' (' + novo + ')');
@@ -8255,8 +8326,14 @@ const TABS_POR_NIVEL = {
 const _TAB_MAP = { dashboard:0, criticos:1, ocorrencias:2, juridico:3, comunicacao:4,
                    estoque:5, triagem:6, relatorio:7, links:8, modelos:9, gerencia:10, admin:11, psicossocial:12, arquivos:13, estatisticas:14, mandado:15, secretaria:16, semcom:17, estplantao:18 };
 
+// abas do usuário: as do nível, menos o Estoque do Plantão para quem é da lotação CCO
+function _abasPermitidas(nivel, usuario) {
+  const base = TABS_POR_NIVEL[nivel] || TABS_POR_NIVEL['plantao'];
+  return _ehCCO(usuario) ? base.filter(a => a !== 'estplantao') : base;
+}
+
 function aplicarVisibilidadeTabs(nivel) {
-  const permitidas = TABS_POR_NIVEL[nivel] || TABS_POR_NIVEL['plantao'];
+  const permitidas = _abasPermitidas(nivel, usuarioAtual);
   // (20/10/2026) a aba é achada pelo data-aba (o menu lateral reagrupou as abas; a posição mudou)
   Object.keys(_TAB_MAP).forEach(aba => {
     const tab = document.querySelector('.nav-tab[data-aba="' + aba + '"]');
@@ -8350,7 +8427,7 @@ function _iniciarAppTela() {
 function mudarAba(aba) {
   // Verificar permissão de acesso
   if (usuarioAtual) {
-    const permitidas = TABS_POR_NIVEL[usuarioAtual.nivel] || TABS_POR_NIVEL['plantao'];
+    const permitidas = _abasPermitidas(usuarioAtual.nivel, usuarioAtual);
     if (!permitidas.includes(aba)) {
       mudarAba(permitidas[0] || 'dashboard');
       return;
@@ -8426,6 +8503,10 @@ function _dashEstoqueDisp() {
   set('dash-est-dpp', dpp);
   set('psi-est-dpp', dpp); // campo dentro do Psicossocial
   // estoque do Plantão (estoque-plantao.js) + o que está a caminho entre setor e plantão
+  // (12/11/2026) lotação CCO não vê o estoque do Plantão: o bloco some do Dashboard
+  const blocoPlantao = document.getElementById('dash-estoque-plantao');
+  if (blocoPlantao) blocoPlantao.style.display = _ehCCO(usuarioAtual) ? 'none' : '';
+  if (_ehCCO(usuarioAtual)) return;
   try {
     if (typeof ep_resumo !== 'function') return;
     const r = ep_resumo(), av = document.getElementById('dash-estp-aviso');
@@ -11364,7 +11445,7 @@ function turno_assumir() {
 // faixa do painel do plantonista
 function turno_faixaHtml() {
   const t = turno_atual(), est = 'display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px';
-  const passar = typeof ep_abrirPassagem === 'function' ? '<button type="button" class="idv-btn" onclick="ep_abrirPassagem()">Passar o serviço</button>' : '';
+  const passar = typeof ep_abrirPassagem === 'function' && !_ehCCO(usuarioAtual) ? '<button type="button" class="idv-btn" onclick="ep_abrirPassagem()">Passar o serviço</button>' : '';
   if (!t) return '<div class="idv-faixa at" style="' + est + '"><div><b>Ninguém assumiu o turno de hoje.</b> Equipe pelo calendário: <b>' + esc(getPlantaoParaData(_diaPlantao())) + '</b>.</div><div class="idv-acoes"><button type="button" class="idv-btn criar" onclick="turno_abrirAssumir()">Assumir turno</button></div></div>';
   const h = new Date(t.assumidoEm), p2 = n => String(n).padStart(2, '0');
   const hora = isNaN(h) ? '' : ' às ' + p2(h.getHours()) + ':' + p2(h.getMinutes());
@@ -11985,6 +12066,7 @@ function renderizarUsers() {
         u.nome.toLowerCase().includes(filtro) ||
         u.usuario.toLowerCase().includes(filtro) ||
         (u.cargo||'').toLowerCase().includes(filtro) ||
+        (u.lotacao||'').toLowerCase().includes(filtro) ||
         (_NIVEL_NOME[u.nivel]||'').toLowerCase().includes(filtro))
     : todos;
 
@@ -12043,9 +12125,9 @@ function renderizarUsers() {
     const assTag = u.assinatura
       ? `<span class="idv-etq ok">Assinatura</span>`
       : `<span class="idv-etq ne">Sem assinatura</span>`;
-    const plTag = u.primeiroLogin
+    const plTag = (u.primeiroLogin
       ? `<span class="idv-etq at" style="margin-left:4px">Aguardando 1º login</span>`
-      : '';
+      : '') + (u.lotacao ? `<span class="idv-etq ne" style="margin-left:4px" title="Lotação">${esc(u.lotacao)}</span>` : '');
     return `
     <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--idv-linha);transition:background .12s"
       onmouseover="this.style.background='var(--idv-fundo)'" onmouseout="this.style.background=''">
@@ -12155,6 +12237,7 @@ async function abrirModalEditarUsuario(loginId) {
   document.getElementById('edit-nome').value          = u.nome    || '';
   document.getElementById('edit-usuario').value       = u.usuario || '';
   document.getElementById('edit-cargo').value         = u.cargo   || '';
+  document.getElementById('edit-lotacao').value       = u.lotacao || '';
   document.getElementById('edit-cress').value         = u.cress   || '';
   document.getElementById('edit-decreto').value       = u.decreto || '';
   document.getElementById('edit-nivel').value         = u.nivel   || 'plantao';
@@ -12274,6 +12357,7 @@ async function salvarEdicaoUsuario() {
   const nome    = document.getElementById('edit-nome').value.trim();
   const usuario = document.getElementById('edit-usuario').value.trim();
   const cargo   = document.getElementById('edit-cargo').value.trim();
+  const lotacao = document.getElementById('edit-lotacao').value.trim().slice(0, 40);
   const cress   = document.getElementById('edit-cress').value.trim();
   const decreto = document.getElementById('edit-decreto').value.trim();
   const nivel   = document.getElementById('edit-nivel').value;
@@ -12310,6 +12394,7 @@ async function salvarEdicaoUsuario() {
   u.usuario = usuario;
   u.cargo   = cargo;
   u.cress   = cress;
+  if (lotacao) u.lotacao = lotacao; else delete u.lotacao;
   if (decreto) u.decreto = decreto; else delete u.decreto;
   u.nivel   = nivel;
 
@@ -12329,7 +12414,7 @@ async function salvarEdicaoUsuario() {
   // Atualizar sessão se for o próprio usuário logado
   if (usuarioAtual && usuarioAtual.usuario === usuario) {
     Object.assign(usuarioAtual, { nome, cargo, cress, decreto: decreto || undefined, nivel,
-      assinatura: u.assinatura || null });
+      lotacao: lotacao || undefined, assinatura: u.assinatura || null });
   }
 
   addLog(`Admin editou cadastro de ${nome} (${usuarioAtual.nome})`);
@@ -30132,6 +30217,7 @@ function estat_exportarResultado() {
 <script src="violacoes-graves.js?v=20261022a"></script>
 <script src="radar-mandado.js?v=20261020f4"></script>
 <script src="rv-justificativas.js?v=20261109a"></script>
+<script src="usuarios-lote.js?v=20261112a"></script>
 <script src="estoque-plantao.js?v=20261028rb"></script>
 <script src="estoque-plantao-tela.js?v=20261028rb"></script>
 <script src="passagem-servico.js?v=20261028a"></script>

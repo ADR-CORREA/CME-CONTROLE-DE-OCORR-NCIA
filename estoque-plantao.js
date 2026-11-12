@@ -186,8 +186,9 @@ if (typeof module !== 'undefined') module.exports = { ep_normalizar, ep_unidades
    nunca grava no estoque do Plantão. As transferências ficam num registro neutro ("estoque_transferencias"):
    quem recebe lança no próprio estoque; se recusar, quem enviou clica "Receber de volta" e lança no seu. */
 const EP_STORE_TR = 'estoque_transferencias';
-function ep_get() { return ep_normalizar(carregarStore(EP_STORE, null), EST_PADRAO.itens); }
-function ep_getTransf() { const d = carregarStore(EP_STORE_TR, null); return { transferencias: _epCopia((d && d.transferencias) || []) }; }
+// (12/11/2026) lotação CCO não lê nem grava o estoque do Plantão: a leitura devolve vazio e a gravação recusa (_epMutarStore)
+function ep_get() { return ep_normalizar(_ehCCO(usuarioAtual) ? null : carregarStore(EP_STORE, null), EST_PADRAO.itens); }
+function ep_getTransf() { const d = _ehCCO(usuarioAtual) ? null : carregarStore(EP_STORE_TR, null); return { transferencias: _epCopia((d && d.transferencias) || []) }; }
 function _epSerial(item) { return ITENS_COM_SERIAL.includes(item); }
 async function _epLerFresco(chave) {
   if (!window._db) return carregarStore(chave, null);
@@ -216,6 +217,7 @@ let _epFila = Promise.resolve();
 function _epNaFila(fn) { const p = _epFila.then(fn, fn); _epFila = p.catch(() => {}); return p; }
 // relê do banco, aplica fn (false = desiste, 'ja' = nada a fazer, { erro } = avisa) e grava
 function _epMutarStore(chave, normalizar, fn) {
+  if (_ehCCO(usuarioAtual)) { alert('A lotação CCO não usa o estoque do Plantão.'); return Promise.resolve(false); }
   return _epNaFila(async () => {
     let base;
     try { base = await _epLerFresco(chave); } catch (e) { _mostrarToast('Sem conexão com o banco — nada foi salvo. Tente de novo.', 'erro'); return false; }
@@ -478,7 +480,7 @@ function ep_resumo() {
 }
 
 /* ── Permissões: cada lado altera só o seu; admin e gerência veem os dois ── */
-function ep_podeMover() { return !!usuarioAtual && ['plantao', 'admin'].includes(usuarioAtual.nivel); }
-function ep_podeVer() { return !!usuarioAtual && ['plantao', 'admin', 'gerencia'].includes(usuarioAtual.nivel); }
+function ep_podeMover() { return !!usuarioAtual && !_ehCCO(usuarioAtual) && ['plantao', 'admin'].includes(usuarioAtual.nivel); }
+function ep_podeVer() { return !!usuarioAtual && !_ehCCO(usuarioAtual) && ['plantao', 'admin', 'gerencia'].includes(usuarioAtual.nivel); }
 function ep_podeVerCme() { return !!usuarioAtual && usuarioAtual.nivel !== 'plantao'; }
 function ep_podeCadastrar() { return !!usuarioAtual && ['admin', 'gerencia'].includes(usuarioAtual.nivel); }
