@@ -9116,7 +9116,15 @@ const _SC_AUT_NIVEIS = ['gerencia', 'admin', 'plantao'];   // quem marca/edita/r
 function _scAutPode() { return _SC_AUT_NIVEIS.includes(usuarioAtual && usuarioAtual.nivel); }
 // o banco só aceita chaves cme_[a-z0-9_]{1,80}: o id do monitorado vira minúsculas/underscore (id real: "sc_<hora>_<5 letras>")
 function _scAutChave(id) { return 'semcom_aut_' + String(id == null ? '' : id).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 60); }
-function _scAutItem(m) { const x = m && m.id != null ? carregarStore(_scAutChave(m.id), null) : null; return (x && typeof x === 'object') ? x : null; }
+// Chave ANTIGA (única, com todas as marcações): o commit da647dd ficou ~15 min no ar (12/11/2026) gravando aqui antes de passar para uma chave por
+// monitorado. Só LEITURA e só como reserva: a chave nova vale primeiro; a antiga nunca é regravada nem apagada.
+function _scAutLegadoDe(dados, id) { const x = dados && dados.itens && typeof dados.itens === 'object' && id != null ? dados.itens[id] : null; return (x && typeof x === 'object') ? x : null; }
+function _scAutItem(m) {
+  if (!m || m.id == null) return null;
+  const x = carregarStore(_scAutChave(m.id), null);
+  if (x && typeof x === 'object') return x;
+  return _scAutLegadoDe(carregarStore('semcom_autorizados', null), m.id);
+}
 function _scAutManual(m) { const x = _scAutItem(m); return (x && x.ativo) ? x : null; }
 function _scAutorizado(m) { return !!m && _scEmAberto(m) && (_diasSemComAtual(m) >= 180 || !!_scAutManual(m)); }
 function _scAutQuando(iso) { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
@@ -9148,12 +9156,18 @@ function _scHtmlAut(m) {
 // a tela só muda se o banco aceitar. fn(item) devolve false para desistir.
 async function _scAutMutar(id, fn) {
   const chave = _scAutChave(id);
-  let base = carregarStore(chave, null);
+  let base = carregarStore(chave, null) || _scAutLegadoDe(carregarStore('semcom_autorizados', null), id);
   if (window._db) {
     try {
       const r = await _dbLerChave('cme_' + chave);
       if (r.error) throw r.error;
       if (r.data && r.data.value && typeof r.data.value === 'object') base = r.data.value;
+      else {   // ainda não existe a chave nova deste monitorado: aproveita a marcação feita na chave antiga (se houver) e o histórico dela
+        const rl = await _dbLerChave('cme_semcom_autorizados');
+        if (rl.error) throw rl.error;
+        const leg = _scAutLegadoDe(rl.data && rl.data.value, id);
+        if (leg) base = leg;
+      }
     } catch (e) { _mostrarToast('Sem conexão com o banco — nada foi salvo. Tente de novo.', 'erro'); return false; }
   }
   const novo = base ? JSON.parse(JSON.stringify(base)) : { id: id, ativo: false, historico: [] };
