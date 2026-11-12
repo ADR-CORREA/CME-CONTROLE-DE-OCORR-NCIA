@@ -183,32 +183,64 @@ function _sccSeloTipo(x) {
 }
 
 // ── Exibição ──────────────────────────────────────────────────────────────────
+// Contatos de referência para mostrar: INCLUI os que só têm nome (sem telefone) e não repete o mesmo número
+// (nem o do próprio monitorado) nem o mesmo nome sem número.
+function _sccRefsUnicas(c) {
+  const tels = new Set(c && c.telefone ? [c.telefone] : []), nomes = new Set(), out = [];
+  ((c && c.refs) || []).forEach(r => {
+    const tel = r && r.telefone ? String(r.telefone) : '', nome = r && r.nome ? String(r.nome) : '';
+    if (!tel && !nome) return;
+    if (tel) { if (tels.has(tel)) return; tels.add(tel); } else { if (nomes.has(nome)) return; nomes.add(nome); }
+    out.push({ nome, telefone: tel });
+  });
+  return out;
+}
 // linha curta abaixo do nome, na tabela
 function _scLinhaContato(m) {
   const c = m && m.contato; if (!c) return '';
-  const refs = (c.refs || []).filter(r => r.telefone);
+  const refs = _sccRefsUnicas(c);   // inclui quem só tem nome (sem telefone)
   const daObs = _sccTelsDaObs(c);
   // na lista só entra número que pode ser do monitorado (antigo, errado, retido e da vítima ficam só no detalhe)
   const novos = daObs.filter(x => x.novo && !_SCC_TIPOS_INUTEIS.includes(x.tipo)).sort((a, b) => (b.tipo === 'atual') - (a.tipo === 'atual'));
   const temVitima = daObs.some(x => x.tipo === 'vitima');
   return '<div style="font-size:12px;margin-top:3px;font-weight:400;color:var(--idv-sec)">'
     + (c.telefone ? '<span style="white-space:nowrap">\u{1F4DE} ' + _sccLinkTel(c.telefone) + '</span>' :'<span style="color:var(--idv-sec)">sem telefone próprio</span>')
-    + (refs.length ? ' <span style="color:var(--idv-sec);cursor:help" title="' + esc(refs.map(r => (r.nome || 'Contato') + ': ' + _sccFmtTel(r.telefone)).join(' · ')) + '">· +' + refs.length + ' de referência</span>' : '')
+    + (refs.length ? ' <span style="color:var(--idv-sec);cursor:help" title="' + esc(refs.map(r => r.telefone ? (r.nome ? r.nome + ' — ' : '') + _sccFmtTel(r.telefone) : r.nome + ' (sem telefone)').join(' · ')) + '">· +' + refs.length + ' de referência</span>' : '')
     + (novos.length ? '<div style="margin-top:2px"><span title="Número escrito na observação de contatos do AKILES, diferente do telefone cadastrado — pode ser o número atualizado" class="idv-etq at">NA OBSERVAÇÃO</span> '
       + _sccLinkTel(novos[0].tel) + (novos[0].rotulo ? ' <span style="color:var(--idv-sec)">' + esc(novos[0].rotulo) + '</span>' : '')
       + (novos.length > 1 ? ' <span style="color:var(--idv-sec)">· +' + (novos.length - 1) + '</span>' : '') + '</div>' : '')
     + (temVitima ? '<div style="margin-top:2px"><span title="A observação de contatos tem o telefone da vítima — abra o detalhe antes de ligar" class="idv-etq cr">\u{26A0}\u{FE0F} OBSERVAÇÃO TEM Nº DA VÍTIMA</span></div>' : '')
     + '</div>';
 }
+// telefones vindos do robô (c.tels = [{n, r, o:[proprio|referencia|observacao]}]): um por linha, com o rótulo, de onde veio (selo neutro) e, se
+// o número está na observação como da VÍTIMA/errado/retido/antigo, o mesmo aviso de sempre. Contatos de referência sem telefone entram só com o nome.
+function _sccHtmlTels(c, linha) {
+  const ORIG = { proprio: 'próprio', referencia: 'referência', observacao: 'observação' };
+  const daObs = _sccTelsDaObs(c), vistos = new Set();
+  const itens = (c.tels || []).filter(x => x && x.n && !vistos.has(x.n) && vistos.add(x.n)).map(x => {
+    const selos = (Array.isArray(x.o) ? x.o : []).filter(k => ORIG[k]).map(k => ' <span class="idv-etq ne">' + ORIG[k] + '</span>').join('');
+    const ob = daObs.find(d => d.tel.slice(-8) === String(x.n).slice(-8));
+    const risco = ob && _SCC_TIPOS_INUTEIS.includes(ob.tipo) ? _sccSeloTipo(Object.assign({}, ob, { novo: true })) : '';
+    return linha(esc(x.r || (Array.isArray(x.o) && x.o.includes('proprio') ? 'Monitorado' : 'Telefone')) + selos + risco, x.n);
+  });
+  // contatos de referência: o que não veio em c.tels (número que faltou na lista) e quem só tem nome, sem repetir
+  const nomesVistos = new Set();
+  const refsExtra = (c.refs || []).filter(r => r && (r.nome || r.telefone)).filter(r => {
+    if (r.telefone) { if (vistos.has(r.telefone)) return false; vistos.add(r.telefone); return true; }
+    if (nomesVistos.has(r.nome)) return false; nomesVistos.add(r.nome); return true;
+  }).map(r => linha(esc(r.nome || 'Contato de referência') + ' <span class="idv-etq ne">referência</span>', r.telefone || ''));
+  return itens.concat(refsExtra).join('');
+}
 // bloco completo (modais de tratativa e de visualização)
 function _scHtmlContatos(m) {
   const c = m && m.contato;
   if (!c) return '<div style="font-size:13px;color:var(--idv-sec)">Sem contato importado. Use "Importar contatos (cadastro)" na aba Sem Comunicação.</div>';
   const linha = (rot, tel) => '<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-top:1px solid var(--idv-linha);font-size:13px"><span>' + rot + '</span><span style="white-space:nowrap">' + (tel ? _sccLinkTel(tel) : '<span style="color:var(--idv-sec)">sem número</span>') + '</span></div>';
-  return linha('<b>Monitorado</b>', c.telefone)
-    + (c.refs || []).map(r => linha(esc(r.nome || 'Contato de referência'), r.telefone)).join('')
+  const doRobo = Array.isArray(c.tels) && c.tels.length;   // pacote do robô das 10h: TODOS os telefones, com rótulo e de onde vieram
+  return (doRobo ? _sccHtmlTels(c, linha)
+      : linha('<b>Monitorado</b>', c.telefone) + (c.refs || []).map(r => linha(esc(r.nome || 'Contato de referência'), r.telefone)).join(''))
     + (() => {
-        const t = _sccTelsDaObs(c); if (!t.length) return '';
+        const t = doRobo ? [] : _sccTelsDaObs(c); if (!t.length) return '';
         return '<div style="font-size:13px;font-weight:600;color:var(--idv-at);margin-top:8px">Números escritos na observação do AKILES</div>'
           + t.map(x => linha(esc(x.rotulo || 'sem identificação') + _sccSeloTipo(x), x.tel)).join('');
       })()
