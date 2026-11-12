@@ -1286,7 +1286,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
       <span class="role-badge" id="role-badge">PLANTÃO</span>
       <div class="user-chip">
         <div class="avatar" id="user-avatar">P</div>
-        <span id="user-display">Usuário</span>
+        <span id="user-display">Usuário</span><span id="user-lot"></span>
       </div>
       <button class="btn-logout" id="btn-tema" onclick="toggleTema()" title="Alternar tema claro / escuro" aria-label="Alternar tema claro e escuro" style="margin-right:6px;min-width:34px"><span id="tema-icone">🌙</span></button>
       <button class="btn-logout" onclick="ass_abrirMinha()" title="Cadastrar ou atualizar a minha assinatura" style="margin-right:6px">Minha assinatura</button>
@@ -1363,6 +1363,14 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
             <div><span class="idv-grande idv-data" id="dash-estp-dpp">—</span><span class="idv-mini">dispositivos DPP</span></div>
           </div>
           <div id="dash-estp-aviso" class="idv-mini" style="display:none;margin-top:4px;color:#b45309;font-weight:600"></div>
+          </div>
+          <div id="dash-estoque-cco" style="display:none">
+          <div class="idv-bloco-cab" style="margin-top:8px"><span>Estoque disponível — CCO</span></div>
+          <div class="idv-bloco-corpo lado">
+            <div><span class="idv-grande idv-data" id="dash-estc-mod">—</span><span class="idv-mini">módulos de tornozeleira</span></div>
+            <div><span class="idv-grande idv-data" id="dash-estc-dpp">—</span><span class="idv-mini">dispositivos DPP</span></div>
+          </div>
+          <div id="dash-estc-aviso" class="idv-mini" style="display:none;margin-top:4px;color:#b45309;font-weight:600"></div>
           </div>
         </div>
       </div>
@@ -3525,6 +3533,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
         <div class="sub-tab active" id="est-stab-estoque"  onclick="mudarSubAbaEstoque('estoque')">Estoque</div>
         <div class="sub-tab"       id="est-stab-consultar" onclick="mudarSubAbaEstoque('consultar')">Consultar</div>
         <div class="sub-tab"       id="est-stab-plantao"   onclick="mudarSubAbaEstoque('plantao')">Estoque do Plantão</div>
+        <div class="sub-tab"       id="est-stab-cco"       onclick="mudarSubAbaEstoque('cco')">Estoque CCO</div>
       </div>
 
       <!-- Sub-panel Estoque -->
@@ -3591,6 +3600,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 
       <!-- Sub-panel Estoque do Plantão: só visualização (estoque-plantao-tela.js) -->
       <div id="est-panel-plantao-ver" class="sub-panel" style="display:none"></div>
+      <div id="est-panel-cco-ver" class="sub-panel" style="display:none"></div>
 
       <!-- Sub-panel Consultar -->
       <div id="est-panel-consultar" class="sub-panel" style="display:none">
@@ -7188,6 +7198,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
           <div class="form-field"><label>Destino *</label>
             <select id="sai-destino">
               <option value="plantao">Estoque do Plantão (fica "a receber" até o plantonista conferir)</option>
+              <option value="cco">Estoque CCO (fica "a receber" até o plantonista do CCO conferir)</option>
               <option value="outro">Outro destino (não entra no estoque do Plantão)</option>
             </select></div>
         </div>
@@ -7920,6 +7931,8 @@ function salvarUsuarios(u) {
 // (12/11/2026) lotação "CCO": o policial do CCO não usa o estoque do Plantão (Macapá usa; o CCO não).
 // Fica no cadastro do usuário (campo lotacao) e vem no login junto com o resto do cadastro.
 function _ehCCO(u) { return !!u && String(u.lotacao || '').trim().toUpperCase() === 'CCO'; }
+// etiqueta "CCO" (idv-etq) ao lado do nome; `l` = o campo lotacao do usuário ou do registro (movimento, log, tratativa)
+function _etqLotacao(l) { return String(l || '').trim().toUpperCase() === 'CCO' ? '<span class="idv-etq in" style="margin-left:6px" title="Lotação CCO">CCO</span>' : ''; }
 
 /* ── TRAVA DE SEGURANÇA contra sobrescrita da lista de usuários ──────
    Só permitimos cadastrar/editar/excluir DEPOIS que a lista completa foi
@@ -8016,6 +8029,7 @@ function auditar(opts) {
 function addLog(msg, meta) {
   // Busca o estado atual dos logs direto do Supabase para evitar conflito entre PCs
   const entrada = { ts: new Date().toISOString(), msg };
+  if (_ehCCO(usuarioAtual)) entrada.lotacao = 'CCO'; // (12/11/2026) etiqueta "CCO" ao lado do registro no painel de logs
   if (window._db) {
     _dbLerChave('cme_logs')
       .then(({ data }) => {
@@ -8286,6 +8300,7 @@ async function _sessaoConferirNivel(u, h) {
   addLog('Nível de acesso atualizado na sessão: ' + usuarioAtual.nome + ' (' + novo + ')');
   document.body.classList.toggle('is-admin', novo === 'admin');
   document.getElementById('role-badge').textContent = (_NIVEL_NOME[novo] || novo || 'Operador').toUpperCase();
+  try { document.getElementById('user-lot').innerHTML = _etqLotacao(usuarioAtual.lotacao); } catch (e) {}
   atualizarTudo();
   aplicarVisibilidadeTabs(novo);
   _mostrarToast('Seu nível de acesso foi atualizado pelo administrador.', 'sucesso');
@@ -8326,19 +8341,19 @@ const TABS_POR_NIVEL = {
 const _TAB_MAP = { dashboard:0, criticos:1, ocorrencias:2, juridico:3, comunicacao:4,
                    estoque:5, triagem:6, relatorio:7, links:8, modelos:9, gerencia:10, admin:11, psicossocial:12, arquivos:13, estatisticas:14, mandado:15, secretaria:16, semcom:17, estplantao:18 };
 
-// abas do usuário: as do nível, menos o Estoque do Plantão para quem é da lotação CCO
-function _abasPermitidas(nivel, usuario) {
-  const base = TABS_POR_NIVEL[nivel] || TABS_POR_NIVEL['plantao'];
-  return _ehCCO(usuario) ? base.filter(a => a !== 'estplantao') : base;
-}
-
 function aplicarVisibilidadeTabs(nivel) {
-  const permitidas = _abasPermitidas(nivel, usuarioAtual);
+  const permitidas = TABS_POR_NIVEL[nivel] || TABS_POR_NIVEL['plantao'];
   // (20/10/2026) a aba é achada pelo data-aba (o menu lateral reagrupou as abas; a posição mudou)
   Object.keys(_TAB_MAP).forEach(aba => {
     const tab = document.querySelector('.nav-tab[data-aba="' + aba + '"]');
     if (tab) tab.style.display = permitidas.includes(aba) ? 'flex' : 'none';
   });
+  // (12/11/2026) o plantonista vê o nome do estoque da lotação dele na aba ("Estoque Plantão" / "Estoque CCO"); gerência e admin veem os dois por dentro (seletor)
+  try {
+    const tp = document.querySelector('.nav-tab[data-aba="estplantao"]');
+    const tn = tp && [...tp.childNodes].filter(n => n.nodeType === 3).pop();
+    if (tn && typeof ep_lot === 'function') tn.nodeValue = ' ' + (usuarioAtual && usuarioAtual.nivel === 'plantao' ? ep_lot().aba : EP_LOTS.plantao.aba);
+  } catch (e) {}
   // (26/10/2026) título de grupo sem aba visível (ex.: "Setores" para a Secretaria) some junto
   document.querySelectorAll('#cme-menu .nav-grupo').forEach(g => { g.style.display = [...g.querySelectorAll('.nav-tab')].some(t => t.style.display !== 'none') ? '' : 'none'; });
   // Navegar para a primeira aba permitida
@@ -8391,6 +8406,7 @@ function _iniciarAppTela() {
   // Marca o body p/ revelar os botões .arq-admin-only só ao admin (os demais veem só + Monitorado e Importar pasta)
   document.body.classList.toggle('is-admin', nivel === 'admin');
   document.getElementById("user-display").textContent = usuarioAtual.nome;
+  document.getElementById("user-lot").innerHTML = _etqLotacao(usuarioAtual.lotacao); // (12/11/2026) "CCO" ao lado do nome
   document.getElementById("user-avatar").textContent = usuarioAtual.nome.charAt(0).toUpperCase();
   // Carrega a assinatura própria do servidor (cadastrada por ele no store)
   try { const _a = _getAssinaturaDe(usuarioAtual.usuario); if (_a) usuarioAtual.assinatura = _a; } catch (e) {}
@@ -8427,7 +8443,7 @@ function _iniciarAppTela() {
 function mudarAba(aba) {
   // Verificar permissão de acesso
   if (usuarioAtual) {
-    const permitidas = _abasPermitidas(usuarioAtual.nivel, usuarioAtual);
+    const permitidas = TABS_POR_NIVEL[usuarioAtual.nivel] || TABS_POR_NIVEL['plantao'];
     if (!permitidas.includes(aba)) {
       mudarAba(permitidas[0] || 'dashboard');
       return;
@@ -8502,21 +8518,26 @@ function _dashEstoqueDisp() {
   set('dash-est-mod', mod);
   set('dash-est-dpp', dpp);
   set('psi-est-dpp', dpp); // campo dentro do Psicossocial
-  // estoque do Plantão (estoque-plantao.js) + o que está a caminho entre setor e plantão
-  // (12/11/2026) lotação CCO não vê o estoque do Plantão: o bloco some do Dashboard
-  const blocoPlantao = document.getElementById('dash-estoque-plantao');
-  if (blocoPlantao) blocoPlantao.style.display = _ehCCO(usuarioAtual) ? 'none' : '';
-  if (_ehCCO(usuarioAtual)) return;
-  try {
-    if (typeof ep_resumo !== 'function') return;
-    const r = ep_resumo(), av = document.getElementById('dash-estp-aviso');
-    set('dash-estp-mod', r.plantao.mod);
-    set('dash-estp-dpp', r.plantao.dpp);
-    const partes = [];
-    if (r.aReceberPlantao) partes.push(r.aReceberPlantao + ' envio(s) do setor a receber pelo Plantão');
-    if (r.aReceberSetor) partes.push(r.aReceberSetor + ' devolução(ões) do Plantão a receber pelo setor');
-    if (av) { av.textContent = partes.length ? '\u{26A0}\u{FE0F} ' + partes.join(' · ') : ''; av.style.display = partes.length ? '' : 'none'; }
-  } catch (e) {}
+  // estoque das lotações (estoque-plantao.js: Plantão e CCO) + o que está a caminho entre setor e lotação
+  // (12/11/2026) o plantonista vê só o da lotação dele; o CCO aparece também para o setor de Estoque, a gerência e o admin
+  if (typeof ep_resumo !== 'function') return;
+  const nivel = usuarioAtual && usuarioAtual.nivel, souPlantonista = nivel === 'plantao', minhaLot = ep_lotDoUsuario(usuarioAtual);
+  const BLOCOS = { plantao: { bloco: 'dash-estoque-plantao', pref: 'dash-estp', aviso: 'dash-estp-aviso' }, cco: { bloco: 'dash-estoque-cco', pref: 'dash-estc', aviso: 'dash-estc-aviso' } };
+  Object.keys(BLOCOS).forEach(lot => {
+    const b = BLOCOS[lot], el = document.getElementById(b.bloco);
+    const ver = lot === 'plantao' ? !(souPlantonista && minhaLot !== 'plantao') : (souPlantonista ? minhaLot === 'cco' : ['estoque', 'gerencia', 'admin'].includes(nivel));
+    if (el) el.style.display = ver ? '' : 'none';
+    if (!ver) return;
+    try {
+      const r = ep_resumo(lot), av = document.getElementById(b.aviso), nome = EP_LOTS[lot].nome;
+      set(b.pref + '-mod', r.plantao.mod);
+      set(b.pref + '-dpp', r.plantao.dpp);
+      const partes = [];
+      if (r.aReceberPlantao) partes.push(r.aReceberPlantao + ' envio(s) do setor a receber pelo ' + nome);
+      if (r.aReceberSetor) partes.push(r.aReceberSetor + ' devolução(ões) do ' + nome + ' a receber pelo setor');
+      if (av) { av.textContent = partes.length ? '\u{26A0}\u{FE0F} ' + partes.join(' · ') : ''; av.style.display = partes.length ? '' : 'none'; }
+    } catch (e) {}
+  });
 }
 
 /* ─── DASHBOARD ──────────────────────────────────────── */
@@ -10996,7 +11017,7 @@ function abrirModalTratativa(monId) {
   const trats = (m.tratativas||[]).slice().reverse();
   hist.innerHTML = trats.length
     ? trats.map(t => `<div style="border-left:3px solid #2563eb;padding:6px 10px;margin-bottom:6px;background:#f0f7ff;border-radius:0 6px 6px 0">
-        <div style="font-weight:600;color:#1d4ed8;font-size:.82rem">${new Date(t.data).toLocaleString('pt-BR')} — ${esc(t.servidor)}${t.tipo ? ` <span style="font-size:.7rem;font-weight:600;color:#0f766e;background:#f0fdfa;border-left:2px solid #0f766e;border-radius:3px;padding:1px 5px">\u{1F4DE} ${esc(t.tipo)}${t.origem ? ' · ' + esc(t.origem) : ''}</span>` : ''}</div>
+        <div style="font-weight:600;color:#1d4ed8;font-size:.82rem">${new Date(t.data).toLocaleString('pt-BR')} — ${esc(t.servidor)}${_etqLotacao(t.lotacao)}${t.tipo ? ` <span style="font-size:.7rem;font-weight:600;color:#0f766e;background:#f0fdfa;border-left:2px solid #0f766e;border-radius:3px;padding:1px 5px">\u{1F4DE} ${esc(t.tipo)}${t.origem ? ' · ' + esc(t.origem) : ''}</span>` : ''}</div>
         <div style="margin-top:3px;color:#374151;white-space:pre-wrap">${esc(t.descricao)}</div>
       </div>`).join('')
     : '<div style="color:#888;font-size:.85rem;padding:8px">Nenhuma tratativa registrada ainda.</div>';
@@ -11029,7 +11050,7 @@ async function salvarTratativaSemCom() {
   const ok = await _scMutar(d => {
     m = d.monitorados.find(x => x.id === monId);
     if (!m) { _mostrarToast('Esse registro mudou no banco. Atualize a página e tente de novo.', 'erro'); return false; }
-    (m.tratativas = m.tratativas || []).push({ data: new Date(data).toISOString(), servidor: srv, descricao: desc, registradoPor: usuarioAtual?.nome || '' });
+    (m.tratativas = m.tratativas || []).push({ data: new Date(data).toISOString(), servidor: srv, descricao: desc, registradoPor: usuarioAtual?.nome || '', lotacao: _ehCCO(usuarioAtual) ? 'CCO' : undefined });
   });
   if (!ok) return;
   try { auditar({ modulo: 'Sem Comunicação', action: 'semcom_tratativa', alvo: m.nome, detalhe: desc.slice(0, 200) }); } catch (e) {}
@@ -11124,7 +11145,7 @@ function verMonitoradoSemCom(monId) {
   const trats = (m.tratativas||[]).slice().reverse();
   hist.innerHTML = trats.length
     ? trats.map(t => `<div style="border-left:3px solid #2563eb;padding:6px 10px;margin-bottom:6px;background:#f0f7ff;border-radius:0 6px 6px 0">
-        <div style="font-weight:600;color:#1d4ed8;font-size:.82rem">${new Date(t.data).toLocaleString('pt-BR')} — ${esc(t.servidor)}${t.tipo ? ` <span style="font-size:.7rem;font-weight:600;color:#0f766e;background:#f0fdfa;border-left:2px solid #0f766e;border-radius:3px;padding:1px 5px">\u{1F4DE} ${esc(t.tipo)}${t.origem ? ' · ' + esc(t.origem) : ''}</span>` : ''}</div>
+        <div style="font-weight:600;color:#1d4ed8;font-size:.82rem">${new Date(t.data).toLocaleString('pt-BR')} — ${esc(t.servidor)}${_etqLotacao(t.lotacao)}${t.tipo ? ` <span style="font-size:.7rem;font-weight:600;color:#0f766e;background:#f0fdfa;border-left:2px solid #0f766e;border-radius:3px;padding:1px 5px">\u{1F4DE} ${esc(t.tipo)}${t.origem ? ' · ' + esc(t.origem) : ''}</span>` : ''}</div>
         <div style="margin-top:3px;color:#374151;white-space:pre-wrap">${esc(t.descricao)}</div>
       </div>`).join('')
     : '<div style="color:#888;font-size:.85rem;padding:8px">Nenhuma tratativa registrada.</div>';
@@ -11445,7 +11466,7 @@ function turno_assumir() {
 // faixa do painel do plantonista
 function turno_faixaHtml() {
   const t = turno_atual(), est = 'display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px';
-  const passar = typeof ep_abrirPassagem === 'function' && !_ehCCO(usuarioAtual) ? '<button type="button" class="idv-btn" onclick="ep_abrirPassagem()">Passar o serviço</button>' : '';
+  const passar = typeof ep_abrirPassagem === 'function' ? '<button type="button" class="idv-btn" onclick="ep_abrirPassagem()">Passar o serviço</button>' : '';
   if (!t) return '<div class="idv-faixa at" style="' + est + '"><div><b>Ninguém assumiu o turno de hoje.</b> Equipe pelo calendário: <b>' + esc(getPlantaoParaData(_diaPlantao())) + '</b>.</div><div class="idv-acoes"><button type="button" class="idv-btn criar" onclick="turno_abrirAssumir()">Assumir turno</button></div></div>';
   const h = new Date(t.assumidoEm), p2 = n => String(n).padStart(2, '0');
   const hora = isNaN(h) ? '' : ' às ' + p2(h.getHours()) + ':' + p2(h.getMinutes());
@@ -12127,7 +12148,7 @@ function renderizarUsers() {
       : `<span class="idv-etq ne">Sem assinatura</span>`;
     const plTag = (u.primeiroLogin
       ? `<span class="idv-etq at" style="margin-left:4px">Aguardando 1º login</span>`
-      : '') + (u.lotacao ? `<span class="idv-etq ne" style="margin-left:4px" title="Lotação">${esc(u.lotacao)}</span>` : '');
+      : '') + (u.lotacao ? (_ehCCO(u) ? _etqLotacao(u.lotacao) : `<span class="idv-etq ne" style="margin-left:4px" title="Lotação">${esc(u.lotacao)}</span>`) : '');
     return `
     <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--idv-linha);transition:background .12s"
       onmouseover="this.style.background='var(--idv-fundo)'" onmouseout="this.style.background=''">
@@ -12816,7 +12837,7 @@ function renderizarLogs() {
   if (!el) return;
   el.innerHTML = logs.length ? logs.map(l => {
     const d = new Date(l.ts).toLocaleString("pt-BR");
-    return `<div style="padding:4px 0;border-bottom:1px solid var(--idv-linha)"><span class="idv-data">[${d}]</span> ${esc(l.msg)}</div>`;
+    return `<div style="padding:4px 0;border-bottom:1px solid var(--idv-linha)"><span class="idv-data">[${d}]</span> ${esc(l.msg)}${_etqLotacao(l.lotacao)}</div>`;
   }).join("") : "<div style='color:var(--idv-sec)'>Nenhum log ainda.</div>";
   // Também atualiza o painel de auditoria, conforme a aba ativa
   if (_adminAuditTab === 'arquivos') admin_carregarAuditArquivos();
@@ -12854,7 +12875,7 @@ function admin_popularLogSistema() {
     const d = l.ts ? new Date(l.ts).toLocaleString('pt-BR') : '';
     return `<div style="display:flex;gap:12px;padding:3px 0;border-bottom:1px solid var(--idv-linha)">
       <span class="idv-data" style="color:var(--idv-sec);white-space:nowrap;min-width:140px">${d}</span>
-      <span>${esc(l.msg)}</span>
+      <span>${esc(l.msg)}${_etqLotacao(l.lotacao)}</span>
     </div>`;
   }).join('');
 }
@@ -16171,7 +16192,9 @@ function mudarSubAbaEstoque(aba) {
   document.getElementById('est-stab-consultar').classList.toggle('active', aba === 'consultar');
   document.getElementById('est-panel-plantao-ver').style.display = aba === 'plantao' ? 'block' : 'none';
   document.getElementById('est-stab-plantao').classList.toggle('active', aba === 'plantao');
-  if (aba === 'plantao' && typeof ep_renderizarVisaoCme === 'function') ep_renderizarVisaoCme();
+  document.getElementById('est-panel-cco-ver').style.display = aba === 'cco' ? 'block' : 'none';
+  document.getElementById('est-stab-cco').classList.toggle('active', aba === 'cco');
+  if ((aba === 'plantao' || aba === 'cco') && typeof ep_renderizarVisaoCme === 'function') ep_renderizarVisaoCme(aba);
   if (aba === 'consultar') {
     const inp = document.getElementById('est-consultar-input');
     if (inp) { inp.value = ''; inp.focus(); }
@@ -16590,9 +16613,10 @@ function salvarMovEstoque(tipo) {
   }
   // Saída para o estoque do Plantão: o plantonista confere unidade por unidade (estoque-plantao.js)
   const paraPlantao = tipo === 'saida' && g('destino') !== 'outro' && typeof ep_enviarDoSetor === 'function';
+  const lotDestino = g('destino') === 'cco' ? 'cco' : 'plantao'; // (12/11/2026) cada lotação tem o seu estoque
   if (paraPlantao && ITENS_COM_SERIAL.includes(itemTipo)) {
     const _ids = Array.from(document.querySelectorAll('.sai-serial-input')).map(i => i.value.trim()).filter(Boolean);
-    if (_ids.length !== qtd || new Set(_ids).size !== qtd) return alert(`Para mandar ao Plantão, informe o ${_serialLabel(itemTipo)} de cada unidade (${qtd}), sem repetir.`);
+    if (_ids.length !== qtd || new Set(_ids).size !== qtd) return alert(`Para mandar ao ${paraPlantao ? EP_LOTS[lotDestino].nome : 'Plantão'}, informe o ${_serialLabel(itemTipo)} de cada unidade (${qtd}), sem repetir.`);
     const _noSetor = _buildSerialEstadoMap(est, itemTipo), _fora = _ids.find(id => !_noSetor[id]);
     if (_fora) return alert(`O ${_serialLabel(itemTipo)} "${_fora}" não está no estoque do setor. Escolha da lista.`);
   }
@@ -16676,7 +16700,7 @@ function salvarMovEstoque(tipo) {
     plantao:      tipo === 'saida' ? g('plantao')      : '',
     plantonista:  tipo === 'saida' ? g('plantonista')  : '',
     dataEntrega:  tipo === 'saida' ? g('data-entrega') : '',
-    destino:      tipo === 'saida' ? (paraPlantao ? 'Estoque do Plantão' : 'Outro destino') : '',
+    destino:      tipo === 'saida' ? (paraPlantao ? EP_LOTS[lotDestino].destinoSetor : 'Outro destino') : '',
   };
   if (paraPlantao && unidadesSaida.length) mov.unidades = unidadesSaida; // para o "Reenviar ao Plantão" se o aviso falhar
   est.movimentacoes.unshift(mov);
@@ -16685,7 +16709,7 @@ function salvarMovEstoque(tipo) {
   salvarEstoque(est);
   addLog(`Estoque — ${tipoLabel}: ${itemTipo}${tamanho ? ' ' + tamanho : ''} ×${qtd} (${resp})`);
   fecharModal(modalId);
-  if (paraPlantao) ep_enviarDoSetor(mov, unidadesSaida);
+  if (paraPlantao) ep_enviarDoSetor(mov, unidadesSaida, lotDestino);
   renderizarEstoque();
   _mostrarToast('\u{2713} ' + tipoLabel + ' registrada com sucesso!', 'ok');
 }
