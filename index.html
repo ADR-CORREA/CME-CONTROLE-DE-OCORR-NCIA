@@ -10801,7 +10801,7 @@ function renderizarSemCom(area) {
     const cls = _scClasseDias(m, dias);
     const tratQt = (m.tratativas||[]).length;
     const sit = desv(m) ? '<span class="idv-etq ok">Desvinculado</span>'
-      : tratQt > 0 ? '<span class="idv-etq ok">Com tratativa</span>' : '<span class="idv-etq at">Sem contato</span>';
+      : tratQt > 0 ? '<span class="idv-etq ok">Com tratativa</span>' : '<span class="idv-etq at">Sem tratativa</span>';   // (12/11/2026) antes "Sem contato": a equipe lia como "sem telefone"; só o texto exibido mudou, a situação gravada é a mesma
     const ult = m.ultimaTratativa || (tratQt ? m.tratativas[tratQt - 1] : null);
     const unid = [m.registro ? 'Reg. ' + m.registro : '', m.unidade || ''].filter(Boolean).join(' · ');
     const idj = _jsq(m.id);
