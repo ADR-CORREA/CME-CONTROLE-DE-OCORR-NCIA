@@ -5125,6 +5125,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
             <option value="">Todas as situações</option>
             <option value="ativo">Ativo</option>
             <option value="tratativa">Com tratativa</option>
+            <option value="autorizado">Autorizado desvincular</option>
             <option value="desvinculado">Desvinculado</option>
           </select>
           <select class="idv-select" id="sc-f-intervalo" aria-label="Intervalo" onchange="renderizarSemCom()">
@@ -5136,6 +5137,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
             <option>5. mais de 4h</option>
           </select>
           <input type="number" class="idv-select" id="sc-f-dias-min" placeholder="Mín. dias" aria-label="Mínimo de dias sem comunicar" min="0" oninput="renderizarSemCom()" style="width:110px">
+          <button type="button" class="idv-chip" id="sc-chip-aut" aria-pressed="false" onclick="_scFiltrarAutorizado()" title="Mostrar só quem está autorizado a desvincular: 180 dias ou mais, ou marcado pela gerência">Autorizado desvincular <span class="idv-n" id="sc-chip-aut-n">0</span></button>
           <button type="button" class="idv-btn" onclick="limparFiltrosSemCom()">Limpar</button>
         </div>
 
@@ -5354,6 +5356,7 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
                 <option value="">Todas</option>
                 <option value="ativo">Ativo</option>
                 <option value="tratativa">Com tratativa</option>
+                <option value="autorizado">Autorizado desvincular</option>
                 <option value="desvinculado">Desvinculado</option>
               </select>
             </div>
@@ -6320,6 +6323,45 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-semcom-desvinc')">Cancelar</button>
       <button class="btn-primary" style="background:#dc2626" onclick="salvarDesvinculacao()">Confirmar Desvinculação</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: AUTORIZAR DESVINCULAR (Sem Comunicação) — marcação só no CME, nada é escrito no AKILES -->
+<div class="modal-overlay" id="modal-semcom-aut">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <h3 id="aut-titulo">Autorizar desvincular</h3>
+      <button class="modal-close" onclick="fecharModal('modal-semcom-aut')" aria-label="Fechar">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="aut-monit-id">
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Monitorado</label>
+          <input class="auto-field" readonly id="aut-nome">
+        </div>
+        <div class="form-field">
+          <label>Dias sem comunicação</label>
+          <input class="auto-field" readonly id="aut-dias">
+        </div>
+      </div>
+      <div class="form-field">
+        <label for="aut-motivo">Motivo *</label>
+        <select id="aut-motivo">
+          <option value="Preso">Preso</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-field full">
+        <label for="aut-obs">Observação *</label>
+        <textarea id="aut-obs" rows="3" placeholder="Ex.: preso desde 10/11 — confirmado por ligação. Será desvinculado com menos de 180 dias."></textarea>
+      </div>
+      <div class="idv-mini" style="margin-top:6px">Isto é só uma marcação no CME: nada é escrito no AKILES e ninguém é desvinculado por aqui. A etiqueta verde aparece na lista e a observação fica no histórico.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-semcom-aut')">Cancelar</button>
+      <button class="btn-primary" style="background:#1a7f37" onclick="salvarAutDesvinc()">Salvar autorização</button>
     </div>
   </div>
 </div>
@@ -9061,6 +9103,113 @@ function _scTempoLegivel(t) {
   if (h) return h + ' h' + (mi ? ' e ' + mi + ' min' : '');
   return mi + ' min';
 }
+/* ── "Autorizado desvincular" (12/11/2026) ───────────────────────────────────────────────────────
+   MARCAÇÃO SÓ NO CME: nada é escrito no AKILES e nada desvincula de verdade; é o aviso de quem já pode ser
+   desvinculado. Aparece em dois casos: AUTOMÁTICO (180 dias ou mais sem comunicar) e MANUAL (a gerência marcou,
+   com motivo e observação, ex.: "preso desde 10/11 — confirmado por ligação" para quem tem menos de 180 dias).
+   A marcação manual fica numa chave PRÓPRIA e pequena (semcom_autorizados), por id do monitorado: marcar não
+   regrava o pacote inteiro da Sem Comunicação (~1 MB) e a importação do AKILES não passa por cima dela.
+   Forma: { itens: { [id]: { ativo, motivo, obs, por, quando, nome, registro, historico: [{acao, por, quando, motivo, obs}] } } } */
+const _SC_AUT_NIVEIS = ['gerencia', 'admin'];   // quem marca/edita/remove; todos veem a etiqueta e o filtro
+function _scAutPode() { return _SC_AUT_NIVEIS.includes(usuarioAtual && usuarioAtual.nivel); }
+function _scAutDados() { const d = carregarStore('semcom_autorizados', null); return (d && d.itens && typeof d.itens === 'object') ? d : { itens: {} }; }
+function _scAutManual(m) { const x = m && _scAutDados().itens[m.id]; return (x && x.ativo) ? x : null; }
+function _scAutorizado(m) { return !!m && _scEmAberto(m) && (_diasSemComAtual(m) >= 180 || !!_scAutManual(m)); }
+function _scAutQuando(iso) { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+// etiqueta verde ao lado do nome (canto reto, nunca pílula — .idv-etq)
+function _scSeloAut(m) {
+  if (!_scAutorizado(m)) return '';
+  const x = _scAutManual(m);
+  const tip = x ? 'Autorizado por ' + (x.por || '—') + ' em ' + _scAutQuando(x.quando) + ' — ' + (x.motivo || '') + ': ' + (x.obs || '') : '180 dias ou mais sem comunicar';
+  return '<span class="idv-etq ok" style="margin-left:6px;vertical-align:1px" title="' + esc(tip) + '">Autorizado desvincular</span>';
+}
+// linha de baixo (observação): manual mostra motivo + observação + quem/quando; automático só diz o porquê
+function _scLinhaAut(m) {
+  if (!_scAutorizado(m)) return '';
+  const x = _scAutManual(m);
+  if (!x) return '<div class="idv-mini" style="color:var(--idv-ok)">180 dias ou mais sem comunicar</div>';
+  const obs = String(x.obs || ''), curta = obs.length > 110 ? obs.slice(0, 110) + '…' : obs;
+  return '<div class="idv-mini" style="color:var(--idv-ok)" title="' + esc(obs) + '">' + esc(x.motivo || '') + ': ' + esc(curta) + ' · ' + esc(x.por || '') + ', ' + esc(_scAutQuando(x.quando)) + '</div>';
+}
+// histórico completo (ficha do monitorado): quem autorizou, quem removeu, quando e por quê
+function _scHtmlAut(m) {
+  const x = m && _scAutDados().itens[m.id];
+  const h = ((x && x.historico) || []).slice().reverse();
+  const topo = _scAutorizado(m) ? '<div style="border-left:3px solid #1a7f37;padding:6px 10px;margin-bottom:6px;background:#dafbe1;border-radius:0 6px 6px 0"><div style="font-weight:600;color:#17702f;font-size:.82rem">AUTORIZADO DESVINCULAR' + (_scAutManual(m) ? '' : ' — 180 dias ou mais sem comunicar') + '</div></div>' : '';
+  return topo + h.map(e => '<div style="border-left:3px solid ' + (e.acao === 'removeu' ? '#8c959f' : '#1a7f37') + ';padding:6px 10px;margin-bottom:6px;background:' + (e.acao === 'removeu' ? '#f6f8fa' : '#dafbe1') + ';border-radius:0 6px 6px 0">'
+    + '<div style="font-weight:600;color:#17702f;font-size:.82rem">' + esc(_scAutQuando(e.quando)) + ' — ' + esc(e.por || '') + ' · ' + (e.acao === 'removeu' ? 'removeu a autorização' : 'autorizou desvincular') + (e.motivo ? ' (' + esc(e.motivo) + ')' : '') + '</div>'
+    + (e.obs ? '<div style="margin-top:3px;color:#374151;white-space:pre-wrap">' + esc(e.obs) + '</div>' : '') + '</div>').join('');
+}
+// Relê a chave no banco ANTES de gravar (outra pessoa pode ter marcado outro monitorado) e AGUARDA a gravação.
+async function _scAutMutar(fn) {
+  let base = _scAutDados();
+  if (window._db) {
+    try {
+      const r = await _dbLerChave('cme_semcom_autorizados');
+      if (r.error) throw r.error;
+      if (r.data && r.data.value && r.data.value.itens && typeof r.data.value.itens === 'object') base = r.data.value;
+    } catch (e) { _mostrarToast('Sem conexão com o banco — nada foi salvo. Tente de novo.', 'erro'); return false; }
+  }
+  const novo = JSON.parse(JSON.stringify(base)); novo.itens = novo.itens || {};
+  if (fn(novo) === false) return false;
+  if (window._db) {
+    const { error } = await _dbGravar('cme_semcom_autorizados', novo);
+    if (error) { _mostrarToast('Não consegui salvar a autorização (' + (error.message || error) + '). Nada foi marcado. Tente de novo.', 'erro'); return false; }
+  }
+  _cache['semcom_autorizados'] = novo;
+  return true;
+}
+// chip da barra: liga/desliga o filtro "Autorizado desvincular" (o mesmo do select)
+function _scFiltrarAutorizado() {
+  const sel = document.getElementById('sc-f-situacao'); if (!sel) return;
+  sel.value = sel.value === 'autorizado' ? '' : 'autorizado';
+  renderizarSemCom('juridico');
+}
+function abrirModalAutDesvinc(monId) {
+  if (!_scAutPode()) { _mostrarToast('Só a gerência e o administrador marcam "Autorizado desvincular".', 'erro'); return; }
+  const m = (getSemCom().monitorados || []).find(x => x.id === monId); if (!m) return;
+  const x = _scAutManual(m);
+  document.getElementById('aut-monit-id').value = monId;
+  document.getElementById('aut-nome').value = m.nome;
+  document.getElementById('aut-dias').value = _diasSemComAtual(m) + ' dias' + (_diasSemComAtual(m) >= 180 ? ' (já autorizado pelos 180 dias)' : '');
+  document.getElementById('aut-motivo').value = x && x.motivo ? x.motivo : 'Preso';
+  document.getElementById('aut-obs').value = x ? (x.obs || '') : '';
+  document.getElementById('aut-titulo').textContent = x ? 'Editar autorização para desvincular' : 'Autorizar desvincular';
+  document.getElementById('modal-semcom-aut').classList.add('open');
+}
+async function salvarAutDesvinc() {
+  if (!_scAutPode()) return;
+  const monId = document.getElementById('aut-monit-id').value;
+  const motivo = document.getElementById('aut-motivo').value;
+  const obs = document.getElementById('aut-obs').value.trim();
+  if (obs.length < 5) { _mostrarToast('Escreva a observação (ex.: "preso desde 10/11 — confirmado por ligação").', 'erro'); return; }
+  let m = (getSemCom().monitorados || []).find(x => x.id === monId); if (!m) return;
+  const ok = await _scAutMutar(d => {
+    const antes = d.itens[monId] || { historico: [] };
+    const agora = new Date().toISOString(), por = (usuarioAtual && usuarioAtual.nome) || '';
+    d.itens[monId] = { ativo: true, motivo, obs, por, quando: agora, nome: m.nome, registro: m.registro || '',
+      historico: (antes.historico || []).concat([{ acao: 'autorizou', por, quando: agora, motivo, obs }]) };
+  });
+  if (!ok) return;
+  try { auditar({ modulo: 'Sem Comunicação', action: 'semcom_autorizar_desvinc', alvo: m.nome, detalhe: (motivo + ': ' + obs).slice(0, 200) }); } catch (e) {}
+  fecharModal('modal-semcom-aut');
+  renderizarSemCom(_scAreaDe(m));
+  _mostrarToast('Marcado: autorizado desvincular. Nada foi desvinculado no AKILES.', 'sucesso');
+}
+async function removerAutDesvinc(monId) {
+  if (!_scAutPode()) { _mostrarToast('Só a gerência e o administrador removem a autorização.', 'erro'); return; }
+  const m = (getSemCom().monitorados || []).find(x => x.id === monId); if (!m) return;
+  if (!confirm('Remover a autorização de desvincular de ' + m.nome + '?' + (_diasSemComAtual(m) >= 180 ? '\n\nEle continua aparecendo como autorizado porque tem 180 dias ou mais sem comunicar.' : ''))) return;
+  const ok = await _scAutMutar(d => {
+    const x = d.itens[monId]; if (!x || !x.ativo) return false;
+    const agora = new Date().toISOString(), por = (usuarioAtual && usuarioAtual.nome) || '';
+    x.ativo = false; x.historico = (x.historico || []).concat([{ acao: 'removeu', por, quando: agora, motivo: x.motivo, obs: x.obs }]);
+  });
+  if (!ok) return;
+  try { auditar({ modulo: 'Sem Comunicação', action: 'semcom_remover_autorizacao', alvo: m.nome, detalhe: '' }); } catch (e) {}
+  renderizarSemCom(_scAreaDe(m));
+  _mostrarToast('Autorização removida.', 'sucesso');
+}
 // Área do registro: marcação MANUAL (areaManual) tem prioridade — alguns DPP
 // não vêm com "-DPP" no Excel do AKILES, então o operador pode reclassificar.
 function _scAreaDe(m)       { if (m && (m.areaManual === 'psicossocial' || m.areaManual === 'juridico')) return m.areaManual; return _scIsDPP(m) ? 'psicossocial' : 'juridico'; }
@@ -10571,6 +10720,7 @@ function renderizarSemCom(area) {
   if (fSituacao === 'desvinculado') lista = lista.filter(m => m.situacao === 'desvinculado');
   else if (fSituacao === 'tratativa') lista = lista.filter(m => (m.tratativas||[]).length > 0 && _scEmAberto(m));
   else if (fSituacao === 'ativo')    lista = lista.filter(m => _scEmAberto(m));
+  else if (fSituacao === 'autorizado') lista = lista.filter(_scAutorizado);   // 180 dias ou mais OU marcado
   if (fDiasMin > 0) lista = lista.filter(m => _diasSemComAtual(m) >= fDiasMin);
   if (fMedida === 'mpu')    lista = lista.filter(_scMPU);
   if (fMedida === 'demais') lista = lista.filter(m => !_scMPU(m));
@@ -10594,6 +10744,15 @@ function renderizarSemCom(area) {
   kpi('mpu',    aberto.filter(_scMPU).length);
   kpi('mpu3',   aberto.filter(m => _scMPU(m) && _diasSemComAtual(m) >= 3).length);
   kpi('demais', aberto.filter(m => !_scMPU(m)).length);
+  // contagem do filtro "Autorizado desvincular" na própria opção do select (conta TODOS os em aberto da área, não só os filtrados)
+  const optAut = document.querySelector('#' + cfg.pfx + '-f-situacao option[value="autorizado"]');
+  const nAut = aberto.filter(_scAutorizado).length;
+  if (optAut) optAut.textContent = 'Autorizado desvincular (' + nAut + ')';
+  const chipAut = document.getElementById(cfg.pfx + '-chip-aut');   // chip com contagem (só na tela Sem Comunicação)
+  if (chipAut) {
+    document.getElementById(cfg.pfx + '-chip-aut-n').textContent = nAut;
+    chipAut.classList.toggle('ativo', fSituacao === 'autorizado'); chipAut.setAttribute('aria-pressed', fSituacao === 'autorizado' ? 'true' : 'false');
+  }
 
   // Última importação (timestamp da área, com fallback ao global)
   const uiEl = document.getElementById(cfg.ultima);
@@ -10626,7 +10785,7 @@ function renderizarSemCom(area) {
     const unid = [m.registro ? 'Reg. ' + m.registro : '', m.unidade || ''].filter(Boolean).join(' · ');
     const idj = _jsq(m.id);
     return `<tr class="${cls === 'cr' ? 'row-vencido' : cls === 'at' ? 'row-atencao' : ''}">
-      <td><div class="idv-nome">${esc(m.nome)}${_scSeloVD(m)}</div>${unid ? `<div class="idv-mini">${esc(unid)}</div>` : ''}${typeof _scLinhaContato === 'function' ? _scLinhaContato(m) : ''}</td>
+      <td><div class="idv-nome">${esc(m.nome)}${_scSeloVD(m)}${_scSeloAut(m)}</div>${unid ? `<div class="idv-mini">${esc(unid)}</div>` : ''}${_scLinhaAut(m)}${typeof _scLinhaContato === 'function' ? _scLinhaContato(m) : ''}</td>
       <td><span class="idv-data" style="font-size:15px;font-weight:600;color:${cls === 'cr' ? 'var(--idv-cr)' : cls === 'at' ? 'var(--idv-at)' : 'var(--idv-sec)'}">${dias} d</span>${m.tempoSemCom ? `<div class="idv-mini">${esc(_scTempoLegivel(m.tempoSemCom))}</div>` : ''}${_akBateriaHtml(m.registro, true)}</td>
       <td><span class="idv-data" style="font-size:13px;white-space:nowrap">${esc(_scDataBR(m.ultimaComunicacao))}</span>${m.intervalo ? `<div class="idv-mini">${esc(m.intervalo)}</div>` : ''}</td>
       <td>${sit}</td>
@@ -10657,6 +10816,11 @@ function _scMenuLinha(id, area) {
   const idj = _jsq(id), destino = area === 'psicossocial' ? 'juridico' : 'psicossocial';
   const itens = [['Ver ficha e histórico', "verMonitoradoSemCom('" + idj + "')"],
     [area === 'psicossocial' ? 'Mover para o Jurídico' : 'Mover para DPP (Psicossocial)', "_scMoverArea('" + idj + "','" + destino + "')"]];
+  if (m.situacao !== 'desvinculado' && _scAutPode()) {
+    itens.push('hr');
+    if (_scAutManual(m)) itens.push(['Editar autorização para desvincular', "abrirModalAutDesvinc('" + idj + "')"], ['Remover autorização para desvincular', "removerAutDesvinc('" + idj + "')"]);
+    else itens.push([_diasSemComAtual(m) >= 180 ? 'Acrescentar observação (autorizado desvincular)' : 'Autorizar desvincular', "abrirModalAutDesvinc('" + idj + "')"]);
+  }
   if (m.situacao !== 'desvinculado') itens.push('hr', ['Desvincular', "abrirModalDesvinc('" + idj + "')", true]);
   return itens;
 }
@@ -10707,6 +10871,7 @@ function abrirModalTratativa(monId) {
         <div style="margin-top:3px;color:#374151;white-space:pre-wrap">${esc(t.descricao)}</div>
       </div>`).join('')
     : '<div style="color:#888;font-size:.85rem;padding:8px">Nenhuma tratativa registrada ainda.</div>';
+  hist.insertAdjacentHTML('afterbegin', _scHtmlAut(m));
   document.getElementById('modal-semcom-tratativa').classList.add('open');
 }
 
@@ -10834,6 +10999,7 @@ function verMonitoradoSemCom(monId) {
         <div style="margin-top:3px;color:#374151;white-space:pre-wrap">${esc(t.descricao)}</div>
       </div>`).join('')
     : '<div style="color:#888;font-size:.85rem;padding:8px">Nenhuma tratativa registrada.</div>';
+  hist.insertAdjacentHTML('afterbegin', _scHtmlAut(m));   // autorização para desvincular (quem/quando/por quê) no topo do histórico
   document.getElementById('modal-semcom-ver').classList.add('open');
 }
 
