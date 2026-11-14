@@ -23297,6 +23297,14 @@ function com_init() {
     o.value = m.id; o.textContent = m.nome;
     selM.lastElementChild.appendChild(o);
   });
+  // (14/11/2026) Atalho: o relatório de violações com mapa (padrão LAERCIO) sai do
+  // Gerador de Violações. Só aparece para quem tem a aba Relatório.
+  if (com_podeAbrirGerador()) {
+    const og = document.createElement('optgroup'); og.label = 'Relatório com mapa';
+    const o = document.createElement('option'); o.value = COM_ATALHO_GERADOR;
+    o.textContent = 'Relatório de Monitoração Eletrônica (abre o Gerador de Violações)';
+    og.appendChild(o); selM.appendChild(og);
+  }
   const hoje = new Date();
   const dd   = String(hoje.getDate()).padStart(2,'0');
   const mm   = String(hoje.getMonth()+1).padStart(2,'0');
@@ -23351,7 +23359,19 @@ function com_atualizarDestinatario() {
    começa com o corpo EM BRANCO para o usuário escrever do zero (sem herdar o
    texto do modelo anterior). */
 let _comAssuntoAuto = ''; // último assunto preenchido sozinho (não sobrescreve o que a pessoa digitou)
+const COM_ATALHO_GERADOR = '__gerador_violacoes';
+let _comModeloAnterior = '';
+function com_podeAbrirGerador() {
+  return (TABS_POR_NIVEL[usuarioAtual?.nivel] || []).includes('relatorio');
+}
 function com_onModeloTrocado() {
+  const selMod = document.getElementById('com-of-modelo');
+  if (selMod.value === COM_ATALHO_GERADOR) {
+    selMod.value = _comModeloAnterior; // o formulário do ofício fica como estava
+    if (!com_podeAbrirGerador()) return;
+    mudarAba('relatorio'); mudarSubAbaRel('gerador');
+    return;
+  }
   _comTextoBloqueado = false;
   _comCorpoEditado   = false;
   const m  = COM_MODELOS.find(x => x.id === document.getElementById('com-of-modelo').value);
@@ -23363,6 +23383,7 @@ function com_onModeloTrocado() {
   com_atualizarPreview();
 }
 function com_atualizarCampos() {
+  _comModeloAnterior = document.getElementById('com-of-modelo').value;
   const m   = COM_MODELOS.find(x => x.id === document.getElementById('com-of-modelo').value);
   // Assunto: ao trocar de modelo, preenche o campo com o assunto padrão do
   // modelo (editável — a Comunicação pode digitar um próprio depois).
@@ -26900,6 +26921,7 @@ function com_limparOficio() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  _comModeloAnterior = '';
   ['com-of-destinatario','com-of-numero','com-of-nome','com-of-processo'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
