@@ -21424,7 +21424,7 @@ async function rv_gerarAutomatico(nomeOuFiltros, ini, fim, opts){
   rv_atualizarAssinante(); rv_marcarTodos(true);
   // mapas das violações de zona (pelo robô)
   const pedidos=new Map();
-  _rv_grupos.forEach(g=>g.filter(x=>/zona/i.test(x.tipo||'')).forEach(x=>{ const id=String(x.idOc||'').trim(); if(id&&!pedidos.has(id)) pedidos.set(id,_rvPedidoRobo(x)); }));
+  _rv_grupos.forEach(g=>g.filter(_rvTemMapa).forEach(x=>{ const id=String(x.idOc||'').trim(); if(id&&!pedidos.has(id)) pedidos.set(id,_rvPedidoRobo(x)); }));
   const faltam=[...pedidos.keys()].filter(id=>!_rv_imagens[id]);
   if(faltam.length) await rv_capturarViaCloud(faltam.map(id=>pedidos.get(id)));
   // capa: período da busca + endereço, contato e datas da ficha do AKILES (robô, só leitura)
@@ -21573,7 +21573,7 @@ function rv_renderizarLista() {
     const total = g.length;
     const tipos = [...new Set(g.map(x => x.tipo))].length;
     // Violações de zona (inclusão/exclusão) — são as que recebem o print do mapa
-    const zonas = g.filter(x => /zona/i.test(x.tipo || ''));
+    const zonas = g.filter(_rvTemMapa);
     // um idOc pode estar em VÁRIOS grupos (mesmo monitorado em 2 processos), por
     // isso guardamos uma LISTA de grupos por idOc — senão o último sobrescreve e
     // marcar um grupo não capturaria o mapa (idOc apontava pro grupo errado).
@@ -21672,7 +21672,7 @@ async function rv_botaoLote() {
   _rv_grupos.forEach((g, i) => {
     const chk = document.getElementById('rv-chk-' + i);
     if (!chk || !chk.checked) return;
-    g.filter(x => /zona/i.test(x.tipo || '')).forEach(x => {
+    g.filter(_rvTemMapa).forEach(x => {
       const idOc = String(x.idOc || '').trim();
       if (idOc && !pedidos.has(idOc)) pedidos.set(idOc, _rvPedidoRobo(x));
     });
@@ -21703,8 +21703,35 @@ function _rvPedidoRobo(x) {
   const ts = d => { const m = String(d || '').match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})/); return m ? m[3] + m[2] + m[1] + m[4] + m[5] : ''; };
   const ini = ts(x.ocorreu), fim = ts(x.fim) || ini;
   if (!idOc || !x.disp || !ini) return idOc;
-  const tipo = /exclus/i.test(x.tipo || '') ? 'E' : /inclus/i.test(x.tipo || '') ? 'I' : 'Z';
+  const tipo = _rvEhProx(x.tipo) ? 'P' : /exclus/i.test(x.tipo || '') ? 'E' : /inclus/i.test(x.tipo || '') ? 'I' : 'Z';
   return [idOc, x.disp, ini, fim, tipo].join('_');
+}
+/* (16/11/2026) Proximidade com o dispositivo de segurança (DPP) da vítima também leva
+   mapa: o robô sobrepõe o GPS da vítima ao do monitorado, desenha os raios cadastrados e
+   mede a menor distância (método do Adriano). O resultado volta em _rv_gps[idOc].prox. */
+function _rvEhProx(tipo) { const t = String(tipo || ''); return /proximidade/i.test(t) && /dispositivo|seguran|dpp|v[ií]tima/i.test(t); }
+function _rvTemMapa(x) { return /zona/i.test(x.tipo || '') || _rvEhProx(x.tipo); }
+/* Parágrafos abaixo do mapa de proximidade: medição do GPS + tratativa do operador. */
+const _nn = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
+function _rvTextoProx(x) {
+  const g = (window._rv_gps || {})[String(x.idOc || '').replace(/\D/g, '')], p = g && g.prox, out = [];
+  if (p && p.nomeFicha && x.nome && _nn(p.nomeFicha) !== _nn(x.nome)) { console.warn('Proximidade: a ficha lida (' + p.nomeFicha + ') não é de ' + x.nome + ' — medição não usada.'); out.push('A medição de proximidade não foi incluída: a ficha lida no AKILES não confere com o nome do monitorado. Conferir manualmente.'); return out; }
+  if (p) {
+    if (p.semVitima) out.push('Vítima não localizada no cadastro do monitorado no AKILES: o mapa mostra só o trajeto do monitorado.');
+    else if (!p.leiturasVitima) out.push('Sem leituras de GPS do dispositivo de segurança da vítima no período da ocorrência.');
+    else if (!p.min) out.push('Há leituras de GPS do dispositivo de segurança da vítima no período, mas nenhuma a menos de 2 minutos de uma leitura do monitorado; a distância não pôde ser medida.');
+    else {
+      const f = p.foco || p.min, eps = p.episodios || [], d0 = eps.length ? eps[0].data : '';
+      const trecho = e => (e.data !== d0 ? 'em ' + e.data.slice(0, 5) + ' ' : '') + (e.de === e.ate ? 'às ' + e.de : 'entre ' + e.de + ' e ' + e.ate) + ' (menor distância de ' + e.menor + ' m)';
+      out.push('Aproximação verificada (GPS do monitorado × dispositivo de segurança da vítima): '
+        + (eps.length ? 'o monitorado permaneceu a menos de ' + p.raioAdv + ' m da vítima ' + eps.map(trecho).join('; ') + '. ' : '')
+        + 'Menor distância no mapa: ' + f.m + ' m às ' + f.ta
+        + (f.m <= p.raioExc ? ', dentro do raio de exclusão de ' + p.raioExc + ' m.' : f.m <= p.raioAdv ? ', dentro do raio de advertência de ' + p.raioAdv + ' m.' : '.'));
+    }
+  }
+  const trat = typeof rvc_tratamentos === 'function' ? rvc_tratamentos(x.comentario).filter(t => t.texto) : [];
+  trat.forEach(t => out.push('Tratativa registrada no AKILES' + (t.operador ? ' (operador(a) ' + t.operador + (t.procTexto ? ' – procedimento “' + t.procTexto + '”' : '') + ')' : '') + ': “' + t.texto + '”'));
+  return out.map(t => t.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ' '));
 }
 
 // Cancelamento da captura em andamento (botão ✕ ao lado da barra). As funções de
@@ -21893,7 +21920,7 @@ function _rvAtualizarSlot(id) {
 function _rvAtualizarContadorGrupo(i) {
   const btn = document.getElementById('rv-mapbtn-' + i);
   if (!btn || !_rv_grupos[i]) return;
-  const zonas = _rv_grupos[i].filter(x => /zona/i.test(x.tipo || ''));
+  const zonas = _rv_grupos[i].filter(_rvTemMapa);
   const n = zonas.length, f = zonas.filter(x => _rv_imagens[String(x.idOc || '')]).length;
   btn.textContent = `\u{1F5FA}\u{FE0F} Mapas ${f}/${n}`;
   btn.style.background  = f ? 'var(--idv-ok-f)' : 'var(--idv-cartao)';
@@ -22236,7 +22263,10 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
     // página seguinte e a linha ficava sozinha no rodapé, com até 10 cm em branco).
     const _cel=`${_rvTcTxt(String(x.tipo||''))}${_rvTcTxt(String(x.idOc||''))}${_rvTcTxt(_rvFmtOcorreu(x.ocorreu))}${_rvTcTxt(String(x.duracao||''))}`;
     vrows+=_a ? `<w:tr><w:trPr><w:cantSplit/></w:trPr>${_cel.replace(/<w:pPr>/g,'<w:pPr><w:keepNext/>')}</w:tr>` : `<w:tr>${_cel}</w:tr>`;
-    if(_a){ vrows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${_rvTc(_rvPara([_rvImgRun(_a.rid,_rvEmuW(_a.im,5.6))],{jc:'center'}),{span:4})}</w:tr>`; }
+    // proximidade com a vítima: medição do GPS + tratativa do operador logo abaixo do mapa (16/11/2026)
+    const _txP = _rvEhProx(x.tipo) ? _rvTextoProx(x) : [];
+    if(_a){ const _pm=_rvPara([_rvImgRun(_a.rid,_rvEmuW(_a.im,5.6))],{jc:'center'}); vrows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${_rvTc(_txP.length?_pm.replace('<w:pPr>','<w:pPr><w:keepNext/>'):_pm,{span:4})}</w:tr>`; }
+    if(_txP.length) vrows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${_rvTc(_txP.map(s=>_rvPara([_rvRun(s)],{jc:'both',after:3})).join(''),{span:4})}</w:tr>`;
     vrows+=`<w:tr>${_rvTc(_rvPara([_rvRun('')],{}),{span:4})}</w:tr>`;
   });
   body.push(`<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>${_RV_TBLBORDERS}</w:tblPr><w:tblGrid><w:gridCol w:w="3200"/><w:gridCol w:w="2200"/><w:gridCol w:w="2600"/><w:gridCol w:w="1600"/></w:tblGrid>${vrows}</w:tbl>`);
@@ -22422,7 +22452,7 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
         <td>${esc(r.idOc)}</td>
         <td style="white-space:nowrap">${esc(fmtOcorreu(r.ocorreu))}</td>
         <td>${esc(r.duracao)}</td>
-      </tr>${_imgRow}
+      </tr>${_imgRow}${_rvEhProx(r.tipo) && _rvTextoProx(r).length ? `<tr><td colspan="4" style="text-align:justify;padding:6px 6px">${_rvTextoProx(r).map(s => '<p style="margin:0 0 4px">' + esc(s) + '</p>').join('')}</td></tr>` : ''}
       <tr><td colspan="4">&nbsp;</td></tr>`;
     }).join('');
 
