@@ -21710,11 +21710,28 @@ function _rvPedidoRobo(x) {
    mapa: o robô sobrepõe o GPS da vítima ao do monitorado, desenha os raios cadastrados e
    mede a menor distância (método do Adriano). O resultado volta em _rv_gps[idOc].prox. */
 function _rvEhProx(tipo) { const t = String(tipo || ''); return /proximidade/i.test(t) && /dispositivo|seguran|dpp|v[ií]tima/i.test(t); }
-function _rvTemMapa(x) { return /zona/i.test(x.tipo || '') || _rvEhProx(x.tipo); }
-/* Parágrafos abaixo do mapa de proximidade: medição do GPS + tratativa do operador. */
+/* Pelo `filter(_rvTemMapa)` o 3º argumento é o grupo: a 2ª ocorrência de um par (mesmo evento) não pede mapa nem tem slot. */
+function _rvTemMapa(x, i, g) { return (/zona/i.test(x.tipo || '') || _rvEhProx(x.tipo)) && !(g && _rvPares(g).some(p => p.sec === x)); }
+/* O AKILES costuma abrir 2 ocorrências de proximidade para a mesma aproximação (ex.: "Advertência de
+   proximidade" + "Proximidade", mesmo dispositivo, minutos de diferença). Elas saem juntas, com UM mapa. */
+const RV_PAR_PROX_MIN = 5;
+function _rvTsMin(d) { const m = String(d || '').match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})/); return m ? Date.UTC(+m[3], +m[2] - 1, +m[1], +m[4], +m[5]) / 60000 : NaN; }
+function _rvPares(g) {
+  const prox = (g || []).filter(x => _rvEhProx(x.tipo) && x.disp && Number.isFinite(_rvTsMin(x.ocorreu))).sort((a, b) => _rvTsMin(a.ocorreu) - _rvTsMin(b.ocorreu));
+  const usado = new Set(), pares = [];
+  prox.forEach(a => {
+    if (usado.has(a)) return;
+    const b = prox.find(y => y !== a && !usado.has(y) && y.disp === a.disp && _rvTsMin(y.ocorreu) - _rvTsMin(a.ocorreu) <= RV_PAR_PROX_MIN && _rvTsMin(y.ocorreu) >= _rvTsMin(a.ocorreu));
+    if (b) { usado.add(a); usado.add(b); pares.push({ prim: a, sec: b }); }
+  });
+  return pares;
+}
+/* Parágrafos abaixo do mapa de proximidade: medição do GPS + tratativa do operador. `sec` = 2ª ocorrência do par. */
 const _nn = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
-function _rvTextoProx(x) {
-  const g = (window._rv_gps || {})[String(x.idOc || '').replace(/\D/g, '')], p = g && g.prox, out = [];
+function _rvTextoProx(x, sec) {
+  const gps = window._rv_gps || {}, chave = o => String(o && o.idOc || '').replace(/\D/g, '');
+  const g = gps[chave(x)] || (sec && gps[chave(sec)]), p = g && g.prox, out = [];
+  if (sec) out.push('Mesmo evento registrado nas ocorrências nº ' + String(x.idOc || '').trim() + ' e nº ' + String(sec.idOc || '').trim() + '.');
   if (p && p.nomeFicha && x.nome && _nn(p.nomeFicha) !== _nn(x.nome)) { console.warn('Proximidade: a ficha lida (' + p.nomeFicha + ') não é de ' + x.nome + ' — medição não usada.'); out.push('A medição de proximidade não foi incluída: a ficha lida no AKILES não confere com o nome do monitorado. Conferir manualmente.'); return out; }
   if (p) {
     if (p.semVitima) out.push('Vítima não localizada no cadastro do monitorado no AKILES: o mapa mostra só o trajeto do monitorado.');
@@ -21729,9 +21746,38 @@ function _rvTextoProx(x) {
         + (f.m <= p.raioExc ? ', dentro do raio de exclusão de ' + p.raioExc + ' m.' : f.m <= p.raioAdv ? ', dentro do raio de advertência de ' + p.raioAdv + ' m.' : '.'));
     }
   }
-  const trat = typeof rvc_tratamentos === 'function' ? rvc_tratamentos(x.comentario).filter(t => t.texto) : [];
+  const vistas = new Set(), trat = [];
+  [x, sec].filter(Boolean).forEach(o => (typeof rvc_tratamentos === 'function' ? rvc_tratamentos(o.comentario) : []).forEach(t => {
+    const k = (t.operador || '') + '|' + (t.texto || ''); if (t.texto && !vistas.has(k)) { vistas.add(k); trat.push(t); }
+  }));
   trat.forEach(t => out.push('Tratativa registrada no AKILES' + (t.operador ? ' (operador(a) ' + t.operador + (t.procTexto ? ' – procedimento “' + t.procTexto + '”' : '') + ')' : '') + ': “' + t.texto + '”'));
   return out.map(t => t.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ' '));
+}
+
+/* Medições de proximidade válidas do grupo (ficha conferida, com leituras pareadas), uma por data:
+   a menor distância do dia. Alimentam a nota de fonte e a síntese técnica do relatório. */
+function _rvProxMedidas(grupo) {
+  const porData = {};
+  (grupo || []).filter(x => _rvEhProx(x.tipo)).forEach(x => {
+    const g = (window._rv_gps || {})[String(x.idOc || '').replace(/\D/g, '')], p = g && g.prox;
+    if (!p || !p.min || p.semVitima || (p.nomeFicha && x.nome && _nn(p.nomeFicha) !== _nn(x.nome))) return;
+    const d = p.min.data; if (!porData[d] || p.min.m < porData[d].m) porData[d] = { data: d, m: p.min.m, raioExc: p.raioExc };
+  });
+  return Object.values(porData).sort((a, b) => a.data.split('/').reverse().join('').localeCompare(b.data.split('/').reverse().join('')));
+}
+function _rvNotaProx(grupo) {
+  if (!_rvProxMedidas(grupo).length) return '';
+  return 'Os mapas de proximidade foram elaborados com as leituras de GPS do Relatório de Telemetria do AKILES, sobrepondo, no intervalo em torno de cada ocorrência, o deslocamento do monitorado (marcadores verdes, desenhados pelo próprio AKILES) e o do dispositivo de segurança da vítima (em roxo), com os raios de exclusão e de advertência cadastrados no AKILES centrados na posição da vítima. As distâncias foram calculadas entre leituras dos dois equipamentos com diferença de até 2 minutos, sem qualquer alteração das coordenadas registradas.';
+}
+function _rvSinteseProx(grupo) {
+  const ms = _rvProxMedidas(grupo); if (!ms.length) return '';
+  const lista = ms.map((m, i) => (i ? 'de ' : 'menor distância de ') + m.m + ' m em ' + m.data);
+  const juntar = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' e ' + a[a.length - 1];
+  const dentro = ms.filter(m => m.m <= m.raioExc), re = ms[0].raioExc;
+  const cond = !dentro.length ? '' : dentro.length === ms.length ? (ms.length > 1 ? ', todas dentro' : ', dentro') + ' do raio de exclusão de ' + re + ' m'
+    : ms.length > 2 && dentro.length === 2 && dentro[0] === ms[ms.length - 2] && dentro[1] === ms[ms.length - 1] ? ', as duas últimas dentro do raio de exclusão de ' + re + ' m'
+    : ', ' + (dentro.length > 1 ? 'as de ' : 'a de ') + juntar(dentro.map(m => m.data)) + ' dentro do raio de exclusão de ' + re + ' m';
+  return 'A sobreposição das leituras de GPS do monitorado e do dispositivo da vítima confirma a aproximação: ' + juntar(lista) + cond + '.';
 }
 
 // Cancelamento da captura em andamento (botão ✕ ao lado da barra). As funções de
@@ -21836,7 +21882,7 @@ async function rv_capturarViaCloud(ids) {
 function _rvMapaJpeg(dataURL) {
   return new Promise(res => {
     const img = new Image();
-    img.onload = () => { try { const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0); res(c.toDataURL('image/jpeg', 0.85)); } catch (e) { res(dataURL); } };
+    img.onload = () => { try { const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0); res(c.toDataURL('image/jpeg', 0.92)); } catch (e) { res(dataURL); } };
     img.onerror = () => res(dataURL);
     img.src = dataURL;
   });
@@ -22255,17 +22301,27 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
   body.push(_rvEmpty());
   body.push(ident('Nome do Monitorado',nome)); body.push(ident('CPF',cpf)); body.push(ident('Número do Processo',proc)); body.push(ident('Competência',vara)); body.push(ident('Comarca',comarca));
   // tabela de violações (4 col, fonte padrão; linha-espaçadora entre cada)
-  let vrows=`<w:tr>${_rvTcTxt('Tipo de Ocorrência',{b:true})}${_rvTcTxt('ID da Ocorrência',{b:true})}${_rvTcTxt('Ocorreu',{b:true})}${_rvTcTxt('Duração',{b:true})}</w:tr>`;
+  // cabeçalho repete em cada página (tblHeader) e não fica sozinho no fim da página (keepNext)
+  const _hdr=`${_rvTcTxt('Tipo de Ocorrência',{b:true})}${_rvTcTxt('ID da Ocorrência',{b:true})}${_rvTcTxt('Ocorreu',{b:true})}${_rvTcTxt('Duração',{b:true})}`;
+  let vrows=`<w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>${_hdr.replace(/<w:pPr>/g,'<w:pPr><w:keepNext/>')}</w:tr>`;
+  // proximidade: o par "Advertência + Proximidade" do mesmo evento sai junto, com UM mapa e um texto (16/11/2026)
+  const _pares=_rvPares(grupo), _sec=new Set(_pares.map(p=>p.sec)), _secDe=new Map(_pares.map(p=>[p.prim,p.sec]));
+  const _linhaOc=(o,ligar)=>{
+    const c=`${_rvTcTxt(String(o.tipo||''))}${_rvTcTxt(String(o.idOc||''))}${_rvTcTxt(_rvFmtOcorreu(o.ocorreu))}${_rvTcTxt(String(o.duracao||''))}`;
+    return ligar ? `<w:tr><w:trPr><w:cantSplit/></w:trPr>${c.replace(/<w:pPr>/g,'<w:pPr><w:keepNext/>')}</w:tr>` : `<w:tr>${c}</w:tr>`;
+  };
   grupo.forEach(x=>{
-    const _src=_rv_imagens[String(x.idOc||'')];
+    if(_sec.has(x)) return; // 2ª ocorrência do par: já saiu junto da 1ª
+    const y=_secDe.get(x)||null;
+    const _src=_rv_imagens[String(x.idOc||'')]||(y&&_rv_imagens[String(y.idOc||'')])||'';
     const _a=_src?addBodyImg(_src):null;
+    // medição do GPS + tratativa do operador logo abaixo do mapa
+    const _txP = _rvEhProx(x.tipo) ? _rvTextoProx(x,y) : [];
     // Com mapa: a linha da violação não se separa do mapa (antes o mapa caía na
     // página seguinte e a linha ficava sozinha no rodapé, com até 10 cm em branco).
-    const _cel=`${_rvTcTxt(String(x.tipo||''))}${_rvTcTxt(String(x.idOc||''))}${_rvTcTxt(_rvFmtOcorreu(x.ocorreu))}${_rvTcTxt(String(x.duracao||''))}`;
-    vrows+=_a ? `<w:tr><w:trPr><w:cantSplit/></w:trPr>${_cel.replace(/<w:pPr>/g,'<w:pPr><w:keepNext/>')}</w:tr>` : `<w:tr>${_cel}</w:tr>`;
-    // proximidade com a vítima: medição do GPS + tratativa do operador logo abaixo do mapa (16/11/2026)
-    const _txP = _rvEhProx(x.tipo) ? _rvTextoProx(x) : [];
-    if(_a){ const _pm=_rvPara([_rvImgRun(_a.rid,_rvEmuW(_a.im,5.6))],{jc:'center'}); vrows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${_rvTc(_txP.length?_pm.replace('<w:pPr>','<w:pPr><w:keepNext/>'):_pm,{span:4})}</w:tr>`; }
+    vrows+=_linhaOc(x,!!(_a||y||_txP.length));
+    if(y) vrows+=_linhaOc(y,!!(_a||_txP.length));
+    if(_a){ const _pm=_rvPara([_rvImgRun(_a.rid,_rvEmuW(_a.im,_rvEhProx(x.tipo)?6.3:5.6))],{jc:'center'}); vrows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${_rvTc(_txP.length?_pm.replace('<w:pPr>','<w:pPr><w:keepNext/>'):_pm,{span:4})}</w:tr>`; }
     if(_txP.length) vrows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${_rvTc(_txP.map(s=>_rvPara([_rvRun(s)],{jc:'both',after:3})).join(''),{span:4})}</w:tr>`;
     vrows+=`<w:tr>${_rvTc(_rvPara([_rvRun('')],{}),{span:4})}</w:tr>`;
   });
@@ -22273,11 +22329,13 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
   // nota de autenticidade (Arial 11, recuo 1.25cm, justificado)
   body.push(_rvEmpty());
   body.push(_rvPara([_ar('As informações contidas neste relatório foram extraídas diretamente do Sistema AKILES AP, plataforma oficial de monitoramento eletrônico adotada pela Central de Monitoramento Eletrônico (CME/IAPEN-AP). Os dados são reproduzidos na íntegra, sem qualquer modificação, supressão ou acréscimo de conteúdo, refletindo fielmente os registros gerados e armazenados automaticamente pelo sistema. Este documento possui validade para fins administrativos e judiciais, nos termos da legislação vigente.')],{jc:'both',indent:1.25}));
+  { const _np = _rvNotaProx(grupo); if (_np) body.push(_rvPara([_ar(_np)], { jc: 'both', indent: 1.25, before: 6 })); } // como foram feitos os mapas de proximidade
   // síntese técnica (Arial 11)
   body.push(_rvEmpty());
   const _st=(t,o)=>_rvPara([_ar(t)],Object.assign({jc:'both',before:6,after:6,line:16.5,indent:1.25},o||{}));
   body.push(_rvPara([_ar('SÍNTESE TÉCNICA DAS OCORRÊNCIAS',{b:true})],{jc:'center',before:6,after:6,line:16.5}));
   body.push(_st('Da análise dos registros extraídos do Sistema AKILES AP, verifica-se que o presente relatório apresenta ocorrências relacionadas a possíveis descumprimentos dos deveres e obrigações do monitorado, conforme registros constantes nas tabelas acima.'));
+  { const _sp = _rvSinteseProx(grupo); if (_sp) body.push(_st(_sp)); } // menores distâncias das aproximações
   const TIPO_BAT='Dispositivo desligado por falta de carga na bateria';
   let maxMin=-1,maxBat=null; grupo.filter(x=>x.tipo===TIPO_BAT).forEach(x=>{const m=_rvParseDurMin(x.duracao); if(m>maxMin){maxMin=m;maxBat=x;}});
   if(maxBat){ const oc=_rvFmtOcorreu(maxBat.ocorreu); const mm=oc.match(/(\d{2}\/\d{2}\/\d{4}).*?(\d{2}:\d{2})/); const dh=mm?`${mm[1]} às ${mm[2]}`:oc; const dur=String(maxBat.duracao||'').trim(), idb=String(maxBat.idOc||'').trim();
@@ -22442,17 +22500,23 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
     ).join('');
 
     // Tabela de violações — print do mapa (se houver) acima da linha + linha em branco após (igual ao Python)
+    // o par "Advertência + Proximidade" do mesmo evento sai junto, com UM mapa e um texto
+    const _pares = _rvPares(grupo), _sec = new Set(_pares.map(p => p.sec)), _secDe = new Map(_pares.map(p => [p.prim, p.sec]));
+    const _linhaOc = o => `<tr>
+        <td>${esc(o.tipo)}</td>
+        <td>${esc(o.idOc)}</td>
+        <td style="white-space:nowrap">${esc(fmtOcorreu(o.ocorreu))}</td>
+        <td>${esc(o.duracao)}</td>
+      </tr>`;
     const violRows = grupo.map(r => {
-      const _img = _rv_imagens[String(r.idOc || '')];
+      if (_sec.has(r)) return ''; // 2ª ocorrência do par: já saiu junto da 1ª
+      const y = _secDe.get(r) || null;
+      const _img = _rv_imagens[String(r.idOc || '')] || (y && _rv_imagens[String(y.idOc || '')]);
       const _imgRow = _img
         ? `<tr><td colspan="4" style="text-align:center;padding:6px 4px"><img src="${_img}" style="max-width:100%;max-height:360px;border:1px solid #ccc"></td></tr>`
         : '';
-      return `<tr>
-        <td>${esc(r.tipo)}</td>
-        <td>${esc(r.idOc)}</td>
-        <td style="white-space:nowrap">${esc(fmtOcorreu(r.ocorreu))}</td>
-        <td>${esc(r.duracao)}</td>
-      </tr>${_imgRow}${_rvEhProx(r.tipo) && _rvTextoProx(r).length ? `<tr><td colspan="4" style="text-align:justify;padding:6px 6px">${_rvTextoProx(r).map(s => '<p style="margin:0 0 4px">' + esc(s) + '</p>').join('')}</td></tr>` : ''}
+      const _tx = _rvEhProx(r.tipo) ? _rvTextoProx(r, y) : [];
+      return `${_linhaOc(r)}${y ? _linhaOc(y) : ''}${_imgRow}${_tx.length ? `<tr><td colspan="4" style="text-align:justify;padding:6px 6px">${_tx.map(s => '<p style="margin:0 0 4px">' + esc(s) + '</p>').join('')}</td></tr>` : ''}
       <tr><td colspan="4">&nbsp;</td></tr>`;
     }).join('');
 
@@ -22560,6 +22624,7 @@ ${semV ? '' : `
           pelo sistema. Este documento possui validade para fins administrativos e judiciais, nos termos
           da legislação vigente.
         </p>
+        ${_rvNotaProx(grupo) ? `<p class="corpo" style="text-indent:1.25cm">${esc(_rvNotaProx(grupo))}</p>` : ''}
 
         <!-- Síntese técnica -->
         <h3 style="text-align:center;margin-top:18px;font-size:11pt">SÍNTESE TÉCNICA DAS OCORRÊNCIAS</h3>
@@ -22569,6 +22634,8 @@ ${semV ? '' : `
           relatório apresenta ocorrências relacionadas a possíveis descumprimentos dos deveres e
           obrigações do monitorado, conforme registros constantes nas tabelas acima.
         </p>
+
+        ${_rvSinteseProx(grupo) ? `<p class="corpo" style="text-indent:1.25cm">${esc(_rvSinteseProx(grupo))}</p>` : ''}
 
         ${parabat ? `<p class="corpo" style="text-indent:1.25cm">${parabat}</p>` : ''}
 
