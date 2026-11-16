@@ -21744,6 +21744,9 @@ function _rvTextoProx(x, sec) {
         + (eps.length ? 'o monitorado permaneceu a menos de ' + p.raioAdv + ' m da vítima ' + eps.map(trecho).join('; ') + '. ' : '')
         + 'Menor distância no mapa: ' + f.m + ' m às ' + f.ta
         + (f.m <= p.raioExc ? ', dentro do raio de exclusão de ' + p.raioExc + ' m.' : f.m <= p.raioAdv ? ', dentro do raio de advertência de ' + p.raioAdv + ' m.' : '.'));
+      // entrada/saída do raio (o mesmo trecho destacado no mapa); só vem de robô com o mapa de rótulos
+      const dn = p.dentro;
+      if (dn && dn.de) out.push('Dentro ' + (dn.nivel === 'exclusao' ? 'da zona de exclusão' : 'da advertência') + ' (' + dn.raio + ' m): ' + (dn.ate && dn.ate !== dn.de ? 'entre ' + dn.de + ' e ' + dn.ate : 'às ' + dn.de) + '.');
     }
   }
   const vistas = new Set(), trat = [];
