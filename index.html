@@ -23784,7 +23784,32 @@ async function _comGarantirNumero() {
     return false;
   }
 }
-async function com_gerarOficioSeguro() { if (await _comGarantirNumero()) com_gerarOficio(); }
+/* (16/11/2026) Confere o formulário ANTES de reservar o número. Antes a reserva vinha
+   primeiro: cada clique com campo faltando queimava um número na central (2796–2800). */
+function _comFaltaNoOficio() {
+  const v = id => (document.getElementById(id)?.value || '').trim();
+  const modeloId = v('com-of-modelo');
+  if (!modeloId) return 'Selecione o modelo de ofício.';
+  if (!v('com-of-destinatario')) return 'Selecione comarca e vara.';
+  if (!v('com-of-numero')) return 'Informe o número do ofício.';
+  if (modeloId === 'livre') {
+    if (!v('com-of-assunto')) return 'Informe o assunto (tema) do ofício.';
+    if (!v('com-of-corpo')) return 'Escreva o texto do ofício.';
+  } else {
+    if (!v('com-of-nome')) return 'Informe o nome do monitorado.';
+    if (!v('com-of-processo')) return 'Informe o número do processo.';
+  }
+  return '';
+}
+let _comGerandoOficio = false;
+async function com_gerarOficioSeguro() {
+  const falta = _comFaltaNoOficio();
+  if (falta) return _mostrarToast('\u{26A0}\u{FE0F} ' + falta, 'erro');
+  if (_comGerandoOficio) return; // 2º clique enquanto o 1º ainda reserva: não pega outro número
+  _comGerandoOficio = true;
+  try { if (await _comGarantirNumero()) com_gerarOficio(); }
+  finally { _comGerandoOficio = false; }
+}
 
 /* Avança o número do ofício no campo para o PRÓXIMO, logo APÓS gerar — senão o
    próximo ofício repetia o mesmo número (o avanço só acontecia no "Limpar").
@@ -24288,18 +24313,10 @@ function com_gerarOficio(ov) {
     : (_assinaturaDoLogado()));
 
   if (!ov) {
-    if (!modeloId)  return _mostrarToast('\u{26A0}\u{FE0F} Selecione o modelo de ofício.','erro');
-    if (!dest)      return _mostrarToast('\u{26A0}\u{FE0F} Selecione comarca e vara.','erro');
-    if (!numero)    return _mostrarToast('\u{26A0}\u{FE0F} Informe o número do ofício.','erro');
     // No modo LIVRE nome/processo são opcionais (casos atípicos), mas o assunto e
     // o corpo digitados são obrigatórios. Nos demais modelos, nome e processo são.
-    if (modeloId === 'livre') {
-      if (!(document.getElementById('com-of-assunto')?.value.trim())) return _mostrarToast('\u{26A0}\u{FE0F} Informe o assunto (tema) do ofício.','erro');
-      if (!(document.getElementById('com-of-corpo')?.value.trim())) return _mostrarToast('\u{26A0}\u{FE0F} Escreva o texto do ofício.','erro');
-    } else {
-      if (!nomeMon)   return _mostrarToast('\u{26A0}\u{FE0F} Informe o nome do monitorado.','erro');
-      if (!processo)  return _mostrarToast('\u{26A0}\u{FE0F} Informe o número do processo.','erro');
-    }
+    const _falta = _comFaltaNoOficio();
+    if (_falta) return _mostrarToast('\u{26A0}\u{FE0F} ' + _falta, 'erro');
 
     // Anti-corrida: se OUTRA pessoa logada gerou esse número enquanto você preenchia,
     // oferece avançar para o próximo livre (evita dois ofícios com o mesmo número).
