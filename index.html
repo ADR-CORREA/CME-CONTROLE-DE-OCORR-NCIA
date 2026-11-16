@@ -1187,6 +1187,17 @@ html[data-theme="dark"] #topbar-logo{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.
 </script>
 <!-- Identidade visual única do CME (16/10/2026): peças comuns das telas redesenhadas -->
 <link rel="stylesheet" href="identidade.css?v=20261109b">
+<script>
+/* (16/11/2026) Reserva do upload-imagem-pdf.js: o módulo carrega no fim da página
+   (~11 s); se a busca/upload é usada antes, ou o arquivo não baixa, a tela quebrava
+   com "_uipOrdenarPorData is not defined". Estas versões simples valem até o módulo
+   carregar e são substituídas por ele (mesmo nome, declarado depois). */
+function _uipOrdenarPorData(arqs) { return (arqs || []).slice(); }
+function _uipSeloData() { return ''; }
+function _uipEhImagem() { return false; }
+async function _uipPrepararUpload(file) { return { file, nota: '' }; }
+function _uipAvisar() { return false; }
+</script>
 </head>
 <body>
 
