@@ -22366,7 +22366,7 @@ async function rv_gerarDocx(grupo, infoAss, infoGer){
     vrows+=_linhaOc(x,!!(_a||y||_txP.length));
     if(y) vrows+=_linhaOc(y,!!(_a||_txP.length));
     if(_a){ const _pm=_rvPara([_rvImgRun(_a.rid,_rvEmuW(_a.im,_rvEhProx(x.tipo)?6.3:5.6))],{jc:'center'}); vrows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${_rvTc(_txP.length?_pm.replace('<w:pPr>','<w:pPr><w:keepNext/>'):_pm,{span:4})}</w:tr>`; }
-    if(_txP.length) vrows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${_rvTc(_txP.map(s=>_rvPara([_rvRun(s)],{jc:'both',after:3})).join(''),{span:4})}</w:tr>`;
+    if(_txP.length) vrows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${_rvTc(_txP.map(s=>_rvPara([_rvRun(s,{size:10})],{jc:'both',after:3})).join(''),{span:4})}</w:tr>`;
     vrows+=`<w:tr>${_rvTc(_rvPara([_rvRun('')],{}),{span:4})}</w:tr>`;
   });
   body.push(`<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>${_RV_TBLBORDERS}</w:tblPr><w:tblGrid><w:gridCol w:w="3200"/><w:gridCol w:w="2200"/><w:gridCol w:w="2600"/><w:gridCol w:w="1600"/></w:tblGrid>${vrows}</w:tbl>`);
@@ -22560,7 +22560,7 @@ function rv_montarHtmlCompleto(grupos, infoAss, infoGer, isWord = false) {
         ? `<tr><td colspan="4" style="text-align:center;padding:6px 4px"><img src="${_img}" style="max-width:100%;max-height:360px;border:1px solid #ccc"></td></tr>`
         : '';
       const _tx = _rvEhProx(r.tipo) ? _rvTextoProx(r, y) : [];
-      return `${_linhaOc(r)}${y ? _linhaOc(y) : ''}${_imgRow}${_tx.length ? `<tr><td colspan="4" style="text-align:justify;padding:6px 6px">${_tx.map(s => '<p style="margin:0 0 4px">' + esc(s) + '</p>').join('')}</td></tr>` : ''}
+      return `${_linhaOc(r)}${y ? _linhaOc(y) : ''}${_imgRow}${_tx.length ? `<tr><td colspan="4" style="text-align:justify;padding:6px 6px">${_tx.map(s => '<p style="margin:0 0 4px;font-size:10pt">' + esc(s) + '</p>').join('')}</td></tr>` : ''}
       <tr><td colspan="4">&nbsp;</td></tr>`;
     }).join('');
 
