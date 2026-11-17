@@ -1930,6 +1930,7 @@ function _uipAvisar() { return false; }
         <!-- Status / resultado da importação -->
         <div id="rv-status" style="display:none;margin-bottom:14px">
           <div id="rv-status-msg" style="background:var(--idv-ok-f);border:1px solid var(--idv-ok);border-radius:6px;padding:12px 16px;color:var(--idv-ok);font-weight:600;margin-bottom:12px"></div>
+          <div id="rv-aviso-proc" class="idv-faixa at" role="alert" style="display:none;margin-bottom:12px"><span class="idv-faixa-ic" aria-hidden="true">!</span><span id="rv-aviso-proc-txt"></span></div>
 
           <!-- Opções -->
           <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px">
@@ -21416,6 +21417,7 @@ async function rv_gerarAutomatico(nomeOuFiltros, ini, fim, opts){
   }
   if(!rows.length && !semGrupos.length) return;
   _rv_grupos=Object.values(mapa).concat(semGrupos);
+  _rvAvisoProc([]);
   _rv_planilha='Metabase (automático) — '+nome+(filtros.tipo?' — '+filtros.tipo:'')+' — '+fmtBR(ini)+' a '+fmtBR(fim);
   // abre o Gerador já carregado (o servidor confere ali o que vai no relatório)
   mudarAba('relatorio'); mudarSubAbaRel('gerador');
@@ -21434,13 +21436,17 @@ async function rv_gerarAutomatico(nomeOuFiltros, ini, fim, opts){
       const nomes=[...new Set(_rv_grupos.filter(g=>!g[0]._semOcorrencia).map(g=>g[0].nome))];
       if(nomes.length) _mostrarToast('\u{1F4C7} Buscando no AKILES os dados da capa (CPF, endereço, contato, vara, datas)…');
       const fichas=Object.assign(nomes.length?await _mpFichasRobo(nomes):{}, fichasSem);
+      // monitorado com mais de um processo: descarta o expirado (o Metabase repete as ocorrências em cada processo)
+      const fp=_rvFiltrarProcessos(_rv_grupos,fichas);
+      if(fp.descartados.length){ _rv_grupos=fp.grupos; rv_renderizarLista(); rv_marcarTodos(true); }
+      _rvAvisoProc(fp.descartados.map(d=>'Processo '+d.processo+' de '+d.nome+' ignorado ('+d.motivo+').').concat(fp.avisos));
       const sem=_rv_grupos.filter(g=>!_rvAplicarFicha(g,fichas[g[0].nome])).map(g=>g[0].nome);
       if(sem.length) _mostrarToast('Capa sem os dados do AKILES para: '+sem.join(', ')+' (ficha não encontrada ou processo diferente) — preencha à mão.','erro');
     }catch(e){ _mostrarToast('Não consegui buscar os dados da capa no AKILES ('+(e.message||e)+') — a capa sai com os campos para preencher.','erro'); }
   }
   if(opts.gerarWord===false){
     const pessoas=_rv_grupos.length;
-    _mostrarToast('\u{2705} '+rows.length+' violação(ões) de '+(pessoas-semGrupos.length)+' monitorado(s)/processo(s) carregada(s)'+(semGrupos.length?' + '+semGrupos.length+' SEM VIOLAÇÃO no período':'')+'. Confira, escolha o assinante e clique em "Gerar Word".','sucesso');
+    _mostrarToast('\u{2705} '+_rv_grupos.reduce((s,g)=>s+(g[0]&&g[0]._semOcorrencia?0:g.length),0)+' violação(ões) de '+(pessoas-semGrupos.length)+' monitorado(s)/processo(s) carregada(s)'+(semGrupos.length?' + '+semGrupos.length+' SEM VIOLAÇÃO no período':'')+'. Confira, escolha o assinante e clique em "Gerar Word".','sucesso');
     return;
   }
   const sel=document.getElementById('rv-assinante');
@@ -22225,7 +22231,9 @@ function _rvAplicarFicha(grupo, f){
   if(!f||!f.encontrado||!grupo||!grupo.length) return false;
   const dig=s=>String(s||'').replace(/\D/g,''), procG=dig(grupo[0].processo).slice(0,20);
   const ps=Array.isArray(f.processos)?f.processos:[];
-  const p=ps.find(x=>dig(x.processo).slice(0,20)===procG);
+  // o mesmo processo pode estar cadastrado 2× no AKILES (caso LUCAS): vale o início mais antigo e o término mais distante dos ativos
+  const pm=ps.filter(x=>dig(x.processo).slice(0,20)===procG), at=pm.filter(x=>/^ativ/i.test(x.status||'')), base=at.length?at:pm;
+  const p=base.length>1?Object.assign({},base[0],{ inicio:base.map(x=>x.inicio).filter(Boolean).sort()[0]||'', prorrogacao:'', termino:base.map(x=>x.prorrogacao||x.termino).filter(Boolean).sort().pop()||'' }):base[0];
   if(!p && (ps.length||!procG)) return false;
   const q=f.qualificacao||{};
   const br=s=>{ s=String(s||'').trim(); const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); return m?m[3]+'/'+m[2]+'/'+m[1]:s; };
@@ -22249,6 +22257,39 @@ function _rvAplicarFicha(grupo, f){
     // monitoração começou depois do início da busca: o período do relatório começa no início da monitoração
     if(/^\d{2}\/\d{2}\/\d{4}$/.test(inicio) && x.periodoIni && iso(inicio)>iso(x.periodoIni)) x.periodoIni=inicio; });
   return true;
+}
+/* (17/11/2026) O Metabase devolve cada ocorrência UMA VEZ POR PROCESSO vinculado ao monitorado (18 → 54 linhas
+   no caso LUCAS): saía um relatório legítimo e outro falso, com as mesmas violações, de um processo EXPIRADO.
+   Com a ficha do AKILES (processos[] com status/datas) descarta o grupo cujo processo está expirado ou não cobre
+   as datas das ocorrências. Sem ficha, ou se nenhum valeria, não descarta nada e avisa. Dois processos ATIVOS
+   (varas diferentes) ficam os dois, com aviso. Devolve { grupos, descartados, avisos }. */
+function _rvAvisoProc(msgs){ // faixa fixa no Gerador (o toast some); [] esconde
+  const el=document.getElementById('rv-aviso-proc'), tx=document.getElementById('rv-aviso-proc-txt'); if(!el||!tx) return;
+  tx.textContent=(msgs||[]).join(' · '); el.style.display=(msgs||[]).length?'':'none';
+}
+function _rvFiltrarProcessos(grupos, fichas){
+  const dig=s=>String(s||'').replace(/\D/g,'').slice(0,20);
+  const dia=s=>{ s=String(s||'').trim(); let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[1]+m[2]+m[3]; m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})/); return m?m[3]+m[2]+m[1]:''; };
+  const porNome={}; (grupos||[]).forEach(g=>{ if(g[0]&&!g[0]._semOcorrencia) (porNome[g[0].nome]=porNome[g[0].nome]||[]).push(g); });
+  const descartar=new Set(), motivos=new Map(), avisos=[];
+  Object.entries(porNome).forEach(([nome,gs])=>{
+    if(gs.length<2) return;
+    const f=fichas&&fichas[nome], ps=f&&f.encontrado&&Array.isArray(f.processos)?f.processos:[], lista=gs.map(g=>g[0].processo).join(' e ');
+    if(!ps.length){ avisos.push(nome+' tem mais de um processo ('+lista+') e a ficha do AKILES não veio: nada foi descartado — confira qual é o processo certo.'); return; }
+    const vale=g=>{
+      const es=ps.filter(p=>dig(p.processo)===dig(g[0].processo));
+      if(!es.length) return {ok:true};                                   // a ficha não conhece esse processo: não descarta
+      const dias=g.map(x=>dia(x.ocorreu)).filter(Boolean).sort(), a=dias[0], b=dias[dias.length-1];
+      if(!es.some(p=>/^ativ/i.test(p.status||''))) return {ok:false,motivo:'expirado/inativo no AKILES'};
+      const cobre=es.some(p=>{ if(!/^ativ/i.test(p.status||'')) return false; const ini=dia(p.inicio), fim=dia(p.revogacao||p.prorrogacao||p.termino); return !((ini&&b&&ini>b)||(fim&&a&&fim<a)); });
+      return cobre?{ok:true}:{ok:false,motivo:'o período do processo não cobre as ocorrências'};
+    };
+    const res=gs.map(g=>({g,v:vale(g)})), bons=res.filter(r=>r.v.ok).map(r=>r.g);
+    if(!bons.length){ avisos.push(nome+' tem mais de um processo ('+lista+') e nenhum vale pela ficha do AKILES: nada foi descartado — confira os processos.'); return; }
+    res.filter(r=>!r.v.ok).forEach(r=>{ descartar.add(r.g); motivos.set(r.g,r.v.motivo); });
+    if(bons.length>1) avisos.push(nome+': monitorado com '+bons.length+' processos ativos: '+bons.map(g=>g[0].processo+(g[0].competencia?' ('+g[0].competencia+')':'')).join(' e ')+' — gere o de cada juízo.');
+  });
+  return { grupos:(grupos||[]).filter(g=>!descartar.has(g)), descartados:[...descartar].map(g=>({nome:g[0].nome,processo:g[0].processo,motivo:motivos.get(g)})), avisos };
 }
 async function rv_gerarDocx(grupo, infoAss, infoGer){
   const Z=window.JSZip; if(!Z) throw new Error('JSZip não carregado');
