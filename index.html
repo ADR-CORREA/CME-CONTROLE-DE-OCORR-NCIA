@@ -7524,6 +7524,7 @@ const _STORES_PROTEGIDAS = {
    tem essas funções, cai no acesso antigo direto à tabela — o sistema funciona nos
    dois casos. Nunca apaga linha; cme_usuarios continua só pelas funções próprias. */
 let _dbModoRpc = null; // null = ainda não testado · true = com login (RPC) · false = acesso antigo
+const _cmeRelerPendente = {}; // chave → releitura marcada (aviso do Realtime), uma por vez
 function _dbRpcAusente(err) {
   const c = String((err && err.code) || ''), m = String((err && err.message) || '');
   return c === 'PGRST202' || c === '42883' || /could not find the function|function .* does not exist/i.test(m);
@@ -7573,7 +7574,7 @@ async function _dbLer(chaves) {
     const r = await _dbRpcComRetentativa('cme_store_ler', { p_username: _sessionUser || '', p_hash: _sessionHash || '', p_keys: chaves || null });
     if (!r.error) { _dbModoRpc = true; return { data: r.data || [], error: null }; }
     if (!_dbRpcAusente(r.error)) return { data: null, error: r.error };
-    _dbModoRpc = false;
+    _dbModoRpc = false; if (window._cmeLigarSyncAntigo) window._cmeLigarSyncAntigo();
   }
   let q = window._db.from('store').select('*');
   if (chaves) q = q.in('key', chaves);
@@ -7593,7 +7594,7 @@ async function _dbGravar(k, valor, soCriar) {
     const r = await _dbRpcComRetentativa('cme_store_gravar', { p_username: _sessionUser || '', p_hash: _sessionHash || '', p_key: k, p_value: valor, p_so_criar: !!soCriar }, () => _dbSeq[k] === seq);
     if (!r.error) { _dbModoRpc = true; return { error: null }; }
     if (!_dbRpcAusente(r.error)) return { error: r.error };
-    _dbModoRpc = false;
+    _dbModoRpc = false; if (window._cmeLigarSyncAntigo) window._cmeLigarSyncAntigo();
   }
   const r = soCriar
     ? await window._db.from('store').insert({ key: k, value: valor })
@@ -21101,15 +21102,25 @@ function r2_iconeArquivo(nome) {
         if (!k || k === 'cme_usuarios') return;
         // posição ao vivo do vigia (a cada 2 min): só busca se a janela do vigia estiver aberta e não redesenha o resto do CME
         if (k === 'cme_vigia_vivo') { if (_vigiaAberto()) { const rv = await _dbLer([k]); if (!rv.error && rv.data && rv.data[0]) { _cache.vigia_vivo = rv.data[0].value; _vigiaAoVivo(); } } return; }
-        const r = await _dbLer([k]);
-        if (r.error) return;
-        const row = (r.data || [])[0], chave = k.replace('cme_', '');
-        if (row) _cache[chave] = row.value; else delete _cache[chave];
-        _cmeAposMudancaRemota(chave);
+        // (18/11/2026) Antes, TODOS os PCs abertos reliam a chave no mesmo segundo (o robô grava o pacote →
+        // 10–20 PCs × chaves grandes de uma vez) e o banco NANO travou às 10h03. Agora cada PC espera um
+        // tempo sorteado (0,5–6 s) e várias mudanças da mesma chave nesse intervalo viram UMA leitura.
+        if (_cmeRelerPendente[k]) return;
+        _cmeRelerPendente[k] = setTimeout(async () => {
+          delete _cmeRelerPendente[k];
+          const r = await _dbLer([k]);
+          if (r.error) return;
+          const row = (r.data || [])[0], chave = k.replace('cme_', '');
+          if (row) _cache[chave] = row.value; else delete _cache[chave];
+          _cmeAposMudancaRemota(chave);
+        }, 500 + Math.random() * 5500);
       })
       .subscribe();
     // Modo antigo (enquanto o banco não tem as funções com login): a própria
     // tabela store avisa as mudanças com o valor.
+    // (18/11/2026) Só liga se o modo antigo for detectado: no modo com login este canal não fazia nada,
+    // mas fazia o Realtime acompanhar a tabela store inteira (valores grandes) para cada PC conectado.
+    window._cmeLigarSyncAntigo = () => { if (window._cmeSyncAntigoLigado) return; window._cmeSyncAntigoLigado = true;
     window._db.channel('store-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'store' }, (payload) => {
         if (_dbModoRpc === true || !_dadosCarregados) return;
@@ -21124,7 +21135,8 @@ function r2_iconeArquivo(nome) {
         }
         _cmeAposMudancaRemota(chave);
       })
-      .subscribe();
+      .subscribe(); };
+    if (_dbModoRpc === false) window._cmeLigarSyncAntigo();
 
     function _cmeAposMudancaRemota(chave) {
         if (usuarioAtual) {
