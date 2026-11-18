@@ -21100,6 +21100,9 @@ function r2_iconeArquivo(nome) {
         if (_dbModoRpc !== true || !usuarioAtual || !_dadosCarregados) return;
         const k = (payload.new || payload.old || {}).key;
         if (!k || k === 'cme_usuarios') return;
+        // (18/11/2026) cópias de segurança (_backup / _bk_) não são usadas na tela e o login já não as lê:
+        // reler cada uma (até ~1 MB) em todos os PCs a cada gravação ajudou a travar o banco.
+        if (/_backup|_bk_/.test(k)) return;
         // posição ao vivo do vigia (a cada 2 min): só busca se a janela do vigia estiver aberta e não redesenha o resto do CME
         if (k === 'cme_vigia_vivo') { if (_vigiaAberto()) { const rv = await _dbLer([k]); if (!rv.error && rv.data && rv.data[0]) { _cache.vigia_vivo = rv.data[0].value; _vigiaAoVivo(); } } return; }
         // (18/11/2026) Antes, TODOS os PCs abertos reliam a chave no mesmo segundo (o robô grava o pacote →
