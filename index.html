@@ -13783,12 +13783,26 @@ function _relSemComDocHTML(m, infoAss, isWord) {
 </body></html>`;
 }
 
+// (18/11/2026) cme_plantao_auto (~1,7 MB, cresce todo dia) não vem mais na leitura do login (SQL passo 16):
+// é buscado na 1ª vez que a gerência abre uma sub-aba que o usa. Devolve true enquanto busca.
+let _plCarregando = null;
+function _plGarantir(depois) {
+  if (_cache.hasOwnProperty('plantao_auto') || !['admin', 'gerencia'].includes(usuarioAtual?.nivel)) return false;
+  if (!_plCarregando) _plCarregando = _dbLer(['cme_plantao_auto']).then(r => {
+    if (r.error) { _mostrarToast('Não consegui carregar os dados dos plantões. Abra a aba de novo em instantes.', 'erro'); return false; }
+    const row = (r.data || [])[0]; _cache.plantao_auto = row ? row.value : null; return true;
+  }).finally(() => { _plCarregando = null; });
+  _plCarregando.then(ok => { if (ok) depois(); });
+  return true;
+}
+
 // Navegação sub-abas Gerência
 function mudarSubAbaGer(aba) {
   ['agenda','arquivados','calendario','produtividade','vdzona','saidatemp','graves','siapen'].forEach(a => {
     document.getElementById('ger-stab-' + a)?.classList.toggle('active', a === aba);
     document.getElementById('ger-panel-' + a)?.classList.toggle('active', a === aba);
   });
+  if (['produtividade','vdzona','saidatemp','graves'].includes(aba) && _plGarantir(() => mudarSubAbaGer(aba))) return;
   if (aba === 'agenda')     renderizarGerencia();
   if (aba === 'arquivados') renderizarGerArquivados();
   if (aba === 'calendario') cal_render('ger-calendario');
@@ -21103,6 +21117,8 @@ function r2_iconeArquivo(nome) {
         // (18/11/2026) cópias de segurança (_backup / _bk_) não são usadas na tela e o login já não as lê:
         // reler cada uma (até ~1 MB) em todos os PCs a cada gravação ajudou a travar o banco.
         if (/_backup|_bk_/.test(k)) return;
+        // pacote dos plantões: só relê em quem já abriu a sub-aba que o usa (_plGarantir)
+        if (k === 'cme_plantao_auto' && !_cache.hasOwnProperty('plantao_auto')) return;
         // posição ao vivo do vigia (a cada 2 min): só busca se a janela do vigia estiver aberta e não redesenha o resto do CME
         if (k === 'cme_vigia_vivo') { if (_vigiaAberto()) { const rv = await _dbLer([k]); if (!rv.error && rv.data && rv.data[0]) { _cache.vigia_vivo = rv.data[0].value; _vigiaAoVivo(); } } return; }
         // (18/11/2026) Antes, TODOS os PCs abertos reliam a chave no mesmo segundo (o robô grava o pacote →
