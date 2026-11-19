@@ -7566,7 +7566,22 @@ async function _dbRpcComRetentativa(fn, args, aindaVale) {
     if (aindaVale && !aindaVale()) return { data: null, error: null };
     r = await chamar();
   }
+  if (r.error && _dbSessaoInvalida(r.error)) _cmeSessaoInvalida();
   return r;
+}
+// (19/11/2026) "nao autorizado" (28000) = o usuário+senha guardados NESTA aba não valem mais (senha trocada ou migrada,
+// acesso alterado, aba velha esquecida aberta). Antes a aba ficava sem dados e cada gravação dava "Erro ao salvar no banco:
+// nao autorizado" sem fim (caso da Silmara, 19/11). Agora a aba limpa a sessão salva e volta ao login — não apaga nada do banco.
+// "so gerencia…"/"so secretaria…" também vêm com 28000, mas são falta de permissão para UMA chave: não derrubam a sessão.
+function _dbSessaoInvalida(err) {
+  return String((err && err.code) || '') === '28000' && /^nao autorizado$/i.test(String((err && err.message) || '').trim());
+}
+let _cmeSaindoPorSessao = false;
+function _cmeSessaoInvalida() {
+  if (_cmeSaindoPorSessao || !usuarioAtual) return;
+  _cmeSaindoPorSessao = true;
+  try { localStorage.removeItem('cme_sessao'); localStorage.removeItem('cme_r2_session'); sessionStorage.setItem('cme_sessao_invalida', '1'); } catch (e) {}
+  location.reload();
 }
 // chaves: lista de 'cme_x' ou null (tudo). Retorna { data:[{key,value,updated_at}], error }
 async function _dbLer(chaves) {
@@ -21224,6 +21239,13 @@ function r2_iconeArquivo(nome) {
 
   overlay.style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
+  try {
+    if (sessionStorage.getItem('cme_sessao_invalida')) {
+      sessionStorage.removeItem('cme_sessao_invalida');
+      const errEl = document.getElementById('login-error');
+      if (errEl) { errEl.textContent = 'Sua sessão neste computador não vale mais (senha trocada ou acesso alterado). A última alteração pode não ter sido salva: entre de novo e confira.'; errEl.style.display = 'block'; }
+    }
+  } catch (e) {}
 })();
 </script>
 
