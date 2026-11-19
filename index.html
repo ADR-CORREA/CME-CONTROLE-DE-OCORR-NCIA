@@ -19319,11 +19319,15 @@ async function r2_api(method, path, headers = {}, body = null) {
   const pedir = () => fetch(base + path, { method, headers: hdr, body });
   // 20/10/2026: falha passageira do servidor/R2 (500–599 ou queda de rede) aparecia direto na tela
   // ("Erro interno no servidor"). Consulta (GET) é só leitura → tenta de novo sozinha; envio/exclusão não repete.
+  // (19/11/2026) Envio (POST /upload) também repete, mas SÓ quando o servidor responde 5xx: no Worker, o 500 do envio
+  // só sai quando a gravação no R2 falhou (nada ficou salvo), então repetir não duplica. Queda de rede NÃO repete
+  // (o arquivo pode ter chegado). Caso Silmara 19/11: "Erro interno no servidor" ao enviar recibo.
+  const repete5xx = method === 'GET' || (method === 'POST' && path === '/upload' && (body == null || body instanceof Blob));
   let res;
   for (let tentativa = 0; ; tentativa++) {
     try {
       res = await pedir();
-      if (method !== 'GET' || res.status < 500 || tentativa >= _R2_GET_RETENTATIVAS) break;
+      if (!repete5xx || res.status < 500 || tentativa >= _R2_GET_RETENTATIVAS) break;
     } catch (e) {
       if (method !== 'GET' || tentativa >= _R2_GET_RETENTATIVAS) throw e;
     }
