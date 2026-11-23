@@ -22972,6 +22972,18 @@ const COM_MODELOS = [
       `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME, informo que <b>${c.nome_monitorado}</b> foi vinculado (a) na Central de Monitoramento para uso do "Botão do Pânico", na data do dia <b>${c.data_vinculacao}</b>, em cumprimento à Decisão contida nos Autos.`,
       `Em anexo segue o Termo de Guarda e Responsabilidade e o expediente acima citado.`,
     ]},
+  // (23/11/2026) modelo da Comunicação — Ofício 2905/2026 (JVD 1ª Vara de Macapá): a vítima recebeu o DPP, mas o
+  // requerido não usa tornozeleira, então não há vinculação (sem alerta de aproximação nem perímetro de exclusão).
+  // O nome do monitorado aqui é a VÍTIMA; o processo vem do campo "Processo" do ofício (processo_autos).
+  { id:'vinc-dpp-requerido-sem-tornozeleira', cat:'Vinculação', nome:'Vinculação DPP — Requerido sem Tornozeleira',
+    assunto:'Vinculação no Sistema de Monitoração Eletrônica',
+    destPadrao:{ comarca:'Macapá', vara:'Juizado de Violência Doméstica e Familiar contra a Mulher - 1ª Vara' },
+    campos:[{id:'data_habilitacao', label:'Data em que o DPP foi habilitado', tipo:'date'}],
+    corpo:c=>[
+      `Em cumprimento à decisão judicial proferida nos autos do Processo nº ${c.processo_autos || '____'}, a vítima <b>${c.nome_monitorado}</b> foi cadastrada no sistema de monitoramento eletrônico e recebeu o Dispositivo Botão do Pânico (DPP), devidamente habilitado em <b>${c.data_habilitacao}</b>.`,
+      `Entretanto, não foi possível vincular o dispositivo da vítima ao do requerido, pois ele não está usando tornozeleira eletrônica. Sem essa vinculação, o sistema não consegue: emitir o alerta de aproximação entre o requerido e a vítima; e monitorar o perímetro de exclusão fixado na decisão.`,
+      `A vinculação poderá ser concluída assim que o requerido passar a usar a tornozeleira eletrônica.`,
+    ]},
   { id:'vinc-trab-externo', cat:'Vinculação', nome:'Vinculação — Trabalho Externo (VEP)',
     assunto:'Vinculação no Sistema de Monitoração Eletrônica',
     campos:[
@@ -23588,6 +23600,14 @@ function com_onModeloTrocado() {
   if (ct && m && m.id === 'livre') ct.value = '';
   _comRestaurarCorpo();
   com_atualizarCampos();
+  // (23/11/2026) modelo com destinatário padrão (destPadrao): só preenche se a comarca estiver vazia — continua editável
+  if (m && m.destPadrao) {
+    const selC = document.getElementById('com-of-comarca'), selV = document.getElementById('com-of-vara');
+    if (selC && selV && !selC.value) {
+      selC.value = m.destPadrao.comarca; com_atualizarVaras();
+      selV.value = m.destPadrao.vara;    com_atualizarDestinatario();
+    }
+  }
   com_sugerirNumero();
   com_atualizarPreview();
 }
@@ -24553,9 +24573,9 @@ function com_gerarOficio(ov) {
   // Coletar campos dinâmicos (do registro salvo na visualização, ou do form)
   let campos;
   if (ov) {
-    campos = Object.assign({ nome_monitorado: nomeMon }, ov.campos || {});
+    campos = Object.assign({ nome_monitorado: nomeMon, processo_autos: processo }, ov.campos || {});
   } else {
-    campos = { nome_monitorado: nomeMon };
+    campos = { nome_monitorado: nomeMon, processo_autos: processo };
     modelo.campos.forEach(c => {
       const el  = document.getElementById('com-of-campo-' + c.id);
       let val   = el ? el.value.trim() : '';
@@ -24886,7 +24906,7 @@ function com_atualizarPreview() {
   const numFmt   = numero ? `${numero}/${ano} - CME/IAPEN` : '____/'+ano+' - CME/IAPEN';
   const dataLonga = dataOficio ? com_fmtDataLonga(dataOficio) : '____';
 
-  const campos = { nome_monitorado: nomeMon };
+  const campos = { nome_monitorado: nomeMon, processo_autos: processo };
   modelo.campos.forEach(c => {
     const el = document.getElementById('com-of-campo-' + c.id);
     let val  = el ? el.value.trim() : '';
@@ -26640,7 +26660,7 @@ async function _comGerarPDFExec() {
     }
 
     // ── Corpo (do modelo — SEM ler preview textarea, evita duplicação) ──
-    const campos = { nome_monitorado: nomeMon };
+    const campos = { nome_monitorado: nomeMon, processo_autos: processo };
     if (modelo) {
       modelo.campos.forEach(c => {
         const el = document.getElementById('com-of-campo-' + c.id);
