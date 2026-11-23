@@ -23056,6 +23056,17 @@ const COM_MODELOS = [
       `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME vem informar que <b>${c.nome_monitorado}</b> foi desvinculado (a) do sistema de Monitoramento Eletrônico na data do dia <b>${c.data_desvincul}</b>, por ter dado entrada no IAPEN, em cumprimento ao Mandado de Prisão n° ${c.num_mandado}, datado de ${c.data_mandado}.`,
       `Em anexo segue o Relatório de Listagem de Eventos de Monitorados e o expediente acima citado.`,
     ]},
+  // (23/11/2026) modelo da Comunicação — Ofício 2900/2026 (1ª VEP de Macapá): desvinculação da tornozeleira por óbito do monitorado.
+  { id:'desvincul-obito', cat:'Desvinculação', nome:'Desvinculação de Tornozeleira — Óbito',
+    assunto:'Informa desvinculação no Sistema de Monitoramento Eletrônico em virtude de óbito',
+    destPadrao:{ comarca:'Macapá', vara:'1ª Vara de Execução Penal de Macapá' },
+    campos:[
+      {id:'data_desvincul', label:'Data da desvinculação', tipo:'date'},
+      {id:'doc_obito',      label:'Documento que comprova o óbito (em branco = Declaração de Óbito)', tipo:'text', placeholder:'Declaração de Óbito'},
+    ],
+    corpo:c=>[
+      `Com os cumprimentos de estilo, neste ato representada pela Central de Monitoramento Eletrônica – CME vem informar que <b>${c.nome_monitorado}</b>, foi desvinculado (a) do sistema de Monitoramento Eletrônico na data do dia <b>${c.data_desvincul}</b>, conforme Relatório de Listagem de Eventos do Monitorado, em anexo. Na oportunidade, encaminha a ${c.doc_obito || 'Declaração de Óbito'} para devidas providências.`,
+    ]},
   { id:'desvincul-trab-externo', cat:'Desvinculação', nome:'Desvinculação — Revogação de Trabalho Externo (VEP)',
     assunto:'Revogação do Trabalho Externo',
     campos:[
