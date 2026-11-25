@@ -7532,7 +7532,9 @@ function _dbRpcAusente(err) {
 // (21/10/2026) O banco (plano gratuito) cancela a consulta que passa de 3 s ("statement timeout", 57014) quando
 // fica lento por um instante. Ler ou gravar o valor inteiro de uma chave pode ser repetido sem risco (a consulta
 // cancelada não grava nada), então tenta de novo antes de desistir.
-const _DB_ESPERAS_TIMEOUT = [1500, 4000];
+// (25/11/2026) picos de 1 min no NANO (gravação de chaves de ~1 MB + releitura nos PCs) estouravam as 2 tentativas e o login
+// caía em "Não consegui carregar os dados": agora insiste por ~45 s (leitura e gravação da chave inteira são idempotentes)
+const _DB_ESPERAS_TIMEOUT = [1500, 4000, 8000, 15000];
 function _dbEstourouTempo(err) {
   const c = String((err && err.code) || ''), m = String((err && err.message) || '');
   return c === '57014' || /statement timeout/i.test(m);
@@ -7623,7 +7625,7 @@ function _upsertStoreDireto(chave, valor) {
       if (error) {
         console.error('[CME] Erro ao salvar no Supabase:', chave, error);
         _mostrarToast(_dbEstourouTempo(error)
-          ? '\u{26A0}\u{FE0F} O banco demorou demais para responder (tentei 3 vezes) e a última alteração NÃO foi salva. Aguarde alguns segundos e faça de novo.'
+          ? '\u{26A0}\u{FE0F} O banco demorou demais para responder (tentei 5 vezes) e a última alteração NÃO foi salva. Aguarde alguns segundos e faça de novo.'
           : _dbFalhaRede(error)
             ? '\u{26A0}\u{FE0F} A conexão com o banco caiu (tentei 4 vezes) e a última alteração NÃO foi salva (' + chave + '). Confira a internet e faça de novo.'
             : '\u{26A0}\u{FE0F} Erro ao salvar no banco: ' + error.message, 'erro');
@@ -8415,7 +8417,13 @@ async function _cmeGarantirDados() {
   return true;
 }
 async function iniciarApp() {
-  if (!(await _cmeGarantirDados())) {
+  // (25/11/2026) enquanto os dados carregam, mostra a tela de carregamento (antes ficava a tela parada/vazia e parecia travado)
+  const _ov = document.getElementById('loading-overlay'), _ovMsg = _ov && _ov.querySelector('p');
+  if (_ov) { if (_ovMsg) { _ovMsg.style.color = '#BDD7EE'; _ovMsg.textContent = 'Carregando os dados do sistema... (se o banco estiver ocupado, pode levar até 1 minuto)'; } _ov.style.display = 'flex'; }
+  let _okDados = false;
+  try { _okDados = await _cmeGarantirDados(); } catch (e) { console.error('[CME] carga dos dados falhou:', e); }
+  finally { if (_ov) _ov.style.display = 'none'; }
+  if (!_okDados) {
     try { localStorage.removeItem('cme_sessao'); } catch (e) {}
     usuarioAtual = null;
     document.getElementById("app").style.display = "none";
