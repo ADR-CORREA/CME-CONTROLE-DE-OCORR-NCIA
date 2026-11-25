@@ -160,7 +160,6 @@ function _secEscxCss() {
     + '.escx-p.z{background:var(--zb)}.escx-p:hover,.escx-cel-p:hover,.escx-ap-p:hover{background:#eaf2fd}'
     + '.escx-p .escx-nome,.escx-cel-p .escx-nome,.escx-ap-p .escx-nome{font-size:15px}'
     + '.escx-p.apagado .escx-nome,.escx-cel-p.apagado .escx-nome,.escx-ap-p.passou .escx-nome{color:var(--mu)}'
-    + '.escx-p.perde{box-shadow:inset 3px 0 0 var(--idv-at,#855800)}.escx-perde{color:var(--idv-at,#855800);white-space:normal}'
     + '.escx-dia-falta{background:var(--idv-at-f,#fff8c5);color:var(--idv-at,#855800);border-radius:3px;padding:0 3px;box-shadow:inset 0 -2px 0 var(--idv-at,#855800);cursor:help}'
     + '.escx-g-fora{margin-top:auto;padding:8px 14px 4px;border-top:1px dashed var(--bd);font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--mu)}'
     + '.escx-ic{background:none;border:0;color:var(--mu);cursor:pointer;font-size:14px;line-height:1;padding:4px;flex:none;font-family:inherit;border-radius:4px}'

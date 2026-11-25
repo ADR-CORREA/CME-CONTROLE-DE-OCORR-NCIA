@@ -79,7 +79,13 @@ function _secServPlantoesPerdidos(sid, g, mes, d, dias) {
   const afs = _secServAfastsNoMes(sid, mes, d);
   return (dias[g] || []).filter(dd => { const dt = mes + '-' + dd; return afs.some(a => a.inicio <= dt && (a.fim || a.inicio) >= dt); });
 }
-function _secServListaDias(ds, mes) { const l = ds.slice(), u = l.pop(); return (l.length ? l.join(', ') + ' e ' : '') + u + '/' + mes.slice(5, 7); }
+// (25/11/2026, regra do Adriano) QUALQUER férias/licença no mês tira o servidor da linha do posto: ele vai para a linha de
+// baixo da guarnição ("FÉRIAS: PP. Fulano"), com as datas quando o afastamento não cobre o mês inteiro.
+function _secServAfastadoNoMes(sid, mes, d) { return _secServAfastsNoMes(sid, mes, d).length > 0; }
+function _secServPeriodoNoMes(a, mes) {
+  const ini = mes + '-01', fim = _secServFimMes(mes); if (a.inicio <= ini && (a.fim || a.inicio) >= fim) return '';
+  const i = _secBRc(a.inicio), f = _secBRc(a.fim || a.inicio); return i.slice(3) === f.slice(3) ? i.slice(0, 2) + '–' + f : i + '–' + f;
+}
 function _secServForaMes(a, mes) {
   if (!a) return false;
   const ini = mes + '-01', fim = _secServFimMes(mes), de = a.inicio > ini ? a.inicio : ini, ate = (a.fim || a.inicio) < fim ? (a.fim || a.inicio) : fim;
@@ -128,25 +134,25 @@ function _secCartaoServico() {
     if (p !== '1' && p !== '2') return '<span class="escx-etqs" style="margin-left:auto">' + ['1', '2'].map(n => '<button type="button" class="escx-btn" style="padding:1px 8px;font-size:12px" onclick="event.stopPropagation();sec_servDefinirPosto(\'' + mes + '\',\'' + sid + '\',\'' + n + '\')" title="Colocar no Posto ' + n + ' neste mês">Posto ' + n + '</button>').join('') + '</span>';
     return '<button type="button" class="escx-ic" onclick="event.stopPropagation();sec_servPosto(\'' + mes + '\',\'' + sid + '\')" title="Posto ' + p + ' — clique para passar para o posto ' + (p === '1' ? '2' : '1') + '">\u{21C4}</button>'; };
   const perde = (sid, g) => g ? _secServPlantoesPerdidos(sid, g, mes, d, dias) : [];
-  const detPerde = (sid, ds) => { const af = _secServAfastsNoMes(sid, mes, d).filter(a => ds.some(dd => a.inicio <= mes + '-' + dd && (a.fim || a.inicio) >= mes + '-' + dd)).pop();
-    return '<span class="escx-det escx-perde">fora nos plantões <span class="mono">' + _secServListaDias(ds, mes) + '</span>'
-      + (af ? ' · ' + esc(af.tipo.toLowerCase()) + ' até <span class="mono">' + _secBRc(af.fim || af.inicio) + '</span>' : '') + '</span>'; };
-  const pessoa = (sid, i, apagado, g) => { const ds = apagado ? [] : perde(sid, g);
-    return '<div class="escx-p' + (i % 2 ? ' z' : '') + (apagado ? ' apagado' : '') + (ds.length ? ' perde' : '') + '"' + arrasta(sid) + '>'
-    + '<span class="escx-nome">' + esc(_secServNomeTela(linhas[sid])) + (ds.length ? detPerde(sid, ds) : det(_secServAfastNoMes(sid, mes, d))) + '</span>' + trocaPosto(sid) + '</div>'; };
+  // afastado no mês (bloco de baixo): todos os afastamentos do mês, com o tipo e as datas ("mês inteiro" quando cobre o mês todo)
+  const detFora = sid => _secServAfastsNoMes(sid, mes, d).map(a => { const per = _secServPeriodoNoMes(a, mes);
+    return '<span class="escx-det">' + esc(a.tipo.toLowerCase()) + ' <span class="mono">' + (per || 'mês inteiro') + '</span></span>'; }).join('');
+  const pessoa = (sid, i, apagado) => '<div class="escx-p' + (i % 2 ? ' z' : '') + (apagado ? ' apagado' : '') + '"' + arrasta(sid) + '>'
+    + '<span class="escx-nome">' + esc(_secServNomeTela(linhas[sid])) + (apagado ? detFora(sid) : det(_secServAfastNoMes(sid, mes, d))) + '</span>' + trocaPosto(sid) + '</div>';
   const guarnicao = g => {
     const membros = ids.filter(id => linhas[id].equipe === g);
-    const fora = membros.filter(id => _secServForaMes(_secServAfastNoMes(id, mes, d), mes));
+    const fora = membros.filter(id => _secServAfastadoNoMes(id, mes, d));
     const lista = membros.filter(id => !fora.includes(id));
+    const base = membros.filter(id => !_secServForaMes(_secServAfastNoMes(id, mes, d), mes)); // quem conta no efetivo do posto (fora ≥20 dias não conta)
     const atual = g === deHoje;
     const grupos = [['1', 'p1', 'Posto 1'], ['2', 'p2', 'Posto 2'], ['', 'p0', 'Sem posto']].map(([n, c, rot]) => {
       const ps = lista.filter(id => n ? linhas[id].posto === n : !['1', '2'].includes(linhas[id].posto)).sort(porNome);
-      return ps.length ? '<div class="escx-g-grupo ' + c + '">' + (n ? '<span class="escx-num ' + c + '">' + n + '</span>' : '') + rot + '</div>' + ps.map((id, i) => pessoa(id, i, false, g)).join('') : '';
+      return ps.length ? '<div class="escx-g-grupo ' + c + '">' + (n ? '<span class="escx-num ' + c + '">' + n + '</span>' : '') + rot + '</div>' + ps.map((id, i) => pessoa(id, i)).join('') : '';
     }).join('');
     return '<section class="escx-g' + (atual ? ' hoje' : '') + '" data-guarnicao="' + g + '"' + solta('G:' + g) + '>'
       + '<div class="escx-g-cab"><span class="escx-g-nome">' + g + '</span>' + (atual ? '<span class="escx-g-selo">De plantão hoje</span>' : '') + '</div>'
       + '<div class="escx-g-dias mono" title="Dias de plantão no mês">Dias ' + (dias[g] || []).map(dd => {
-          const fal = lista.filter(id => perde(id, g).includes(dd));
+          const fal = base.filter(id => perde(id, g).includes(dd));
           return fal.length ? '<span class="escx-dia-falta" title="' + esc(dd + '/' + mes.slice(5, 7) + ' — efetivo menor: ' + fal.map(id => _secServNomeTela(linhas[id]) + (['1', '2'].includes(linhas[id].posto) ? ' (posto ' + linhas[id].posto + ')' : '')).join(', ') + ' afastado(a)') + '">' + dd + '</span>' : dd;
         }).join(' · ') + '</div>'
       + (grupos || '<div class="vazio" style="padding:8px 14px">Arraste um nome para cá.</div>')
@@ -194,7 +200,7 @@ function _secCartaoServico() {
     + '<div class="escx-grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px">' + _PL_EQUIPES_SEC.map(guarnicao).join('') + '</div>'
     + '<div class="escx-sec">Setor administrativo</div>'
     + tabelaAdm
-    + '<div class="escx-nota">Nome em cinza = afastado no mês (férias ou licença). Aviso amarelo = afastado só em alguns plantões do mês (dia destacado em "Dias" = efetivo menor). Arraste o nome para mudar de setor, turno ou guarnição; \u{21C4} troca o posto ou o turno; clique no nome para abrir o cadastro.</div>'
+    + '<div class="escx-nota">Nome em cinza = afastado no mês (férias ou licença). Quem tem férias ou licença no mês fica em "Fora no mês", com as datas; dia destacado em "Dias" = posto com efetivo menor. Arraste o nome para mudar de setor, turno ou guarnição; \u{21C4} troca o posto ou o turno; clique no nome para abrir o cadastro.</div>'
     + _secServHtmlQuadroApoio(mes, d) + _secServHtmlObs(mes, d) + '</div>';
 }
 
@@ -355,22 +361,14 @@ function sec_servImprimir(mes) {
   // guarnições
   const col = _PL_EQUIPES_SEC.map(g => {
     const membros = ids.filter(id => linhas[id].equipe === g);
-    const fora = membros.filter(id => _secServForaMes(_secServAfastNoMes(id, mes, d), mes));
-    return { g, lista: membros.filter(id => !fora.includes(id)).sort((a, c) => String(linhas[a].posto || '9').localeCompare(String(linhas[c].posto || '9')) || linhas[a].nome.localeCompare(linhas[c].nome)), fora };
+    const fora = membros.filter(id => _secServAfastadoNoMes(id, mes, d));
+    const base = membros.filter(id => !_secServForaMes(_secServAfastNoMes(id, mes, d), mes));
+    return { g, base, lista: membros.filter(id => !fora.includes(id)).sort((a, c) => String(linhas[a].posto || '9').localeCompare(String(linhas[c].posto || '9')) || linhas[a].nome.localeCompare(linhas[c].nome)), fora };
   });
   const nLin = Math.max(4, ...col.map(c => c.lista.length));
-  // (25/11/2026) afastamento parcial: continua na guarnição, com os plantões que perde (fonte menor, itálico, sem cor)
-  const intervalo = af => { const i = _secBRc(af.inicio), f = _secBRc(af.fim || af.inicio); return i.slice(3) === f.slice(3) ? i.slice(0, 2) + '–' + f : i + '–' + f; };
-  const perdeFolha = (id, g) => {
-    const ds = _secServPlantoesPerdidos(id, g, mes, d, dias); if (!ds.length) return '';
-    const afs = _secServAfastsNoMes(id, mes, d).filter(a => ds.some(dd => a.inicio <= mes + '-' + dd && (a.fim || a.inicio) >= mes + '-' + dd));
-    const l = ds.slice(), u = l.pop();
-    return '<br><span style="font-size:7pt;font-style:italic;font-weight:normal">(' + afs.map(a => esc(String(a.tipo).toLowerCase()) + ' ' + intervalo(a)).join('; ')
-      + ': não concorre ' + (ds.length > 1 ? 'aos plantões ' : 'ao plantão ') + (l.length ? l.join(', ') + ' e ' : '') + u + ')</span>';
-  };
   // posto com menos servidores em algum dia de plantão (por causa dos afastamentos parciais)
   const obsPosto = c => ['1', '2'].map(n => {
-    const doPosto = c.lista.filter(id => linhas[id].posto === n); if (!doPosto.length) return '';
+    const doPosto = c.base.filter(id => linhas[id].posto === n); if (!doPosto.length) return '';
     const porN = {};
     (dias[c.g] || []).forEach(dd => { const fal = doPosto.filter(id => _secServPlantoesPerdidos(id, c.g, mes, d, dias).includes(dd)).length; if (fal) (porN[doPosto.length - fal] = porN[doPosto.length - fal] || []).push(dd); });
     return Object.keys(porN).sort().map(k => { const l = porN[k].slice(), u = l.pop(), qtd = +k;
@@ -378,8 +376,14 @@ function sec_servImprimir(mes) {
   }).filter(Boolean).join('<br>');
   let tabG = '<table style="width:100%;border-collapse:collapse;font-size:8.5pt"><tr><th style="' + b + ';background:#e7e7e7;width:34px">Nº</th>'
     + col.map(c => '<th style="' + b + ';background:#e7e7e7">GUARNIÇÃO ' + c.g + '<br>Dias: ' + (dias[c.g] || []).join(', ') + '</th>').join('') + '</tr>';
-  for (let i = 0; i < nLin; i++) tabG += '<tr><td style="' + b + ';text-align:center">' + String(i + 1).padStart(2, '0') + '</td>' + col.map(c => { const id = c.lista[i]; return '<td style="' + b + ';text-align:center;font-weight:bold">' + (id ? 'PP. ' + esc(_secServNomeFolha(linhas[id])) + posto(linhas[id].posto) + perdeFolha(id, c.g) : '') + '</td>'; }).join('') + '</tr>';
-  if (col.some(c => c.fora.length)) tabG += '<tr><td style="' + b + ';text-align:center">' + String(nLin + 1).padStart(2, '0') + '</td>' + col.map(c => '<td style="' + b + ';text-align:center;font-weight:bold">' + c.fora.map(id => { const a = _secServAfastNoMes(id, mes, d); return '<i>' + esc(String(a.tipo).toUpperCase()) + '</i>: PP. ' + esc(_secServNomeFolha(linhas[id])); }).join('<br>') + '</td>').join('') + '</tr>';
+  for (let i = 0; i < nLin; i++) tabG += '<tr><td style="' + b + ';text-align:center">' + String(i + 1).padStart(2, '0') + '</td>' + col.map(c => { const id = c.lista[i]; return '<td style="' + b + ';text-align:center;font-weight:bold">' + (id ? 'PP. ' + esc(_secServNomeFolha(linhas[id])) + posto(linhas[id].posto) : '') + '</td>'; }).join('') + '</tr>';
+  // linha de baixo: uma linha por tipo ("FÉRIAS:" / "LICENÇA-PRÊMIO:"), nomes separados por ponto e vírgula, datas do parcial
+  const foraFolha = c => { const porTipo = {};
+    c.fora.sort((x, y) => linhas[x].nome.localeCompare(linhas[y].nome)).forEach(id => _secServAfastsNoMes(id, mes, d).forEach(a => {
+      const t = String(a.tipo).toUpperCase(), per = _secServPeriodoNoMes(a, mes);
+      (porTipo[t] = porTipo[t] || []).push('PP. ' + esc(_secServNomeFolha(linhas[id])) + (per ? ' (' + per + ')' : '')); }));
+    return Object.keys(porTipo).map(t => '<i>' + esc(t) + '</i>: ' + porTipo[t].join('; ')).join('<br>'); };
+  if (col.some(c => c.fora.length)) tabG += '<tr><td style="' + b + ';text-align:center">' + String(nLin + 1).padStart(2, '0') + '</td>' + col.map(c => '<td style="' + b + ';text-align:center;font-weight:bold">' + foraFolha(c) + '</td>').join('') + '</tr>';
   const obsG = col.map(obsPosto);
   if (obsG.some(Boolean)) tabG += '<tr><td style="' + b + ';text-align:center">OBS</td>' + obsG.map(t => '<td style="' + b + ';text-align:center;font-size:7.5pt;font-style:italic">' + t + '</td>').join('') + '</tr>';
   tabG += '</table>';
