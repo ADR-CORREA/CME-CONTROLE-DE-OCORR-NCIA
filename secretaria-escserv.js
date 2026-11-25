@@ -79,9 +79,9 @@ function _secServPlantoesPerdidos(sid, g, mes, d, dias) {
   const afs = _secServAfastsNoMes(sid, mes, d);
   return (dias[g] || []).filter(dd => { const dt = mes + '-' + dd; return afs.some(a => a.inicio <= dt && (a.fim || a.inicio) >= dt); });
 }
-// (25/11/2026, regra do Adriano) QUALQUER férias/licença no mês tira o servidor da linha do posto: ele vai para a linha de
-// baixo da guarnição ("FÉRIAS: PP. Fulano"), com as datas quando o afastamento não cobre o mês inteiro.
-function _secServAfastadoNoMes(sid, mes, d) { return _secServAfastsNoMes(sid, mes, d).length > 0; }
+// (25/11/2026, regra do Adriano) férias/licença que pega ao menos UM plantão da guarnição no mês tira o servidor da linha do
+// posto: ele vai para a linha de baixo ("FÉRIAS: PP. Fulano"), com as datas quando o afastamento não cobre o mês inteiro.
+// Afastado no mês sem perder plantão (ex.: férias até 02/12 numa guarnição que começa em 03/12) fica no posto, sem anotação.
 function _secServPeriodoNoMes(a, mes) {
   const ini = mes + '-01', fim = _secServFimMes(mes); if (a.inicio <= ini && (a.fim || a.inicio) >= fim) return '';
   const i = _secBRc(a.inicio), f = _secBRc(a.fim || a.inicio); return i.slice(3) === f.slice(3) ? i.slice(0, 2) + '–' + f : i + '–' + f;
@@ -125,7 +125,6 @@ function _secCartaoServico() {
   const guardado = (d.escalaServico || {})[mes];
   const solta = alvo => ' ondragover="event.preventDefault();this.classList.add(\'escx-drop\')" ondragleave="this.classList.remove(\'escx-drop\')" ondrop="sec_servSoltar(event,\'' + mes + '\',\'' + _jsq(alvo) + '\')"';
   const arrasta = sid => ' draggable="true" ondragstart="event.dataTransfer.setData(\'text/plain\',\'escserv:' + sid + '\')" onclick="sec_editarServidor(\'' + sid + '\')" title="' + esc(linhas[sid].nome) + ' — arraste para mudar de guarnição/setor · clique para abrir o cadastro"';
-  const det = af => af ? '<span class="escx-det">' + esc(af.tipo.toLowerCase()) + ' <span class="mono">' + _secBRc(af.inicio) + '–' + _secBRc(af.fim || af.inicio) + '</span></span>' : '';
   const porNome = (a, b) => linhas[a].nome.localeCompare(linhas[b].nome);
 
   // ── Plantão 24x96: um cartão por guarnição, nomes agrupados por posto ──
@@ -138,10 +137,10 @@ function _secCartaoServico() {
   const detFora = sid => _secServAfastsNoMes(sid, mes, d).map(a => { const per = _secServPeriodoNoMes(a, mes);
     return '<span class="escx-det">' + esc(a.tipo.toLowerCase()) + ' <span class="mono">' + (per || 'mês inteiro') + '</span></span>'; }).join('');
   const pessoa = (sid, i, apagado) => '<div class="escx-p' + (i % 2 ? ' z' : '') + (apagado ? ' apagado' : '') + '"' + arrasta(sid) + '>'
-    + '<span class="escx-nome">' + esc(_secServNomeTela(linhas[sid])) + (apagado ? detFora(sid) : det(_secServAfastNoMes(sid, mes, d))) + '</span>' + trocaPosto(sid) + '</div>';
+    + '<span class="escx-nome">' + esc(_secServNomeTela(linhas[sid])) + (apagado ? detFora(sid) : '') + '</span>' + trocaPosto(sid) + '</div>';
   const guarnicao = g => {
     const membros = ids.filter(id => linhas[id].equipe === g);
-    const fora = membros.filter(id => _secServAfastadoNoMes(id, mes, d));
+    const fora = membros.filter(id => perde(id, g).length); // só quem perde ao menos 1 plantão da guarnição no mês (Adriano, 25/11)
     const lista = membros.filter(id => !fora.includes(id));
     const base = membros.filter(id => !_secServForaMes(_secServAfastNoMes(id, mes, d), mes)); // quem conta no efetivo do posto (fora ≥20 dias não conta)
     const atual = g === deHoje;
@@ -361,7 +360,7 @@ function sec_servImprimir(mes) {
   // guarnições
   const col = _PL_EQUIPES_SEC.map(g => {
     const membros = ids.filter(id => linhas[id].equipe === g);
-    const fora = membros.filter(id => _secServAfastadoNoMes(id, mes, d));
+    const fora = membros.filter(id => _secServPlantoesPerdidos(id, g, mes, d, dias).length); // só quem perde ao menos 1 plantão (Adriano, 25/11)
     const base = membros.filter(id => !_secServForaMes(_secServAfastNoMes(id, mes, d), mes));
     return { g, base, lista: membros.filter(id => !fora.includes(id)).sort((a, c) => String(linhas[a].posto || '9').localeCompare(String(linhas[c].posto || '9')) || linhas[a].nome.localeCompare(linhas[c].nome)), fora };
   });
