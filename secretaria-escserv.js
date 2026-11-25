@@ -359,10 +359,29 @@ function sec_servImprimir(mes) {
     return { g, lista: membros.filter(id => !fora.includes(id)).sort((a, c) => String(linhas[a].posto || '9').localeCompare(String(linhas[c].posto || '9')) || linhas[a].nome.localeCompare(linhas[c].nome)), fora };
   });
   const nLin = Math.max(4, ...col.map(c => c.lista.length));
+  // (25/11/2026) afastamento parcial: continua na guarnição, com os plantões que perde (fonte menor, itálico, sem cor)
+  const intervalo = af => { const i = _secBRc(af.inicio), f = _secBRc(af.fim || af.inicio); return i.slice(3) === f.slice(3) ? i.slice(0, 2) + '–' + f : i + '–' + f; };
+  const perdeFolha = (id, g) => {
+    const ds = _secServPlantoesPerdidos(id, g, mes, d, dias); if (!ds.length) return '';
+    const afs = _secServAfastsNoMes(id, mes, d).filter(a => ds.some(dd => a.inicio <= mes + '-' + dd && (a.fim || a.inicio) >= mes + '-' + dd));
+    const l = ds.slice(), u = l.pop();
+    return '<br><span style="font-size:7pt;font-style:italic;font-weight:normal">(' + afs.map(a => esc(String(a.tipo).toLowerCase()) + ' ' + intervalo(a)).join('; ')
+      + ': não concorre ' + (ds.length > 1 ? 'aos plantões ' : 'ao plantão ') + (l.length ? l.join(', ') + ' e ' : '') + u + ')</span>';
+  };
+  // posto com menos servidores em algum dia de plantão (por causa dos afastamentos parciais)
+  const obsPosto = c => ['1', '2'].map(n => {
+    const doPosto = c.lista.filter(id => linhas[id].posto === n); if (!doPosto.length) return '';
+    const porN = {};
+    (dias[c.g] || []).forEach(dd => { const fal = doPosto.filter(id => _secServPlantoesPerdidos(id, c.g, mes, d, dias).includes(dd)).length; if (fal) (porN[doPosto.length - fal] = porN[doPosto.length - fal] || []).push(dd); });
+    return Object.keys(porN).sort().map(k => { const l = porN[k].slice(), u = l.pop(), qtd = +k;
+      return 'Posto 0' + n + (qtd ? ' com ' + qtd + ' servidor' + (qtd > 1 ? 'es' : '') : ' sem servidor') + (porN[k].length > 1 ? ' nos dias ' : ' no dia ') + (l.length ? l.join(', ') + ' e ' : '') + u; }).join('<br>');
+  }).filter(Boolean).join('<br>');
   let tabG = '<table style="width:100%;border-collapse:collapse;font-size:8.5pt"><tr><th style="' + b + ';background:#e7e7e7;width:34px">Nº</th>'
     + col.map(c => '<th style="' + b + ';background:#e7e7e7">GUARNIÇÃO ' + c.g + '<br>Dias: ' + (dias[c.g] || []).join(', ') + '</th>').join('') + '</tr>';
-  for (let i = 0; i < nLin; i++) tabG += '<tr><td style="' + b + ';text-align:center">' + String(i + 1).padStart(2, '0') + '</td>' + col.map(c => { const id = c.lista[i]; return '<td style="' + b + ';text-align:center;font-weight:bold">' + (id ? 'PP. ' + esc(_secServNomeFolha(linhas[id])) + posto(linhas[id].posto) : '') + '</td>'; }).join('') + '</tr>';
+  for (let i = 0; i < nLin; i++) tabG += '<tr><td style="' + b + ';text-align:center">' + String(i + 1).padStart(2, '0') + '</td>' + col.map(c => { const id = c.lista[i]; return '<td style="' + b + ';text-align:center;font-weight:bold">' + (id ? 'PP. ' + esc(_secServNomeFolha(linhas[id])) + posto(linhas[id].posto) + perdeFolha(id, c.g) : '') + '</td>'; }).join('') + '</tr>';
   if (col.some(c => c.fora.length)) tabG += '<tr><td style="' + b + ';text-align:center">' + String(nLin + 1).padStart(2, '0') + '</td>' + col.map(c => '<td style="' + b + ';text-align:center;font-weight:bold">' + c.fora.map(id => { const a = _secServAfastNoMes(id, mes, d); return '<i>' + esc(String(a.tipo).toUpperCase()) + '</i>: PP. ' + esc(_secServNomeFolha(linhas[id])); }).join('<br>') + '</td>').join('') + '</tr>';
+  const obsG = col.map(obsPosto);
+  if (obsG.some(Boolean)) tabG += '<tr><td style="' + b + ';text-align:center">OBS</td>' + obsG.map(t => '<td style="' + b + ';text-align:center;font-size:7.5pt;font-style:italic">' + t + '</td>').join('') + '</tr>';
   tabG += '</table>';
   // setor administrativo (2 pares setor/nomes por linha, como no papel)
   const setores = {}; _secServSetoresConhecidos(d, linhas).forEach(k => { setores[k] = []; });
