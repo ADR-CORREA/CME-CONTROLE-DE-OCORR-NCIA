@@ -72,6 +72,14 @@ function _secServSetor(l) { return l.setor && !_SEC_SERV_NAO_SETOR.includes(l.se
 function _secServOrdemSetor(k) { return /^ger[eê]ncia/i.test(k) ? '0' + k : k === _SEC_SERV_SEM_SETOR ? '2' : '1' + k; }
 function _secServAfastNoMes(sid, mes, d) { const ini = mes + '-01', fim = _secServFimMes(mes); return d.afastamentos.find(a => a.servidorId === sid && a.inicio <= fim && (a.fim || a.inicio) >= ini) || null; }
 // afastado na maior parte do mês (20 dias ou mais) vai para a faixa de baixo, como "FÉRIAS: PP. Fulano" no papel
+// (25/11/2026) afastamento MENOR que o mês (fica no posto): quais dias de plantão da guarnição caem dentro dele.
+// Caso HEBERTON (ECHO, férias 01–15/12): perde os plantões 03, 08 e 13/12 e trabalha 18, 23 e 28/12.
+function _secServAfastsNoMes(sid, mes, d) { const ini = mes + '-01', fim = _secServFimMes(mes); return d.afastamentos.filter(a => a.servidorId === sid && a.inicio <= fim && (a.fim || a.inicio) >= ini); }
+function _secServPlantoesPerdidos(sid, g, mes, d, dias) {
+  const afs = _secServAfastsNoMes(sid, mes, d);
+  return (dias[g] || []).filter(dd => { const dt = mes + '-' + dd; return afs.some(a => a.inicio <= dt && (a.fim || a.inicio) >= dt); });
+}
+function _secServListaDias(ds, mes) { const l = ds.slice(), u = l.pop(); return (l.length ? l.join(', ') + ' e ' : '') + u + '/' + mes.slice(5, 7); }
 function _secServForaMes(a, mes) {
   if (!a) return false;
   const ini = mes + '-01', fim = _secServFimMes(mes), de = a.inicio > ini ? a.inicio : ini, ate = (a.fim || a.inicio) < fim ? (a.fim || a.inicio) : fim;
@@ -119,8 +127,13 @@ function _secCartaoServico() {
   const trocaPosto = sid => { const p = linhas[sid].posto;
     if (p !== '1' && p !== '2') return '<span class="escx-etqs" style="margin-left:auto">' + ['1', '2'].map(n => '<button type="button" class="escx-btn" style="padding:1px 8px;font-size:12px" onclick="event.stopPropagation();sec_servDefinirPosto(\'' + mes + '\',\'' + sid + '\',\'' + n + '\')" title="Colocar no Posto ' + n + ' neste mês">Posto ' + n + '</button>').join('') + '</span>';
     return '<button type="button" class="escx-ic" onclick="event.stopPropagation();sec_servPosto(\'' + mes + '\',\'' + sid + '\')" title="Posto ' + p + ' — clique para passar para o posto ' + (p === '1' ? '2' : '1') + '">\u{21C4}</button>'; };
-  const pessoa = (sid, i, apagado) => '<div class="escx-p' + (i % 2 ? ' z' : '') + (apagado ? ' apagado' : '') + '"' + arrasta(sid) + '>'
-    + '<span class="escx-nome">' + esc(_secServNomeTela(linhas[sid])) + det(_secServAfastNoMes(sid, mes, d)) + '</span>' + trocaPosto(sid) + '</div>';
+  const perde = (sid, g) => g ? _secServPlantoesPerdidos(sid, g, mes, d, dias) : [];
+  const detPerde = (sid, ds) => { const af = _secServAfastsNoMes(sid, mes, d).filter(a => ds.some(dd => a.inicio <= mes + '-' + dd && (a.fim || a.inicio) >= mes + '-' + dd)).pop();
+    return '<span class="escx-det escx-perde">fora nos plantões <span class="mono">' + _secServListaDias(ds, mes) + '</span>'
+      + (af ? ' · ' + esc(af.tipo.toLowerCase()) + ' até <span class="mono">' + _secBRc(af.fim || af.inicio) + '</span>' : '') + '</span>'; };
+  const pessoa = (sid, i, apagado, g) => { const ds = apagado ? [] : perde(sid, g);
+    return '<div class="escx-p' + (i % 2 ? ' z' : '') + (apagado ? ' apagado' : '') + (ds.length ? ' perde' : '') + '"' + arrasta(sid) + '>'
+    + '<span class="escx-nome">' + esc(_secServNomeTela(linhas[sid])) + (ds.length ? detPerde(sid, ds) : det(_secServAfastNoMes(sid, mes, d))) + '</span>' + trocaPosto(sid) + '</div>'; };
   const guarnicao = g => {
     const membros = ids.filter(id => linhas[id].equipe === g);
     const fora = membros.filter(id => _secServForaMes(_secServAfastNoMes(id, mes, d), mes));
@@ -128,11 +141,14 @@ function _secCartaoServico() {
     const atual = g === deHoje;
     const grupos = [['1', 'p1', 'Posto 1'], ['2', 'p2', 'Posto 2'], ['', 'p0', 'Sem posto']].map(([n, c, rot]) => {
       const ps = lista.filter(id => n ? linhas[id].posto === n : !['1', '2'].includes(linhas[id].posto)).sort(porNome);
-      return ps.length ? '<div class="escx-g-grupo ' + c + '">' + (n ? '<span class="escx-num ' + c + '">' + n + '</span>' : '') + rot + '</div>' + ps.map((id, i) => pessoa(id, i)).join('') : '';
+      return ps.length ? '<div class="escx-g-grupo ' + c + '">' + (n ? '<span class="escx-num ' + c + '">' + n + '</span>' : '') + rot + '</div>' + ps.map((id, i) => pessoa(id, i, false, g)).join('') : '';
     }).join('');
     return '<section class="escx-g' + (atual ? ' hoje' : '') + '" data-guarnicao="' + g + '"' + solta('G:' + g) + '>'
       + '<div class="escx-g-cab"><span class="escx-g-nome">' + g + '</span>' + (atual ? '<span class="escx-g-selo">De plantão hoje</span>' : '') + '</div>'
-      + '<div class="escx-g-dias mono" title="Dias de plantão no mês">Dias ' + (dias[g] || []).join(' · ') + '</div>'
+      + '<div class="escx-g-dias mono" title="Dias de plantão no mês">Dias ' + (dias[g] || []).map(dd => {
+          const fal = lista.filter(id => perde(id, g).includes(dd));
+          return fal.length ? '<span class="escx-dia-falta" title="' + esc(dd + '/' + mes.slice(5, 7) + ' — efetivo menor: ' + fal.map(id => _secServNomeTela(linhas[id]) + (['1', '2'].includes(linhas[id].posto) ? ' (posto ' + linhas[id].posto + ')' : '')).join(', ') + ' afastado(a)') + '">' + dd + '</span>' : dd;
+        }).join(' · ') + '</div>'
       + (grupos || '<div class="vazio" style="padding:8px 14px">Arraste um nome para cá.</div>')
       + (fora.length ? '<div class="escx-g-fora">Fora no mês</div>' + fora.sort(porNome).map((id, i) => pessoa(id, i, true)).join('') : '')
       + '</section>';
@@ -178,7 +194,7 @@ function _secCartaoServico() {
     + '<div class="escx-grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px">' + _PL_EQUIPES_SEC.map(guarnicao).join('') + '</div>'
     + '<div class="escx-sec">Setor administrativo</div>'
     + tabelaAdm
-    + '<div class="escx-nota">Nome em cinza = afastado no mês (férias ou licença). Arraste o nome para mudar de setor, turno ou guarnição; \u{21C4} troca o posto ou o turno; clique no nome para abrir o cadastro.</div>'
+    + '<div class="escx-nota">Nome em cinza = afastado no mês (férias ou licença). Aviso amarelo = afastado só em alguns plantões do mês (dia destacado em "Dias" = efetivo menor). Arraste o nome para mudar de setor, turno ou guarnição; \u{21C4} troca o posto ou o turno; clique no nome para abrir o cadastro.</div>'
     + _secServHtmlQuadroApoio(mes, d) + _secServHtmlObs(mes, d) + '</div>';
 }
 
