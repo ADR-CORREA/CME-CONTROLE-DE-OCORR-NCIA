@@ -4333,8 +4333,14 @@ function _uipAvisar() { return false; }
             <!-- Header da ficha -->
             <div style="display:flex;align-items:center;justify-content:space-between">
               <div style="font-weight:600;font-size:16px;color:var(--idv-texto)">Ficha do monitorado</div>
-              <button type="button" class="idv-btn mini" onclick="document.getElementById('r2-ficha-panel').style.display='none';document.getElementById('r2-pastas-view').style.display='grid'">Fechar ✕</button>
+              <button type="button" class="idv-btn mini" onclick="_r2FotoLimpar();document.getElementById('r2-ficha-panel').style.display='none';document.getElementById('r2-pastas-view').style.display='grid'">Fechar ✕</button>
             </div>
+            <!-- Foto (26/11/2026): só admin/gerência/plantão; o Worker registra cada abertura na auditoria -->
+            <div id="r2-ficha-foto" style="display:none;align-items:flex-start;gap:12px">
+              <img id="r2-ficha-foto-img" alt="Foto do monitorado" width="120" height="160" draggable="false" style="width:120px;height:160px;object-fit:cover;border:1px solid var(--idv-borda);border-radius:6px;background:var(--idv-zebra)">
+              <div style="font-size:12px;color:var(--idv-sec);line-height:1.5;max-width:340px">Foto do cadastro do AKILES, só para identificar o monitorado no atendimento. Esta abertura fica registrada na auditoria. Proibido copiar, exportar ou usar em reconhecimento facial.</div>
+            </div>
+            <div id="r2-ficha-foto-msg" style="display:none;font-size:13px;color:var(--idv-sec)"></div>
             <!-- Cards de status -->
             <div id="r2-ficha-cards" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px"></div>
             <!-- IA narrativa -->
@@ -19925,6 +19931,39 @@ async function r2_reconciliarDrive(input) {
 /* ══════════════════════════════════════════════════════════
    FICHA DO MONITORADO
    ══════════════════════════════════════════════════════════ */
+// FOTO (26/11/2026, aprovado pelo Adriano): UMA foto, só ao abrir a ficha, só admin/gerência/plantão.
+// O Worker confere o nível, registra quem viu e limita 60 por hora. Sem cache e sem botão de baixar.
+const _R2_FOTO_NIVEIS = ['admin', 'gerencia', 'plantao'];
+let _r2FotoUrl = '';
+function _r2FotoLimpar() {
+  const box = document.getElementById('r2-ficha-foto'), img = document.getElementById('r2-ficha-foto-img'), msg = document.getElementById('r2-ficha-foto-msg');
+  if (box) box.style.display = 'none';
+  if (img) img.removeAttribute('src');
+  if (msg) { msg.style.display = 'none'; msg.textContent = ''; }
+  if (_r2FotoUrl) { URL.revokeObjectURL(_r2FotoUrl); _r2FotoUrl = ''; }
+}
+async function _r2FotoCarregar(monitorado) {
+  _r2FotoLimpar();
+  if (!monitorado || !_R2_FOTO_NIVEIS.includes(usuarioAtual?.nivel)) return;
+  try {
+    await _garantirTokenSessao();
+    const r = await fetch(r2_state.url.replace(/\/$/, '') + '/fotos/ver?' + new URLSearchParams({ monitorado }),
+      { headers: { 'Authorization': `Bearer ${_workerToken()}` }, cache: 'no-store' });
+    if (r2_state.monitorado !== monitorado) return; // trocou de pasta enquanto carregava
+    if (r.ok && (r.headers.get('Content-Type') || '').startsWith('image/')) {
+      _r2FotoUrl = URL.createObjectURL(await r.blob());
+      document.getElementById('r2-ficha-foto-img').src = _r2FotoUrl;
+      document.getElementById('r2-ficha-foto').style.display = 'flex';
+      return;
+    }
+    if (r.status === 409 || r.status === 429) {
+      const j = await r.json().catch(() => ({}));
+      const msg = document.getElementById('r2-ficha-foto-msg');
+      msg.textContent = j.error || '';
+      msg.style.display = msg.textContent ? 'block' : 'none';
+    }
+  } catch (e) { /* sem foto: a ficha segue normal */ }
+}
 async function r2_abrirFicha() {
   // Ocultar outras views
   document.getElementById('r2-guia-inicial').style.display    = 'none';
@@ -19933,6 +19972,7 @@ async function r2_abrirFicha() {
   document.getElementById('r2-painel-risco').style.display    = 'none';
   const painel = document.getElementById('r2-ficha-panel');
   painel.style.display = 'flex';
+  _r2FotoCarregar(r2_state.monitorado);
 
   // Mostrar loading nos cards
   document.getElementById('r2-ficha-cards').innerHTML =
@@ -20044,7 +20084,7 @@ async function r2_abrirPainelRisco() {
   document.getElementById('r2-guia-inicial').style.display  = 'none';
   document.getElementById('r2-pastas-view').style.display   = 'none';
   document.getElementById('r2-arquivos-view').style.display = 'none';
-  document.getElementById('r2-ficha-panel').style.display   = 'none';
+  document.getElementById('r2-ficha-panel').style.display   = 'none'; _r2FotoLimpar();
   document.getElementById('r2-breadcrumb').style.display    = 'none';
   const painel = document.getElementById('r2-painel-risco');
   painel.style.display = 'flex';
@@ -20363,7 +20403,7 @@ async function r2_selecionarMonitorado(nome) {
   document.getElementById('r2-guia-inicial').style.display  = 'none';
   document.getElementById('r2-pastas-view').style.display   = 'grid';
   document.getElementById('r2-arquivos-view').style.display = 'none';
-  document.getElementById('r2-ficha-panel').style.display   = 'none';
+  document.getElementById('r2-ficha-panel').style.display   = 'none'; _r2FotoLimpar();
   document.getElementById('r2-painel-risco').style.display  = 'none';
   // Carregar contagens
   r2_atualizarContagens(nome);
