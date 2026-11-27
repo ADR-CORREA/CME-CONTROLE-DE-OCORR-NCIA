@@ -473,8 +473,13 @@ function sec_escImprimir(mes) {
   const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>Escala de Apoio - ' + mesAno + '</title>'
     + '<style>html,body{background:#fff}@page{size:A4 landscape;margin:6mm 8mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;font-size:10pt}'
     + 'table{border-collapse:collapse;width:100%}td,th{' + bd + ';padding:2px 8px}@media screen{body{padding:10px 16px}}@media print{.np{display:none}}'
-    + '</style></head><body' + (lin.length > 16 ? ' style="zoom:' + Math.max(0.55, 26 / (lin.length + 8)).toFixed(2) + '"' : '') + '>' // muitas linhas: reduz tudo para caber em 1 folha
-    + '<div class="np" style="text-align:right;margin-bottom:6px"><button onclick="print()" style="padding:6px 16px;font-size:11pt;cursor:pointer">Imprimir</button></div>'
+    + '</style>'
+    // (27/11/2026, "está saindo em duas folhas") o zoom fixo por nº de linhas chegava a AUMENTAR a folha (17 nomes = 1,04).
+    // Agora, como na escala 24x96: ao imprimir, mede o conteúdo na largura útil do A4 deitado e reduz só o necessário.
+    + '<script>(function(){var W=1060,H=730;function aj(){var f=document.getElementById("folha");if(!f)return;f.style.zoom=1;f.style.width=W+"px";var z=1;'
+    + 'for(var i=0;i<6;i++){var h=f.getBoundingClientRect().height;if(h<=H)break;z=z*H/h*0.99;f.style.zoom=z;f.style.width=(W/z)+"px"}}'
+    + 'function vt(){var f=document.getElementById("folha");if(f){f.style.zoom="";f.style.width=""}}addEventListener("beforeprint",aj);addEventListener("afterprint",vt)})()</script></head><body>'
+    + '<div class="np" style="text-align:right;margin-bottom:6px"><button onclick="print()" style="padding:6px 16px;font-size:11pt;cursor:pointer">Imprimir</button></div><div id="folha">'
     + '<div style="display:flex;align-items:center;gap:8px;border-bottom:1.5px solid #000;padding-bottom:4px">'
     + img(window._IAPEN_LOGO_B64, 'image/png', 'IAPEN') + img(window._PPENAL_LOGO_B64, 'image/jpeg', 'Polícia Penal')
     + '<div style="flex:1;text-align:center;font-weight:bold;font-size:9.5pt;line-height:1.9">GOVERNO DO ESTADO DO AMAPÁ<br>SECRETARIA DE ESTADO DE JUSTIÇA E SEGURANÇA PÚBLICA - SEJUSP<br>INSTITUTO DE ADMINISTRAÇÃO PENITENCIÁRIA DO AMAPÁ - IAPEN</div>'
@@ -492,7 +497,7 @@ function sec_escImprimir(mes) {
     + '<div style="text-align:right;margin-top:26px;font-size:10pt">' + _secDataEmissao() + '</div>'
     + '<div style="text-align:center;font-size:9.5pt;line-height:1.3"><b>' + esc(_secGerente(d).toUpperCase()) + '</b><br>Gerente da Central de Monitoramento Eletrônico<br>' + esc(cfg.gerenteDecreto || 'Decreto nº 5953/2025 – GEA') + '</div>'
     + '<div style="border-top:1.5px solid #000;margin-top:4px;padding-top:6px;text-align:center;font-size:8.5pt;line-height:1.6"><b>CENTRAL DE MONITORAMENTO ELETRÔNICO – CME -</b> Av. Machado de Assis, 372 – Centro - CEP: 68900-066, Macapá-AP.<br>Email: cme@iapen.ap.gov.br - Telefone (96) 98415 2844</div>'
-    + '</body></html>';
+    + '</div></body></html>';
   _entregarDoc(new Blob([html], { type: 'text/html' }), 'Escala de apoio ' + mes + '.html');
 }
 // "DIANE BRITO", "ADRIANE BASTOS": primeiro + último nome, em maiúsculas
