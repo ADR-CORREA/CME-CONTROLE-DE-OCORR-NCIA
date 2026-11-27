@@ -57,6 +57,14 @@ function _secServLinhas(mes, d) {
   const g = (d.escalaServico || {})[mes];
   return mes < _secServAtual() && g && g.linhas ? g.linhas : _secServDoCadastro(d, mes);
 }
+// (27/11/2026, Adriano: "tem que ter a opção de remover o servidor para não sair na escala") — tirado só daquele mês,
+// guardado em cme_secretaria.escalaServFora[mes]; o cadastro e os outros meses não mudam. "Voltar" desfaz.
+function _secServTirados(mes, d) { return (d.escalaServFora || {})[mes] || {}; }
+function _secServLinhasEscala(mes, d) {
+  const l = _secServLinhas(mes, d), t = _secServTirados(mes, d), r = {};
+  Object.keys(l).forEach(id => { if (!t[id]) r[id] = l[id]; });
+  return r;
+}
 // Setores do administrativo FIXOS (pedido de 14/10/2026: "nenhum pode sumir se não tiver ninguém").
 // Lista em config.setoresAdm; enquanto não existir, vale a lista da escala geral de outubro/2026.
 const _SEC_SETORES_PADRAO = ['Gerência — Gerente', 'Gerência — Subgerente', 'Casa da Mulher Brasileira (CME)', 'Comunicação Processual', 'Jurídico', 'Logística',
@@ -120,7 +128,8 @@ function _secCartaoServico() {
   if (typeof _secEscxCss === 'function') _secEscxCss();
   const d = _secDados(), hoje = _secHoje(), mes = _secEscMesVis || hoje.slice(0, 7), passado = mes < _secServAtual();
   _secServApoioCongelar(mes);
-  const linhas = _secServLinhas(mes, d), ids = Object.keys(linhas);
+  const todas = _secServLinhas(mes, d), linhas = _secServLinhasEscala(mes, d), ids = Object.keys(linhas);
+  const tirados = Object.keys(_secServTirados(mes, d)).filter(id => todas[id]).sort((a, b) => todas[a].nome.localeCompare(todas[b].nome));
   const dias = _secServDiasGuarnicao(mes), deHoje = mes === _secServAtual() ? _secPlantaoAgora().guarnicao : '';
   const guardado = (d.escalaServico || {})[mes];
   const solta = alvo => ' ondragover="event.preventDefault();this.classList.add(\'escx-drop\')" ondragleave="this.classList.remove(\'escx-drop\')" ondrop="sec_servSoltar(event,\'' + mes + '\',\'' + _jsq(alvo) + '\')"';
@@ -132,12 +141,13 @@ function _secCartaoServico() {
   const trocaPosto = sid => { const p = linhas[sid].posto;
     if (p !== '1' && p !== '2') return '<span class="escx-etqs" style="margin-left:auto">' + ['1', '2'].map(n => '<button type="button" class="escx-btn" style="padding:1px 8px;font-size:12px" onclick="event.stopPropagation();sec_servDefinirPosto(\'' + mes + '\',\'' + sid + '\',\'' + n + '\')" title="Colocar no Posto ' + n + ' neste mês">Posto ' + n + '</button>').join('') + '</span>';
     return '<button type="button" class="escx-ic" onclick="event.stopPropagation();sec_servPosto(\'' + mes + '\',\'' + sid + '\')" title="Posto ' + p + ' — clique para passar para o posto ' + (p === '1' ? '2' : '1') + '">\u{21C4}</button>'; };
+  const tirar = sid => '<button type="button" class="escx-ic" onclick="event.stopPropagation();sec_servTirar(\'' + mes + '\',\'' + sid + '\')" title="Tirar da escala de ' + esc(_secEscMesTxt(mes)) + ' (não sai na tela nem na impressão; o cadastro não muda)" aria-label="Tirar ' + esc(_secServNomeTela(linhas[sid])) + ' da escala deste mês">\u{2715}</button>';
   const perde = (sid, g) => g ? _secServPlantoesPerdidos(sid, g, mes, d, dias) : [];
   // afastado no mês (bloco de baixo): todos os afastamentos do mês, com o tipo e as datas ("mês inteiro" quando cobre o mês todo)
   const detFora = sid => _secServAfastsNoMes(sid, mes, d).map(a => { const per = _secServPeriodoNoMes(a, mes);
     return '<span class="escx-det">' + esc(a.tipo.toLowerCase()) + ' <span class="mono">' + (per || 'mês inteiro') + '</span></span>'; }).join('');
   const pessoa = (sid, i, apagado) => '<div class="escx-p' + (i % 2 ? ' z' : '') + (apagado ? ' apagado' : '') + '"' + arrasta(sid) + '>'
-    + '<span class="escx-nome">' + esc(_secServNomeTela(linhas[sid])) + (apagado ? detFora(sid) : '') + '</span>' + trocaPosto(sid) + '</div>';
+    + '<span class="escx-nome">' + esc(_secServNomeTela(linhas[sid])) + (apagado ? detFora(sid) : '') + '</span>' + trocaPosto(sid) + tirar(sid) + '</div>';
   const guarnicao = g => {
     const membros = ids.filter(id => linhas[id].equipe === g);
     const fora = membros.filter(id => perde(id, g).length); // só quem perde ao menos 1 plantão da guarnição no mês (Adriano, 25/11)
@@ -168,7 +178,7 @@ function _secCartaoServico() {
     const af = _secServAfastNoMes(id, mes, d), t = turnoDe(id);
     return '<div class="escx-cel-p' + (af ? ' apagado' : '') + '"' + arrasta(id) + '><span class="escx-nome">' + esc(_secServNomeTela(linhas[id]))
       + (af ? '<span class="escx-det">' + esc(af.tipo.toLowerCase()) + ' até <span class="mono">' + _secBRc(af.fim || af.inicio) + '</span></span>' : '') + '</span>'
-      + '<button type="button" class="escx-ic" onclick="event.stopPropagation();sec_servTurno(\'' + mes + '\',\'' + id + '\')" title="Passar para o turno da ' + (t === 'M' ? 'tarde' : 'manhã') + '">\u{21C4}</button></div>';
+      + '<button type="button" class="escx-ic" onclick="event.stopPropagation();sec_servTurno(\'' + mes + '\',\'' + id + '\')" title="Passar para o turno da ' + (t === 'M' ? 'tarde' : 'manhã') + '">\u{21C4}</button>' + tirar(id) + '</div>';
   };
   const linhaSetor = k => {
     const ps = setores[k].sort(porNome);
@@ -199,7 +209,11 @@ function _secCartaoServico() {
     + '<div class="escx-grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px">' + _PL_EQUIPES_SEC.map(guarnicao).join('') + '</div>'
     + '<div class="escx-sec">Setor administrativo</div>'
     + tabelaAdm
-    + '<div class="escx-nota">Nome em cinza = afastado no mês (férias ou licença). Quem tem férias ou licença no mês fica em "Fora no mês", com as datas; dia destacado em "Dias" = posto com efetivo menor. Arraste o nome para mudar de setor, turno ou guarnição; \u{21C4} troca o posto ou o turno; clique no nome para abrir o cadastro.</div>'
+    + (tirados.length ? '<div class="escx-sec">Fora da escala deste mês <span style="font-weight:400;color:var(--mu)">(não saem na tela nem na impressão de ' + esc(_secEscMesTxt(mes)) + '; o cadastro não muda)</span></div>'
+      + '<div class="escx-tab-box">' + tirados.map((id, i) => { const l = todas[id], de = l.equipe === 'EXPEDIENTE' ? _secServSetor(l) : l.equipe + (['1', '2'].includes(l.posto) ? ' · Posto ' + l.posto : '');
+        return '<div class="escx-p' + (i % 2 ? ' z' : '') + '"><span class="escx-nome">' + esc(_secServNomeTela(l)) + '<span class="escx-det">' + esc(de) + '</span></span>'
+          + '<button type="button" class="escx-btn" style="margin-left:auto;padding:1px 10px;font-size:12px" onclick="sec_servVoltar(\'' + mes + '\',\'' + id + '\')" title="Trazer de volta para a escala deste mês">Voltar</button></div>'; }).join('') + '</div>' : '')
+    + '<div class="escx-nota">Nome em cinza = afastado no mês (férias ou licença). Quem tem férias ou licença no mês fica em "Fora no mês", com as datas; dia destacado em "Dias" = posto com efetivo menor. Arraste o nome para mudar de setor, turno ou guarnição; \u{21C4} troca o posto ou o turno; \u{2715} tira o servidor só da escala deste mês ("Voltar" desfaz); clique no nome para abrir o cadastro.</div>'
     + _secServHtmlQuadroApoio(mes, d) + _secServHtmlObs(mes, d) + '</div>';
 }
 
@@ -208,7 +222,7 @@ function _secCartaoServico() {
 // cme_secretaria.escalaServObs[mes] e é o que sai na impressão. "Sugerir de novo" apaga a edição.
 function _secServEquipeDe(sid, d) { const s = _secServ(sid, d); return s ? (s.equipe === 'EXPEDIENTE' ? (_secServSetor(s) === _SEC_SERV_SEM_SETOR ? '' : _secServSetor(s)) : s.equipe ? s.equipe.charAt(0) + s.equipe.slice(1).toLowerCase() : '') : ''; }
 function _secServObsSugestao(mes, d) {
-  const porTipo = {}; _secEscAfastadosMes(mes, d).forEach(a => (porTipo[a.tipo] = porTipo[a.tipo] || []).push(a));
+  const porTipo = {}, t = _secServTirados(mes, d); _secEscAfastadosMes(mes, d).filter(a => !t[a.servidorId]).forEach(a => (porTipo[a.tipo] = porTipo[a.tipo] || []).push(a));
   return Object.entries(porTipo).map(([t, l]) => t.toUpperCase() + ': ' + l.map(a => 'PP. ' + _secNomeServ(a.servidorId, d).toUpperCase() + (_secServEquipeDe(a.servidorId, d) ? ' (' + _secServEquipeDe(a.servidorId, d) + ')' : '') + ' – ' + _secBR(a.inicio) + ' a ' + _secBR(a.fim || a.inicio)).join('; ') + ';').join('\n');
 }
 function _secServObsTexto(mes, d) { const g = (d.escalaServObs || {})[mes]; return g && typeof g.texto === 'string' ? g.texto : _secServObsSugestao(mes, d); }
@@ -342,6 +356,23 @@ function sec_servDefinirPosto(mes, sid, n) {
   const l = _secServLinhas(mes, _secDados())[sid]; if (!l || (n !== '1' && n !== '2')) return;
   return _secServAplicar(mes, sid, { posto: mes < _secServAtual() ? n : _secPostoNoMes(n, mes) }, { action: 'sec_serv_posto', detalhe: 'Posto ' + (l.posto || '—') + ' → ' + n + ' (' + _secEscMesTxt(mes) + ')' });
 }
+// ✕ / "Voltar": tira ou devolve o servidor só na escala deste mês (cadastro e outros meses não mudam)
+async function sec_servTirar(mes, sid) {
+  const l = _secServLinhas(mes, _secDados())[sid]; if (!l) return;
+  const ok = await _secMutar(d => { if (_secServTirados(mes, d)[sid]) return false;
+    d.escalaServFora = Object.assign({}, d.escalaServFora, { [mes]: Object.assign({}, _secServTirados(mes, d), { [sid]: { em: new Date().toISOString(), por: usuarioAtual ? usuarioAtual.nome : '' } }) }); },
+    { action: 'sec_serv_tirar', alvo: l.nome, detalhe: 'tirado da escala de ' + _secEscMesTxt(mes) + ' (' + (l.equipe === 'EXPEDIENTE' ? _secServSetor(l) : l.equipe) + ')' });
+  if (ok) { _mostrarToast(_secServNomeTela(l) + ' fora da escala de ' + _secEscMesTxt(mes) + '. Para desfazer, use "Voltar" em "Fora da escala deste mês".', 'sucesso'); _secEscAtualizar(); }
+  return ok;
+}
+async function sec_servVoltar(mes, sid) {
+  const l = _secServLinhas(mes, _secDados())[sid];
+  const ok = await _secMutar(d => { const t = Object.assign({}, _secServTirados(mes, d)); if (!t[sid]) return false; delete t[sid];
+    const f = Object.assign({}, d.escalaServFora); if (Object.keys(t).length) f[mes] = t; else delete f[mes]; d.escalaServFora = f; },
+    { action: 'sec_serv_voltar', alvo: l ? l.nome : sid, detalhe: 'voltou para a escala de ' + _secEscMesTxt(mes) });
+  if (ok) { _mostrarToast((l ? _secServNomeTela(l) : 'Servidor') + ' voltou para a escala de ' + _secEscMesTxt(mes) + '.', 'sucesso'); _secEscAtualizar(); }
+  return ok;
+}
 function sec_servTurno(mes, sid) {
   const l = _secServLinhas(mes, _secDados())[sid]; if (!l) return;
   const novo = l.turno === 'M' ? 'T' : 'M';
@@ -351,7 +382,7 @@ function sec_servTurno(mes, sid) {
 // ── Impressão no formato do papel (A4 deitado, cabeçalho IAPEN/CME, assinatura do gerente) ──
 function _secServNomePapel(nome) { const p = String(nome || '').split(' ').filter(Boolean); return (p.length > 2 ? p[0] + ' ' + p[p.length - 1] : p.join(' ')).toUpperCase(); }
 function sec_servImprimir(mes) {
-  const d = _secDados(), linhas = _secServLinhas(mes, d), ids = Object.keys(linhas), dias = _secServDiasGuarnicao(mes);
+  const d = _secDados(), linhas = _secServLinhasEscala(mes, d), ids = Object.keys(linhas), dias = _secServDiasGuarnicao(mes);
   const cfg = d.config || {}, MESES = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
   const mesNum = +mes.slice(5, 7), ano = mes.slice(0, 4);
   const iapen = window._IAPEN_LOGO_B64 ? 'data:image/png;base64,' + window._IAPEN_LOGO_B64 : '', cme = window._CME_LOGO_B64 ? 'data:image/png;base64,' + window._CME_LOGO_B64 : '';
@@ -425,4 +456,4 @@ function sec_servImprimir(mes) {
   _entregarDoc(new Blob([html], { type: 'text/html' }), 'Escala de Servico ' + mes + '.html');
   auditar({ modulo: 'Secretaria', action: 'sec_serv_imprimir', alvo: MESES[mesNum - 1] + '/' + ano });
 }
-Object.assign(_SEC_ACOES, { sec_serv_mover: 'Mudou servidor de guarnição/setor na escala de serviço', sec_serv_posto: 'Trocou o posto na escala de serviço', sec_serv_turno: 'Trocou o turno na escala de serviço', sec_serv_imprimir: 'Imprimiu a escala de serviço', sec_serv_apoio: 'Editou o quadro de apoio da escala de serviço', sec_serv_setor: 'Removeu setor da escala de serviço', sec_serv_obs: 'Editou as observações da escala de serviço' });
+Object.assign(_SEC_ACOES, { sec_serv_mover: 'Mudou servidor de guarnição/setor na escala de serviço', sec_serv_posto: 'Trocou o posto na escala de serviço', sec_serv_turno: 'Trocou o turno na escala de serviço', sec_serv_imprimir: 'Imprimiu a escala de serviço', sec_serv_apoio: 'Editou o quadro de apoio da escala de serviço', sec_serv_setor: 'Removeu setor da escala de serviço', sec_serv_obs: 'Editou as observações da escala de serviço', sec_serv_tirar: 'Tirou servidor da escala de serviço do mês', sec_serv_voltar: 'Devolveu servidor à escala de serviço do mês' });

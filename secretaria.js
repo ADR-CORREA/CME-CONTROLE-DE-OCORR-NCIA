@@ -39,6 +39,7 @@ function _secNormal(d) {
     escalaServico: (d.escalaServico && typeof d.escalaServico === 'object' && !Array.isArray(d.escalaServico)) ? d.escalaServico : {}, // { 'AAAA-MM': { linhas, guardadoEm } }
     escalaServApoio: (d.escalaServApoio && typeof d.escalaServApoio === 'object' && !Array.isArray(d.escalaServApoio)) ? d.escalaServApoio : {}, // { 'AAAA-MM': { 'AAAA-MM-DD': 'texto' } } quadro fixo da escala de serviço
     escalaServObs: (d.escalaServObs && typeof d.escalaServObs === 'object' && !Array.isArray(d.escalaServObs)) ? d.escalaServObs : {}, // { 'AAAA-MM': { texto, editadoEm, editadoPor } } OBS editada da escala de serviço (27/10/2026)
+    escalaServFora: (d.escalaServFora && typeof d.escalaServFora === 'object' && !Array.isArray(d.escalaServFora)) ? d.escalaServFora : {}, // { 'AAAA-MM': { idServidor: { em, por } } } tirado da escala de serviço só naquele mês (27/11/2026)
     faltas: arr('faltas'),
     prodoc: (d.prodoc && typeof d.prodoc === 'object' && !Array.isArray(d.prodoc)) ? d.prodoc : {}, // marcações da Entrada PRODOC { idDoc: { st, por, em, nota } }
     email: (d.email && typeof d.email === 'object' && !Array.isArray(d.email)) ? d.email : {}, // marcações da Entrada E-mail { id: { st, por, em, nota } }
